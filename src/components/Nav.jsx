@@ -5,6 +5,7 @@ const links = [
   { to: '/brief', label: 'Brief', icon: '◇' },
   { to: '/conventions', label: 'Radar', icon: '◎' },
   { to: '/concepts', label: 'AI', icon: '✦' },
+  { to: '/manage', label: 'Manage', icon: '⊞' },
 ]
 
 export default function Nav() {
