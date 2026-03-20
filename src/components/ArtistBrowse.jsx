@@ -80,7 +80,7 @@ export default function ArtistBrowse({ artists, startIndex = 0, onClose }) {
         >
           ← Back
         </button>
-        <span className="font-mono text-[10px] text-cream-muted/60 tracking-widest">
+        <span className="font-mono text-[12px] text-cream-muted/60 tracking-widest">
           {artistIdx + 1} / {withImages.length}
         </span>
       </div>
@@ -132,9 +132,9 @@ export default function ArtistBrowse({ artists, startIndex = 0, onClose }) {
           <div>
             <h2 className="font-display text-2xl text-cream leading-tight">{displayName}</h2>
             {artist.name && (
-              <p className="font-mono text-[11px] text-cream-muted/60 mt-0.5">@{artist.handle}</p>
+              <p className="font-mono text-[13px] text-cream-muted/60 mt-0.5">@{artist.handle}</p>
             )}
-            <p className="font-mono text-[10px] text-cream-muted/40 mt-1 tracking-widest">
+            <p className="font-mono text-[12px] text-cream-muted/40 mt-1 tracking-widest">
               {imageIdx + 1} / {images.length}
             </p>
           </div>
@@ -142,14 +142,14 @@ export default function ArtistBrowse({ artists, startIndex = 0, onClose }) {
             <button
               onClick={() => artistIdx > 0 && setArtistIdx((i) => i - 1)}
               disabled={artistIdx === 0}
-              className="font-mono text-[11px] text-cream-muted/70 hover:text-cream disabled:opacity-20 transition-colors tracking-widest uppercase"
+              className="font-mono text-[13px] text-cream-muted/70 hover:text-cream disabled:opacity-20 transition-colors tracking-widest uppercase"
             >
               ← Artist
             </button>
             <button
               onClick={() => artistIdx < withImages.length - 1 && setArtistIdx((i) => i + 1)}
               disabled={artistIdx === withImages.length - 1}
-              className="font-mono text-[11px] text-cream-muted/70 hover:text-cream disabled:opacity-20 transition-colors tracking-widest uppercase"
+              className="font-mono text-[13px] text-cream-muted/70 hover:text-cream disabled:opacity-20 transition-colors tracking-widest uppercase"
             >
               Artist →
             </button>

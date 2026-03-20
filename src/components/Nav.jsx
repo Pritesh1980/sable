@@ -46,7 +46,7 @@ export default function Nav() {
               }
             >
               <span className="text-base leading-none">{icon}</span>
-              <span className="tracking-widest uppercase text-[10px]">{label}</span>
+              <span className="tracking-widest uppercase text-[12px]">{label}</span>
             </NavLink>
           ))}
         </div>

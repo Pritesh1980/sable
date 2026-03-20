@@ -21,7 +21,7 @@ export const DEFAULT_ARTISTS = [
   { id: 'yuki_zerkjad', handle: 'yuki_zerkjad', name: '', tier: TIERS.FAVOURITE, tags: [], images: [], rank: 4 },
   { id: 'carlosvalera', handle: 'carl245tattoo', name: 'Carlos Valera', tier: TIERS.FAVOURITE, tags: [], images: [], rank: 5 },
   { id: 'oscarakermo', handle: 'oscarakermo', name: 'Oscar Akermo', tier: TIERS.FAVOURITE, tags: [], images: [], rank: 6 },
-  { id: 'leoalbuquerque', handle: 'leoalbuquerque', name: '', tier: TIERS.FAVOURITE, tags: [], images: [], rank: 7 },
+  { id: 'leoalbuquerque', handle: 'leoalbuquerque.tattoo', name: '', tier: TIERS.FAVOURITE, tags: [], images: [], rank: 7 },
   { id: 'leon_del_cabo', handle: 'leon_del_cabo', name: '', tier: TIERS.FAVOURITE, tags: [], images: [], rank: 8 },
   { id: 'berkbosveren', handle: 'berkbosveren', name: '', tier: TIERS.FAVOURITE, tags: [], images: [], rank: 9 },
   { id: 'gody_tattoo', handle: 'gody_tattoo', name: '', tier: TIERS.FAVOURITE, tags: [], images: [], rank: 10 },
@@ -29,15 +29,15 @@ export const DEFAULT_ARTISTS = [
   { id: 'saadtattoo', handle: 'saadtattoo', name: '', tier: TIERS.FAVOURITE, tags: [], images: [], rank: 12 },
   { id: 'm3.inkd', handle: 'm3.inkd', name: '', tier: TIERS.FAVOURITE, tags: [], images: [], rank: 13 },
   { id: 'picciott_ink', handle: 'picciott_ink', name: '', tier: TIERS.FAVOURITE, tags: [], images: [], rank: 14 },
-  { id: 'victor_portugal', handle: 'victor_portugal', name: 'Victor Portugal', tier: TIERS.FAVOURITE, tags: [], images: [], rank: 15 },
+  { id: 'victor_portugal', handle: 'victorportugal', name: 'Victor Portugal', tier: TIERS.FAVOURITE, tags: [], images: [], rank: 15 },
   { id: 'patrick_shanty', handle: 'patrick_shanty', name: '', tier: TIERS.FAVOURITE, tags: [], images: [], rank: 16 },
   { id: 'cagriesk', handle: 'cagriesk', name: '', tier: TIERS.FAVOURITE, tags: [], images: [], rank: 17 },
 
   // Tier 2 — Also Like
-  { id: 'milanboros', handle: 'milanboros', name: '', tier: TIERS.ALSO_LIKE, tags: [], images: [], rank: 1 },
+  { id: 'milanboros', handle: 'milanboros_tatts', name: '', tier: TIERS.ALSO_LIKE, tags: [], images: [], rank: 1 },
   { id: 'tattoo_amir', handle: 'tattoo_amir', name: '', tier: TIERS.ALSO_LIKE, tags: [], images: [], rank: 2 },
   { id: 'silas_balaio', handle: 'silas_balaio', name: '', tier: TIERS.ALSO_LIKE, tags: [], images: [], rank: 3 },
-  { id: 'suenanki.tattoo', handle: 'suenanki.tattoo', name: '', tier: TIERS.ALSO_LIKE, tags: [], images: [], rank: 4 },
+  { id: 'suenanki.tattoo', handle: 'suenanki', name: '', tier: TIERS.ALSO_LIKE, tags: [], images: [], rank: 4 },
   { id: 'nate_lights', handle: 'nate_lights', name: '', tier: TIERS.ALSO_LIKE, tags: [], images: [], rank: 5 },
 ]
 

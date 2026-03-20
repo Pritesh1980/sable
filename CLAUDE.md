@@ -82,7 +82,7 @@ All are Instagram handles unless otherwise noted.
 | yuki_zerkjad | |
 | carl245tattoo | Known as Carlos Valera |
 | oscarakermo | Known as Oscar Akermo |
-| leoalbuquerque | |
+| leoalbuquerque.tattoo | |
 | leon_del_cabo | |
 | berkbosveren | |
 | gody_tattoo | |
@@ -90,7 +90,7 @@ All are Instagram handles unless otherwise noted.
 | saadtattoo | |
 | m3.inkd | |
 | picciott_ink | |
-| victor_portugal | Known as Victor Portugal |
+| victorportugal | Known as Victor Portugal |
 | patrick_shanty | |
 | cagriesk | |
 
@@ -98,10 +98,10 @@ All are Instagram handles unless otherwise noted.
 
 | Handle | Notes |
 |---|---|
-| milanboros | |
+| milanboros_tatts | |
 | tattoo_amir | |
 | silas_balaio | |
-| suenanki.tattoo | |
+| suenanki | |
 | nate_lights | |
 
 ### Studios (4 — to be expanded)

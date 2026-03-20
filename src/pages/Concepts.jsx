@@ -72,12 +72,12 @@ export default function Concepts({ concepts, setConcepts }) {
     <div className="min-h-screen bg-ink-black px-4 pt-safe-top pb-24">
       <div className="pt-12 pb-6 flex items-end justify-between">
         <div>
-          <p className="font-mono text-[10px] text-accent tracking-[0.3em] uppercase mb-1">Tattoo</p>
+          <p className="font-mono text-[12px] text-accent tracking-[0.3em] uppercase mb-1">Tattoo</p>
           <h1 className="font-display text-3xl text-cream">AI Concepts</h1>
         </div>
         <button
           onClick={() => setShowKeyInput((v) => !v)}
-          className="text-[10px] font-mono text-cream-muted/90 hover:text-cream-muted transition-colors tracking-widest uppercase"
+          className="text-[12px] font-mono text-cream-muted/90 hover:text-cream-muted transition-colors tracking-widest uppercase"
           title="Configure API key"
         >
           {apiKey ? '● API' : '○ API'}
@@ -86,7 +86,7 @@ export default function Concepts({ concepts, setConcepts }) {
 
       {showKeyInput && (
         <div className="mb-6 p-4 bg-ink-card border border-ink-border rounded-sm animate-slide-up">
-          <p className="text-[10px] font-mono text-cream-muted tracking-widest uppercase mb-3">Claude API Key</p>
+          <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase mb-3">Claude API Key</p>
           <p className="text-cream-muted/90 text-xs font-body mb-3">Your key is stored locally and never sent to any server.</p>
           <div className="flex gap-2">
             <input
@@ -117,7 +117,7 @@ export default function Concepts({ concepts, setConcepts }) {
           onKeyDown={(e) => { if (e.key === 'Enter' && e.metaKey) generate() }}
         />
         <div className="flex items-center justify-between mt-2">
-          <span className="text-[10px] font-mono text-cream-muted/90">⌘ Enter to generate</span>
+          <span className="text-[12px] font-mono text-cream-muted/90">⌘ Enter to generate</span>
           <button
             onClick={generate}
             disabled={loading || !prompt.trim()}
@@ -146,7 +146,7 @@ export default function Concepts({ concepts, setConcepts }) {
               className="bg-ink-card border border-ink-border rounded-sm p-4 cursor-pointer hover:border-cream-muted/50 transition-colors animate-slide-up"
               onClick={() => setSelected(selected?.id === c.id ? null : c)}
             >
-              <p className="text-cream-muted/90 text-[10px] font-mono tracking-widest uppercase mb-2">Prompt</p>
+              <p className="text-cream-muted/90 text-[12px] font-mono tracking-widest uppercase mb-2">Prompt</p>
               <p className="text-cream font-body text-sm mb-3 italic">"{c.prompt}"</p>
 
               {selected?.id === c.id ? (
@@ -160,7 +160,7 @@ export default function Concepts({ concepts, setConcepts }) {
               <div className="flex justify-end mt-3">
                 <button
                   onClick={(e) => { e.stopPropagation(); setConcepts((prev) => prev.filter((x) => x.id !== c.id)) }}
-                  className="text-[10px] font-mono text-cream-muted/90 hover:text-accent transition-colors tracking-widest uppercase"
+                  className="text-[12px] font-mono text-cream-muted/90 hover:text-accent transition-colors tracking-widest uppercase"
                 >
                   Delete
                 </button>

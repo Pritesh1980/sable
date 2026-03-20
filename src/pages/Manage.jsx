@@ -54,12 +54,12 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
         {/* Name */}
         <td className="py-3 pl-4 pr-2">
           <p className="font-display text-cream text-sm leading-tight">{artist.name || `@${artist.handle}`}</p>
-          {artist.name && <p className="font-mono text-cream-muted/90 text-[10px]">@{artist.handle}</p>}
+          {artist.name && <p className="font-mono text-cream-muted/90 text-[12px]">@{artist.handle}</p>}
         </td>
 
         {/* Tier */}
         <td className="py-3 px-2 hidden sm:table-cell">
-          <span className={`font-mono text-[10px] tracking-widest uppercase ${artist.tier === TIERS.FAVOURITE ? 'text-accent' : 'text-cream-muted/90'}`}>
+          <span className={`font-mono text-[12px] tracking-widest uppercase ${artist.tier === TIERS.FAVOURITE ? 'text-accent' : 'text-cream-muted/90'}`}>
             {TIER_LABELS[artist.tier] || artist.tier}
           </span>
         </td>
@@ -71,7 +71,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="font-mono text-[11px] text-cream-muted hover:text-accent transition-colors inline-flex items-center gap-1"
+            className="font-mono text-[13px] text-cream-muted hover:text-accent transition-colors inline-flex items-center gap-1"
           >
             Instagram ↗
           </a>
@@ -84,14 +84,14 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
             <button
               onClick={(e) => { e.stopPropagation(); fileRef.current.click() }}
               disabled={uploading}
-              className="font-mono text-[11px] text-cream-muted hover:text-cream border border-ink-border hover:border-cream-muted/40 px-2 py-1 rounded-sm transition-colors disabled:opacity-40 whitespace-nowrap"
+              className="font-mono text-[13px] text-cream-muted hover:text-cream border border-ink-border hover:border-cream-muted/40 px-2 py-1 rounded-sm transition-colors disabled:opacity-40 whitespace-nowrap"
             >
               {uploading ? 'Importing…' : '+ Photos'}
             </button>
             {imageCount > 0 ? (
-              <span className="font-mono text-[10px] text-accent font-semibold">{imageCount}</span>
+              <span className="font-mono text-[12px] text-accent font-semibold">{imageCount}</span>
             ) : (
-              <span className="font-mono text-[10px] text-cream-muted/40 italic">none</span>
+              <span className="font-mono text-[12px] text-cream-muted/40 italic">none</span>
             )}
           </div>
         </td>
@@ -110,7 +110,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
 
               {/* Tags */}
               <div>
-                <p className="text-[9px] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Style Tags</p>
+                <p className="text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Style Tags</p>
                 <div className="flex flex-wrap gap-1.5">
                   {STYLE_TAGS.map((tag) => (
                     <TagPill key={tag} tag={tag} active={artist.tags.includes(tag)} onClick={() => toggleTag(tag)} small />
@@ -120,7 +120,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
 
               {/* Notes */}
               <div>
-                <p className="text-[9px] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Notes</p>
+                <p className="text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Notes</p>
                 <div className="flex gap-2">
                   <input
                     className="flex-1 bg-ink-muted border border-ink-border rounded-sm px-3 py-1.5 text-sm text-cream outline-none focus:border-cream-muted/40 font-body placeholder-cream-muted/60"
@@ -136,7 +136,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
               {/* Image thumbnails */}
               {imageCount > 0 && (
                 <div>
-                  <p className="text-[9px] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Photos ({imageCount})</p>
+                  <p className="text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Photos ({imageCount})</p>
                   <div className="flex gap-2 flex-wrap">
                     {artist.images.map((src, idx) => (
                       <div key={idx} className="relative w-14 h-14 rounded-sm overflow-hidden group bg-ink-muted shrink-0">
@@ -157,7 +157,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
               <div className="flex justify-end">
                 <button
                   onClick={() => onRemove(artist.id)}
-                  className="text-[10px] font-mono text-cream-muted/90 hover:text-accent transition-colors tracking-widest uppercase"
+                  className="text-[12px] font-mono text-cream-muted/90 hover:text-accent transition-colors tracking-widest uppercase"
                 >
                   Remove artist
                 </button>
@@ -188,10 +188,10 @@ function AddArtistForm({ onAdd }) {
 
   return (
     <form onSubmit={submit} className="bg-ink-card border border-ink-border rounded-sm p-4 mb-8">
-      <p className="text-[10px] font-mono text-cream-muted tracking-widest uppercase mb-4">Add New Artist</p>
+      <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase mb-4">Add New Artist</p>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
         <div>
-          <label className="text-[9px] font-mono text-cream-muted/90 tracking-widest uppercase block mb-1">Instagram Handle *</label>
+          <label className="text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase block mb-1">Instagram Handle *</label>
           <input
             className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/40 font-mono placeholder-cream-muted/60"
             placeholder="@handle"
@@ -200,7 +200,7 @@ function AddArtistForm({ onAdd }) {
           />
         </div>
         <div>
-          <label className="text-[9px] font-mono text-cream-muted/90 tracking-widest uppercase block mb-1">Display Name</label>
+          <label className="text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase block mb-1">Display Name</label>
           <input
             className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/40 font-body placeholder-cream-muted/60"
             placeholder="Full name (optional)"
@@ -209,7 +209,7 @@ function AddArtistForm({ onAdd }) {
           />
         </div>
         <div>
-          <label className="text-[9px] font-mono text-cream-muted/90 tracking-widest uppercase block mb-1">Tier</label>
+          <label className="text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase block mb-1">Tier</label>
           <select
             className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/40 font-body"
             value={tier}
@@ -292,9 +292,9 @@ export default function Manage({ artists, setArtists }) {
     <div className="min-h-screen bg-ink-black px-4 pt-safe-top pb-24">
       {/* Header */}
       <div className="pt-10 pb-6">
-        <p className="font-mono text-[10px] text-accent tracking-[0.4em] uppercase mb-2">Tattoo</p>
+        <p className="font-mono text-[12px] text-accent tracking-[0.4em] uppercase mb-2">Tattoo</p>
         <h1 className="font-display text-5xl text-cream leading-none tracking-tight">Manage</h1>
-        <p className="font-mono text-[10px] text-cream-muted/90 mt-3 tracking-widest">
+        <p className="font-mono text-[12px] text-cream-muted/90 mt-3 tracking-widest">
           {artists.length} artists · {withImages} with photos · {totalImages} total images
         </p>
       </div>
@@ -317,10 +317,10 @@ export default function Manage({ artists, setArtists }) {
         <table className="w-full">
           <thead>
             <tr className="border-b border-ink-border bg-ink-card">
-              <th className="text-left py-2.5 pl-4 pr-2 text-[9px] font-mono text-cream-muted/90 tracking-widest uppercase">Artist</th>
-              <th className="text-left py-2.5 px-2 text-[9px] font-mono text-cream-muted/90 tracking-widest uppercase hidden sm:table-cell">Tier</th>
-              <th className="text-left py-2.5 px-2 text-[9px] font-mono text-cream-muted/90 tracking-widest uppercase">Instagram</th>
-              <th className="text-left py-2.5 px-2 text-[9px] font-mono text-cream-muted/90 tracking-widest uppercase">Photos</th>
+              <th className="text-left py-2.5 pl-4 pr-2 text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase">Artist</th>
+              <th className="text-left py-2.5 px-2 text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase hidden sm:table-cell">Tier</th>
+              <th className="text-left py-2.5 px-2 text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase">Instagram</th>
+              <th className="text-left py-2.5 px-2 text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase">Photos</th>
               <th className="py-2.5 pr-4" />
             </tr>
           </thead>

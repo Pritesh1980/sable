@@ -1,7 +1,7 @@
 export default function TagPill({ tag, active, onClick, small }) {
   const base = small
-    ? 'text-[9px] px-1.5 py-0.5'
-    : 'text-[10px] px-2 py-1'
+    ? 'text-[13px] px-1.5 py-0.5'
+    : 'text-[12px] px-2 py-1'
 
   return (
     <button

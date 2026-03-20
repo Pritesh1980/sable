@@ -18,7 +18,7 @@ function IdeaCard({ idea, onOpen }) {
         {idea.placement && <TagPill tag={idea.placement} small />}
       </div>
       {idea.linkedArtists?.length > 0 && (
-        <p className="text-cream-muted/90 text-[10px] font-mono mt-3 tracking-widest">
+        <p className="text-cream-muted/90 text-[12px] font-mono mt-3 tracking-widest">
           {idea.linkedArtists.length} artist{idea.linkedArtists.length !== 1 ? 's' : ''} linked
         </p>
       )}
@@ -92,7 +92,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists }) {
         </div>
 
         <div>
-          <p className="text-[10px] font-mono text-cream-muted tracking-widest uppercase mb-3">Description</p>
+          <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase mb-3">Description</p>
           <textarea
             className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-body placeholder-cream-muted/60 resize-none"
             rows={4}
@@ -103,7 +103,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists }) {
         </div>
 
         <div>
-          <p className="text-[10px] font-mono text-cream-muted tracking-widest uppercase mb-3">Style Tags</p>
+          <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase mb-3">Style Tags</p>
           <div className="flex flex-wrap gap-2">
             {STYLE_TAGS.map((tag) => (
               <TagPill key={tag} tag={tag} active={draft.tags.includes(tag)} onClick={() => toggleTag(tag)} />
@@ -112,7 +112,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists }) {
         </div>
 
         <div>
-          <p className="text-[10px] font-mono text-cream-muted tracking-widest uppercase mb-3">Body Placement</p>
+          <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase mb-3">Body Placement</p>
           <div className="flex flex-wrap gap-2">
             {PLACEMENTS.map((p) => (
               <TagPill
@@ -126,7 +126,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists }) {
         </div>
 
         <div>
-          <p className="text-[10px] font-mono text-cream-muted tracking-widest uppercase mb-3">Reference Images</p>
+          <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase mb-3">Reference Images</p>
           {draft.images?.length > 0 && (
             <div className="grid grid-cols-2 gap-2 mb-3">
               {draft.images.map((url) => (
@@ -155,7 +155,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists }) {
         </div>
 
         <div>
-          <p className="text-[10px] font-mono text-cream-muted tracking-widest uppercase mb-3">Linked Artists</p>
+          <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase mb-3">Linked Artists</p>
           <div className="space-y-1">
             {artistOptions.map((a) => (
               <button
@@ -199,7 +199,7 @@ export default function Brief({ ideas, setIdeas, artists }) {
     <div className="min-h-screen bg-ink-black px-4 pt-safe-top pb-24">
       <div className="pt-12 pb-6 flex items-end justify-between">
         <div>
-          <p className="font-mono text-[10px] text-accent tracking-[0.3em] uppercase mb-1">Tattoo</p>
+          <p className="font-mono text-[12px] text-accent tracking-[0.3em] uppercase mb-1">Tattoo</p>
           <h1 className="font-display text-3xl text-cream">My Brief</h1>
         </div>
         <button

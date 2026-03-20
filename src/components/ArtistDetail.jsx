@@ -111,11 +111,11 @@ export default function ArtistDetail({ artist, onClose, onSave }) {
           {/* ── PHOTOS ── always editable */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-[10px] font-mono text-cream-muted tracking-widest uppercase">
+              <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase">
                 Photos {images.length > 0 && <span className="text-cream-muted/90">· {images.length}</span>}
               </p>
               {images.length > 0 && (
-                <p className="text-[9px] font-mono text-cream-muted/90 tracking-widest">Tap to set cover · Long press to remove</p>
+                <p className="text-[13px] font-mono text-cream-muted/90 tracking-widest">Tap to set cover · Long press to remove</p>
               )}
             </div>
 
@@ -156,7 +156,7 @@ export default function ArtistDetail({ artist, onClose, onSave }) {
 
                     {/* Cover badge */}
                     {idx === 0 && (
-                      <div className="absolute top-1 left-1 bg-accent/80 text-cream text-[8px] font-mono tracking-widest px-1.5 py-0.5 rounded-sm uppercase">
+                      <div className="absolute top-1 left-1 bg-accent/80 text-cream text-[13px] font-mono tracking-widest px-1.5 py-0.5 rounded-sm uppercase">
                         Cover
                       </div>
                     )}
@@ -166,14 +166,14 @@ export default function ArtistDetail({ artist, onClose, onSave }) {
                       {idx !== 0 && (
                         <button
                           onClick={(e) => { e.stopPropagation(); setCover(idx) }}
-                          className="text-[10px] font-mono text-cream tracking-widest uppercase bg-ink-black/60 px-2 py-1 rounded-sm"
+                          className="text-[12px] font-mono text-cream tracking-widest uppercase bg-ink-black/60 px-2 py-1 rounded-sm"
                         >
                           Set cover
                         </button>
                       )}
                       <button
                         onClick={(e) => { e.stopPropagation(); removeImage(idx) }}
-                        className="text-[10px] font-mono text-accent tracking-widest uppercase bg-ink-black/60 px-2 py-1 rounded-sm"
+                        className="text-[12px] font-mono text-accent tracking-widest uppercase bg-ink-black/60 px-2 py-1 rounded-sm"
                       >
                         Remove
                       </button>
@@ -186,7 +186,7 @@ export default function ArtistDetail({ artist, onClose, onSave }) {
 
           {/* Style tags */}
           <div className="mb-6">
-            <p className="text-[10px] font-mono text-cream-muted tracking-widest uppercase mb-3">Style</p>
+            <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase mb-3">Style</p>
             <div className="flex flex-wrap gap-2">
               {STYLE_TAGS.map((tag) => (
                 <TagPill
@@ -197,12 +197,12 @@ export default function ArtistDetail({ artist, onClose, onSave }) {
                 />
               ))}
             </div>
-            {!editing && <p className="text-cream-muted/90 text-[10px] font-mono mt-2">Tap "Edit details" to assign tags</p>}
+            {!editing && <p className="text-cream-muted/90 text-[12px] font-mono mt-2">Tap "Edit details" to assign tags</p>}
           </div>
 
           {/* Notes */}
           <div className="mb-10">
-            <p className="text-[10px] font-mono text-cream-muted tracking-widest uppercase mb-3">Notes</p>
+            <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase mb-3">Notes</p>
             {editing ? (
               <textarea
                 className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-body placeholder-cream-muted/60 resize-none"

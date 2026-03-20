@@ -73,7 +73,7 @@ export default function Gallery({ artists, setArtists }) {
         <div className="flex items-center gap-4 mb-5">
           <div className="flex-1 h-px bg-ink-border" />
           <h2 className="font-display text-2xl text-cream tracking-wide shrink-0">{label}</h2>
-          <span className="font-mono text-[10px] text-cream-muted/90 tracking-[0.2em] shrink-0">
+          <span className="font-mono text-[12px] text-cream-muted/90 tracking-[0.2em] shrink-0">
             {String(items.length).padStart(2, '0')}
           </span>
           <div className="flex-1 h-px bg-ink-border" />
@@ -132,13 +132,13 @@ export default function Gallery({ artists, setArtists }) {
       {/* Page header */}
       <div className="px-4 pt-10 pb-4 flex items-end justify-between">
         <div>
-          <p className="font-mono text-[10px] text-accent tracking-[0.4em] uppercase mb-2">Your Collection</p>
+          <p className="font-mono text-[12px] text-accent tracking-[0.4em] uppercase mb-2">Your Collection</p>
           <h1 className="font-display text-5xl text-cream leading-none tracking-tight">Artists</h1>
         </div>
         {artistsWithImages.length > 0 && (
           <button
             onClick={() => setBrowsing(true)}
-            className="font-mono text-[10px] text-cream-muted hover:text-cream border border-ink-border hover:border-cream-muted/40 px-3 py-2 rounded-sm transition-colors tracking-widest uppercase mb-1"
+            className="font-mono text-[12px] text-cream-muted hover:text-cream border border-ink-border hover:border-cream-muted/40 px-3 py-2 rounded-sm transition-colors tracking-widest uppercase mb-1"
           >
             Browse
           </button>
@@ -168,14 +168,14 @@ export default function Gallery({ artists, setArtists }) {
             <button
               onClick={() => setViewMode('grid')}
               title="Grid view"
-              className={`px-2 py-1 rounded-sm text-[11px] font-mono transition-colors ${viewMode === 'grid' ? 'text-cream bg-ink-card' : 'text-cream-muted/50 hover:text-cream-muted'}`}
+              className={`px-2 py-1 rounded-sm text-[13px] font-mono transition-colors ${viewMode === 'grid' ? 'text-cream bg-ink-card' : 'text-cream-muted/50 hover:text-cream-muted'}`}
             >
               ⊞
             </button>
             <button
               onClick={() => setViewMode('wall')}
               title="Style wall"
-              className={`px-2 py-1 rounded-sm text-[11px] font-mono transition-colors ${viewMode === 'wall' ? 'text-cream bg-ink-card' : 'text-cream-muted/50 hover:text-cream-muted'}`}
+              className={`px-2 py-1 rounded-sm text-[13px] font-mono transition-colors ${viewMode === 'wall' ? 'text-cream bg-ink-card' : 'text-cream-muted/50 hover:text-cream-muted'}`}
             >
               ▦
             </button>
