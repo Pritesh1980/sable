@@ -47,7 +47,7 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
             {/* Quick upload prompt on empty tiles */}
             <button
               onClick={(e) => { e.stopPropagation(); fileRef.current.click() }}
-              className="text-[9px] font-mono text-cream-muted/20 hover:text-cream-muted/60 tracking-widest uppercase transition-colors"
+              className="text-[9px] font-mono text-cream-muted/75 hover:text-cream-muted/80 tracking-widest uppercase transition-colors"
             >
               {uploading ? 'Importing…' : '+ Add photo'}
             </button>
@@ -81,7 +81,7 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
         {hasImages && !imgError && (
           <button
             onClick={(e) => { e.stopPropagation(); fileRef.current.click() }}
-            className="absolute bottom-8 right-1.5 w-6 h-6 rounded-full bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-80 transition-opacity z-10"
+            className="absolute bottom-8 right-1.5 w-6 h-6 rounded-full bg-ink-black/70 flex items-center justify-center opacity-0 group-hover:opacity-80 transition-opacity z-10"
             title="Add photos"
           >
             <span className="text-cream text-sm leading-none">+</span>
@@ -89,19 +89,19 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
         )}
 
         {/* Gradient + name overlay */}
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/60 to-transparent pt-10 pb-2.5 px-2.5">
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink-black via-ink-black/60 to-transparent pt-10 pb-2.5 px-2.5">
           <p className={`font-display text-cream leading-tight ${featured ? 'text-base' : 'text-sm'}`}>
             {artist.name || `@${artist.handle}`}
           </p>
           {artist.name && (
-            <p className="font-mono text-cream-muted/60 text-[9px] tracking-widest mt-0.5">
+            <p className="font-mono text-cream-muted/90 text-[9px] tracking-widest mt-0.5">
               @{artist.handle}
             </p>
           )}
         </div>
 
         {/* Rank badge */}
-        <div className="absolute top-2 left-2 w-5 h-5 rounded-full bg-black/70 flex items-center justify-center backdrop-blur-sm">
+        <div className="absolute top-2 left-2 w-5 h-5 rounded-full bg-ink-black/70 flex items-center justify-center backdrop-blur-sm">
           <span className="text-[9px] font-mono text-cream-muted/80">{artist.rank}</span>
         </div>
       </div>

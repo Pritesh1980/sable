@@ -88,7 +88,7 @@ export default function ArtistDetail({ artist, onClose, onSave }) {
           <div className="mb-6">
             {editing ? (
               <input
-                className="bg-transparent border-b border-ink-border text-cream font-display text-2xl w-full outline-none pb-1 mb-2 placeholder-cream-muted/30"
+                className="bg-transparent border-b border-ink-border text-cream font-display text-2xl w-full outline-none pb-1 mb-2 placeholder-cream-muted/60"
                 value={draft.name}
                 onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
                 placeholder="Display name (optional)"
@@ -112,10 +112,10 @@ export default function ArtistDetail({ artist, onClose, onSave }) {
           <div className="mb-8">
             <div className="flex items-center justify-between mb-3">
               <p className="text-[10px] font-mono text-cream-muted tracking-widest uppercase">
-                Photos {images.length > 0 && <span className="text-cream-muted/40">· {images.length}</span>}
+                Photos {images.length > 0 && <span className="text-cream-muted/90">· {images.length}</span>}
               </p>
               {images.length > 0 && (
-                <p className="text-[9px] font-mono text-cream-muted/30 tracking-widest">Tap to set cover · Long press to remove</p>
+                <p className="text-[9px] font-mono text-cream-muted/90 tracking-widest">Tap to set cover · Long press to remove</p>
               )}
             </div>
 
@@ -162,18 +162,18 @@ export default function ArtistDetail({ artist, onClose, onSave }) {
                     )}
 
                     {/* Actions overlay */}
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+                    <div className="absolute inset-0 bg-ink-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
                       {idx !== 0 && (
                         <button
                           onClick={(e) => { e.stopPropagation(); setCover(idx) }}
-                          className="text-[10px] font-mono text-cream tracking-widest uppercase bg-black/60 px-2 py-1 rounded-sm"
+                          className="text-[10px] font-mono text-cream tracking-widest uppercase bg-ink-black/60 px-2 py-1 rounded-sm"
                         >
                           Set cover
                         </button>
                       )}
                       <button
                         onClick={(e) => { e.stopPropagation(); removeImage(idx) }}
-                        className="text-[10px] font-mono text-accent tracking-widest uppercase bg-black/60 px-2 py-1 rounded-sm"
+                        className="text-[10px] font-mono text-accent tracking-widest uppercase bg-ink-black/60 px-2 py-1 rounded-sm"
                       >
                         Remove
                       </button>
@@ -197,7 +197,7 @@ export default function ArtistDetail({ artist, onClose, onSave }) {
                 />
               ))}
             </div>
-            {!editing && <p className="text-cream-muted/30 text-[10px] font-mono mt-2">Tap "Edit details" to assign tags</p>}
+            {!editing && <p className="text-cream-muted/90 text-[10px] font-mono mt-2">Tap "Edit details" to assign tags</p>}
           </div>
 
           {/* Notes */}
@@ -205,7 +205,7 @@ export default function ArtistDetail({ artist, onClose, onSave }) {
             <p className="text-[10px] font-mono text-cream-muted tracking-widest uppercase mb-3">Notes</p>
             {editing ? (
               <textarea
-                className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-body placeholder-cream-muted/30 resize-none"
+                className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-body placeholder-cream-muted/60 resize-none"
                 rows={4}
                 placeholder="Personal notes about this artist…"
                 value={draft.notes || ''}
@@ -224,7 +224,7 @@ export default function ArtistDetail({ artist, onClose, onSave }) {
       {/* Lightbox */}
       {lightbox !== null && (
         <div
-          className="fixed inset-0 z-60 bg-black flex items-center justify-center"
+          className="fixed inset-0 z-60 bg-ink-black flex items-center justify-center"
           onClick={() => setLightbox(null)}
         >
           <img

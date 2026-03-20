@@ -6,7 +6,7 @@ import { TIERS } from '../data/artists'
 function IdeaCard({ idea, onOpen }) {
   return (
     <div
-      className="bg-ink-card border border-ink-border rounded-sm p-4 cursor-pointer hover:border-cream-muted/30 transition-colors animate-slide-up"
+      className="bg-ink-card border border-ink-border rounded-sm p-4 cursor-pointer hover:border-cream-muted/50 transition-colors animate-slide-up"
       onClick={() => onOpen(idea)}
     >
       <h3 className="font-display text-cream text-lg mb-1">{idea.title}</h3>
@@ -18,7 +18,7 @@ function IdeaCard({ idea, onOpen }) {
         {idea.placement && <TagPill tag={idea.placement} small />}
       </div>
       {idea.linkedArtists?.length > 0 && (
-        <p className="text-cream-muted/50 text-[10px] font-mono mt-3 tracking-widest">
+        <p className="text-cream-muted/90 text-[10px] font-mono mt-3 tracking-widest">
           {idea.linkedArtists.length} artist{idea.linkedArtists.length !== 1 ? 's' : ''} linked
         </p>
       )}
@@ -84,7 +84,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists }) {
         <div>
           <input
             autoFocus
-            className="bg-transparent border-b border-ink-border text-cream font-display text-2xl w-full outline-none pb-1 placeholder-cream-muted/30"
+            className="bg-transparent border-b border-ink-border text-cream font-display text-2xl w-full outline-none pb-1 placeholder-cream-muted/60"
             placeholder="Idea title…"
             value={draft.title}
             onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
@@ -94,7 +94,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists }) {
         <div>
           <p className="text-[10px] font-mono text-cream-muted tracking-widest uppercase mb-3">Description</p>
           <textarea
-            className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-body placeholder-cream-muted/30 resize-none"
+            className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-body placeholder-cream-muted/60 resize-none"
             rows={4}
             placeholder="Describe the concept, mood, imagery…"
             value={draft.description}
@@ -142,7 +142,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists }) {
           )}
           <div className="flex gap-2">
             <input
-              className="flex-1 bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-mono placeholder-cream-muted/30"
+              className="flex-1 bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-mono placeholder-cream-muted/60"
               placeholder="Paste image URL…"
               value={newImage}
               onChange={(e) => setNewImage(e.target.value)}
@@ -164,11 +164,11 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists }) {
                 className={`w-full text-left px-3 py-2 rounded-sm text-sm font-body transition-colors border ${
                   draft.linkedArtists?.includes(a.id)
                     ? 'border-accent/40 bg-accent/5 text-cream'
-                    : 'border-ink-border text-cream-muted hover:border-cream-muted/30'
+                    : 'border-ink-border text-cream-muted hover:border-cream-muted/50'
                 }`}
               >
                 {a.name || `@${a.handle}`}
-                <span className="text-cream-muted/40 ml-2 text-xs font-mono">{a.tier === TIERS.FAVOURITE ? '★' : '◇'}</span>
+                <span className="text-cream-muted/90 ml-2 text-xs font-mono">{a.tier === TIERS.FAVOURITE ? '★' : '◇'}</span>
               </button>
             ))}
           </div>
@@ -213,8 +213,8 @@ export default function Brief({ ideas, setIdeas, artists }) {
       {ideas.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <span className="text-5xl mb-4 opacity-10">◇</span>
-          <p className="text-cream-muted/40 font-body text-sm">No ideas yet.</p>
-          <p className="text-cream-muted/30 font-body text-xs mt-1">Tap + to capture your first concept.</p>
+          <p className="text-cream-muted/90 font-body text-sm">No ideas yet.</p>
+          <p className="text-cream-muted/90 font-body text-xs mt-1">Tap + to capture your first concept.</p>
         </div>
       ) : (
         <div className="space-y-3">

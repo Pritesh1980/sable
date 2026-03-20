@@ -18,6 +18,13 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Apply saved preferences before first paint to avoid flash -->
+    <script>
+      const t = localStorage.getItem('tattoo_theme')
+      if (t === 'light') document.documentElement.setAttribute('data-theme', 'light')
+      const f = localStorage.getItem('tattoo_font')
+      if (f === 'large') document.documentElement.setAttribute('data-font', 'large')
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

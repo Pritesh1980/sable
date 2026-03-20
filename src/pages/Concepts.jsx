@@ -77,7 +77,7 @@ export default function Concepts({ concepts, setConcepts }) {
         </div>
         <button
           onClick={() => setShowKeyInput((v) => !v)}
-          className="text-[10px] font-mono text-cream-muted/40 hover:text-cream-muted transition-colors tracking-widest uppercase"
+          className="text-[10px] font-mono text-cream-muted/90 hover:text-cream-muted transition-colors tracking-widest uppercase"
           title="Configure API key"
         >
           {apiKey ? '● API' : '○ API'}
@@ -87,11 +87,11 @@ export default function Concepts({ concepts, setConcepts }) {
       {showKeyInput && (
         <div className="mb-6 p-4 bg-ink-card border border-ink-border rounded-sm animate-slide-up">
           <p className="text-[10px] font-mono text-cream-muted tracking-widest uppercase mb-3">Claude API Key</p>
-          <p className="text-cream-muted/50 text-xs font-body mb-3">Your key is stored locally and never sent to any server.</p>
+          <p className="text-cream-muted/90 text-xs font-body mb-3">Your key is stored locally and never sent to any server.</p>
           <div className="flex gap-2">
             <input
               type="password"
-              className="flex-1 bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-mono placeholder-cream-muted/30"
+              className="flex-1 bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-mono placeholder-cream-muted/60"
               placeholder="sk-ant-…"
               defaultValue={apiKey}
               id="api-key-input"
@@ -109,7 +109,7 @@ export default function Concepts({ concepts, setConcepts }) {
       {/* Prompt input */}
       <div className="mb-8">
         <textarea
-          className="w-full bg-ink-card border border-ink-border rounded-sm px-4 py-3 text-sm text-cream outline-none focus:border-cream-muted/40 font-body placeholder-cream-muted/20 resize-none transition-colors"
+          className="w-full bg-ink-card border border-ink-border rounded-sm px-4 py-3 text-sm text-cream outline-none focus:border-cream-muted/40 font-body placeholder-cream-muted/60 resize-none transition-colors"
           rows={3}
           placeholder="Describe a tattoo concept… e.g. 'A moth emerging from a skull wreathed in dark botanicals'"
           value={prompt}
@@ -117,7 +117,7 @@ export default function Concepts({ concepts, setConcepts }) {
           onKeyDown={(e) => { if (e.key === 'Enter' && e.metaKey) generate() }}
         />
         <div className="flex items-center justify-between mt-2">
-          <span className="text-[10px] font-mono text-cream-muted/30">⌘ Enter to generate</span>
+          <span className="text-[10px] font-mono text-cream-muted/90">⌘ Enter to generate</span>
           <button
             onClick={generate}
             disabled={loading || !prompt.trim()}
@@ -135,18 +135,18 @@ export default function Concepts({ concepts, setConcepts }) {
       {concepts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <span className="text-5xl mb-4 opacity-10">✦</span>
-          <p className="text-cream-muted/40 font-body text-sm">No concepts yet.</p>
-          <p className="text-cream-muted/30 font-body text-xs mt-1">Describe an idea and generate your first concept.</p>
+          <p className="text-cream-muted/90 font-body text-sm">No concepts yet.</p>
+          <p className="text-cream-muted/90 font-body text-xs mt-1">Describe an idea and generate your first concept.</p>
         </div>
       ) : (
         <div className="space-y-4">
           {concepts.map((c) => (
             <div
               key={c.id}
-              className="bg-ink-card border border-ink-border rounded-sm p-4 cursor-pointer hover:border-cream-muted/30 transition-colors animate-slide-up"
+              className="bg-ink-card border border-ink-border rounded-sm p-4 cursor-pointer hover:border-cream-muted/50 transition-colors animate-slide-up"
               onClick={() => setSelected(selected?.id === c.id ? null : c)}
             >
-              <p className="text-cream-muted/60 text-[10px] font-mono tracking-widest uppercase mb-2">Prompt</p>
+              <p className="text-cream-muted/90 text-[10px] font-mono tracking-widest uppercase mb-2">Prompt</p>
               <p className="text-cream font-body text-sm mb-3 italic">"{c.prompt}"</p>
 
               {selected?.id === c.id ? (
@@ -154,13 +154,13 @@ export default function Concepts({ concepts, setConcepts }) {
                   <p className="text-cream-muted text-sm font-body leading-relaxed whitespace-pre-wrap">{c.response}</p>
                 </div>
               ) : (
-                <p className="text-cream-muted/40 text-xs font-mono">{new Date(c.createdAt).toLocaleDateString()} · tap to expand</p>
+                <p className="text-cream-muted/90 text-xs font-mono">{new Date(c.createdAt).toLocaleDateString()} · tap to expand</p>
               )}
 
               <div className="flex justify-end mt-3">
                 <button
                   onClick={(e) => { e.stopPropagation(); setConcepts((prev) => prev.filter((x) => x.id !== c.id)) }}
-                  className="text-[10px] font-mono text-cream-muted/30 hover:text-accent transition-colors tracking-widest uppercase"
+                  className="text-[10px] font-mono text-cream-muted/90 hover:text-accent transition-colors tracking-widest uppercase"
                 >
                   Delete
                 </button>
