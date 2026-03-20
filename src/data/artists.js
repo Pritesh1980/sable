@@ -16,10 +16,10 @@ export const TIERS = {
 export const DEFAULT_ARTISTS = [
   // Tier 1 — Favourites
   { id: 'zoia.ink', handle: 'zoia.ink', name: '', tier: TIERS.FAVOURITE, tags: [], images: [], rank: 1 },
-  { id: 'tolgatemirlenk', handle: 'tolgatemirlenk', name: '', tier: TIERS.FAVOURITE, tags: [], images: [], rank: 2 },
+  { id: 'tolgatemirlenk', handle: 'tolgatemirlenk.ink', name: '', tier: TIERS.FAVOURITE, tags: [], images: [], rank: 2 },
   { id: 'keremtattz', handle: 'keremtattz', name: '', tier: TIERS.FAVOURITE, tags: [], images: [], rank: 3 },
   { id: 'yuki_zerkjad', handle: 'yuki_zerkjad', name: '', tier: TIERS.FAVOURITE, tags: [], images: [], rank: 4 },
-  { id: 'carlosvalera', handle: 'carlosvalera', name: 'Carlos Valera', tier: TIERS.FAVOURITE, tags: [], images: [], rank: 5 },
+  { id: 'carlosvalera', handle: 'carl245tattoo', name: 'Carlos Valera', tier: TIERS.FAVOURITE, tags: [], images: [], rank: 5 },
   { id: 'oscarakermo', handle: 'oscarakermo', name: 'Oscar Akermo', tier: TIERS.FAVOURITE, tags: [], images: [], rank: 6 },
   { id: 'leoalbuquerque', handle: 'leoalbuquerque', name: '', tier: TIERS.FAVOURITE, tags: [], images: [], rank: 7 },
   { id: 'leon_del_cabo', handle: 'leon_del_cabo', name: '', tier: TIERS.FAVOURITE, tags: [], images: [], rank: 8 },

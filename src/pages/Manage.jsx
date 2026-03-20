@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { STYLE_TAGS, TIERS, DEFAULT_ARTISTS } from '../data/artists'
+import { STYLE_TAGS, TIERS } from '../data/artists'
 import { compressImages } from '../hooks/useImageUpload'
 import TagPill from '../components/TagPill'
 
@@ -54,12 +54,12 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
         {/* Name */}
         <td className="py-3 pl-4 pr-2">
           <p className="font-display text-cream text-sm leading-tight">{artist.name || `@${artist.handle}`}</p>
-          {artist.name && <p className="font-mono text-cream-muted/50 text-[10px]">@{artist.handle}</p>}
+          {artist.name && <p className="font-mono text-cream-muted/90 text-[10px]">@{artist.handle}</p>}
         </td>
 
         {/* Tier */}
         <td className="py-3 px-2 hidden sm:table-cell">
-          <span className={`font-mono text-[10px] tracking-widest uppercase ${artist.tier === TIERS.FAVOURITE ? 'text-accent' : 'text-cream-muted/50'}`}>
+          <span className={`font-mono text-[10px] tracking-widest uppercase ${artist.tier === TIERS.FAVOURITE ? 'text-accent' : 'text-cream-muted/90'}`}>
             {TIER_LABELS[artist.tier] || artist.tier}
           </span>
         </td>
@@ -88,15 +88,17 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
             >
               {uploading ? 'Importing…' : '+ Photos'}
             </button>
-            {imageCount > 0 && (
-              <span className="font-mono text-[10px] text-cream-muted/40">{imageCount}</span>
+            {imageCount > 0 ? (
+              <span className="font-mono text-[10px] text-accent font-semibold">{imageCount}</span>
+            ) : (
+              <span className="font-mono text-[10px] text-cream-muted/40 italic">none</span>
             )}
           </div>
         </td>
 
         {/* Expand chevron */}
         <td className="py-3 pr-4 text-right">
-          <span className={`text-cream-muted/30 text-xs transition-transform inline-block ${expanded ? 'rotate-180' : ''}`}>▾</span>
+          <span className={`text-cream-muted/90 text-xs transition-transform inline-block ${expanded ? 'rotate-180' : ''}`}>▾</span>
         </td>
       </tr>
 
@@ -108,7 +110,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
 
               {/* Tags */}
               <div>
-                <p className="text-[9px] font-mono text-cream-muted/50 tracking-widest uppercase mb-2">Style Tags</p>
+                <p className="text-[9px] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Style Tags</p>
                 <div className="flex flex-wrap gap-1.5">
                   {STYLE_TAGS.map((tag) => (
                     <TagPill key={tag} tag={tag} active={artist.tags.includes(tag)} onClick={() => toggleTag(tag)} small />
@@ -118,10 +120,10 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
 
               {/* Notes */}
               <div>
-                <p className="text-[9px] font-mono text-cream-muted/50 tracking-widest uppercase mb-2">Notes</p>
+                <p className="text-[9px] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Notes</p>
                 <div className="flex gap-2">
                   <input
-                    className="flex-1 bg-ink-muted border border-ink-border rounded-sm px-3 py-1.5 text-sm text-cream outline-none focus:border-cream-muted/40 font-body placeholder-cream-muted/20"
+                    className="flex-1 bg-ink-muted border border-ink-border rounded-sm px-3 py-1.5 text-sm text-cream outline-none focus:border-cream-muted/40 font-body placeholder-cream-muted/60"
                     placeholder="Notes about this artist…"
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
@@ -134,14 +136,14 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
               {/* Image thumbnails */}
               {imageCount > 0 && (
                 <div>
-                  <p className="text-[9px] font-mono text-cream-muted/50 tracking-widest uppercase mb-2">Photos ({imageCount})</p>
+                  <p className="text-[9px] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Photos ({imageCount})</p>
                   <div className="flex gap-2 flex-wrap">
                     {artist.images.map((src, idx) => (
                       <div key={idx} className="relative w-14 h-14 rounded-sm overflow-hidden group bg-ink-muted shrink-0">
                         <img src={src} alt="" className="w-full h-full object-cover" />
                         <button
                           onClick={() => removeImage(idx)}
-                          className="absolute inset-0 bg-black/60 text-accent text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                          className="absolute inset-0 bg-ink-black/60 text-accent text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                         >
                           ×
                         </button>
@@ -155,7 +157,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
               <div className="flex justify-end">
                 <button
                   onClick={() => onRemove(artist.id)}
-                  className="text-[10px] font-mono text-cream-muted/20 hover:text-accent transition-colors tracking-widest uppercase"
+                  className="text-[10px] font-mono text-cream-muted/90 hover:text-accent transition-colors tracking-widest uppercase"
                 >
                   Remove artist
                 </button>
@@ -189,25 +191,25 @@ function AddArtistForm({ onAdd }) {
       <p className="text-[10px] font-mono text-cream-muted tracking-widest uppercase mb-4">Add New Artist</p>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
         <div>
-          <label className="text-[9px] font-mono text-cream-muted/50 tracking-widest uppercase block mb-1">Instagram Handle *</label>
+          <label className="text-[9px] font-mono text-cream-muted/90 tracking-widest uppercase block mb-1">Instagram Handle *</label>
           <input
-            className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/40 font-mono placeholder-cream-muted/20"
+            className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/40 font-mono placeholder-cream-muted/60"
             placeholder="@handle"
             value={handle}
             onChange={(e) => { setHandle(e.target.value); setError('') }}
           />
         </div>
         <div>
-          <label className="text-[9px] font-mono text-cream-muted/50 tracking-widest uppercase block mb-1">Display Name</label>
+          <label className="text-[9px] font-mono text-cream-muted/90 tracking-widest uppercase block mb-1">Display Name</label>
           <input
-            className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/40 font-body placeholder-cream-muted/20"
+            className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/40 font-body placeholder-cream-muted/60"
             placeholder="Full name (optional)"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
         </div>
         <div>
-          <label className="text-[9px] font-mono text-cream-muted/50 tracking-widest uppercase block mb-1">Tier</label>
+          <label className="text-[9px] font-mono text-cream-muted/90 tracking-widest uppercase block mb-1">Tier</label>
           <select
             className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/40 font-body"
             value={tier}
@@ -292,7 +294,7 @@ export default function Manage({ artists, setArtists }) {
       <div className="pt-10 pb-6">
         <p className="font-mono text-[10px] text-accent tracking-[0.4em] uppercase mb-2">Tattoo</p>
         <h1 className="font-display text-5xl text-cream leading-none tracking-tight">Manage</h1>
-        <p className="font-mono text-[10px] text-cream-muted/40 mt-3 tracking-widest">
+        <p className="font-mono text-[10px] text-cream-muted/90 mt-3 tracking-widest">
           {artists.length} artists · {withImages} with photos · {totalImages} total images
         </p>
       </div>
@@ -303,7 +305,7 @@ export default function Manage({ artists, setArtists }) {
       {/* Search */}
       <div className="mb-4">
         <input
-          className="w-full bg-ink-card border border-ink-border rounded-sm px-4 py-2.5 text-sm text-cream outline-none focus:border-cream-muted/40 font-body placeholder-cream-muted/20"
+          className="w-full bg-ink-card border border-ink-border rounded-sm px-4 py-2.5 text-sm text-cream outline-none focus:border-cream-muted/40 font-body placeholder-cream-muted/60"
           placeholder="Search artists…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -315,10 +317,10 @@ export default function Manage({ artists, setArtists }) {
         <table className="w-full">
           <thead>
             <tr className="border-b border-ink-border bg-ink-card">
-              <th className="text-left py-2.5 pl-4 pr-2 text-[9px] font-mono text-cream-muted/50 tracking-widest uppercase">Artist</th>
-              <th className="text-left py-2.5 px-2 text-[9px] font-mono text-cream-muted/50 tracking-widest uppercase hidden sm:table-cell">Tier</th>
-              <th className="text-left py-2.5 px-2 text-[9px] font-mono text-cream-muted/50 tracking-widest uppercase">Instagram</th>
-              <th className="text-left py-2.5 px-2 text-[9px] font-mono text-cream-muted/50 tracking-widest uppercase">Photos</th>
+              <th className="text-left py-2.5 pl-4 pr-2 text-[9px] font-mono text-cream-muted/90 tracking-widest uppercase">Artist</th>
+              <th className="text-left py-2.5 px-2 text-[9px] font-mono text-cream-muted/90 tracking-widest uppercase hidden sm:table-cell">Tier</th>
+              <th className="text-left py-2.5 px-2 text-[9px] font-mono text-cream-muted/90 tracking-widest uppercase">Instagram</th>
+              <th className="text-left py-2.5 px-2 text-[9px] font-mono text-cream-muted/90 tracking-widest uppercase">Photos</th>
               <th className="py-2.5 pr-4" />
             </tr>
           </thead>
@@ -334,7 +336,7 @@ export default function Manage({ artists, setArtists }) {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-12 text-center text-cream-muted/30 font-mono text-xs tracking-widest uppercase">
+                <td colSpan={5} className="py-12 text-center text-cream-muted/90 font-mono text-xs tracking-widest uppercase">
                   No artists found
                 </td>
               </tr>

@@ -77,10 +77,10 @@ All are Instagram handles unless otherwise noted.
 | Handle | Notes |
 |---|---|
 | zoia.ink | |
-| tolgatemirlenk | |
+| tolgatemirlenk.ink | |
 | keremtattz | |
 | yuki_zerkjad | |
-| carlosvalera | Known as Carlos Valera |
+| carl245tattoo | Known as Carlos Valera |
 | oscarakermo | Known as Oscar Akermo |
 | leoalbuquerque | |
 | leon_del_cabo | |
