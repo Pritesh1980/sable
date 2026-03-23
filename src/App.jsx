@@ -6,10 +6,10 @@ import Conventions from './pages/Conventions'
 import Concepts from './pages/Concepts'
 import Manage from './pages/Manage'
 import { useStorage } from './hooks/useStorage'
-import { DEFAULT_ARTISTS } from './data/artists'
+import { useArtistStorage } from './hooks/useArtistStorage'
 
 export default function App() {
-  const [artists, setArtists] = useStorage('tattoo_artists', DEFAULT_ARTISTS)
+  const [artists, setArtists] = useArtistStorage()
   const [ideas, setIdeas] = useStorage('tattoo_ideas', [])
   const [conventions, setConventions] = useStorage('tattoo_conventions', [])
   const [concepts, setConcepts] = useStorage('tattoo_concepts', [])

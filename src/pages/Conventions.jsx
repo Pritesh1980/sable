@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { TIERS } from '../data/artists'
 
 function distance(mk, conv) {
   // Rough straight-line estimates from Milton Keynes
@@ -127,7 +126,7 @@ function ConventionModal({ convention, onClose, onSave, onDelete, artists }) {
         <div>
           <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase mb-3">Artists Attending</p>
           <div className="space-y-1">
-            {artists.filter((a) => a.tier !== 'studio').map((a) => (
+            {artists.map((a) => (
               <button
                 key={a.id}
                 onClick={() => toggleArtist(a.id)}
@@ -139,7 +138,6 @@ function ConventionModal({ convention, onClose, onSave, onDelete, artists }) {
               >
                 {a.name || `@${a.handle}`}
                 <span className="text-cream-muted/90 ml-2 text-xs font-mono">
-                  {a.tier === TIERS.FAVOURITE ? '★' : '◇'}
                 </span>
               </button>
             ))}

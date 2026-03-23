@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import TagPill from '../components/TagPill'
 import { STYLE_TAGS, PLACEMENTS } from '../data/artists'
-import { TIERS } from '../data/artists'
 
 function IdeaCard({ idea, onOpen }) {
   return (
@@ -60,7 +59,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists }) {
     onSave({ ...draft, id: draft.id || Date.now().toString() })
   }
 
-  const artistOptions = artists.filter((a) => a.tier !== 'studio')
+  const artistOptions = artists
 
   return (
     <div className="fixed inset-0 z-50 bg-ink-black/95 flex flex-col animate-fade-in overflow-y-auto">
@@ -168,7 +167,6 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists }) {
                 }`}
               >
                 {a.name || `@${a.handle}`}
-                <span className="text-cream-muted/90 ml-2 text-xs font-mono">{a.tier === TIERS.FAVOURITE ? '★' : '◇'}</span>
               </button>
             ))}
           </div>

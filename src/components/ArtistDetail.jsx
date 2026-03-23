@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import TagPill from './TagPill'
-import { STYLE_TAGS } from '../data/artists'
+import { STYLE_TAGS, DEFAULT_STUDIOS } from '../data/artists'
 import { compressImages } from '../hooks/useImageUpload'
 
 export default function ArtistDetail({ artist, onClose, onSave }) {
@@ -106,6 +106,11 @@ export default function ArtistDetail({ artist, onClose, onSave }) {
             >
               @{artist.handle} <span className="text-xs">↗</span>
             </a>
+            {DEFAULT_STUDIOS.find((s) => s.id === artist.studio) && (
+              <p className="font-mono text-sm text-cream-muted/60 mt-1">
+                {DEFAULT_STUDIOS.find((s) => s.id === artist.studio).name}
+              </p>
+            )}
           </div>
 
           {/* ── PHOTOS ── always editable */}
@@ -199,6 +204,23 @@ export default function ArtistDetail({ artist, onClose, onSave }) {
             </div>
             {!editing && <p className="text-cream-muted/90 text-[12px] font-mono mt-2">Tap "Edit details" to assign tags</p>}
           </div>
+
+          {/* Studio (edit mode) */}
+          {editing && (
+            <div className="mb-6">
+              <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase mb-3">Studio</p>
+              <select
+                className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-body"
+                value={draft.studio || ''}
+                onChange={(e) => setDraft((d) => ({ ...d, studio: e.target.value || null }))}
+              >
+                <option value="">— None —</option>
+                {DEFAULT_STUDIOS.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Notes */}
           <div className="mb-10">

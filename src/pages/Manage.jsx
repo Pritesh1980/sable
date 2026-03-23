@@ -1,12 +1,7 @@
 import { useState, useRef } from 'react'
-import { STYLE_TAGS, TIERS } from '../data/artists'
+import { STYLE_TAGS, DEFAULT_STUDIOS } from '../data/artists'
 import { compressImages } from '../hooks/useImageUpload'
 import TagPill from '../components/TagPill'
-
-const TIER_LABELS = {
-  [TIERS.FAVOURITE]: 'Favourite',
-  [TIERS.ALSO_LIKE]: 'Also Like',
-}
 
 function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
   const fileRef = useRef()
@@ -55,13 +50,6 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
         <td className="py-3 pl-4 pr-2">
           <p className="font-display text-cream text-sm leading-tight">{artist.name || `@${artist.handle}`}</p>
           {artist.name && <p className="font-mono text-cream-muted/90 text-[12px]">@{artist.handle}</p>}
-        </td>
-
-        {/* Tier */}
-        <td className="py-3 px-2 hidden sm:table-cell">
-          <span className={`font-mono text-[12px] tracking-widest uppercase ${artist.tier === TIERS.FAVOURITE ? 'text-accent' : 'text-cream-muted/90'}`}>
-            {TIER_LABELS[artist.tier] || artist.tier}
-          </span>
         </td>
 
         {/* Instagram */}
@@ -116,6 +104,21 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
                     <TagPill key={tag} tag={tag} active={artist.tags.includes(tag)} onClick={() => toggleTag(tag)} small />
                   ))}
                 </div>
+              </div>
+
+              {/* Studio */}
+              <div>
+                <p className="text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Studio</p>
+                <select
+                  className="bg-ink-muted border border-ink-border rounded-sm px-3 py-1.5 text-sm text-cream outline-none focus:border-cream-muted/40 font-body"
+                  value={artist.studio || ''}
+                  onChange={(e) => onUpdate(artist.id, { studio: e.target.value || null })}
+                >
+                  <option value="">— None —</option>
+                  {DEFAULT_STUDIOS.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
               </div>
 
               {/* Notes */}
@@ -173,14 +176,13 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
 function AddArtistForm({ onAdd }) {
   const [handle, setHandle] = useState('')
   const [name, setName] = useState('')
-  const [tier, setTier] = useState(TIERS.FAVOURITE)
   const [error, setError] = useState('')
 
   function submit(e) {
     e.preventDefault()
     const clean = handle.replace(/^@/, '').trim()
     if (!clean) { setError('Instagram handle is required'); return }
-    onAdd({ handle: clean, name: name.trim(), tier })
+    onAdd({ handle: clean, name: name.trim() })
     setHandle('')
     setName('')
     setError('')
@@ -189,7 +191,7 @@ function AddArtistForm({ onAdd }) {
   return (
     <form onSubmit={submit} className="bg-ink-card border border-ink-border rounded-sm p-4 mb-8">
       <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase mb-4">Add New Artist</p>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
         <div>
           <label className="text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase block mb-1">Instagram Handle *</label>
           <input
@@ -208,17 +210,6 @@ function AddArtistForm({ onAdd }) {
             onChange={(e) => setName(e.target.value)}
           />
         </div>
-        <div>
-          <label className="text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase block mb-1">Tier</label>
-          <select
-            className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/40 font-body"
-            value={tier}
-            onChange={(e) => setTier(e.target.value)}
-          >
-            <option value={TIERS.FAVOURITE}>Favourite</option>
-            <option value={TIERS.ALSO_LIKE}>Also Like</option>
-          </select>
-        </div>
       </div>
       {error && <p className="text-accent text-xs font-mono mb-3">{error}</p>}
       <div className="flex justify-end">
@@ -236,15 +227,7 @@ function AddArtistForm({ onAdd }) {
 export default function Manage({ artists, setArtists }) {
   const [search, setSearch] = useState('')
 
-  const favourites = artists
-    .filter((a) => a.tier === TIERS.FAVOURITE)
-    .sort((a, b) => a.rank - b.rank)
-
-  const alsoLike = artists
-    .filter((a) => a.tier === TIERS.ALSO_LIKE)
-    .sort((a, b) => a.rank - b.rank)
-
-  const allInOrder = [...favourites, ...alsoLike]
+  const allInOrder = artists.slice().sort((a, b) => a.rank - b.rank)
 
   const filtered = search.trim()
     ? allInOrder.filter((a) =>
@@ -253,22 +236,21 @@ export default function Manage({ artists, setArtists }) {
       )
     : allInOrder
 
-  function addArtist({ handle, name, tier }) {
+  function addArtist({ handle, name }) {
     const existing = artists.find((a) => a.handle.toLowerCase() === handle.toLowerCase())
     if (existing) return
 
-    const tierArtists = artists.filter((a) => a.tier === tier)
-    const maxRank = tierArtists.reduce((m, a) => Math.max(m, a.rank), 0)
+    const maxRank = artists.reduce((m, a) => Math.max(m, a.rank), 0)
 
     const newArtist = {
       id: handle,
       handle,
       name,
-      tier,
       tags: [],
       images: [],
       rank: maxRank + 1,
       notes: '',
+      studio: null,
     }
     setArtists((prev) => [...prev, newArtist])
   }
@@ -318,7 +300,6 @@ export default function Manage({ artists, setArtists }) {
           <thead>
             <tr className="border-b border-ink-border bg-ink-card">
               <th className="text-left py-2.5 pl-4 pr-2 text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase">Artist</th>
-              <th className="text-left py-2.5 px-2 text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase hidden sm:table-cell">Tier</th>
               <th className="text-left py-2.5 px-2 text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase">Instagram</th>
               <th className="text-left py-2.5 px-2 text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase">Photos</th>
               <th className="py-2.5 pr-4" />
