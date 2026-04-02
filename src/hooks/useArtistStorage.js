@@ -47,17 +47,24 @@ export function stripImages(artists) {
   return artists.map(({ images: _images, ...rest }) => rest)
 }
 
-// Fill in any fields present in defaults but missing from a stored record
+// Fill in any fields present in defaults but missing from a stored record,
+// and append any DEFAULT_ARTISTS entries not yet in the stored list.
 export function applyDefaults(artists) {
-  return artists.map((a) => {
+  const merged = artists.map((a) => {
     const def = DEFAULT_ARTISTS.find((d) => d.id === a.id)
     if (!def) return a
-    const merged = { ...a }
+    const out = { ...a }
     for (const key of Object.keys(def)) {
-      if (!(key in a)) merged[key] = def[key]
+      if (!(key in a)) out[key] = def[key]
     }
-    return merged
+    return out
   })
+  const storedIds = new Set(artists.map((a) => a.id))
+  const nextRank = merged.length > 0 ? Math.max(...merged.map((a) => a.rank ?? 0)) + 1 : 1
+  DEFAULT_ARTISTS.filter((d) => !storedIds.has(d.id)).forEach((d, i) => {
+    merged.push({ ...d, rank: nextRank + i })
+  })
+  return merged
 }
 
 function loadMeta() {
@@ -102,7 +109,10 @@ export function useArtistStorage() {
 
         const imageMap = await dbGetAll()
         setArtistsRaw((prev) =>
-          prev.map((a) => ({ ...a, images: imageMap[a.id] || [] }))
+          prev.map((a) => {
+            const def = DEFAULT_ARTISTS.find((d) => d.id === a.id)
+            return { ...a, images: imageMap[a.id] || def?.images || [] }
+          })
         )
       } catch (e) {
         console.error('[tattoo] Failed to load images:', e)

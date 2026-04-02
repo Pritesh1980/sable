@@ -1,5 +1,10 @@
 import { useState, useRef } from 'react'
 import { STYLE_TAGS, DEFAULT_STUDIOS } from '../data/artists'
+
+function studioName(id) {
+  const s = DEFAULT_STUDIOS.find((s) => s.id === id)
+  return s ? s.name : null
+}
 import { compressImages } from '../hooks/useImageUpload'
 import TagPill from '../components/TagPill'
 
@@ -50,6 +55,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
         <td className="py-3 pl-4 pr-2">
           <p className="font-display text-cream text-sm leading-tight">{artist.name || `@${artist.handle}`}</p>
           {artist.name && <p className="font-mono text-cream-muted/90 text-[12px]">@{artist.handle}</p>}
+          {artist.studio && <p className="font-mono text-cream-muted/60 text-[11px] tracking-widest">{studioName(artist.studio)}</p>}
         </td>
 
         {/* Instagram */}

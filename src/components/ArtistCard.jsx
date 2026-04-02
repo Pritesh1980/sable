@@ -1,8 +1,10 @@
 import { useState, useRef } from 'react'
 import { compressImages } from '../hooks/useImageUpload'
+import { DEFAULT_STUDIOS } from '../data/artists'
 
 export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandleProps, isDragging, featured, index = 0 }) {
   const displayName = artist.name || `@${artist.handle}`
+  const studio = artist.studio ? DEFAULT_STUDIOS.find((s) => s.id === artist.studio) : null
   const hasImages = artist.images && artist.images.length > 0
   const [imgError, setImgError] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -97,6 +99,11 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
             <p className="font-mono text-cream-muted/90 text-[13px] tracking-widest mt-0.5">
               @{artist.handle}
             </p>
+          )}
+          {studio && (
+            <span className="inline-block mt-1 px-1.5 py-px bg-ink-black/70 backdrop-blur-sm font-mono text-cream-muted/90 text-[10px] tracking-widest truncate max-w-full">
+              {studio.name}
+            </span>
           )}
         </div>
 

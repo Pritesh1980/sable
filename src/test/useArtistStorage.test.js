@@ -60,6 +60,16 @@ describe('applyDefaults', () => {
     const result = applyDefaults(custom)
     expect(result[0]).toEqual(custom[0])
   })
+
+  it('appends DEFAULT_ARTISTS entries missing from stored list', () => {
+    // Simulate localStorage that only has the first artist
+    const stored = [DEFAULT_ARTISTS[0]]
+    const result = applyDefaults(stored)
+    expect(result).toHaveLength(DEFAULT_ARTISTS.length)
+    DEFAULT_ARTISTS.slice(1).forEach((d) => {
+      expect(result.find((a) => a.id === d.id)).toBeDefined()
+    })
+  })
 })
 
 // ── Hook integration tests ────────────────────────────────────────────────────
