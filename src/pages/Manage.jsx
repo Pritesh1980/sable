@@ -28,6 +28,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
   }
 
   function removeImage(idx) {
+    if (!window.confirm('Remove this photo?')) return
     onSaveImages(artist.id, artist.images.filter((_, i) => i !== idx))
   }
 
@@ -165,7 +166,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
               {/* Remove artist */}
               <div className="flex justify-end">
                 <button
-                  onClick={() => onRemove(artist.id)}
+                  onClick={() => { if (window.confirm(`Remove ${artist.name || '@' + artist.handle}?`)) onRemove(artist.id) }}
                   className="text-[12px] font-mono text-cream-muted/90 hover:text-accent transition-colors tracking-widest uppercase"
                 >
                   Remove artist

@@ -34,6 +34,7 @@ export default function ArtistDetail({ artist, onClose, onSave }) {
   }
 
   function removeImage(idx) {
+    if (!window.confirm('Remove this photo?')) return
     saveImages(images.filter((_, i) => i !== idx))
   }
 
