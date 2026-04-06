@@ -77,12 +77,12 @@ All are Instagram handles unless otherwise noted.
 | Handle | Notes |
 |---|---|
 | zoia.ink | |
-| tolgatemirlenk | |
+| tolgatemirlenk.ink | |
 | keremtattz | |
 | yuki_zerkjad | |
-| carlosvalera | Known as Carlos Valera |
+| carl245tattoo | Known as Carlos Valera |
 | oscarakermo | Known as Oscar Akermo |
-| leoalbuquerque | |
+| leoalbuquerque.tattoo | |
 | leon_del_cabo | |
 | berkbosveren | |
 | gody_tattoo | |
@@ -90,7 +90,7 @@ All are Instagram handles unless otherwise noted.
 | saadtattoo | |
 | m3.inkd | |
 | picciott_ink | |
-| victor_portugal | Known as Victor Portugal |
+| victorportugal | Known as Victor Portugal |
 | patrick_shanty | |
 | cagriesk | |
 
@@ -98,10 +98,10 @@ All are Instagram handles unless otherwise noted.
 
 | Handle | Notes |
 |---|---|
-| milanboros | |
+| milanboros_tatts | |
 | tattoo_amir | |
 | silas_balaio | |
-| suenanki.tattoo | |
+| suenanki | |
 | nate_lights | |
 
 ### Studios (4 — to be expanded)
@@ -193,3 +193,25 @@ npx tailwindcss init -p
 ```
 
 Then say: **"Build the MVP per CLAUDE.md"**
+
+---
+
+## Testing
+
+**Use a TDD approach for all new code.** Write tests before writing the implementation.
+
+- Test runner: **Vitest** (`npm test` to run, `npm run test:watch` during development)
+- Tests live in `src/test/`
+- Setup file: `src/test/setup.js` (provides localStorage mock + fake-indexeddb)
+- Use `@testing-library/react` for hooks and components
+
+### What to test
+- **Pure functions** (data transforms, rank logic, defaults merging) — test these directly
+- **Hooks** — test behaviour via `renderHook`, not implementation details
+- **Data integrity** — any change to `src/data/artists.js` must keep the data tests green
+
+### TDD workflow
+1. Write a failing test that describes the intended behaviour
+2. Run `npm test` to confirm it fails
+3. Write the minimum implementation to make it pass
+4. Refactor if needed, keeping tests green

@@ -5,15 +5,15 @@ export default {
     extend: {
       colors: {
         ink: {
-          black: '#0a0a0a',
-          dark: '#111111',
-          card: '#161616',
-          border: '#222222',
-          muted: '#2a2a2a',
+          black: 'rgb(var(--ink-black) / <alpha-value>)',
+          dark: 'rgb(var(--ink-dark) / <alpha-value>)',
+          card: 'rgb(var(--ink-card) / <alpha-value>)',
+          border: 'rgb(var(--ink-border) / <alpha-value>)',
+          muted: 'rgb(var(--ink-muted) / <alpha-value>)',
         },
         cream: {
-          DEFAULT: '#f0ebe0',
-          muted: '#9e9a8e',
+          DEFAULT: 'rgb(var(--cream) / <alpha-value>)',
+          muted: 'rgb(var(--cream-muted) / <alpha-value>)',
         },
         accent: {
           DEFAULT: '#c0392b',

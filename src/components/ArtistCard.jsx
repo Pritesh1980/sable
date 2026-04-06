@@ -1,8 +1,10 @@
 import { useState, useRef } from 'react'
 import { compressImages } from '../hooks/useImageUpload'
+import { DEFAULT_STUDIOS } from '../data/artists'
 
 export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandleProps, isDragging, featured, index = 0 }) {
   const displayName = artist.name || `@${artist.handle}`
+  const studio = artist.studio ? DEFAULT_STUDIOS.find((s) => s.id === artist.studio) : null
   const hasImages = artist.images && artist.images.length > 0
   const [imgError, setImgError] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -47,7 +49,7 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
             {/* Quick upload prompt on empty tiles */}
             <button
               onClick={(e) => { e.stopPropagation(); fileRef.current.click() }}
-              className="text-[9px] font-mono text-cream-muted/20 hover:text-cream-muted/60 tracking-widest uppercase transition-colors"
+              className="text-[13px] font-mono text-cream-muted/75 hover:text-cream-muted/80 tracking-widest uppercase transition-colors"
             >
               {uploading ? 'Importing…' : '+ Add photo'}
             </button>
@@ -81,7 +83,7 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
         {hasImages && !imgError && (
           <button
             onClick={(e) => { e.stopPropagation(); fileRef.current.click() }}
-            className="absolute bottom-8 right-1.5 w-6 h-6 rounded-full bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-80 transition-opacity z-10"
+            className="absolute bottom-8 right-1.5 w-6 h-6 rounded-full bg-ink-black/70 flex items-center justify-center opacity-0 group-hover:opacity-80 transition-opacity z-10"
             title="Add photos"
           >
             <span className="text-cream text-sm leading-none">+</span>
@@ -89,20 +91,25 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
         )}
 
         {/* Gradient + name overlay */}
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/60 to-transparent pt-10 pb-2.5 px-2.5">
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink-black via-ink-black/60 to-transparent pt-10 pb-2.5 px-2.5">
           <p className={`font-display text-cream leading-tight ${featured ? 'text-base' : 'text-sm'}`}>
             {artist.name || `@${artist.handle}`}
           </p>
           {artist.name && (
-            <p className="font-mono text-cream-muted/60 text-[9px] tracking-widest mt-0.5">
+            <p className="font-mono text-cream-muted/90 text-[13px] tracking-widest mt-0.5">
               @{artist.handle}
             </p>
+          )}
+          {studio && (
+            <span className="inline-block mt-1 px-1.5 py-px bg-ink-black/70 backdrop-blur-sm font-mono text-cream-muted/90 text-[10px] tracking-widest truncate max-w-full">
+              {studio.name}
+            </span>
           )}
         </div>
 
         {/* Rank badge */}
-        <div className="absolute top-2 left-2 w-5 h-5 rounded-full bg-black/70 flex items-center justify-center backdrop-blur-sm">
-          <span className="text-[9px] font-mono text-cream-muted/80">{artist.rank}</span>
+        <div className="absolute top-2 left-2 w-5 h-5 rounded-full bg-ink-black/70 flex items-center justify-center backdrop-blur-sm">
+          <span className="text-[13px] font-mono text-cream-muted/80">{artist.rank}</span>
         </div>
       </div>
     </div>

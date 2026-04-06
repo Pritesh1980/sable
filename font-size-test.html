@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Font Size Test — Tattoo App</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0a0a0a;
+      color: #f0ebe0;
+      font-family: 'DM Sans', system-ui, sans-serif;
+      padding: 32px 24px 80px;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 40px;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: #9e9a8e;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      margin-bottom: 48px;
+    }
+
+    .section {
+      margin-bottom: 48px;
+    }
+
+    .section-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: #c0392b;
+      letter-spacing: 0.4em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #222;
+    }
+
+    /* ── Table mock ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid #222;
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 32px;
+    }
+
+    thead tr {
+      background: #161616;
+      border-bottom: 1px solid #222;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid #161616;
+    }
+
+    th, td { padding: 10px 12px; text-align: left; }
+
+    .size-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: #c0392b;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    /* ── Size rows ── */
+    .row { margin-bottom: 28px; }
+
+    .row-meta {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: #555;
+      letter-spacing: 0.2em;
+      margin-bottom: 12px;
+    }
+
+    .demo-table { width: 100%; border-collapse: collapse; border: 1px solid #222; margin-bottom: 6px; }
+    .demo-table thead { background: #161616; }
+    .demo-table th, .demo-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #1a1a1a; }
+
+    .tag {
+      display: inline-block;
+      border: 1px solid #222;
+      border-radius: 2px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      font-family: 'DM Mono', monospace;
+      color: #9e9a8e;
+      margin-right: 4px;
+    }
+
+    .mono { font-family: 'DM Mono', monospace; }
+    .muted { color: #9e9a8e; }
+    .accent { color: #c0392b; }
+    .cream { color: #f0ebe0; }
+    .divider { border: none; border-top: 1px solid #222; margin: 32px 0; }
+
+    .choice {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+      padding: 10px 14px;
+      border: 1px solid #222;
+      border-radius: 2px;
+      cursor: default;
+    }
+    .choice:hover { border-color: #444; }
+    .choice-num {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: #c0392b;
+      width: 24px;
+      flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Font Size Test</h1>
+  <p class="subtitle">Pick the most comfortable small text size</p>
+
+  <div class="section">
+    <p class="section-label">The question</p>
+    <p style="font-family:'DM Sans';font-size:15px;color:#9e9a8e;line-height:1.6;margin-bottom:16px;">
+      The tiny labels throughout the app (tier badges, Instagram handles, column headers, tags) are currently 8–11px.
+      Below are 5 options — A through E — showing the same Manage table row at different sizes.
+      Tell me which letter feels most comfortable to read.
+    </p>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- Option A: current (smallest) -->
+  <div class="row">
+    <p class="row-meta">Option A — current sizes (8–11px)</p>
+    <table class="demo-table">
+      <thead>
+        <tr>
+          <th><span class="mono muted" style="font-size:9px;letter-spacing:.15em;text-transform:uppercase;">Artist</span></th>
+          <th><span class="mono muted" style="font-size:9px;letter-spacing:.15em;text-transform:uppercase;">Tier</span></th>
+          <th><span class="mono muted" style="font-size:9px;letter-spacing:.15em;text-transform:uppercase;">Instagram</span></th>
+          <th><span class="mono muted" style="font-size:9px;letter-spacing:.15em;text-transform:uppercase;">Photos</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <p style="font-family:'Playfair Display';font-size:14px;color:#f0ebe0;line-height:1.2;">Carlos Valera</p>
+            <p class="mono muted" style="font-size:10px;">@carl245tattoo</p>
+          </td>
+          <td><span class="mono accent" style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;">Favourite</span></td>
+          <td><span class="mono muted" style="font-size:11px;">Instagram ↗</span></td>
+          <td>
+            <span class="mono" style="font-size:11px;color:#9e9a8e;border:1px solid #222;padding:2px 6px;border-radius:2px;">+ Photos</span>
+            <span class="mono accent" style="font-size:10px;margin-left:6px;">3</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <p style="font-family:'Playfair Display';font-size:14px;color:#f0ebe0;line-height:1.2;">@zoia.ink</p>
+          </td>
+          <td><span class="mono muted" style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;opacity:.7;">Also Like</span></td>
+          <td><span class="mono muted" style="font-size:11px;">Instagram ↗</span></td>
+          <td>
+            <span class="mono" style="font-size:11px;color:#9e9a8e;border:1px solid #222;padding:2px 6px;border-radius:2px;">+ Photos</span>
+            <span class="mono muted" style="font-size:10px;margin-left:6px;font-style:italic;opacity:.4;">none</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="font-size:10px;font-family:'DM Mono';color:#444;letter-spacing:.1em;">Tags: <span class="tag" style="font-size:9px;">dark-illustrative</span><span class="tag" style="font-size:9px;">blackwork</span></p>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- Option B -->
+  <div class="row">
+    <p class="row-meta">Option B — bumped up slightly (10–13px)</p>
+    <table class="demo-table">
+      <thead>
+        <tr>
+          <th><span class="mono muted" style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;">Artist</span></th>
+          <th><span class="mono muted" style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;">Tier</span></th>
+          <th><span class="mono muted" style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;">Instagram</span></th>
+          <th><span class="mono muted" style="font-size:10px;letter-spacing:.15em;text-transform:uppercase;">Photos</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <p style="font-family:'Playfair Display';font-size:15px;color:#f0ebe0;line-height:1.2;">Carlos Valera</p>
+            <p class="mono muted" style="font-size:11px;">@carl245tattoo</p>
+          </td>
+          <td><span class="mono accent" style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;">Favourite</span></td>
+          <td><span class="mono muted" style="font-size:12px;">Instagram ↗</span></td>
+          <td>
+            <span class="mono" style="font-size:12px;color:#9e9a8e;border:1px solid #222;padding:2px 8px;border-radius:2px;">+ Photos</span>
+            <span class="mono accent" style="font-size:11px;margin-left:6px;">3</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <p style="font-family:'Playfair Display';font-size:15px;color:#f0ebe0;line-height:1.2;">@zoia.ink</p>
+          </td>
+          <td><span class="mono muted" style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;opacity:.7;">Also Like</span></td>
+          <td><span class="mono muted" style="font-size:12px;">Instagram ↗</span></td>
+          <td>
+            <span class="mono" style="font-size:12px;color:#9e9a8e;border:1px solid #222;padding:2px 8px;border-radius:2px;">+ Photos</span>
+            <span class="mono muted" style="font-size:11px;margin-left:6px;font-style:italic;opacity:.4;">none</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="font-size:11px;font-family:'DM Mono';color:#444;letter-spacing:.1em;">Tags: <span class="tag" style="font-size:10px;">dark-illustrative</span><span class="tag" style="font-size:10px;">blackwork</span></p>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- Option C -->
+  <div class="row">
+    <p class="row-meta">Option C — comfortable medium (11–14px)</p>
+    <table class="demo-table">
+      <thead>
+        <tr>
+          <th><span class="mono muted" style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;">Artist</span></th>
+          <th><span class="mono muted" style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;">Tier</span></th>
+          <th><span class="mono muted" style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;">Instagram</span></th>
+          <th><span class="mono muted" style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;">Photos</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <p style="font-family:'Playfair Display';font-size:16px;color:#f0ebe0;line-height:1.2;">Carlos Valera</p>
+            <p class="mono muted" style="font-size:12px;">@carl245tattoo</p>
+          </td>
+          <td><span class="mono accent" style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;">Favourite</span></td>
+          <td><span class="mono muted" style="font-size:13px;">Instagram ↗</span></td>
+          <td>
+            <span class="mono" style="font-size:13px;color:#9e9a8e;border:1px solid #222;padding:3px 10px;border-radius:2px;">+ Photos</span>
+            <span class="mono accent" style="font-size:12px;margin-left:6px;">3</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <p style="font-family:'Playfair Display';font-size:16px;color:#f0ebe0;line-height:1.2;">@zoia.ink</p>
+          </td>
+          <td><span class="mono muted" style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;opacity:.7;">Also Like</span></td>
+          <td><span class="mono muted" style="font-size:13px;">Instagram ↗</span></td>
+          <td>
+            <span class="mono" style="font-size:13px;color:#9e9a8e;border:1px solid #222;padding:3px 10px;border-radius:2px;">+ Photos</span>
+            <span class="mono muted" style="font-size:12px;margin-left:6px;font-style:italic;opacity:.4;">none</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="font-size:12px;font-family:'DM Mono';color:#444;letter-spacing:.1em;">Tags: <span class="tag" style="font-size:11px;">dark-illustrative</span><span class="tag" style="font-size:11px;">blackwork</span></p>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- Option D -->
+  <div class="row">
+    <p class="row-meta">Option D — larger (13–15px)</p>
+    <table class="demo-table">
+      <thead>
+        <tr>
+          <th><span class="mono muted" style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;">Artist</span></th>
+          <th><span class="mono muted" style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;">Tier</span></th>
+          <th><span class="mono muted" style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;">Instagram</span></th>
+          <th><span class="mono muted" style="font-size:12px;letter-spacing:.1em;text-transform:uppercase;">Photos</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <p style="font-family:'Playfair Display';font-size:17px;color:#f0ebe0;line-height:1.2;">Carlos Valera</p>
+            <p class="mono muted" style="font-size:13px;">@carl245tattoo</p>
+          </td>
+          <td><span class="mono accent" style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;">Favourite</span></td>
+          <td><span class="mono muted" style="font-size:14px;">Instagram ↗</span></td>
+          <td>
+            <span class="mono" style="font-size:14px;color:#9e9a8e;border:1px solid #222;padding:3px 10px;border-radius:2px;">+ Photos</span>
+            <span class="mono accent" style="font-size:13px;margin-left:8px;">3</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <p style="font-family:'Playfair Display';font-size:17px;color:#f0ebe0;line-height:1.2;">@zoia.ink</p>
+          </td>
+          <td><span class="mono muted" style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;opacity:.7;">Also Like</span></td>
+          <td><span class="mono muted" style="font-size:14px;">Instagram ↗</span></td>
+          <td>
+            <span class="mono" style="font-size:14px;color:#9e9a8e;border:1px solid #222;padding:3px 10px;border-radius:2px;">+ Photos</span>
+            <span class="mono muted" style="font-size:13px;margin-left:8px;font-style:italic;opacity:.4;">none</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="font-size:13px;font-family:'DM Mono';color:#444;letter-spacing:.08em;">Tags: <span class="tag" style="font-size:12px;">dark-illustrative</span><span class="tag" style="font-size:12px;">blackwork</span></p>
+  </div>
+
+  <hr class="divider" />
+
+  <!-- Option E -->
+  <div class="row">
+    <p class="row-meta">Option E — largest (14–16px)</p>
+    <table class="demo-table">
+      <thead>
+        <tr>
+          <th><span class="mono muted" style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;">Artist</span></th>
+          <th><span class="mono muted" style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;">Tier</span></th>
+          <th><span class="mono muted" style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;">Instagram</span></th>
+          <th><span class="mono muted" style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;">Photos</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <p style="font-family:'Playfair Display';font-size:18px;color:#f0ebe0;line-height:1.2;">Carlos Valera</p>
+            <p class="mono muted" style="font-size:14px;">@carl245tattoo</p>
+          </td>
+          <td><span class="mono accent" style="font-size:14px;letter-spacing:.06em;text-transform:uppercase;">Favourite</span></td>
+          <td><span class="mono muted" style="font-size:15px;">Instagram ↗</span></td>
+          <td>
+            <span class="mono" style="font-size:15px;color:#9e9a8e;border:1px solid #222;padding:4px 12px;border-radius:2px;">+ Photos</span>
+            <span class="mono accent" style="font-size:14px;margin-left:8px;">3</span>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <p style="font-family:'Playfair Display';font-size:18px;color:#f0ebe0;line-height:1.2;">@zoia.ink</p>
+          </td>
+          <td><span class="mono muted" style="font-size:14px;letter-spacing:.06em;text-transform:uppercase;opacity:.7;">Also Like</span></td>
+          <td><span class="mono muted" style="font-size:15px;">Instagram ↗</span></td>
+          <td>
+            <span class="mono" style="font-size:15px;color:#9e9a8e;border:1px solid #222;padding:4px 12px;border-radius:2px;">+ Photos</span>
+            <span class="mono muted" style="font-size:14px;margin-left:8px;font-style:italic;opacity:.4;">none</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="font-size:13px;font-family:'DM Mono';color:#444;letter-spacing:.08em;">Tags: <span class="tag" style="font-size:13px;">dark-illustrative</span><span class="tag" style="font-size:13px;">blackwork</span></p>
+  </div>
+
+</body>
+</html>

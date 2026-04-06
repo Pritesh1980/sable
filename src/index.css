@@ -2,10 +2,57 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Theme variables ───────────────────────────────────────────────────── */
+/* Values are space-separated RGB triplets — required for Tailwind's       */
+/* rgb(var(--x) / <alpha-value>) opacity modifier syntax to work.          */
+
+:root {
+  /* Dark theme (default) */
+  --ink-black: 10 10 10;
+  --ink-dark: 17 17 17;
+  --ink-card: 22 22 22;
+  --ink-border: 34 34 34;
+  --ink-muted: 42 42 42;
+  --cream: 240 235 224;
+  --cream-muted: 158 154 142;
+
+  --bg-html: #0a0a0a;
+  --scrollbar-track: #0a0a0a;
+  --scrollbar-thumb: #2a2a2a;
+  --selection-text: #f0ebe0;
+}
+
+[data-theme='light'] {
+  /* Silver theme */
+  --ink-black: 244 244 246;
+  --ink-dark: 232 232 238;
+  --ink-card: 255 255 255;
+  --ink-border: 209 209 218;
+  --ink-muted: 224 224 230;
+  --cream: 22 22 28;
+  /* Near-black muted — ensures legibility even at reduced opacity on light bg */
+  --cream-muted: 18 18 32;
+
+  --bg-html: #f4f4f6;
+  --scrollbar-track: #f4f4f6;
+  --scrollbar-thumb: #c8c8d4;
+  --selection-text: #16161c;
+}
+
+/* ── Font size ─────────────────────────────────────────────────────────── */
+
+[data-font='large'] {
+  /* Scales all rem-based Tailwind sizes up ~18.75% */
+  font-size: 19px;
+}
+
+/* ── Base ──────────────────────────────────────────────────────────────── */
+
 @layer base {
   html {
-    background-color: #0a0a0a;
+    background-color: var(--bg-html);
     -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.2s ease;
   }
 
   body {
@@ -13,6 +60,7 @@
     margin: 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   * {
@@ -20,8 +68,8 @@
   }
 
   ::selection {
-    background-color: rgba(192, 57, 43, 0.3);
-    color: #f0ebe0;
+    background-color: rgba(192, 57, 43, 0.25);
+    color: var(--selection-text);
   }
 
   ::-webkit-scrollbar {
@@ -29,13 +77,15 @@
   }
 
   ::-webkit-scrollbar-track {
-    background: #0a0a0a;
+    background: var(--scrollbar-track);
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #2a2a2a;
+    background: var(--scrollbar-thumb);
   }
 }
+
+/* ── Utilities ─────────────────────────────────────────────────────────── */
 
 @layer utilities {
   .pt-safe-top {
