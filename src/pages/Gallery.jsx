@@ -17,13 +17,15 @@ import ArtistDetail from '../components/ArtistDetail'
 import ArtistBrowse from '../components/ArtistBrowse'
 import RankingMode from '../components/RankingMode'
 import StyleWall from '../components/StyleWall'
+import FilmstripView from '../components/FilmstripView'
+import CompareView from '../components/CompareView'
 import TagPill from '../components/TagPill'
 import { STYLE_TAGS } from '../data/artists'
 
 export default function Gallery({ artists, setArtists }) {
   const [activeTag, setActiveTag] = useState(null)
   const [selected, setSelected] = useState(null)
-  const [viewMode, setViewMode] = useState('grid') // 'grid' | 'wall'
+  const [viewMode, setViewMode] = useState('filmstrip')
   const [browsing, setBrowsing] = useState(false)
   const [ranking, setRanking] = useState(false)
 
@@ -57,6 +59,21 @@ export default function Gallery({ artists, setArtists }) {
 
   function saveImages(artist, images) {
     setArtists((prev) => prev.map((a) => (a.id === artist.id ? { ...a, images } : a)))
+  }
+
+  function setRank(artistId, newRank) {
+    setArtists((prev) => {
+      const all = prev.slice().sort((a, b) => a.rank - b.rank)
+      const oldIndex = all.findIndex((a) => a.id === artistId)
+      if (oldIndex === -1) return prev
+      const clamped = Math.max(1, Math.min(all.length, newRank))
+      const newIndex = clamped - 1
+      if (oldIndex === newIndex) return prev
+      const [moved] = all.splice(oldIndex, 1)
+      all.splice(newIndex, 0, moved)
+      const reranked = all.map((a, i) => ({ ...a, rank: i + 1 }))
+      return prev.map((a) => reranked.find((r) => r.id === a.id) || a)
+    })
   }
 
   function ArtistGrid({ items }) {
@@ -144,26 +161,31 @@ export default function Gallery({ artists, setArtists }) {
           </div>
           {/* View toggle */}
           <div className="flex gap-1 shrink-0 ml-2">
-            <button
-              onClick={() => setViewMode('grid')}
-              title="Grid view"
-              className={`px-2 py-1 rounded-sm text-[13px] font-mono transition-colors ${viewMode === 'grid' ? 'text-cream bg-ink-card' : 'text-cream-muted/50 hover:text-cream-muted'}`}
-            >
-              ⊞
-            </button>
-            <button
-              onClick={() => setViewMode('wall')}
-              title="Style wall"
-              className={`px-2 py-1 rounded-sm text-[13px] font-mono transition-colors ${viewMode === 'wall' ? 'text-cream bg-ink-card' : 'text-cream-muted/50 hover:text-cream-muted'}`}
-            >
-              ▦
-            </button>
+            {[
+              { mode: 'filmstrip', label: '☰', title: 'Filmstrip view' },
+              { mode: 'compare', label: '⊟', title: 'Compare artists' },
+              { mode: 'grid', label: '⊞', title: 'Grid view' },
+              { mode: 'wall', label: '▦', title: 'Style wall' },
+            ].map(({ mode, label, title }) => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                title={title}
+                className={`px-2 py-1 rounded-sm text-[13px] font-mono transition-colors ${viewMode === mode ? 'text-cream bg-ink-card' : 'text-cream-muted/50 hover:text-cream-muted'}`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
       {viewMode === 'wall' ? (
         <StyleWall artists={artists} onOpenArtist={setSelected} />
+      ) : viewMode === 'filmstrip' ? (
+        <FilmstripView artists={sorted} onOpenArtist={setSelected} onSetRank={setRank} />
+      ) : viewMode === 'compare' ? (
+        <CompareView artists={artists} onOpenArtist={setSelected} />
       ) : (
         <div className="px-4">
           <ArtistGrid items={sorted} />

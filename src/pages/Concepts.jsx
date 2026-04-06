@@ -1,110 +1,66 @@
 import { useState } from 'react'
 
-const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages'
+const SYSTEM_PROMPT = `You are a creative tattoo concept consultant with deep knowledge of tattoo styles, placement, and aesthetics. When given a concept prompt, provide:
+1. A vivid visual description of the tattoo concept (2-3 sentences)
+2. Recommended style (from: dark-illustrative, fine-line, blackwork, surrealism, dark-fantasy, realism)
+3. Suggested placement
+4. Mood/aesthetic notes (1-2 sentences)
+5. Which type of artist would suit this best (brief)
+
+Be specific, evocative, and editorial in tone. Format as plain text with labelled sections.`
+
+function buildPrompt(userPrompt) {
+  return `${SYSTEM_PROMPT}\n\nA client wants a tattoo based on this prompt: "${userPrompt}"`
+}
 
 export default function Concepts({ concepts, setConcepts }) {
   const [prompt, setPrompt] = useState('')
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem('claude_api_key') || '')
-  const [showKeyInput, setShowKeyInput] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [copied, setCopied] = useState(false)
   const [selected, setSelected] = useState(null)
+  const [pasting, setPasting] = useState(null) // id of concept being pasted into
 
-  function saveKey(key) {
-    setApiKey(key)
-    localStorage.setItem('claude_api_key', key)
-    setShowKeyInput(false)
+  async function copyPrompt() {
+    if (!prompt.trim()) return
+    const full = buildPrompt(prompt)
+    await navigator.clipboard.writeText(full)
+    setCopied(true)
+
+    // Create a placeholder concept to paste the response into
+    const concept = {
+      id: Date.now().toString(),
+      prompt,
+      fullPrompt: full,
+      response: '',
+      createdAt: new Date().toISOString(),
+    }
+    setConcepts((prev) => [concept, ...prev])
+    setPasting(concept.id)
+    setPrompt('')
+    setTimeout(() => setCopied(false), 2000)
   }
 
-  async function generate() {
-    if (!prompt.trim()) return
-    if (!apiKey) { setShowKeyInput(true); return }
-
-    setLoading(true)
-    setError('')
-
-    try {
-      const response = await fetch(CLAUDE_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-calls': 'true',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1024,
-          messages: [
-            {
-              role: 'user',
-              content: `You are a creative tattoo concept consultant. A client wants a tattoo based on this prompt: "${prompt}"\n\nProvide:\n1. A vivid visual description of the tattoo concept (2-3 sentences)\n2. Recommended style (from: dark-illustrative, fine-line, blackwork, surrealism, dark-fantasy, realism)\n3. Suggested placement\n4. Mood/aesthetic notes (1-2 sentences)\n5. Which type of artist would suit this best (brief)\n\nBe specific, evocative, and editorial in tone. Format as plain text with labelled sections.`,
-            },
-          ],
-        }),
-      })
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}))
-        throw new Error(err.error?.message || `API error ${response.status}`)
-      }
-
-      const data = await response.json()
-      const text = data.content?.[0]?.text || ''
-
-      const concept = {
-        id: Date.now().toString(),
-        prompt,
-        response: text,
-        createdAt: new Date().toISOString(),
-      }
-
-      setConcepts((prev) => [concept, ...prev])
-      setPrompt('')
-    } catch (e) {
-      setError(e.message || 'Something went wrong')
-    } finally {
-      setLoading(false)
-    }
+  function saveResponse(id, response) {
+    setConcepts((prev) => prev.map((c) => c.id === id ? { ...c, response } : c))
+    setPasting(null)
   }
 
   return (
     <div className="min-h-screen bg-ink-black px-4 pt-safe-top pb-24">
-      <div className="pt-12 pb-6 flex items-end justify-between">
-        <div>
-          <p className="font-mono text-[12px] text-accent tracking-[0.3em] uppercase mb-1">Tattoo</p>
-          <h1 className="font-display text-3xl text-cream">AI Concepts</h1>
-        </div>
-        <button
-          onClick={() => setShowKeyInput((v) => !v)}
-          className="text-[12px] font-mono text-cream-muted/90 hover:text-cream-muted transition-colors tracking-widest uppercase"
-          title="Configure API key"
-        >
-          {apiKey ? '● API' : '○ API'}
-        </button>
+      <div className="pt-12 pb-6">
+        <p className="font-mono text-[12px] text-accent tracking-[0.3em] uppercase mb-1">Tattoo</p>
+        <h1 className="font-display text-3xl text-cream">AI Concepts</h1>
       </div>
 
-      {showKeyInput && (
-        <div className="mb-6 p-4 bg-ink-card border border-ink-border rounded-sm animate-slide-up">
-          <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase mb-3">Claude API Key</p>
-          <p className="text-cream-muted/90 text-xs font-body mb-3">Your key is stored locally and never sent to any server.</p>
-          <div className="flex gap-2">
-            <input
-              type="password"
-              className="flex-1 bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-mono placeholder-cream-muted/60"
-              placeholder="sk-ant-…"
-              defaultValue={apiKey}
-              id="api-key-input"
-            />
-            <button
-              onClick={() => saveKey(document.getElementById('api-key-input').value)}
-              className="px-4 py-2 bg-ink-muted border border-ink-border rounded-sm text-sm text-cream hover:border-cream-muted/50 transition-colors"
-            >
-              Save
-            </button>
-          </div>
-        </div>
-      )}
+      {/* How it works */}
+      <div className="mb-6 p-4 bg-ink-card/50 border border-ink-border rounded-sm">
+        <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase mb-2">How it works</p>
+        <ol className="text-cream-muted/80 text-xs font-body space-y-1 list-decimal list-inside">
+          <li>Describe your tattoo idea below</li>
+          <li>Tap <span className="text-accent">Copy Prompt</span> — a detailed AI prompt is copied to your clipboard</li>
+          <li>Paste into <a href="https://chatgpt.com" target="_blank" rel="noopener noreferrer" className="text-accent hover:text-accent-hover underline">ChatGPT</a> (or any AI chat)</li>
+          <li>Paste the response back here to save it</li>
+        </ol>
+      </div>
 
       {/* Prompt input */}
       <div className="mb-8">
@@ -114,21 +70,18 @@ export default function Concepts({ concepts, setConcepts }) {
           placeholder="Describe a tattoo concept… e.g. 'A moth emerging from a skull wreathed in dark botanicals'"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter' && e.metaKey) generate() }}
+          onKeyDown={(e) => { if (e.key === 'Enter' && e.metaKey) copyPrompt() }}
         />
         <div className="flex items-center justify-between mt-2">
-          <span className="text-[12px] font-mono text-cream-muted/90">⌘ Enter to generate</span>
+          <span className="text-[12px] font-mono text-cream-muted/90">⌘ Enter to copy</span>
           <button
-            onClick={generate}
-            disabled={loading || !prompt.trim()}
+            onClick={copyPrompt}
+            disabled={!prompt.trim()}
             className="px-5 py-2 bg-accent hover:bg-accent-hover disabled:opacity-30 disabled:cursor-not-allowed text-cream text-sm font-body rounded-sm transition-colors"
           >
-            {loading ? 'Generating…' : 'Generate'}
+            {copied ? 'Copied!' : 'Copy Prompt'}
           </button>
         </div>
-        {error && (
-          <p className="text-accent text-xs font-mono mt-2">{error}</p>
-        )}
       </div>
 
       {/* Results */}
@@ -136,35 +89,92 @@ export default function Concepts({ concepts, setConcepts }) {
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <span className="text-5xl mb-4 opacity-10">✦</span>
           <p className="text-cream-muted/90 font-body text-sm">No concepts yet.</p>
-          <p className="text-cream-muted/90 font-body text-xs mt-1">Describe an idea and generate your first concept.</p>
+          <p className="text-cream-muted/90 font-body text-xs mt-1">Describe an idea and copy the prompt to get started.</p>
         </div>
       ) : (
         <div className="space-y-4">
           {concepts.map((c) => (
             <div
               key={c.id}
-              className="bg-ink-card border border-ink-border rounded-sm p-4 cursor-pointer hover:border-cream-muted/50 transition-colors animate-slide-up"
-              onClick={() => setSelected(selected?.id === c.id ? null : c)}
+              className="bg-ink-card border border-ink-border rounded-sm p-4 animate-slide-up"
             >
               <p className="text-cream-muted/90 text-[12px] font-mono tracking-widest uppercase mb-2">Prompt</p>
               <p className="text-cream font-body text-sm mb-3 italic">"{c.prompt}"</p>
 
-              {selected?.id === c.id ? (
-                <div className="mt-3 pt-3 border-t border-ink-border">
-                  <p className="text-cream-muted text-sm font-body leading-relaxed whitespace-pre-wrap">{c.response}</p>
-                </div>
-              ) : (
-                <p className="text-cream-muted/90 text-xs font-mono">{new Date(c.createdAt).toLocaleDateString()} · tap to expand</p>
+              {c.fullPrompt && (
+                <details className="mb-3 group">
+                  <summary className="text-[11px] font-mono text-cream-muted/50 tracking-widest uppercase cursor-pointer hover:text-cream-muted transition-colors">
+                    View generated prompt
+                  </summary>
+                  <div className="mt-2 p-3 bg-ink-muted/50 border border-ink-border rounded-sm relative">
+                    <pre className="text-cream-muted/70 text-xs font-mono whitespace-pre-wrap leading-relaxed">{c.fullPrompt}</pre>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(c.fullPrompt)}
+                      className="absolute top-2 right-2 text-[10px] font-mono text-cream-muted/40 hover:text-cream-muted tracking-widest uppercase transition-colors"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </details>
               )}
 
-              <div className="flex justify-end mt-3">
-                <button
-                  onClick={(e) => { e.stopPropagation(); setConcepts((prev) => prev.filter((x) => x.id !== c.id)) }}
-                  className="text-[12px] font-mono text-cream-muted/90 hover:text-accent transition-colors tracking-widest uppercase"
+              {pasting === c.id ? (
+                <div className="mt-3 pt-3 border-t border-ink-border">
+                  <p className="text-[12px] font-mono text-accent tracking-widest uppercase mb-2">Paste AI response</p>
+                  <textarea
+                    autoFocus
+                    className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-body placeholder-cream-muted/60 resize-none"
+                    rows={8}
+                    placeholder="Paste the ChatGPT response here…"
+                    id={`paste-${c.id}`}
+                  />
+                  <div className="flex justify-end gap-3 mt-2">
+                    <button
+                      onClick={() => { setConcepts((prev) => prev.filter((x) => x.id !== c.id)); setPasting(null) }}
+                      className="text-[12px] font-mono text-cream-muted/60 hover:text-cream-muted transition-colors tracking-widest uppercase"
+                    >
+                      Discard
+                    </button>
+                    <button
+                      onClick={() => saveResponse(c.id, document.getElementById(`paste-${c.id}`).value)}
+                      className="text-[12px] font-mono text-accent hover:text-accent-hover transition-colors tracking-widest uppercase"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              ) : c.response ? (
+                <div
+                  className="cursor-pointer"
+                  onClick={() => setSelected(selected?.id === c.id ? null : c)}
                 >
-                  Delete
+                  {selected?.id === c.id ? (
+                    <div className="mt-3 pt-3 border-t border-ink-border">
+                      <p className="text-cream-muted text-sm font-body leading-relaxed whitespace-pre-wrap">{c.response}</p>
+                    </div>
+                  ) : (
+                    <p className="text-cream-muted/90 text-xs font-mono">{new Date(c.createdAt).toLocaleDateString()} · tap to expand</p>
+                  )}
+                </div>
+              ) : (
+                <button
+                  onClick={() => setPasting(c.id)}
+                  className="mt-2 text-[12px] font-mono text-accent hover:text-accent-hover transition-colors tracking-widest uppercase"
+                >
+                  + Paste response
                 </button>
-              </div>
+              )}
+
+              {pasting !== c.id && (
+                <div className="flex justify-end mt-3">
+                  <button
+                    onClick={() => setConcepts((prev) => prev.filter((x) => x.id !== c.id))}
+                    className="text-[12px] font-mono text-cream-muted/90 hover:text-accent transition-colors tracking-widest uppercase"
+                  >
+                    Delete
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>

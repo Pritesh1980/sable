@@ -1,14 +1,29 @@
 import { useState } from 'react'
 import TagPill from '../components/TagPill'
 import { STYLE_TAGS, PLACEMENTS } from '../data/artists'
+import { IDEA_STATUSES, matchArtistsToIdea } from '../data/brief'
+
+const STATUS_DOTS = {
+  idea: 'bg-cream-muted/40',
+  booked: 'bg-accent',
+  done: 'bg-green-400',
+}
 
 function IdeaCard({ idea, onOpen }) {
+  const status = IDEA_STATUSES.find((s) => s.value === (idea.status || 'idea'))
+
   return (
     <div
       className="bg-ink-card border border-ink-border rounded-sm p-4 cursor-pointer hover:border-cream-muted/50 transition-colors animate-slide-up"
       onClick={() => onOpen(idea)}
     >
-      <h3 className="font-display text-cream text-lg mb-1">{idea.title}</h3>
+      <div className="flex items-start justify-between mb-1">
+        <h3 className="font-display text-cream text-lg leading-tight">{idea.title}</h3>
+        <span className={`flex items-center gap-1.5 text-[11px] font-mono tracking-widest uppercase shrink-0 ml-3 mt-1 ${status.color}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOTS[status.value]}`} />
+          {status.label}
+        </span>
+      </div>
       {idea.description && (
         <p className="text-cream-muted text-sm font-body leading-relaxed line-clamp-2 mb-3">{idea.description}</p>
       )}
@@ -26,9 +41,13 @@ function IdeaCard({ idea, onOpen }) {
 }
 
 function IdeaModal({ idea, onClose, onSave, onDelete, artists }) {
-  const [draft, setDraft] = useState({ ...idea })
+  const [draft, setDraft] = useState({ status: 'idea', ...idea })
   const [newImage, setNewImage] = useState('')
   const isNew = !idea.id
+
+  const suggested = matchArtistsToIdea(draft, artists).filter(
+    (a) => !draft.linkedArtists?.includes(a.id)
+  )
 
   function toggleTag(tag) {
     setDraft((d) => ({
@@ -59,8 +78,6 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists }) {
     onSave({ ...draft, id: draft.id || Date.now().toString() })
   }
 
-  const artistOptions = artists
-
   return (
     <div className="fixed inset-0 z-50 bg-ink-black/95 flex flex-col animate-fade-in overflow-y-auto">
       <div className="flex items-center justify-between px-5 pt-safe-top pt-6 pb-4 border-b border-ink-border sticky top-0 bg-ink-black z-10">
@@ -88,6 +105,27 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists }) {
             value={draft.title}
             onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
           />
+        </div>
+
+        {/* Status */}
+        <div>
+          <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase mb-3">Status</p>
+          <div className="flex gap-2">
+            {IDEA_STATUSES.map((s) => (
+              <button
+                key={s.value}
+                onClick={() => setDraft((d) => ({ ...d, status: s.value }))}
+                className={`flex items-center gap-2 px-4 py-2 rounded-sm text-sm font-mono border transition-colors ${
+                  draft.status === s.value
+                    ? 'border-cream-muted/50 text-cream bg-ink-card'
+                    : 'border-ink-border text-cream-muted hover:border-cream-muted/30'
+                }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOTS[s.value]}`} />
+                {s.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div>
@@ -153,18 +191,45 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists }) {
           </div>
         </div>
 
+        {/* Suggested artists based on tag match */}
+        {suggested.length > 0 && (
+          <div>
+            <p className="text-[12px] font-mono text-accent tracking-widest uppercase mb-2">Suggested artists</p>
+            <p className="text-cream-muted/90 text-[11px] font-mono mb-3">Based on style tag overlap — tap to link</p>
+            <div className="space-y-1">
+              {suggested.map((a) => (
+                <button
+                  key={a.id}
+                  onClick={() => toggleArtist(a.id)}
+                  className="w-full text-left px-3 py-2 rounded-sm text-sm font-body transition-colors border border-accent/20 text-cream-muted hover:border-accent/50 hover:text-cream"
+                >
+                  {a.name || `@${a.handle}`}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div>
           <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase mb-3">Linked Artists</p>
+          {draft.linkedArtists?.length === 0 && suggested.length === 0 && (
+            <p className="text-cream-muted/60 text-xs font-mono mb-2">Add style tags above to get artist suggestions.</p>
+          )}
           <div className="space-y-1">
-            {artistOptions.map((a) => (
+            {artists.filter((a) => draft.linkedArtists?.includes(a.id)).map((a) => (
               <button
                 key={a.id}
                 onClick={() => toggleArtist(a.id)}
-                className={`w-full text-left px-3 py-2 rounded-sm text-sm font-body transition-colors border ${
-                  draft.linkedArtists?.includes(a.id)
-                    ? 'border-accent/40 bg-accent/5 text-cream'
-                    : 'border-ink-border text-cream-muted hover:border-cream-muted/50'
-                }`}
+                className="w-full text-left px-3 py-2 rounded-sm text-sm font-body transition-colors border border-accent/40 bg-accent/5 text-cream"
+              >
+                {a.name || `@${a.handle}`}
+              </button>
+            ))}
+            {artists.filter((a) => !draft.linkedArtists?.includes(a.id) && !suggested.find((s) => s.id === a.id)).map((a) => (
+              <button
+                key={a.id}
+                onClick={() => toggleArtist(a.id)}
+                className="w-full text-left px-3 py-2 rounded-sm text-sm font-body transition-colors border border-ink-border text-cream-muted hover:border-cream-muted/50"
               >
                 {a.name || `@${a.handle}`}
               </button>
@@ -176,10 +241,11 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists }) {
   )
 }
 
-const BLANK_IDEA = { title: '', description: '', tags: [], placement: '', images: [], linkedArtists: [] }
+const BLANK_IDEA = { title: '', description: '', tags: [], placement: '', images: [], linkedArtists: [], status: 'idea' }
 
 export default function Brief({ ideas, setIdeas, artists }) {
   const [modal, setModal] = useState(null)
+  const [statusFilter, setStatusFilter] = useState(null)
 
   function saveIdea(idea) {
     setIdeas((prev) => {
@@ -192,6 +258,15 @@ export default function Brief({ ideas, setIdeas, artists }) {
   function deleteIdea(id) {
     setIdeas((prev) => prev.filter((i) => i.id !== id))
   }
+
+  const filtered = statusFilter
+    ? ideas.filter((i) => (i.status || 'idea') === statusFilter)
+    : ideas
+
+  const counts = IDEA_STATUSES.reduce((acc, s) => {
+    acc[s.value] = ideas.filter((i) => (i.status || 'idea') === s.value).length
+    return acc
+  }, {})
 
   return (
     <div className="min-h-screen bg-ink-black px-4 pt-safe-top pb-24">
@@ -208,15 +283,43 @@ export default function Brief({ ideas, setIdeas, artists }) {
         </button>
       </div>
 
-      {ideas.length === 0 ? (
+      {/* Status filter tabs */}
+      {ideas.length > 0 && (
+        <div className="flex gap-2 mb-6">
+          <button
+            onClick={() => setStatusFilter(null)}
+            className={`px-3 py-1.5 rounded-sm text-xs font-mono border transition-colors ${
+              !statusFilter ? 'border-cream-muted/50 text-cream' : 'border-ink-border text-cream-muted hover:border-cream-muted/30'
+            }`}
+          >
+            All ({ideas.length})
+          </button>
+          {IDEA_STATUSES.map((s) => counts[s.value] > 0 && (
+            <button
+              key={s.value}
+              onClick={() => setStatusFilter(statusFilter === s.value ? null : s.value)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-mono border transition-colors ${
+                statusFilter === s.value ? 'border-cream-muted/50 text-cream' : 'border-ink-border text-cream-muted hover:border-cream-muted/30'
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOTS[s.value]}`} />
+              {s.label} ({counts[s.value]})
+            </button>
+          ))}
+        </div>
+      )}
+
+      {filtered.length === 0 && ideas.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <span className="text-5xl mb-4 opacity-10">◇</span>
           <p className="text-cream-muted/90 font-body text-sm">No ideas yet.</p>
           <p className="text-cream-muted/90 font-body text-xs mt-1">Tap + to capture your first concept.</p>
         </div>
+      ) : filtered.length === 0 ? (
+        <p className="text-cream-muted/90 text-center text-xs font-mono tracking-widest py-16">No ideas with this status.</p>
       ) : (
         <div className="space-y-3">
-          {ideas.map((idea) => (
+          {filtered.map((idea) => (
             <IdeaCard key={idea.id} idea={idea} onOpen={setModal} />
           ))}
         </div>
