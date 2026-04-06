@@ -15,6 +15,7 @@ import {
 import SortableArtistCard from '../components/SortableArtistCard'
 import ArtistDetail from '../components/ArtistDetail'
 import ArtistBrowse from '../components/ArtistBrowse'
+import RankingMode from '../components/RankingMode'
 import StyleWall from '../components/StyleWall'
 import TagPill from '../components/TagPill'
 import { STYLE_TAGS } from '../data/artists'
@@ -24,6 +25,7 @@ export default function Gallery({ artists, setArtists }) {
   const [selected, setSelected] = useState(null)
   const [viewMode, setViewMode] = useState('grid') // 'grid' | 'wall'
   const [browsing, setBrowsing] = useState(false)
+  const [ranking, setRanking] = useState(false)
 
   const artistsWithImages = artists.filter((a) => a.images?.length > 0)
 
@@ -105,12 +107,20 @@ export default function Gallery({ artists, setArtists }) {
           <h1 className="font-display text-5xl text-cream leading-none tracking-tight">Artists</h1>
         </div>
         {artistsWithImages.length > 0 && (
-          <button
-            onClick={() => setBrowsing(true)}
-            className="font-mono text-[12px] text-cream-muted hover:text-cream border border-ink-border hover:border-cream-muted/40 px-3 py-2 rounded-sm transition-colors tracking-widest uppercase mb-1"
-          >
-            Browse
-          </button>
+          <div className="flex gap-2 mb-1">
+            <button
+              onClick={() => setRanking(true)}
+              className="font-mono text-[12px] text-accent hover:text-cream border border-accent/40 hover:border-accent px-3 py-2 rounded-sm transition-colors tracking-widest uppercase"
+            >
+              Rank
+            </button>
+            <button
+              onClick={() => setBrowsing(true)}
+              className="font-mono text-[12px] text-cream-muted hover:text-cream border border-ink-border hover:border-cream-muted/40 px-3 py-2 rounded-sm transition-colors tracking-widest uppercase"
+            >
+              Browse
+            </button>
+          </div>
         )}
       </div>
 
@@ -177,6 +187,17 @@ export default function Gallery({ artists, setArtists }) {
         <ArtistBrowse
           artists={artists}
           onClose={() => setBrowsing(false)}
+        />
+      )}
+
+      {ranking && (
+        <RankingMode
+          artists={artists}
+          onClose={() => setRanking(false)}
+          onApplyRanking={(updated) => {
+            setArtists((prev) => prev.map((a) => updated.find((u) => u.id === a.id) || a))
+            setRanking(false)
+          }}
         />
       )}
     </div>
