@@ -12,7 +12,6 @@ import { useArtistStorage } from './hooks/useArtistStorage'
 export default function App() {
   const [artists, setArtists] = useArtistStorage()
   const [ideas, setIdeas] = useStorage('tattoo_ideas', [])
-  const [conventions, setConventions] = useStorage('tattoo_conventions', [])
   const [concepts, setConcepts] = useStorage('tattoo_concepts', [])
   const [boards, setBoards] = useStorage('tattoo_boards', [])
 
@@ -21,7 +20,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Gallery artists={artists} setArtists={setArtists} />} />
         <Route path="/brief" element={<Brief ideas={ideas} setIdeas={setIdeas} artists={artists} />} />
-        <Route path="/conventions" element={<Conventions conventions={conventions} setConventions={setConventions} artists={artists} />} />
+        <Route path="/conventions" element={<Conventions />} />
         <Route path="/concepts" element={<Concepts concepts={concepts} setConcepts={setConcepts} />} />
         <Route path="/boards" element={<Boards boards={boards} setBoards={setBoards} ideas={ideas} />} />
         <Route path="/manage" element={<Manage artists={artists} setArtists={setArtists} />} />
