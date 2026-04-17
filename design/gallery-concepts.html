@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gallery View Concepts</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@300;400&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #0a0a0a;
+    color: #e8e0d4;
+    font-family: 'Inter', sans-serif;
+    line-height: 1.5;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.5rem;
+    text-align: center;
+    padding: 3rem 2rem 1rem;
+    letter-spacing: -0.02em;
+  }
+
+  .subtitle {
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: #c8423f;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    margin-bottom: 3rem;
+  }
+
+  .concept {
+    max-width: 1200px;
+    margin: 0 auto 4rem;
+    padding: 0 2rem;
+  }
+
+  .concept-header {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .concept-number {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: #c8423f;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+  }
+
+  .concept-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+  }
+
+  .concept-desc {
+    color: #a89e91;
+    font-size: 0.85rem;
+    margin-bottom: 1.5rem;
+    max-width: 600px;
+  }
+
+  .mockup {
+    background: #111;
+    border: 1px solid #222;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .mockup-bar {
+    background: #181818;
+    padding: 8px 12px;
+    display: flex;
+    gap: 6px;
+    border-bottom: 1px solid #222;
+  }
+
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #ffbd2e; }
+  .dot-g { background: #28c840; }
+
+  /* === CONCEPT 1: FILMSTRIP ROWS === */
+  .filmstrip {
+    padding: 1rem;
+  }
+
+  .filmstrip-row {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #1a1a1a;
+    padding: 12px 0;
+  }
+
+  .filmstrip-row:last-child { border-bottom: none; }
+
+  .filmstrip-info {
+    min-width: 180px;
+    padding-right: 1.5rem;
+    border-right: 1px solid #1a1a1a;
+  }
+
+  .filmstrip-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.95rem;
+    margin-bottom: 2px;
+  }
+
+  .filmstrip-handle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    color: #666;
+  }
+
+  .filmstrip-tags {
+    display: flex;
+    gap: 4px;
+    margin-top: 6px;
+  }
+
+  .tag-sm {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem;
+    padding: 2px 6px;
+    border: 1px solid #333;
+    border-radius: 2px;
+    color: #888;
+  }
+
+  .filmstrip-images {
+    display: flex;
+    gap: 8px;
+    padding: 0 1rem;
+    overflow-x: auto;
+    flex: 1;
+  }
+
+  .filmstrip-img {
+    width: 90px;
+    height: 90px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .img-placeholder {
+    background: linear-gradient(135deg, #1a1a1a, #252525);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #333;
+    font-size: 0.7rem;
+  }
+
+  .filmstrip-images .img-placeholder:nth-child(1) { background: linear-gradient(135deg, #1a1520, #251a28); }
+  .filmstrip-images .img-placeholder:nth-child(2) { background: linear-gradient(135deg, #151a20, #1a2528); }
+  .filmstrip-images .img-placeholder:nth-child(3) { background: linear-gradient(135deg, #1a1a15, #252520); }
+  .filmstrip-images .img-placeholder:nth-child(4) { background: linear-gradient(135deg, #201515, #281a1a); }
+  .filmstrip-images .img-placeholder:nth-child(5) { background: linear-gradient(135deg, #151a15, #1a251a); }
+  .filmstrip-images .img-placeholder:nth-child(6) { background: linear-gradient(135deg, #1a1518, #251a22); }
+
+  .scroll-hint {
+    position: absolute;
+    right: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem;
+    color: #444;
+    letter-spacing: 0.2em;
+  }
+
+  /* === CONCEPT 2: SPLIT PANE === */
+  .splitpane {
+    display: flex;
+    height: 400px;
+  }
+
+  .splitpane-list {
+    width: 260px;
+    border-right: 1px solid #222;
+    overflow-y: auto;
+    background: #0e0e0e;
+  }
+
+  .splitpane-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid #1a1a1a;
+    cursor: default;
+  }
+
+  .splitpane-item.active {
+    background: #181418;
+    border-left: 2px solid #c8423f;
+  }
+
+  .splitpane-item-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.85rem;
+  }
+
+  .splitpane-item-handle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    color: #555;
+  }
+
+  .splitpane-detail {
+    flex: 1;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .splitpane-detail-header {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .splitpane-detail-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+  }
+
+  .splitpane-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    flex: 1;
+  }
+
+  .splitpane-grid .img-placeholder {
+    border-radius: 4px;
+    aspect-ratio: 1;
+  }
+
+  .splitpane-grid .img-placeholder:nth-child(1) { background: linear-gradient(135deg, #1a1520, #302030); }
+  .splitpane-grid .img-placeholder:nth-child(2) { background: linear-gradient(135deg, #151a20, #203028); }
+  .splitpane-grid .img-placeholder:nth-child(3) { background: linear-gradient(135deg, #1a1a15, #302820); }
+  .splitpane-grid .img-placeholder:nth-child(4) { background: linear-gradient(135deg, #201515, #302020); }
+  .splitpane-grid .img-placeholder:nth-child(5) { background: linear-gradient(135deg, #151520, #202030); }
+  .splitpane-grid .img-placeholder:nth-child(6) { background: linear-gradient(135deg, #1a1518, #281a28); }
+  .splitpane-grid .img-placeholder:nth-child(7) { background: linear-gradient(135deg, #18151a, #22182a); }
+  .splitpane-grid .img-placeholder:nth-child(8) { background: linear-gradient(135deg, #151a18, #1a2822); }
+
+  .kbd {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem;
+    padding: 1px 5px;
+    border: 1px solid #333;
+    border-radius: 3px;
+    color: #555;
+    margin-top: 6px;
+  }
+
+  /* === CONCEPT 3: COMPARISON COLUMNS === */
+  .comparison {
+    padding: 1rem;
+  }
+
+  .comparison-cols {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    height: 380px;
+  }
+
+  .comparison-col {
+    border: 1px solid #222;
+    border-radius: 4px;
+    overflow-y: auto;
+    background: #0e0e0e;
+  }
+
+  .comparison-col-header {
+    padding: 12px;
+    border-bottom: 1px solid #222;
+    background: #111;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  .comparison-col-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.95rem;
+  }
+
+  .comparison-col-handle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem;
+    color: #555;
+  }
+
+  .comparison-col-images {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding: 10px;
+  }
+
+  .comparison-col-images .img-placeholder {
+    aspect-ratio: 1;
+    border-radius: 3px;
+  }
+
+  .comparison-col:nth-child(1) .img-placeholder { background: linear-gradient(135deg, #1a1520, #251a28); }
+  .comparison-col:nth-child(2) .img-placeholder { background: linear-gradient(135deg, #151a20, #1a2528); }
+  .comparison-col:nth-child(3) .img-placeholder { background: linear-gradient(135deg, #201515, #281a1a); }
+  .comparison-col:nth-child(1) .img-placeholder:nth-child(2n) { background: linear-gradient(135deg, #201520, #2a1a28); }
+  .comparison-col:nth-child(2) .img-placeholder:nth-child(2n) { background: linear-gradient(135deg, #1a2020, #1a2a28); }
+  .comparison-col:nth-child(3) .img-placeholder:nth-child(2n) { background: linear-gradient(135deg, #251515, #301a1a); }
+
+  .comparison-selector {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .comparison-chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    padding: 4px 10px;
+    border: 1px solid #333;
+    border-radius: 2px;
+    color: #888;
+  }
+
+  .comparison-chip.active {
+    border-color: #c8423f;
+    color: #c8423f;
+  }
+
+  /* === CONCEPT 4: KANBAN LANES === */
+  .lanes {
+    display: flex;
+    gap: 10px;
+    padding: 1rem;
+    overflow-x: auto;
+    height: 400px;
+  }
+
+  .lane {
+    min-width: 160px;
+    max-width: 160px;
+    border: 1px solid #1a1a1a;
+    border-radius: 4px;
+    overflow-y: auto;
+    background: #0e0e0e;
+    flex-shrink: 0;
+  }
+
+  .lane-header {
+    padding: 10px;
+    border-bottom: 1px solid #1a1a1a;
+    background: #111;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    text-align: center;
+  }
+
+  .lane-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.8rem;
+  }
+
+  .lane-handle {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.5rem;
+    color: #555;
+  }
+
+  .lane-images {
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .lane-images .img-placeholder {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 3px;
+  }
+
+  .lane:nth-child(1) .img-placeholder { background: linear-gradient(135deg, #1a1520, #251a28); }
+  .lane:nth-child(2) .img-placeholder { background: linear-gradient(135deg, #151a20, #1a2528); }
+  .lane:nth-child(3) .img-placeholder { background: linear-gradient(135deg, #201515, #281a1a); }
+  .lane:nth-child(4) .img-placeholder { background: linear-gradient(135deg, #151a15, #1a251a); }
+  .lane:nth-child(5) .img-placeholder { background: linear-gradient(135deg, #1a1a15, #252520); }
+  .lane:nth-child(6) .img-placeholder { background: linear-gradient(135deg, #1a1518, #251a22); }
+  .lane:nth-child(7) .img-placeholder { background: linear-gradient(135deg, #18151a, #22182a); }
+  .lane:nth-child(1) .img-placeholder:nth-child(2n) { background: linear-gradient(135deg, #201520, #2a1a30); }
+  .lane:nth-child(2) .img-placeholder:nth-child(2n) { background: linear-gradient(135deg, #1a2020, #1a2a30); }
+  .lane:nth-child(3) .img-placeholder:nth-child(2n) { background: linear-gradient(135deg, #251515, #301a20); }
+
+  /* === CONCEPT 5: TABLE EXPAND === */
+  .table-view {
+    padding: 0.5rem 1rem;
+  }
+
+  .table-row {
+    display: grid;
+    grid-template-columns: 50px 180px 1fr auto;
+    align-items: center;
+    gap: 1rem;
+    padding: 10px 0;
+    border-bottom: 1px solid #1a1a1a;
+  }
+
+  .table-row.expanded {
+    grid-template-columns: 1fr;
+    padding: 0;
+    border-bottom: none;
+  }
+
+  .table-thumb {
+    width: 44px;
+    height: 44px;
+    border-radius: 4px;
+  }
+
+  .table-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.85rem;
+  }
+
+  .table-tags {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .table-expand-btn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem;
+    color: #555;
+    letter-spacing: 0.15em;
+  }
+
+  .table-expanded-row {
+    background: #0e0e0e;
+    border: 1px solid #1a1a1a;
+    border-radius: 4px;
+    margin: 8px 0;
+    padding: 12px;
+  }
+
+  .table-expanded-header {
+    display: grid;
+    grid-template-columns: 50px 180px 1fr auto;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 12px;
+  }
+
+  .table-expanded-images {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 4px 0;
+  }
+
+  .table-expanded-images .img-placeholder {
+    width: 100px;
+    height: 100px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .table-expanded-images .img-placeholder:nth-child(1) { background: linear-gradient(135deg, #201520, #2a1a30); }
+  .table-expanded-images .img-placeholder:nth-child(2) { background: linear-gradient(135deg, #1a2020, #1a2a30); }
+  .table-expanded-images .img-placeholder:nth-child(3) { background: linear-gradient(135deg, #251515, #301a20); }
+  .table-expanded-images .img-placeholder:nth-child(4) { background: linear-gradient(135deg, #152015, #1a2a1a); }
+  .table-expanded-images .img-placeholder:nth-child(5) { background: linear-gradient(135deg, #1a1a18, #252522); }
+  .table-expanded-images .img-placeholder:nth-child(6) { background: linear-gradient(135deg, #181520, #22182a); }
+
+  /* Annotations */
+  .annotation {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    color: #c8423f;
+    letter-spacing: 0.15em;
+    padding: 6px 12px;
+    border: 1px dashed #c8423f33;
+    border-radius: 3px;
+    display: inline-block;
+  }
+
+  .pros-cons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 1rem;
+    font-size: 0.75rem;
+    color: #777;
+  }
+
+  .pros-cons dt {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .pros-cons .pro dt { color: #28c840; }
+  .pros-cons .con dt { color: #c8423f; }
+
+  .divider {
+    max-width: 1200px;
+    margin: 0 auto;
+    border: none;
+    border-top: 1px solid #1a1a1a;
+  }
+</style>
+</head>
+<body>
+
+<h1>Gallery View Concepts</h1>
+<p class="subtitle">Optimised for widescreen &middot; artist style comparison</p>
+
+<!-- CONCEPT 1 -->
+<div class="concept">
+  <div class="concept-header">
+    <span class="concept-number">Option 01</span>
+    <h2 class="concept-title">Filmstrip Rows</h2>
+  </div>
+  <p class="concept-desc">Each artist occupies a full-width row. Info pinned left, images scroll horizontally. Scroll down through artists, scroll right through their work.</p>
+
+  <div class="mockup">
+    <div class="mockup-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+    <div class="filmstrip">
+      <div class="filmstrip-row">
+        <div class="filmstrip-info">
+          <div class="filmstrip-name">Oscar Akermo</div>
+          <div class="filmstrip-handle">@oscarakermo</div>
+          <div class="filmstrip-tags"><span class="tag-sm">dark-illustrative</span><span class="tag-sm">blackwork</span></div>
+        </div>
+        <div class="filmstrip-images">
+          <div class="filmstrip-img img-placeholder"></div>
+          <div class="filmstrip-img img-placeholder"></div>
+          <div class="filmstrip-img img-placeholder"></div>
+          <div class="filmstrip-img img-placeholder"></div>
+          <div class="filmstrip-img img-placeholder"></div>
+          <div class="filmstrip-img img-placeholder"></div>
+        </div>
+      </div>
+      <div class="filmstrip-row">
+        <div class="filmstrip-info">
+          <div class="filmstrip-name">Victor Portugal</div>
+          <div class="filmstrip-handle">@victorportugal</div>
+          <div class="filmstrip-tags"><span class="tag-sm">surrealism</span><span class="tag-sm">realism</span></div>
+        </div>
+        <div class="filmstrip-images">
+          <div class="filmstrip-img img-placeholder"></div>
+          <div class="filmstrip-img img-placeholder"></div>
+          <div class="filmstrip-img img-placeholder"></div>
+          <div class="filmstrip-img img-placeholder"></div>
+          <div class="filmstrip-img img-placeholder"></div>
+          <div class="filmstrip-img img-placeholder"></div>
+        </div>
+      </div>
+      <div class="filmstrip-row">
+        <div class="filmstrip-info">
+          <div class="filmstrip-name">Zoia</div>
+          <div class="filmstrip-handle">@zoia.ink</div>
+          <div class="filmstrip-tags"><span class="tag-sm">fine-line</span><span class="tag-sm">dark-fantasy</span></div>
+        </div>
+        <div class="filmstrip-images">
+          <div class="filmstrip-img img-placeholder"></div>
+          <div class="filmstrip-img img-placeholder"></div>
+          <div class="filmstrip-img img-placeholder"></div>
+          <div class="filmstrip-img img-placeholder"></div>
+          <div class="filmstrip-img img-placeholder"></div>
+          <div class="filmstrip-img img-placeholder"></div>
+        </div>
+      </div>
+      <div class="filmstrip-row">
+        <div class="filmstrip-info">
+          <div class="filmstrip-name">Saad</div>
+          <div class="filmstrip-handle">@saadtattoo</div>
+          <div class="filmstrip-tags"><span class="tag-sm">blackwork</span></div>
+        </div>
+        <div class="filmstrip-images">
+          <div class="filmstrip-img img-placeholder"></div>
+          <div class="filmstrip-img img-placeholder"></div>
+          <div class="filmstrip-img img-placeholder"></div>
+          <div class="filmstrip-img img-placeholder"></div>
+          <div class="filmstrip-img img-placeholder"></div>
+          <div class="filmstrip-img img-placeholder"></div>
+        </div>
+      </div>
+    </div>
+    <span class="scroll-hint" style="bottom: 12px;">scroll → for more images</span>
+  </div>
+
+  <div class="pros-cons">
+    <dl class="pro"><dt>Strengths</dt><dd>See every artist at a glance. Natural scan pattern. No clicks needed. Best for browsing.</dd></dl>
+    <dl class="con"><dt>Tradeoffs</dt><dd>Images are smaller. Horizontal scroll per row can feel fiddly on trackpad.</dd></dl>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- CONCEPT 2 -->
+<div class="concept">
+  <div class="concept-header">
+    <span class="concept-number">Option 02</span>
+    <h2 class="concept-title">Split Pane</h2>
+  </div>
+  <p class="concept-desc">Fixed artist sidebar on the left. Click or arrow-key through artists — their full gallery fills the right panel.</p>
+
+  <div class="mockup">
+    <div class="mockup-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+    <div class="splitpane">
+      <div class="splitpane-list">
+        <div class="splitpane-item">
+          <div class="splitpane-item-name">Zoia</div>
+          <div class="splitpane-item-handle">@zoia.ink</div>
+        </div>
+        <div class="splitpane-item">
+          <div class="splitpane-item-name">Tolga Temirlenk</div>
+          <div class="splitpane-item-handle">@tolgatemirlenk.ink</div>
+        </div>
+        <div class="splitpane-item active">
+          <div class="splitpane-item-name">Oscar Akermo</div>
+          <div class="splitpane-item-handle">@oscarakermo</div>
+        </div>
+        <div class="splitpane-item">
+          <div class="splitpane-item-name">Victor Portugal</div>
+          <div class="splitpane-item-handle">@victorportugal</div>
+        </div>
+        <div class="splitpane-item">
+          <div class="splitpane-item-name">Carlos Valera</div>
+          <div class="splitpane-item-handle">@carl245tattoo</div>
+        </div>
+        <div class="splitpane-item">
+          <div class="splitpane-item-name">Leo Albuquerque</div>
+          <div class="splitpane-item-handle">@leoalbuquerque.tattoo</div>
+        </div>
+        <div class="splitpane-item">
+          <div class="splitpane-item-name">Leon del Cabo</div>
+          <div class="splitpane-item-handle">@leon_del_cabo</div>
+        </div>
+        <div class="splitpane-item">
+          <div class="splitpane-item-name">Berk Bosveren</div>
+          <div class="splitpane-item-handle">@berkbosveren</div>
+        </div>
+      </div>
+      <div class="splitpane-detail">
+        <div class="splitpane-detail-header">
+          <div class="splitpane-detail-name">Oscar Akermo</div>
+          <span class="filmstrip-handle">@oscarakermo</span>
+          <div class="filmstrip-tags"><span class="tag-sm">dark-illustrative</span><span class="tag-sm">blackwork</span></div>
+        </div>
+        <div class="splitpane-grid">
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+        </div>
+        <div style="margin-top: 8px; text-align: center;">
+          <span class="kbd">↑</span> <span class="kbd">↓</span> <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.55rem; color: #444; margin-left: 4px;">navigate artists</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pros-cons">
+    <dl class="pro"><dt>Strengths</dt><dd>Large images. Fast keyboard navigation. Clean layout. Good for deep-diving one artist.</dd></dl>
+    <dl class="con"><dt>Tradeoffs</dt><dd>Only see one artist at a time. Can't visually compare side-by-side without switching back and forth.</dd></dl>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- CONCEPT 3 -->
+<div class="concept">
+  <div class="concept-header">
+    <span class="concept-number">Option 03</span>
+    <h2 class="concept-title">Comparison Columns</h2>
+  </div>
+  <p class="concept-desc">Select 2–3 artists to compare. Each gets a column with independently scrollable images. Like a visual diff.</p>
+
+  <div class="mockup">
+    <div class="mockup-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+    <div class="comparison">
+      <div class="comparison-selector">
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: #555; margin-right: 4px;">Comparing:</span>
+        <span class="comparison-chip active">Oscar Akermo ×</span>
+        <span class="comparison-chip active">Victor Portugal ×</span>
+        <span class="comparison-chip active">Zoia ×</span>
+        <span class="comparison-chip">+ Add artist</span>
+      </div>
+      <div class="comparison-cols">
+        <div class="comparison-col">
+          <div class="comparison-col-header">
+            <div class="comparison-col-name">Oscar Akermo</div>
+            <div class="comparison-col-handle">@oscarakermo</div>
+            <div class="filmstrip-tags" style="margin-top: 4px;"><span class="tag-sm">dark-illustrative</span></div>
+          </div>
+          <div class="comparison-col-images">
+            <div class="img-placeholder"></div>
+            <div class="img-placeholder"></div>
+            <div class="img-placeholder"></div>
+            <div class="img-placeholder"></div>
+            <div class="img-placeholder"></div>
+            <div class="img-placeholder"></div>
+          </div>
+        </div>
+        <div class="comparison-col">
+          <div class="comparison-col-header">
+            <div class="comparison-col-name">Victor Portugal</div>
+            <div class="comparison-col-handle">@victorportugal</div>
+            <div class="filmstrip-tags" style="margin-top: 4px;"><span class="tag-sm">surrealism</span></div>
+          </div>
+          <div class="comparison-col-images">
+            <div class="img-placeholder"></div>
+            <div class="img-placeholder"></div>
+            <div class="img-placeholder"></div>
+            <div class="img-placeholder"></div>
+            <div class="img-placeholder"></div>
+            <div class="img-placeholder"></div>
+          </div>
+        </div>
+        <div class="comparison-col">
+          <div class="comparison-col-header">
+            <div class="comparison-col-name">Zoia</div>
+            <div class="comparison-col-handle">@zoia.ink</div>
+            <div class="filmstrip-tags" style="margin-top: 4px;"><span class="tag-sm">fine-line</span></div>
+          </div>
+          <div class="comparison-col-images">
+            <div class="img-placeholder"></div>
+            <div class="img-placeholder"></div>
+            <div class="img-placeholder"></div>
+            <div class="img-placeholder"></div>
+            <div class="img-placeholder"></div>
+            <div class="img-placeholder"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pros-cons">
+    <dl class="pro"><dt>Strengths</dt><dd>Best for direct comparison. Each column scrolls independently. Great for decision-making.</dd></dl>
+    <dl class="con"><dt>Tradeoffs</dt><dd>Requires choosing artists first. Not a passive browse — it's a deliberate comparison tool.</dd></dl>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- CONCEPT 4 -->
+<div class="concept">
+  <div class="concept-header">
+    <span class="concept-number">Option 04</span>
+    <h2 class="concept-title">Vertical Lanes</h2>
+  </div>
+  <p class="concept-desc">Each artist is a vertical column. Scroll horizontally across artists, vertically within each artist's images. A visual Kanban for art.</p>
+
+  <div class="mockup">
+    <div class="mockup-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+    <div class="lanes">
+      <div class="lane">
+        <div class="lane-header">
+          <div class="lane-name">Oscar Akermo</div>
+          <div class="lane-handle">@oscarakermo</div>
+        </div>
+        <div class="lane-images">
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+        </div>
+      </div>
+      <div class="lane">
+        <div class="lane-header">
+          <div class="lane-name">Victor Portugal</div>
+          <div class="lane-handle">@victorportugal</div>
+        </div>
+        <div class="lane-images">
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+        </div>
+      </div>
+      <div class="lane">
+        <div class="lane-header">
+          <div class="lane-name">Zoia</div>
+          <div class="lane-handle">@zoia.ink</div>
+        </div>
+        <div class="lane-images">
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+        </div>
+      </div>
+      <div class="lane">
+        <div class="lane-header">
+          <div class="lane-name">Saad</div>
+          <div class="lane-handle">@saadtattoo</div>
+        </div>
+        <div class="lane-images">
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+        </div>
+      </div>
+      <div class="lane">
+        <div class="lane-header">
+          <div class="lane-name">Carlos Valera</div>
+          <div class="lane-handle">@carl245tattoo</div>
+        </div>
+        <div class="lane-images">
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+        </div>
+      </div>
+      <div class="lane">
+        <div class="lane-header">
+          <div class="lane-name">Leo Albuquerque</div>
+          <div class="lane-handle">@leoalbuquerque</div>
+        </div>
+        <div class="lane-images">
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+        </div>
+      </div>
+      <div class="lane">
+        <div class="lane-header">
+          <div class="lane-name">Berk Bosveren</div>
+          <div class="lane-handle">@berkbosveren</div>
+        </div>
+        <div class="lane-images">
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+        </div>
+      </div>
+    </div>
+    <span class="scroll-hint" style="bottom: 12px;">scroll → for more artists</span>
+  </div>
+
+  <div class="pros-cons">
+    <dl class="pro"><dt>Strengths</dt><dd>See many artists at once. Casual, browsable. Natural two-axis scrolling on trackpad.</dd></dl>
+    <dl class="con"><dt>Tradeoffs</dt><dd>Images are small. Two-axis scroll can feel disorienting. Narrower than filmstrip per image.</dd></dl>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- CONCEPT 5 -->
+<div class="concept">
+  <div class="concept-header">
+    <span class="concept-number">Option 05</span>
+    <h2 class="concept-title">Table with Expand</h2>
+  </div>
+  <p class="concept-desc">Compact list — one row per artist with thumbnail and tags. Click to expand inline into a filmstrip. Minimal when collapsed, rich when expanded.</p>
+
+  <div class="mockup">
+    <div class="mockup-bar"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+    <div class="table-view">
+      <div class="table-row">
+        <div class="table-thumb img-placeholder" style="background: linear-gradient(135deg, #1a1520, #251a28);"></div>
+        <div>
+          <div class="table-name">Zoia</div>
+          <div class="filmstrip-handle">@zoia.ink</div>
+        </div>
+        <div class="table-tags"><span class="tag-sm">fine-line</span><span class="tag-sm">dark-fantasy</span></div>
+        <div class="table-expand-btn">EXPAND ▸</div>
+      </div>
+
+      <!-- Expanded row -->
+      <div class="table-expanded-row">
+        <div class="table-expanded-header">
+          <div class="table-thumb img-placeholder" style="background: linear-gradient(135deg, #151a20, #1a2528);"></div>
+          <div>
+            <div class="table-name">Oscar Akermo</div>
+            <div class="filmstrip-handle">@oscarakermo</div>
+          </div>
+          <div class="table-tags"><span class="tag-sm">dark-illustrative</span><span class="tag-sm">blackwork</span></div>
+          <div class="table-expand-btn">COLLAPSE ▾</div>
+        </div>
+        <div class="table-expanded-images">
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+          <div class="img-placeholder"></div>
+        </div>
+      </div>
+
+      <div class="table-row">
+        <div class="table-thumb img-placeholder" style="background: linear-gradient(135deg, #201515, #281a1a);"></div>
+        <div>
+          <div class="table-name">Victor Portugal</div>
+          <div class="filmstrip-handle">@victorportugal</div>
+        </div>
+        <div class="table-tags"><span class="tag-sm">surrealism</span><span class="tag-sm">realism</span></div>
+        <div class="table-expand-btn">EXPAND ▸</div>
+      </div>
+
+      <div class="table-row">
+        <div class="table-thumb img-placeholder" style="background: linear-gradient(135deg, #151a15, #1a251a);"></div>
+        <div>
+          <div class="table-name">Carlos Valera</div>
+          <div class="filmstrip-handle">@carl245tattoo</div>
+        </div>
+        <div class="table-tags"><span class="tag-sm">dark-illustrative</span></div>
+        <div class="table-expand-btn">EXPAND ▸</div>
+      </div>
+
+      <div class="table-row">
+        <div class="table-thumb img-placeholder" style="background: linear-gradient(135deg, #1a1518, #251a22);"></div>
+        <div>
+          <div class="table-name">Saad</div>
+          <div class="filmstrip-handle">@saadtattoo</div>
+        </div>
+        <div class="table-tags"><span class="tag-sm">blackwork</span></div>
+        <div class="table-expand-btn">EXPAND ▸</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pros-cons">
+    <dl class="pro"><dt>Strengths</dt><dd>Most compact. Fast scanning of all artists. Expand only what you care about. Best information density.</dd></dl>
+    <dl class="con"><dt>Tradeoffs</dt><dd>Requires click to see images. Expanded rows push content down. Less visual-first than other options.</dd></dl>
+  </div>
+</div>
+
+<div style="height: 4rem;"></div>
+
+</body>
+</html>
