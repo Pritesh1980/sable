@@ -4,6 +4,7 @@ import { useTheme } from '../context/ThemeContext'
 const links = [
   { to: '/', label: 'Gallery', icon: '◈' },
   { to: '/brief', label: 'Brief', icon: '◇' },
+  { to: '/boards', label: 'Boards', icon: '▦' },
   { to: '/conventions', label: 'Radar', icon: '◎' },
   { to: '/concepts', label: 'AI', icon: '✦' },
   { to: '/manage', label: 'Manage', icon: '⊞' },
