@@ -22,8 +22,8 @@ describe('DEFAULT_ARTISTS data integrity', () => {
     ranks.forEach((r, i) => expect(r).toBe(i + 1))
   })
 
-  it('has 26 artists', () => {
-    expect(DEFAULT_ARTISTS).toHaveLength(26)
+  it('has 30 artists', () => {
+    expect(DEFAULT_ARTISTS).toHaveLength(30)
   })
 
   it('every assigned studio ID exists in DEFAULT_STUDIOS', () => {

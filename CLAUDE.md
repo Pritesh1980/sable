@@ -71,7 +71,7 @@ A personal mood board / brief section.
 
 ## Artist Data (Pre-load this)
 
-### Favourite Artists (Tier 1 — 17 artists)
+### Favourite Artists (Tier 1 — 20 artists)
 All are Instagram handles unless otherwise noted.
 
 | Handle | Notes |
@@ -93,16 +93,30 @@ All are Instagram handles unless otherwise noted.
 | victorportugal | Known as Victor Portugal |
 | patrick_shanty | |
 | cagriesk | |
+| senatatts | |
+| sink_tattoo | |
+| adamblakeytattoos | |
 
-### Also Like (Tier 2 — 5 artists)
+### Also Like (Tier 2 — 6 artists)
 
 | Handle | Notes |
 |---|---|
 | milanboros_tatts | |
-| tattoo_amir | |
+| tattoo__amir | Double underscore |
 | silas_balaio | |
-| suenanki | |
+| suenanki.tattoo | |
 | nate_lights | |
+| johndarktattoo_ | |
+
+### Retained (not in current favourites — 4 artists)
+Kept in the data but not in Pritesh's current list of favourites. Do not remove.
+
+| Handle | Notes |
+|---|---|
+| danny_romano1 | Danny Romano (No Regrets Cheltenham) |
+| bacanubogdan | Bogdan Bacanu (No Regrets Cheltenham) |
+| tattooluckyone | Tyler Payne (No Regrets Cheltenham) |
+| androprimo_ | Andro (No Regrets Birmingham) |
 
 ### Studios (4 — to be expanded)
 
