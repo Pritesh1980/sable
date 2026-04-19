@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import TagPill from './TagPill'
 import { STYLE_TAGS, DEFAULT_STUDIOS } from '../data/artists'
 import { compressImages } from '../hooks/useImageUpload'
@@ -9,7 +9,20 @@ export default function ArtistDetail({ artist, onClose, onSave }) {
   const [draft, setDraft] = useState({ ...artist })
   const [uploading, setUploading] = useState(false)
   const [lightbox, setLightbox] = useState(null)
+  const [currentIdx, setCurrentIdx] = useState(0)
   const fileRef = useRef()
+  const carouselRef = useRef(null)
+
+  useEffect(() => {
+    const el = carouselRef.current
+    if (!el || images.length === 0) return
+    function onScroll() {
+      const itemWidth = el.scrollWidth / images.length
+      if (itemWidth > 0) setCurrentIdx(Math.round(el.scrollLeft / itemWidth))
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [images.length])
 
   const instagramUrl = `https://www.instagram.com/${artist.handle}/`
 
@@ -118,14 +131,16 @@ export default function ArtistDetail({ artist, onClose, onSave }) {
           <div className="mb-8">
             <div className="flex items-center justify-between mb-3">
               <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase">
-                Photos {images.length > 0 && <span className="text-cream-muted/90">· {images.length}</span>}
+                Photos
+                {images.length > 0 && (
+                  <span className="text-cream-muted/90 ml-2">
+                    {currentIdx + 1} / {images.length}
+                  </span>
+                )}
               </p>
-              {images.length > 0 && (
-                <p className="text-[13px] font-mono text-cream-muted/90 tracking-widest">Tap to set cover · Long press to remove</p>
-              )}
             </div>
 
-            {/* Upload button — always prominent */}
+            {/* Upload button */}
             <input
               ref={fileRef}
               type="file"
@@ -137,7 +152,7 @@ export default function ArtistDetail({ artist, onClose, onSave }) {
             <button
               onClick={() => fileRef.current.click()}
               disabled={uploading}
-              className="w-full flex items-center justify-center gap-3 py-4 mb-3 border border-dashed border-ink-muted rounded-sm text-cream-muted hover:text-cream hover:border-cream-muted/40 transition-colors disabled:opacity-40"
+              className="w-full flex items-center justify-center gap-3 py-3 mb-4 border border-dashed border-ink-muted rounded-sm text-cream-muted hover:text-cream hover:border-cream-muted/40 transition-colors disabled:opacity-40"
             >
               {uploading ? (
                 <span className="font-mono text-xs tracking-widest animate-pulse">Importing…</span>
@@ -148,47 +163,66 @@ export default function ArtistDetail({ artist, onClose, onSave }) {
                 </>
               )}
             </button>
+          </div>
+        </div>
 
-            {/* Thumbnail grid */}
-            {images.length > 0 && (
-              <div className="grid grid-cols-3 gap-2">
-                {images.map((src, idx) => (
-                  <div
-                    key={idx}
-                    className={`relative aspect-square bg-ink-muted rounded-sm overflow-hidden group cursor-pointer ${idx === 0 ? 'ring-1 ring-accent' : ''}`}
-                    onClick={() => setLightbox(idx)}
-                  >
-                    <img src={src} alt="" className="w-full h-full object-cover" />
+        {/* Carousel — escapes the max-w-screen-sm content column */}
+        {images.length > 0 && (
+          <div className="mb-8">
+            <div
+              ref={carouselRef}
+              className="flex gap-3 overflow-x-auto snap-x snap-mandatory px-5 pb-3"
+            >
+              {images.map((src, idx) => (
+                <div
+                  key={idx}
+                  className={`relative snap-center shrink-0 w-[88%] sm:w-[520px] aspect-[4/5] bg-ink-muted rounded-sm overflow-hidden cursor-pointer ${idx === 0 ? 'ring-1 ring-accent' : ''}`}
+                  onClick={() => setLightbox(idx)}
+                >
+                  <img src={src} alt="" className="w-full h-full object-cover" loading="lazy" />
 
-                    {/* Cover badge */}
-                    {idx === 0 && (
-                      <div className="absolute top-1 left-1 bg-accent/80 text-cream text-[13px] font-mono tracking-widest px-1.5 py-0.5 rounded-sm uppercase">
-                        Cover
-                      </div>
-                    )}
-
-                    {/* Actions overlay */}
-                    <div className="absolute inset-0 bg-ink-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-                      {idx !== 0 && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setCover(idx) }}
-                          className="text-[12px] font-mono text-cream tracking-widest uppercase bg-ink-black/60 px-2 py-1 rounded-sm"
-                        >
-                          Set cover
-                        </button>
-                      )}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); removeImage(idx) }}
-                        className="text-[12px] font-mono text-accent tracking-widest uppercase bg-ink-black/60 px-2 py-1 rounded-sm"
-                      >
-                        Remove
-                      </button>
+                  {idx === 0 && (
+                    <div className="absolute top-3 left-3 bg-accent/80 text-cream text-[11px] font-mono tracking-widest px-2 py-1 rounded-sm uppercase">
+                      Cover
                     </div>
+                  )}
+
+                  <div className="absolute top-3 right-3 flex gap-1.5">
+                    {idx !== 0 && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setCover(idx) }}
+                        className="text-[11px] font-mono text-cream tracking-widest uppercase bg-ink-black/70 hover:bg-ink-black px-2.5 py-1 rounded-sm transition-colors backdrop-blur-sm"
+                      >
+                        Set cover
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); removeImage(idx) }}
+                      className="w-7 h-7 flex items-center justify-center text-accent text-xl leading-none bg-ink-black/70 hover:bg-ink-black rounded-sm transition-colors backdrop-blur-sm"
+                      title="Remove photo"
+                    >×</button>
                   </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Dot indicator */}
+            {images.length > 1 && (
+              <div className="flex justify-center gap-1.5 mt-2">
+                {images.map((_, idx) => (
+                  <span
+                    key={idx}
+                    className={`h-1 rounded-full transition-all ${
+                      idx === currentIdx ? 'w-4 bg-accent' : 'w-1 bg-cream-muted/30'
+                    }`}
+                  />
                 ))}
               </div>
             )}
           </div>
+        )}
+
+        <div className="px-5 max-w-screen-sm mx-auto w-full">
 
           {/* Style tags */}
           <div className="mb-6">
