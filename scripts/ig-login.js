@@ -24,11 +24,13 @@ const SESSION_FILE = path.join(__dirname, '..', '.ig-session.json')
 
   await page.goto('https://www.instagram.com/accounts/login/', { waitUntil: 'domcontentloaded' })
 
-  // Wait until the user is logged in (grid/feed visible, login form gone)
-  await page.waitForFunction(
-    () => !document.querySelector('input[name="username"]'),
+  // Wait until IG redirects away from the login page to the home feed
+  await page.waitForURL(
+    (url) => !url.pathname.startsWith('/accounts/'),
     { timeout: 300_000 }
   )
+  // Give IG a moment to finish setting all auth cookies
+  await page.waitForTimeout(3000)
 
   console.log('Logged in — saving session…')
   await context.storageState({ path: SESSION_FILE })
