@@ -25,3 +25,12 @@ dist-ssr
 
 # Claude Code (personal settings + memory)
 .claude/
+
+# Instagram session (contains auth cookies — never commit)
+.ig-session.json
+
+# Playwright MCP artifacts
+.playwright-mcp/
+
+# Session memory
+.remember/

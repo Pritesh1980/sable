@@ -28,6 +28,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.join(__dirname, '..')
 const PUBLIC_DIR = path.join(ROOT, 'public', 'images', 'artists')
 const ARTISTS_JS = path.join(ROOT, 'src', 'data', 'artists.js')
+const SESSION_FILE = path.join(ROOT, '.ig-session.json')
 
 function parseArgs(argv) {
   let count = 10
@@ -173,10 +174,15 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
     targets = handles
   }
 
+  const hasSession = fs.existsSync(SESSION_FILE)
+  if (hasSession) console.log('Using saved Instagram session (.ig-session.json)')
+  else console.log('No session file found — running anonymously (may hit rate limits)')
+
   const browser = await chromium.launch({ headless: true })
   const context = await browser.newContext({
     userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
     viewport: { width: 1280, height: 1600 },
+    ...(hasSession ? { storageState: SESSION_FILE } : {}),
   })
   const page = await context.newPage()
 
