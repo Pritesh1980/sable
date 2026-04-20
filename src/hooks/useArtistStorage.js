@@ -111,7 +111,16 @@ export function useArtistStorage() {
         setArtistsRaw((prev) =>
           prev.map((a) => {
             const def = DEFAULT_ARTISTS.find((d) => d.id === a.id)
-            return { ...a, images: imageMap[a.id] || def?.images || [] }
+            const idbImages = imageMap[a.id] || []
+            const staticImages = def?.images || []
+            // Keep user-uploaded data-URLs from IDB, then append any static
+            // paths from DEFAULT_ARTISTS not already present.
+            const idbStatic = new Set(idbImages.filter((s) => !s.startsWith('data:')))
+            const merged = [
+              ...idbImages,
+              ...staticImages.filter((s) => !idbStatic.has(s)),
+            ]
+            return { ...a, images: merged.length ? merged : staticImages }
           })
         )
       } catch (e) {

@@ -135,8 +135,11 @@ describe('useArtistStorage', () => {
       expect(localStorage.getItem('tattoo_artists')).toBeNull()
     })
 
-    // Image should be present in the hook's state (loaded from IndexedDB)
+    // Migrated data-URL should appear first, followed by any static defaults
     const migrated = result.current[0].find((a) => a.id === DEFAULT_ARTISTS[0].id)
-    expect(migrated.images).toEqual(['data:image/jpeg;base64,migratedimg'])
+    expect(migrated.images[0]).toBe('data:image/jpeg;base64,migratedimg')
+    // Static paths from DEFAULT_ARTISTS are merged in after the upload
+    const def = DEFAULT_ARTISTS.find((a) => a.id === DEFAULT_ARTISTS[0].id)
+    def.images.forEach((p) => expect(migrated.images).toContain(p))
   })
 })
