@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Logo from '../components/Logo'
 import {
   BLANK_BOARD,
   addIdeaToBoard,
@@ -195,7 +196,7 @@ export default function Boards({ boards, setBoards, ideas }) {
     <div className="min-h-screen bg-ink-black px-4 pt-safe-top pb-24">
       <div className="pt-12 pb-6 flex items-end justify-between">
         <div>
-          <p className="font-mono text-[12px] text-accent tracking-[0.3em] uppercase mb-1">Tattoo</p>
+          <Logo size={24} className="mb-2" />
           <h1 className="font-display text-3xl text-cream">Mood Boards</h1>
         </div>
         <button

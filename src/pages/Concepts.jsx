@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Logo from '../components/Logo'
 
 const SYSTEM_PROMPT = `You are a creative tattoo concept consultant with deep knowledge of tattoo styles, placement, and aesthetics. When given a concept prompt, provide:
 1. A vivid visual description of the tattoo concept (2-3 sentences)
@@ -47,7 +48,7 @@ export default function Concepts({ concepts, setConcepts }) {
   return (
     <div className="min-h-screen bg-ink-black px-4 pt-safe-top pb-24">
       <div className="pt-12 pb-6">
-        <p className="font-mono text-[12px] text-accent tracking-[0.3em] uppercase mb-1">Tattoo</p>
+        <Logo size={24} className="mb-2" />
         <h1 className="font-display text-3xl text-cream">AI Concepts</h1>
       </div>
 

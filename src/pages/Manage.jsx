@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { STYLE_TAGS, DEFAULT_STUDIOS } from '../data/artists'
+import Logo from '../components/Logo'
 
 function studioName(id) {
   const s = DEFAULT_STUDIOS.find((s) => s.id === id)
@@ -281,7 +282,7 @@ export default function Manage({ artists, setArtists }) {
     <div className="min-h-screen bg-ink-black px-4 pt-safe-top pb-24">
       {/* Header */}
       <div className="pt-10 pb-6">
-        <p className="font-mono text-[12px] text-accent tracking-[0.4em] uppercase mb-2">Tattoo</p>
+        <Logo size={28} className="mb-3" />
         <h1 className="font-display text-5xl text-cream leading-none tracking-tight">Manage</h1>
         <p className="font-mono text-[12px] text-cream-muted/90 mt-3 tracking-widest">
           {artists.length} artists · {withImages} with photos · {totalImages} total images

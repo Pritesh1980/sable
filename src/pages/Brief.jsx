@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import TagPill from '../components/TagPill'
+import Logo from '../components/Logo'
 import { STYLE_TAGS, PLACEMENTS } from '../data/artists'
 import { IDEA_STATUSES, matchArtistsToIdea } from '../data/brief'
 
@@ -272,7 +273,7 @@ export default function Brief({ ideas, setIdeas, artists }) {
     <div className="min-h-screen bg-ink-black px-4 pt-safe-top pb-24">
       <div className="pt-12 pb-6 flex items-end justify-between">
         <div>
-          <p className="font-mono text-[12px] text-accent tracking-[0.3em] uppercase mb-1">Tattoo</p>
+          <Logo size={24} className="mb-2" />
           <h1 className="font-display text-3xl text-cream">My Brief</h1>
         </div>
         <button

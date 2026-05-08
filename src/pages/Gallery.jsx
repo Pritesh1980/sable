@@ -13,6 +13,7 @@ import {
   rectSortingStrategy,
 } from '@dnd-kit/sortable'
 import SortableArtistCard from '../components/SortableArtistCard'
+import Logo from '../components/Logo'
 import ArtistDetail from '../components/ArtistDetail'
 import ArtistBrowse from '../components/ArtistBrowse'
 import RankingMode from '../components/RankingMode'
@@ -120,6 +121,7 @@ export default function Gallery({ artists, setArtists }) {
       {/* Page header */}
       <div className="px-4 pt-10 pb-4 flex items-end justify-between">
         <div>
+          <Logo size={28} className="mb-3" />
           <p className="font-mono text-[12px] text-accent tracking-[0.4em] uppercase mb-2">Your Collection</p>
           <h1 className="font-display text-5xl text-cream leading-none tracking-tight">Artists</h1>
         </div>

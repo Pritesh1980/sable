@@ -1,4 +1,5 @@
 import { CONVENTIONS, getConventionFavicon } from '../data/conventions'
+import Logo from '../components/Logo'
 
 function ConventionCard({ convention }) {
   const favicon = getConventionFavicon(convention)
@@ -52,7 +53,7 @@ export default function Conventions() {
   return (
     <div className="min-h-screen bg-ink-black px-4 pt-safe-top pb-24">
       <div className="pt-12 pb-6">
-        <p className="font-mono text-[12px] text-accent tracking-[0.3em] uppercase mb-1">Tattoo</p>
+        <Logo size={24} className="mb-2" />
         <h1 className="font-display text-3xl text-cream">Convention Radar</h1>
         <p className="text-cream-muted/80 text-xs font-mono mt-2">Popular UK tattoo conventions. Dates are 2026 editions.</p>
       </div>
