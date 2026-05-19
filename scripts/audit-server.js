@@ -45,12 +45,30 @@ function updateArtistsJs(artistId, newPaths) {
   return false
 }
 
+function scanArtists() {
+  return fs.readdirSync(path.join(PUBLIC_DIR, 'images', 'artists'))
+    .sort()
+    .map(id => {
+      const dir = path.join(PUBLIC_DIR, 'images', 'artists', id)
+      const files = fs.readdirSync(dir)
+        .filter(f => /\.(jpg|jpeg|png|webp)$/i.test(f))
+        .sort((a, b) => parseInt(a) - parseInt(b))
+      return { id, images: files.map(f => `/images/artists/${id}/${f}`) }
+    })
+}
+
 const server = http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
 
   if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return }
+
+  if (req.method === 'GET' && req.url === '/artists') {
+    res.writeHead(200, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify(scanArtists()))
+    return
+  }
 
   if (req.method === 'POST' && req.url === '/apply') {
     let body = ''
