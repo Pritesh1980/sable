@@ -34,3 +34,8 @@ dist-ssr
 
 # Session memory
 .remember/
+.ijfw/
+
+# Local audit/tagging artifacts
+audit-page*.png
+tags-batch*.jpeg
