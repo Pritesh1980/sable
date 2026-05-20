@@ -8,6 +8,7 @@ import {
   getBoardIdeas,
   getBoardCover,
 } from '../data/boards'
+import { buildBoardBrief } from '../data/export'
 
 function BoardCard({ board, ideas, onOpen }) {
   const cover = getBoardCover(board, ideas)
@@ -43,8 +44,9 @@ function BoardCard({ board, ideas, onOpen }) {
   )
 }
 
-function BoardModal({ board, onClose, onSave, onDelete, ideas }) {
+function BoardModal({ board, onClose, onSave, onDelete, ideas, artists }) {
   const [draft, setDraft] = useState({ ...BLANK_BOARD, ...board })
+  const [copied, setCopied] = useState(false)
   const isNew = !board.id
 
   const boardIdeas = getBoardIdeas(draft, ideas)
@@ -63,6 +65,12 @@ function BoardModal({ board, onClose, onSave, onDelete, ideas }) {
   function save() {
     if (!draft.name.trim()) return
     onSave({ ...draft, id: draft.id || Date.now().toString() })
+  }
+
+  async function copyBoardBrief() {
+    await navigator.clipboard.writeText(buildBoardBrief(draft, ideas, artists))
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1600)
   }
 
   return (
@@ -85,6 +93,13 @@ function BoardModal({ board, onClose, onSave, onDelete, ideas }) {
               Delete
             </button>
           )}
+          <button
+            onClick={copyBoardBrief}
+            disabled={!draft.name.trim()}
+            className="text-cream-muted hover:text-cream disabled:opacity-30 text-sm transition-colors"
+          >
+            {copied ? 'Copied' : 'Copy brief'}
+          </button>
           <button onClick={save} className="text-accent hover:text-accent-hover text-sm font-body transition-colors">
             {isNew ? 'Add' : 'Save'}
           </button>
@@ -177,7 +192,7 @@ function BoardModal({ board, onClose, onSave, onDelete, ideas }) {
   )
 }
 
-export default function Boards({ boards, setBoards, ideas }) {
+export default function Boards({ boards, setBoards, ideas, artists }) {
   const [modal, setModal] = useState(null)
 
   function saveBoard(board) {
@@ -236,6 +251,7 @@ export default function Boards({ boards, setBoards, ideas }) {
           onSave={saveBoard}
           onDelete={deleteBoard}
           ideas={ideas}
+          artists={artists}
         />
       )}
     </div>

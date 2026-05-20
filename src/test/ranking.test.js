@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeSwipeRanking } from '../components/RankingMode'
+import { computeSwipeRanking } from '../data/ranking'
 
 const ARTISTS = [
   { id: 'a', rank: 1, images: ['img1.jpg'] },

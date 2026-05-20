@@ -44,7 +44,11 @@ async function dbGetAll() {
 // ── Metadata (localStorage, no images) ───────────────────────────────────────
 
 export function stripImages(artists) {
-  return artists.map(({ images: _images, ...rest }) => rest)
+  return artists.map((artist) => {
+    const rest = { ...artist }
+    delete rest.images
+    return rest
+  })
 }
 
 // Fill in any fields present in defaults but missing from a stored record,
@@ -71,7 +75,9 @@ function loadMeta() {
   try {
     const stored = localStorage.getItem(META_KEY)
     if (stored) return applyDefaults(JSON.parse(stored))
-  } catch {}
+  } catch {
+    return null
+  }
   return null
 }
 

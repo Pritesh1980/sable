@@ -22,8 +22,22 @@ export default function App() {
         <Route path="/brief" element={<Brief ideas={ideas} setIdeas={setIdeas} artists={artists} />} />
         <Route path="/conventions" element={<Conventions />} />
         <Route path="/concepts" element={<Concepts concepts={concepts} setConcepts={setConcepts} />} />
-        <Route path="/boards" element={<Boards boards={boards} setBoards={setBoards} ideas={ideas} />} />
-        <Route path="/manage" element={<Manage artists={artists} setArtists={setArtists} />} />
+        <Route path="/boards" element={<Boards boards={boards} setBoards={setBoards} ideas={ideas} artists={artists} />} />
+        <Route
+          path="/manage"
+          element={(
+            <Manage
+              artists={artists}
+              setArtists={setArtists}
+              ideas={ideas}
+              setIdeas={setIdeas}
+              boards={boards}
+              setBoards={setBoards}
+              concepts={concepts}
+              setConcepts={setConcepts}
+            />
+          )}
+        />
       </Routes>
       <Nav />
     </div>

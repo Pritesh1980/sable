@@ -26,7 +26,11 @@ describe('stripImages', () => {
 describe('applyDefaults', () => {
   it('adds missing fields from DEFAULT_ARTISTS', () => {
     // Simulate a stored artist missing the studio field
-    const stored = DEFAULT_ARTISTS.map(({ studio: _studio, ...rest }) => rest)
+    const stored = DEFAULT_ARTISTS.map((artist) => {
+      const rest = { ...artist }
+      delete rest.studio
+      return rest
+    })
     const result = applyDefaults(stored)
     result.forEach((a, i) => {
       expect(a.studio).toBe(DEFAULT_ARTISTS[i].studio)

@@ -58,10 +58,14 @@ export default function ArtistDetail({ artist, onClose, onSave }) {
   }
 
   function toggleTag(tag) {
-    setDraft((d) => ({
-      ...d,
-      tags: d.tags.includes(tag) ? d.tags.filter((t) => t !== tag) : [...d.tags, tag],
-    }))
+    setDraft((d) => {
+      const tags = d.tags.includes(tag) ? d.tags.filter((t) => t !== tag) : [...d.tags, tag]
+      const next = { ...d, tags }
+      if (!editing) {
+        onSave({ ...artist, ...next, images })
+      }
+      return next
+    })
   }
 
   function save() {
@@ -233,11 +237,11 @@ export default function ArtistDetail({ artist, onClose, onSave }) {
                   key={tag}
                   tag={tag}
                   active={draft.tags.includes(tag)}
-                  onClick={editing ? () => toggleTag(tag) : undefined}
+                  onClick={() => toggleTag(tag)}
                 />
               ))}
             </div>
-            {!editing && <p className="text-cream-muted/90 text-[12px] font-mono mt-2">Tap "Edit details" to assign tags</p>}
+            {!editing && <p className="text-cream-muted/90 text-[12px] font-mono mt-2">Tap tags to tune matching.</p>}
           </div>
 
           {/* Studio (edit mode) */}

@@ -3,6 +3,7 @@ import TagPill from '../components/TagPill'
 import Logo from '../components/Logo'
 import { STYLE_TAGS, PLACEMENTS } from '../data/artists'
 import { IDEA_STATUSES, matchArtistsToIdea } from '../data/brief'
+import { buildIdeaBrief } from '../data/export'
 
 const STATUS_DOTS = {
   idea: 'bg-cream-muted/40',
@@ -44,6 +45,7 @@ function IdeaCard({ idea, onOpen }) {
 function IdeaModal({ idea, onClose, onSave, onDelete, artists }) {
   const [draft, setDraft] = useState({ status: 'idea', ...idea })
   const [newImage, setNewImage] = useState('')
+  const [copied, setCopied] = useState(false)
   const isNew = !idea.id
 
   const suggested = matchArtistsToIdea(draft, artists).filter(
@@ -79,6 +81,12 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists }) {
     onSave({ ...draft, id: draft.id || Date.now().toString() })
   }
 
+  async function copyBrief() {
+    await navigator.clipboard.writeText(buildIdeaBrief(draft, artists))
+    setCopied(true)
+    setTimeout(() => setCopied(false), 1600)
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-ink-black/95 flex flex-col animate-fade-in overflow-y-auto">
       <div className="flex items-center justify-between px-5 pt-safe-top pt-6 pb-4 border-b border-ink-border sticky top-0 bg-ink-black z-10">
@@ -91,6 +99,13 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists }) {
               Delete
             </button>
           )}
+          <button
+            onClick={copyBrief}
+            disabled={!draft.title.trim()}
+            className="text-cream-muted hover:text-cream disabled:opacity-30 text-sm transition-colors"
+          >
+            {copied ? 'Copied' : 'Copy brief'}
+          </button>
           <button onClick={save} className="text-accent hover:text-accent-hover text-sm font-body transition-colors">
             {isNew ? 'Add' : 'Save'}
           </button>

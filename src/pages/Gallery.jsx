@@ -23,6 +23,45 @@ import CompareView from '../components/CompareView'
 import TagPill from '../components/TagPill'
 import { STYLE_TAGS } from '../data/artists'
 
+function ArtistGrid({ items, sensors, onDragEnd, onOpen, onSaveImages }) {
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+      <SortableContext items={items.map((a) => a.id)} strategy={rectSortingStrategy}>
+        {/* Top 3 — featured trio */}
+        {items.filter((a) => a.rank <= 3).length > 0 && (
+          <div className="grid grid-cols-3 gap-2 mb-2">
+            {items.filter((a) => a.rank <= 3).map((artist, i) => (
+              <SortableArtistCard
+                key={artist.id}
+                artist={artist}
+                onOpen={onOpen}
+                onSaveImages={onSaveImages}
+                featured={true}
+                index={i}
+              />
+            ))}
+          </div>
+        )}
+        {/* Remaining — compact grid */}
+        {items.filter((a) => a.rank > 3).length > 0 && (
+          <div className="grid grid-cols-4 gap-2">
+            {items.filter((a) => a.rank > 3).map((artist, i) => (
+              <SortableArtistCard
+                key={artist.id}
+                artist={artist}
+                onOpen={onOpen}
+                onSaveImages={onSaveImages}
+                featured={false}
+                index={3 + i}
+              />
+            ))}
+          </div>
+        )}
+      </SortableContext>
+    </DndContext>
+  )
+}
+
 export default function Gallery({ artists, setArtists }) {
   const [activeTag, setActiveTag] = useState(null)
   const [selected, setSelected] = useState(null)
@@ -75,45 +114,6 @@ export default function Gallery({ artists, setArtists }) {
       const reranked = all.map((a, i) => ({ ...a, rank: i + 1 }))
       return prev.map((a) => reranked.find((r) => r.id === a.id) || a)
     })
-  }
-
-  function ArtistGrid({ items }) {
-    return (
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={items.map((a) => a.id)} strategy={rectSortingStrategy}>
-          {/* Top 3 — featured trio */}
-          {items.filter((a) => a.rank <= 3).length > 0 && (
-            <div className="grid grid-cols-3 gap-2 mb-2">
-              {items.filter((a) => a.rank <= 3).map((artist, i) => (
-                <SortableArtistCard
-                  key={artist.id}
-                  artist={artist}
-                  onOpen={setSelected}
-                  onSaveImages={saveImages}
-                  featured={true}
-                  index={i}
-                />
-              ))}
-            </div>
-          )}
-          {/* Remaining — compact grid */}
-          {items.filter((a) => a.rank > 3).length > 0 && (
-            <div className="grid grid-cols-4 gap-2">
-              {items.filter((a) => a.rank > 3).map((artist, i) => (
-                <SortableArtistCard
-                  key={artist.id}
-                  artist={artist}
-                  onOpen={setSelected}
-                  onSaveImages={saveImages}
-                  featured={false}
-                  index={3 + i}
-                />
-              ))}
-            </div>
-          )}
-        </SortableContext>
-      </DndContext>
-    )
   }
 
   return (
@@ -190,7 +190,13 @@ export default function Gallery({ artists, setArtists }) {
         <CompareView artists={artists} onOpenArtist={setSelected} />
       ) : (
         <div className="px-4">
-          <ArtistGrid items={sorted} />
+          <ArtistGrid
+            items={sorted}
+            sensors={sensors}
+            onDragEnd={handleDragEnd}
+            onOpen={setSelected}
+            onSaveImages={saveImages}
+          />
           {sorted.length === 0 && (
             <p className="text-cream-muted/90 py-10 text-center tracking-widest uppercase text-xs font-mono">
               No artists match this filter

@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { STYLE_TAGS, DEFAULT_STUDIOS } from '../data/artists'
 import Logo from '../components/Logo'
+import { createBackup, parseBackup } from '../data/export'
 
 function studioName(id) {
   const s = DEFAULT_STUDIOS.find((s) => s.id === id)
@@ -8,6 +9,16 @@ function studioName(id) {
 }
 import { compressImages } from '../hooks/useImageUpload'
 import TagPill from '../components/TagPill'
+
+function downloadJson(filename, payload) {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
 
 function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
   const fileRef = useRef()
@@ -232,7 +243,66 @@ function AddArtistForm({ onAdd }) {
   )
 }
 
-export default function Manage({ artists, setArtists }) {
+function BackupPanel({ artists, setArtists, ideas, setIdeas, boards, setBoards, concepts, setConcepts }) {
+  const fileRef = useRef()
+  const [message, setMessage] = useState('')
+
+  function exportBackup() {
+    const backup = createBackup({ artists, ideas, boards, concepts })
+    const date = backup.exportedAt.slice(0, 10)
+    downloadJson(`tattoo-backup-${date}.json`, backup)
+    setMessage('Backup exported.')
+  }
+
+  async function importBackup(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    try {
+      const data = parseBackup(await file.text())
+      setArtists(data.artists)
+      setIdeas(data.ideas)
+      setBoards(data.boards)
+      setConcepts(data.concepts)
+      setMessage('Backup imported.')
+    } catch (error) {
+      setMessage(error.message || 'Could not import backup.')
+    } finally {
+      e.target.value = ''
+    }
+  }
+
+  return (
+    <div className="bg-ink-card border border-ink-border rounded-sm p-4 mb-8">
+      <div className="flex items-start justify-between gap-4 mb-4">
+        <div>
+          <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase mb-1">Backup</p>
+          <p className="text-cream-muted/90 text-sm font-body leading-relaxed">
+            Export or restore artists, ideas, boards, concepts, notes, ranks, tags, and saved images.
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={exportBackup}
+          className="px-4 py-2 bg-accent hover:bg-accent-hover text-cream text-sm font-body rounded-sm transition-colors"
+        >
+          Export Backup
+        </button>
+        <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={importBackup} />
+        <button
+          onClick={() => fileRef.current.click()}
+          className="px-4 py-2 border border-ink-border hover:border-cream-muted/50 text-cream-muted hover:text-cream text-sm font-body rounded-sm transition-colors"
+        >
+          Import Backup
+        </button>
+      </div>
+      {message && <p className="text-[12px] font-mono text-cream-muted/90 mt-3">{message}</p>}
+    </div>
+  )
+}
+
+export default function Manage({ artists, setArtists, ideas, setIdeas, boards, setBoards, concepts, setConcepts }) {
   const [search, setSearch] = useState('')
 
   const allInOrder = artists.slice().sort((a, b) => a.rank - b.rank)
@@ -291,6 +361,17 @@ export default function Manage({ artists, setArtists }) {
 
       {/* Add artist */}
       <AddArtistForm onAdd={addArtist} />
+
+      <BackupPanel
+        artists={artists}
+        setArtists={setArtists}
+        ideas={ideas}
+        setIdeas={setIdeas}
+        boards={boards}
+        setBoards={setBoards}
+        concepts={concepts}
+        setConcepts={setConcepts}
+      />
 
       {/* Search */}
       <div className="mb-4">

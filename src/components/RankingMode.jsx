@@ -1,27 +1,27 @@
 import { useState, useRef, useEffect } from 'react'
+import { computeSwipeRanking } from '../data/ranking'
 
-const BUCKET_ORDER = { top: 0, maybe: 1, pass: 2 }
-
-export function computeSwipeRanking(decisions, artists) {
-  const decisionMap = Object.fromEntries(decisions.map((d) => [d.artistId, d.bucket]))
-
-  const ranked = artists
-    .filter((a) => decisionMap[a.id] !== undefined)
-    .sort((a, b) => {
-      const bucketDiff = BUCKET_ORDER[decisionMap[a.id]] - BUCKET_ORDER[decisionMap[b.id]]
-      if (bucketDiff !== 0) return bucketDiff
-      return a.rank - b.rank
-    })
-
-  const unranked = artists
-    .filter((a) => decisionMap[a.id] === undefined)
-    .sort((a, b) => a.rank - b.rank)
-
-  return [...ranked, ...unranked].map((a, i) => ({ ...a, rank: i + 1 }))
+function GroupSection({ label, items, accent }) {
+  if (items.length === 0) return null
+  return (
+    <div className="mb-6">
+      <div className="flex items-center gap-3 mb-2">
+        <span className={`font-mono text-[11px] tracking-[0.35em] uppercase ${accent}`}>{label}</span>
+        <span className="font-mono text-[11px] text-cream-muted/40">({items.length})</span>
+        <div className="flex-1 h-px bg-ink-border" />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {items.map((a) => (
+          <span key={a.id} className="font-body text-[13px] text-cream-muted bg-ink-card px-2.5 py-1 rounded-sm">
+            {a.name || `@${a.handle}`}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 function SummaryScreen({ decisions, artists, onApply, onDiscard }) {
-  const decisionMap = Object.fromEntries(decisions.map((d) => [d.artistId, d.bucket]))
   const artistMap = Object.fromEntries(artists.map((a) => [a.id, a]))
 
   const groups = {
@@ -31,26 +31,6 @@ function SummaryScreen({ decisions, artists, onApply, onDiscard }) {
   }
 
   const total = decisions.length
-
-  function GroupSection({ label, items, accent }) {
-    if (items.length === 0) return null
-    return (
-      <div className="mb-6">
-        <div className="flex items-center gap-3 mb-2">
-          <span className={`font-mono text-[11px] tracking-[0.35em] uppercase ${accent}`}>{label}</span>
-          <span className="font-mono text-[11px] text-cream-muted/40">({items.length})</span>
-          <div className="flex-1 h-px bg-ink-border" />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {items.map((a) => (
-            <span key={a.id} className="font-body text-[13px] text-cream-muted bg-ink-card px-2.5 py-1 rounded-sm">
-              {a.name || `@${a.handle}`}
-            </span>
-          ))}
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="fixed inset-0 z-50 bg-ink-black flex flex-col animate-fade-in">
@@ -104,6 +84,7 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
   const [transitioning, setTransitioning] = useState(false)
   const [showSummary, setShowSummary] = useState(false)
   const [dragX, setDragX] = useState(0)
+  const [hasDragged, setHasDragged] = useState(false)
 
   const touchStartX = useRef(null)
   const touchStartY = useRef(null)
@@ -139,6 +120,7 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
     if (touchStartX.current === null) return
     const dx = e.touches[0].clientX - touchStartX.current
     isDragging.current = true
+    setHasDragged(true)
     setDragX(dx)
   }
 
@@ -257,7 +239,7 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
         )}
 
         {/* Swipe hint (first card only) */}
-        {currentIdx === 0 && !isDragging.current && (
+        {currentIdx === 0 && !hasDragged && (
           <div className="absolute bottom-32 inset-x-0 flex justify-center pointer-events-none">
             <p className="font-mono text-[11px] text-cream-muted/30 tracking-widest uppercase">
               swipe to rank

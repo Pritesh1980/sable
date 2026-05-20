@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 
 export default function ArtistBrowse({ artists, startIndex = 0, onClose }) {
   const withImages = artists.filter((a) => a.images?.length > 0)
@@ -12,7 +12,23 @@ export default function ArtistBrowse({ artists, startIndex = 0, onClose }) {
   const artist = withImages[artistIdx]
   const images = artist?.images || []
 
-  useEffect(() => { setImageIdx(0) }, [artistIdx])
+  const handlePrevImage = useCallback(() => {
+    if (imageIdx > 0) {
+      setImageIdx((i) => i - 1)
+    } else if (artistIdx > 0) {
+      setArtistIdx((i) => i - 1)
+      setImageIdx(Math.max(0, (withImages[artistIdx - 1]?.images?.length || 1) - 1))
+    }
+  }, [artistIdx, imageIdx, withImages])
+
+  const handleNextImage = useCallback(() => {
+    if (imageIdx < images.length - 1) {
+      setImageIdx((i) => i + 1)
+    } else if (artistIdx < withImages.length - 1) {
+      setArtistIdx((i) => i + 1)
+      setImageIdx(0)
+    }
+  }, [artistIdx, imageIdx, images.length, withImages.length])
 
   useEffect(() => {
     function onKey(e) {
@@ -22,24 +38,7 @@ export default function ArtistBrowse({ artists, startIndex = 0, onClose }) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  })
-
-  function handlePrevImage() {
-    if (imageIdx > 0) {
-      setImageIdx((i) => i - 1)
-    } else if (artistIdx > 0) {
-      setArtistIdx((i) => i - 1)
-      // will set imageIdx to last image of prev artist after render
-    }
-  }
-
-  function handleNextImage() {
-    if (imageIdx < images.length - 1) {
-      setImageIdx((i) => i + 1)
-    } else if (artistIdx < withImages.length - 1) {
-      setArtistIdx((i) => i + 1)
-    }
-  }
+  }, [handleNextImage, handlePrevImage, onClose])
 
   function onTouchStart(e) {
     touchStartX.current = e.touches[0].clientX
@@ -140,14 +139,24 @@ export default function ArtistBrowse({ artists, startIndex = 0, onClose }) {
           </div>
           <div className="flex gap-5">
             <button
-              onClick={() => artistIdx > 0 && setArtistIdx((i) => i - 1)}
+              onClick={() => {
+                if (artistIdx > 0) {
+                  setArtistIdx((i) => i - 1)
+                  setImageIdx(0)
+                }
+              }}
               disabled={artistIdx === 0}
               className="font-mono text-[13px] text-cream-muted/70 hover:text-cream disabled:opacity-20 transition-colors tracking-widest uppercase"
             >
               ← Artist
             </button>
             <button
-              onClick={() => artistIdx < withImages.length - 1 && setArtistIdx((i) => i + 1)}
+              onClick={() => {
+                if (artistIdx < withImages.length - 1) {
+                  setArtistIdx((i) => i + 1)
+                  setImageIdx(0)
+                }
+              }}
               disabled={artistIdx === withImages.length - 1}
               className="font-mono text-[13px] text-cream-muted/70 hover:text-cream disabled:opacity-20 transition-colors tracking-widest uppercase"
             >
