@@ -22,6 +22,8 @@
                color: #666; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
   .artist h2 span.count { font-size: 11px; color: #444; font-weight: 400; }
   .artist h2 span.marked-label { font-size: 11px; color: #c0392b; font-weight: 400; display: none; }
+  .artist h2 button.batch-btn { font-size: 10px; padding: 2px 6px; margin-left: 4px; cursor: pointer; background: #222; color: #aaa; border: 1px solid #444; border-radius: 3px; }
+  .artist h2 button.batch-btn:hover { background: #333; color: #fff; border-color: #666; }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 4px; }
 
   .thumb { position: relative; aspect-ratio: 1; cursor: pointer; overflow: hidden; border-radius: 3px; }
@@ -31,6 +33,9 @@
   .thumb .x { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
               background: rgba(180,30,30,0.7); opacity: 0; transition: opacity 0.15s; font-size: 32px;
               color: #fff; font-weight: 700; pointer-events: none; }
+  .thumb .zoom { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,0.6); color: #fff; border-radius: 3px; padding: 2px 5px; font-size: 10px; opacity: 0; transition: opacity 0.2s; z-index: 2; pointer-events: auto; }
+  .thumb:hover .zoom { opacity: 1; }
+  .thumb .zoom:hover { background: rgba(255,255,255,0.3); }
   .thumb.marked img { opacity: 0.3; }
   .thumb.marked .x { opacity: 1; }
   .thumb:hover img { opacity: 0.85; }
@@ -59,6 +64,24 @@
                 white-space: pre-wrap; }
   #output-close { position: absolute; top: 20px; right: 20px; background: none; border: none;
                   color: #666; font-size: 24px; cursor: pointer; }
+
+  .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 50; align-items: center; justify-content: center; }
+  .modal.show { display: flex; }
+  .modal-content { background: #111; border: 1px solid #333; border-radius: 6px; padding: 20px; width: 600px; max-width: 90vw; max-height: 80vh; display: flex; flex-direction: column; }
+  .modal-content h3 { color: #eee; margin-bottom: 12px; font-weight: 500; font-size: 16px; }
+  #review-list { overflow-y: auto; flex: 1; list-style: none; margin-bottom: 16px; font-size: 11px; color: #aaa; background: #000; padding: 10px; border-radius: 4px; border: 1px solid #222; }
+  #review-list li { margin-bottom: 4px; word-break: break-all; padding-bottom: 4px; border-bottom: 1px solid #1a1a1a; }
+  #review-list li:last-child { border-bottom: none; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+  .modal-actions button { padding: 8px 16px; border-radius: 4px; cursor: pointer; border: none; font-size: 12px; font-weight: 500; }
+  #review-cancel { background: #333; color: #ccc; }
+  #review-cancel:hover { background: #444; }
+  #review-confirm { background: #c0392b; color: #fff; }
+  #review-confirm:hover { background: #e74c3c; }
+
+  #lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 100; align-items: center; justify-content: center; cursor: zoom-out; }
+  #lightbox.show { display: flex; }
+  #lightbox img { max-width: 95vw; max-height: 95vh; object-fit: contain; }
 </style>
 </head>
 <body>
@@ -83,6 +106,21 @@
   <button id="output-close">✕</button>
 </div>
 
+<div id="review-modal" class="modal">
+  <div class="modal-content">
+    <h3>Review Removals (<span id="review-count">0</span>)</h3>
+    <ul id="review-list"></ul>
+    <div class="modal-actions">
+      <button id="review-cancel">Cancel</button>
+      <button id="review-confirm">Confirm Removals</button>
+    </div>
+  </div>
+</div>
+
+<div id="lightbox">
+  <img id="lightbox-img" src="">
+</div>
+
 <script>
 let ARTISTS = [];
 
@@ -98,10 +136,14 @@ async function loadArtists() {
 }
 
 
-const marked = new Set();
+const marked = new Set(JSON.parse(localStorage.getItem('audit_marked') || '[]'));
 
 function getMarked() {
   return [...marked].sort();
+}
+
+function saveProgress() {
+  localStorage.setItem('audit_marked', JSON.stringify([...marked]));
 }
 
 function updateTally() {
@@ -136,6 +178,37 @@ function build() {
 
     const h2 = document.createElement('h2');
     h2.innerHTML = `${artist.id} <span class="count">${artist.images.length} images</span><span class="marked-label"></span>`;
+    
+    const markAllBtn = document.createElement('button');
+    markAllBtn.className = 'batch-btn';
+    markAllBtn.textContent = 'Mark All';
+    markAllBtn.onclick = () => {
+      artist.images.forEach(src => {
+        marked.add(src);
+        const thumb = section.querySelector(`.thumb[data-path="${src}"]`);
+        if (thumb) thumb.classList.add('marked');
+      });
+      updateTally();
+      updateArtistLabel(artist.id);
+      saveProgress();
+    };
+
+    const clearBtn = document.createElement('button');
+    clearBtn.className = 'batch-btn';
+    clearBtn.textContent = 'Clear';
+    clearBtn.onclick = () => {
+      artist.images.forEach(src => {
+        marked.delete(src);
+        const thumb = section.querySelector(`.thumb[data-path="${src}"]`);
+        if (thumb) thumb.classList.remove('marked');
+      });
+      updateTally();
+      updateArtistLabel(artist.id);
+      saveProgress();
+    };
+
+    h2.appendChild(markAllBtn);
+    h2.appendChild(clearBtn);
     section.appendChild(h2);
 
     const grid = document.createElement('div');
@@ -144,6 +217,7 @@ function build() {
     artist.images.forEach((src, i) => {
       const thumb = document.createElement('div');
       thumb.className = 'thumb';
+      if (marked.has(src)) thumb.classList.add('marked');
       thumb.dataset.path = src;
 
       const img = document.createElement('img');
@@ -157,10 +231,21 @@ function build() {
       const x = document.createElement('div');
       x.className = 'x';
       x.textContent = '✕';
+      
+      const zoom = document.createElement('div');
+      zoom.className = 'zoom';
+      zoom.textContent = '🔍';
+      zoom.title = 'View full size';
+      zoom.onclick = (e) => {
+        e.stopPropagation();
+        document.getElementById('lightbox-img').src = src;
+        document.getElementById('lightbox').classList.add('show');
+      };
 
       thumb.appendChild(img);
       thumb.appendChild(num);
       thumb.appendChild(x);
+      thumb.appendChild(zoom);
 
       thumb.addEventListener('click', () => {
         if (marked.has(src)) {
@@ -172,6 +257,7 @@ function build() {
         }
         updateTally();
         updateArtistLabel(artist.id);
+        saveProgress();
       });
 
       grid.appendChild(thumb);
@@ -179,7 +265,12 @@ function build() {
 
     section.appendChild(grid);
     container.appendChild(section);
+    
+    // Initialize labels on load (if restoring from local storage)
+    updateArtistLabel(artist.id);
   });
+  
+  updateTally();
 }
 
 document.getElementById('copy-btn').addEventListener('click', () => {
@@ -191,10 +282,28 @@ document.getElementById('copy-btn').addEventListener('click', () => {
   });
 });
 
-document.getElementById('apply-btn').addEventListener('click', async () => {
+document.getElementById('apply-btn').addEventListener('click', () => {
   const paths = getMarked();
   if (!paths.length) { alert('Nothing marked.'); return; }
-  if (!confirm(`Delete ${paths.length} image(s) and renumber? This cannot be undone.`)) return;
+
+  document.getElementById('review-count').textContent = paths.length;
+  const list = document.getElementById('review-list');
+  list.innerHTML = '';
+  paths.forEach(p => {
+    const li = document.createElement('li');
+    li.textContent = p;
+    list.appendChild(li);
+  });
+  document.getElementById('review-modal').classList.add('show');
+});
+
+document.getElementById('review-cancel').addEventListener('click', () => {
+  document.getElementById('review-modal').classList.remove('show');
+});
+
+document.getElementById('review-confirm').addEventListener('click', async () => {
+  document.getElementById('review-modal').classList.remove('show');
+  const paths = getMarked();
 
   document.getElementById('apply-btn').textContent = 'Applying…';
   document.getElementById('apply-btn').disabled = true;
@@ -217,6 +326,7 @@ document.getElementById('apply-btn').addEventListener('click', async () => {
       if (thumb) thumb.remove();
     });
     updateTally();
+    saveProgress();
   } catch (e) {
     alert(`Error: ${e.message}\n\nIs audit-server running?\n! node scripts/audit-server.js`);
   } finally {
@@ -227,6 +337,11 @@ document.getElementById('apply-btn').addEventListener('click', async () => {
 
 document.getElementById('output-close').addEventListener('click', () => {
   document.getElementById('output').classList.remove('show');
+});
+
+document.getElementById('lightbox').addEventListener('click', () => {
+  document.getElementById('lightbox').classList.remove('show');
+  document.getElementById('lightbox-img').src = '';
 });
 
 loadArtists();
