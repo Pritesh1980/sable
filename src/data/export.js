@@ -18,8 +18,10 @@ function formatArtist(artist) {
 function formatImageList(images = []) {
   if (!images.length) return 'None added'
   return images.map((image, index) => {
+    const url = getImageUrl(image)
     const note = getImageNote(image)
-    return `${index + 1}. ${getImageUrl(image)}${note ? `\n   Note: ${note}` : ''}`
+    const label = url.startsWith('data:') ? '[uploaded photo]' : url
+    return `${index + 1}. ${label}${note ? `\n   Note: ${note}` : ''}`
   }).join('\n')
 }
 
