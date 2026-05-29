@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Logo from '../components/Logo'
+import { getImageUrl } from '../data/planning'
 import {
   BLANK_BOARD,
   addIdeaToBoard,
@@ -153,7 +154,7 @@ function BoardModal({ board, onClose, onSave, onDelete, ideas, artists }) {
                     >▼</button>
                   </div>
                   {idea.images?.[0] && (
-                    <img src={idea.images[0]} alt="" className="w-10 h-10 object-cover rounded-sm" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                    <img src={getImageUrl(idea.images[0])} alt="" className="w-10 h-10 object-cover rounded-sm" onError={(e) => { e.currentTarget.style.display = 'none' }} />
                   )}
                   <span className="flex-1 text-cream text-sm font-body truncate">{idea.title}</span>
                   <button
@@ -179,7 +180,7 @@ function BoardModal({ board, onClose, onSave, onDelete, ideas, artists }) {
                   className="w-full flex items-center gap-2 text-left px-3 py-2 rounded-sm text-sm font-body transition-colors border border-ink-border text-cream-muted hover:border-cream-muted/50"
                 >
                   {idea.images?.[0] && (
-                    <img src={idea.images[0]} alt="" className="w-8 h-8 object-cover rounded-sm" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                    <img src={getImageUrl(idea.images[0])} alt="" className="w-8 h-8 object-cover rounded-sm" onError={(e) => { e.currentTarget.style.display = 'none' }} />
                   )}
                   <span className="flex-1 truncate">{idea.title}</span>
                 </button>

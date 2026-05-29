@@ -1,3 +1,5 @@
+import { getImageUrl } from './planning'
+
 export const BLANK_BOARD = {
   name: '',
   description: '',
@@ -34,7 +36,7 @@ export function getBoardCover(board, ideas) {
   if (board.cover) return board.cover
   const boardIdeas = getBoardIdeas(board, ideas)
   for (const idea of boardIdeas) {
-    if (idea.images?.length) return idea.images[0]
+    if (idea.images?.length) return getImageUrl(idea.images[0])
   }
   return ''
 }

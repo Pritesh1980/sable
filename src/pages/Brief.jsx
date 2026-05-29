@@ -256,15 +256,20 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists }) {
                         : 'border-ink-border text-cream-muted hover:border-cream-muted/50'
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="font-display text-lg leading-tight truncate">{artist.name || `@${artist.handle}`}</p>
+                    <div className="flex items-start gap-3">
+                      {artist.images?.[0] && (
+                        <img src={artist.images[0]} alt="" className="w-12 h-14 object-cover rounded-sm shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="font-display text-lg leading-tight truncate">{artist.name || `@${artist.handle}`}</p>
+                          <span className="font-mono text-[0.6875rem] text-accent shrink-0">{overlapTags.length} match</span>
+                        </div>
                         <p className="font-mono text-[0.6875rem] text-cream-muted/70 mt-1">#{artist.rank} · {statusLabel(status)}</p>
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {overlapTags.map((tag) => <TagPill key={tag} tag={tag} active small />)}
+                        </div>
                       </div>
-                      <span className="font-mono text-[0.6875rem] text-accent shrink-0">{overlapTags.length} match</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {overlapTags.map((tag) => <TagPill key={tag} tag={tag} active small />)}
                     </div>
                   </button>
                 )
