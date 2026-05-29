@@ -323,8 +323,9 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
                 <button
                   key={a.id}
                   onClick={() => toggleArtist(a.id)}
-                  className="w-full text-left px-3 py-2 rounded-sm text-sm font-body transition-colors border border-accent/20 text-cream-muted hover:border-accent/50 hover:text-cream"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-sm text-sm font-body transition-colors border border-accent/20 text-cream-muted hover:border-accent/50 hover:text-cream"
                 >
+                  {a.images?.[0] && <img src={a.images[0]} alt="" className="w-6 h-6 rounded-sm object-cover shrink-0" />}
                   {a.name || `@${a.handle}`}
                 </button>
               ))}

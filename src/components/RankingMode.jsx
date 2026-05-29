@@ -12,7 +12,8 @@ function GroupSection({ label, items, accent }) {
       </div>
       <div className="flex flex-wrap gap-2">
         {items.map((a) => (
-          <span key={a.id} className="font-body text-[0.8125rem] text-cream-muted bg-ink-card px-2.5 py-1 rounded-sm">
+          <span key={a.id} className="inline-flex items-center gap-1.5 font-body text-[0.8125rem] text-cream-muted bg-ink-card px-2 py-1 rounded-sm">
+            {a.images?.[0] && <img src={a.images[0]} alt="" className="w-5 h-5 rounded-sm object-cover shrink-0" />}
             {a.name || `@${a.handle}`}
           </span>
         ))}
