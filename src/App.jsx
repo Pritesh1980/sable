@@ -24,7 +24,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Dashboard artists={artists} ideas={ideas} boards={boards} mergedConventions={mergedConventions} />} />
         <Route path="/gallery" element={<Gallery artists={artists} setArtists={setArtists} mergedConventions={mergedConventions} />} />
-        <Route path="/brief" element={<Brief ideas={ideas} setIdeas={setIdeas} artists={artists} />} />
+        <Route path="/brief" element={<Brief ideas={ideas} setIdeas={setIdeas} artists={artists} mergedConventions={mergedConventions} />} />
         <Route path="/conventions" element={<Conventions artists={artists} conventionOverrides={conventionOverrides} setConventionOverrides={setConventionOverrides} />} />
         <Route path="/concepts" element={<Concepts concepts={concepts} setConcepts={setConcepts} artists={artists} />} />
         <Route path="/boards" element={<Boards boards={boards} setBoards={setBoards} ideas={ideas} artists={artists} />} />

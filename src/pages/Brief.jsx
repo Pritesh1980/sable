@@ -51,7 +51,7 @@ function IdeaCard({ idea, onOpen }) {
   )
 }
 
-function IdeaModal({ idea, onClose, onSave, onDelete, artists }) {
+function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions = [] }) {
   const [draft, setDraft] = useState({ status: 'idea', ...idea, images: normalizeReferenceImages(idea.images) })
   const [newImage, setNewImage] = useState('')
   const [copied, setCopied] = useState(false)
@@ -293,6 +293,14 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists }) {
                           <span className="font-mono text-[0.6875rem] text-accent shrink-0">{overlapTags.length} match</span>
                         </div>
                         <p className="font-mono text-[0.6875rem] text-cream-muted/70 mt-1">#{artist.rank} · {statusLabel(status)}</p>
+                        {(() => {
+                          const conventions = mergedConventions.filter((c) => c.attendingArtistIds.includes(artist.id))
+                          return conventions.length > 0 ? (
+                            <p className="font-mono text-[0.625rem] text-accent/70 tracking-widest mt-1 truncate">
+                              ◎ {conventions.map((c) => c.name).join(' · ')}
+                            </p>
+                          ) : null
+                        })()}
                         <div className="flex flex-wrap gap-1.5 mt-2">
                           {overlapTags.map((tag) => <TagPill key={tag} tag={tag} active small />)}
                         </div>
@@ -357,7 +365,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists }) {
 
 const BLANK_IDEA = { title: '', description: '', tags: [], placement: '', images: [], linkedArtists: [], status: 'idea' }
 
-export default function Brief({ ideas, setIdeas, artists }) {
+export default function Brief({ ideas, setIdeas, artists, mergedConventions = [] }) {
   const [modal, setModal] = useState(null)
   const [statusFilter, setStatusFilter] = useState(null)
 
@@ -446,6 +454,7 @@ export default function Brief({ ideas, setIdeas, artists }) {
           onSave={saveIdea}
           onDelete={deleteIdea}
           artists={artists}
+          mergedConventions={mergedConventions}
         />
       )}
     </div>
