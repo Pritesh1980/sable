@@ -1,5 +1,6 @@
 import { Routes, Route } from 'react-router-dom'
 import Nav from './components/Nav'
+import Dashboard from './pages/Dashboard'
 import Gallery from './pages/Gallery'
 import Brief from './pages/Brief'
 import Conventions from './pages/Conventions'
@@ -18,9 +19,10 @@ export default function App() {
   return (
     <div className="bg-ink-black min-h-screen pb-20">
       <Routes>
-        <Route path="/" element={<Gallery artists={artists} setArtists={setArtists} />} />
+        <Route path="/" element={<Dashboard artists={artists} ideas={ideas} boards={boards} />} />
+        <Route path="/gallery" element={<Gallery artists={artists} setArtists={setArtists} />} />
         <Route path="/brief" element={<Brief ideas={ideas} setIdeas={setIdeas} artists={artists} />} />
-        <Route path="/conventions" element={<Conventions />} />
+        <Route path="/conventions" element={<Conventions artists={artists} />} />
         <Route path="/concepts" element={<Concepts concepts={concepts} setConcepts={setConcepts} />} />
         <Route path="/boards" element={<Boards boards={boards} setBoards={setBoards} ideas={ideas} artists={artists} />} />
         <Route

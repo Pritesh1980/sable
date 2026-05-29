@@ -52,15 +52,17 @@ describe('buildIdeaBrief', () => {
         placement: 'forearm',
         tags: ['blackwork', 'surrealism'],
         description: 'A moth emerging from dark botanicals.',
-        images: ['https://example.com/moth.jpg'],
+        images: [{ url: 'https://example.com/moth.jpg', note: 'Use the wing shape, not the exact flower.' }],
         linkedArtists: ['a1'],
       },
-      [{ id: 'a1', handle: 'artist_one', name: 'Artist One', tags: ['blackwork'], notes: 'Strong insects.' }]
+      [{ id: 'a1', handle: 'artist_one', name: 'Artist One', tags: ['blackwork'], status: 'contact-next', notes: 'Strong insects.' }]
     )
 
     expect(text).toContain('Tattoo idea: Moth study')
     expect(text).toContain('Placement: forearm')
+    expect(text).toContain('Note: Use the wing shape, not the exact flower.')
     expect(text).toContain('- Artist One (@artist_one) - blackwork')
+    expect(text).toContain('Status: contact-next')
     expect(text).toContain('Notes: Strong insects.')
   })
 })

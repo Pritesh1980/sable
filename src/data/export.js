@@ -1,3 +1,5 @@
+import { getImageNote, getImageUrl } from './planning'
+
 const BACKUP_VERSION = 1
 
 function compactList(items) {
@@ -8,13 +10,17 @@ function formatArtist(artist) {
   if (!artist) return ''
   const label = artist.name ? `${artist.name} (@${artist.handle})` : `@${artist.handle}`
   const tags = artist.tags?.length ? ` - ${artist.tags.join(', ')}` : ''
+  const status = artist.status ? `\n  Status: ${artist.status}` : ''
   const notes = artist.notes ? `\n  Notes: ${artist.notes}` : ''
-  return `- ${label}${tags}${notes}`
+  return `- ${label}${tags}${status}${notes}`
 }
 
 function formatImageList(images = []) {
   if (!images.length) return 'None added'
-  return images.map((url, index) => `${index + 1}. ${url}`).join('\n')
+  return images.map((image, index) => {
+    const note = getImageNote(image)
+    return `${index + 1}. ${getImageUrl(image)}${note ? `\n   Note: ${note}` : ''}`
+  }).join('\n')
 }
 
 export function createBackup({ artists = [], ideas = [], boards = [], concepts = [] }, exportedAt = new Date().toISOString()) {

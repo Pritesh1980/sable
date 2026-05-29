@@ -1,6 +1,8 @@
 // Curated list of UK tattoo conventions. Dates reflect 2026 editions;
 // most recur annually so treat as an ongoing calendar.
 // `popular: true` highlights the largest / longest-running shows.
+// `distanceMiles` is approximate driving distance from Milton Keynes.
+// `attendingArtistIds` lists artist IDs from your saved list who are confirmed attending.
 
 export const CONVENTIONS = [
   {
@@ -11,6 +13,8 @@ export const CONVENTIONS = [
     url: 'https://www.tattoofreeze.com/',
     summary: 'The UK\'s first major tattoo show of the year. Now merged with the Great British Tattoo Show, drawing a large international line-up to Telford.',
     popular: true,
+    distanceMiles: 68,
+    attendingArtistIds: [],
   },
   {
     id: 'brighton',
@@ -20,6 +24,8 @@ export const CONVENTIONS = [
     url: 'https://www.brightontattoo.com/',
     summary: '17th edition. 375+ hand-picked artists and studios, 50+ vendors, live music and competitions by the seafront.',
     popular: true,
+    distanceMiles: 95,
+    attendingArtistIds: [],
   },
   {
     id: 'uk-tattoo-fest',
@@ -29,6 +35,8 @@ export const CONVENTIONS = [
     url: 'https://www.uktattoofest.co.uk/',
     summary: 'Your local one. 250+ award-winning artists across two days at Marshall Arena.',
     popular: true,
+    distanceMiles: 0,
+    attendingArtistIds: [],
   },
   {
     id: 'north-lakes',
@@ -37,15 +45,8 @@ export const CONVENTIONS = [
     dates: '27–29 March 2026',
     url: 'https://www.worldtattooevents.com/north-lakes-tattoo-show/',
     summary: '17th annual three-day gathering in Cumbria. Well-established regional show with a loyal artist base.',
-  },
-  {
-    id: 'scottish',
-    name: 'Scottish Tattoo Convention',
-    location: 'Edinburgh Corn Exchange',
-    dates: '28–29 March 2026',
-    url: 'https://www.scottishtattooconvention.net/',
-    summary: '13th edition. Long-running Edinburgh show bringing together Scottish, UK and international artists with music and entertainment.',
-    popular: true,
+    distanceMiles: 220,
+    attendingArtistIds: [],
   },
   {
     id: 'portsmouth',
@@ -54,6 +55,8 @@ export const CONVENTIONS = [
     dates: '28–29 March 2026',
     url: 'https://www.worldtattooevents.com/portsmouth-tattoo-fest/',
     summary: 'South coast tattoo weekend with a growing artist roster and relaxed, regional atmosphere.',
+    distanceMiles: 100,
+    attendingArtistIds: [],
   },
   {
     id: 'uktta-birmingham',
@@ -63,6 +66,8 @@ export const CONVENTIONS = [
     url: 'https://uktta.co.uk/',
     summary: 'Billed as the UK\'s biggest tattoo convention. Huge artist line-up in the Midlands, plus a sister Manchester edition later in the year.',
     popular: true,
+    distanceMiles: 50,
+    attendingArtistIds: [],
   },
   {
     id: 'big-north',
@@ -71,6 +76,8 @@ export const CONVENTIONS = [
     dates: '25–26 April 2026',
     url: 'https://www.bignorthtattooshow.com/',
     summary: '8th year. 250+ artists from around the world, plus fire, magic, alternative performance and live gaming.',
+    distanceMiles: 230,
+    attendingArtistIds: [],
   },
   {
     id: 'tattoo-expo-uk',
@@ -79,6 +86,8 @@ export const CONVENTIONS = [
     dates: '2–3 May 2026',
     url: 'https://www.thetattooexpo.co.uk/',
     summary: 'May Day bank holiday show. 300+ tattoo artists, traders and galleries drawn from around the world.',
+    distanceMiles: null,
+    attendingArtistIds: [],
   },
   {
     id: 'big-tattoo-meltdown',
@@ -87,14 +96,8 @@ export const CONVENTIONS = [
     dates: '16–17 May 2026',
     url: 'https://www.bigtattoomeltdown.co.uk/',
     summary: 'High-energy second edition taking over Nottingham\'s Motorpoint Arena with a mix of UK and European artists.',
-  },
-  {
-    id: 'belfast',
-    name: 'Belfast Tattoo Convention',
-    location: 'Belfast, Northern Ireland',
-    dates: '5–7 June 2026',
-    url: 'https://www.worldtattooevents.com/belfast-tattoo-convention/',
-    summary: '3rd edition. Three-day Northern Irish convention covering a broad spread of styles.',
+    distanceMiles: 72,
+    attendingArtistIds: [],
   },
   {
     id: 'leeds',
@@ -104,6 +107,8 @@ export const CONVENTIONS = [
     url: 'https://www.leedstattooexpo.com/',
     summary: '11th annual expo with 200+ top artists — traditional, realism, neo-traditional, blackwork, fine line and contemporary.',
     popular: true,
+    distanceMiles: 135,
+    attendingArtistIds: [],
   },
   {
     id: 'great-western',
@@ -112,6 +117,8 @@ export const CONVENTIONS = [
     dates: '25–26 July 2026',
     url: 'https://www.worldtattooevents.com/great-western-tattoo-show/',
     summary: 'South-west regional show for the Bristol / Swindon / Oxford crowd.',
+    distanceMiles: 65,
+    attendingArtistIds: [],
   },
   {
     id: 'uktta-manchester',
@@ -121,6 +128,8 @@ export const CONVENTIONS = [
     url: 'https://uktta.co.uk/',
     summary: '400+ artists at Depot Mayfield. Northern sister event to UKTTA Birmingham.',
     popular: true,
+    distanceMiles: 130,
+    attendingArtistIds: [],
   },
   {
     id: 'ink-and-engines',
@@ -129,14 +138,8 @@ export const CONVENTIONS = [
     dates: '14–16 August 2026',
     url: 'https://www.worldtattooevents.com/ink-and-engines-fest/',
     summary: 'East-of-England festival mixing tattoos with custom car and motorcycle culture.',
-  },
-  {
-    id: 'maiden-city',
-    name: 'Maiden City Ink',
-    location: 'Derry, Northern Ireland',
-    dates: '21–23 August 2026',
-    url: 'https://www.worldtattooevents.com/maiden-city-ink/',
-    summary: '14th year. One of Northern Ireland\'s longest-running tattoo gatherings.',
+    distanceMiles: 105,
+    attendingArtistIds: [],
   },
   {
     id: 'cornwall',
@@ -145,6 +148,8 @@ export const CONVENTIONS = [
     dates: '21–23 August 2026',
     url: 'https://www.worldtattooevents.com/cornwalls-tattoo-convention/',
     summary: '8th edition. Small, characterful show in the far south-west of England.',
+    distanceMiles: 240,
+    attendingArtistIds: [],
   },
   {
     id: 'big-london',
@@ -154,6 +159,8 @@ export const CONVENTIONS = [
     url: 'https://www.biglondontattooshow.com/',
     summary: '3-day flagship at London\'s biggest indoor venue. 450 of the best international artists, plus funfair, sideshows, fire performers and alternative markets.',
     popular: true,
+    distanceMiles: 55,
+    attendingArtistIds: [],
   },
   {
     id: 'bristol',
@@ -162,6 +169,8 @@ export const CONVENTIONS = [
     dates: '2026 (TBC)',
     url: 'https://www.bristoltattooconvention.com/',
     summary: 'Independent Bristol-based show with a tight regional focus.',
+    distanceMiles: 110,
+    attendingArtistIds: [],
   },
 ]
 
