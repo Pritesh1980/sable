@@ -70,9 +70,12 @@ export default function Dashboard({ artists, ideas, boards }) {
               <Link
                 key={artist.id}
                 to="/gallery"
-                className="flex items-center justify-between gap-3 bg-ink-card border border-accent/25 rounded-sm px-3 py-3"
+                className="flex items-center gap-3 bg-ink-card border border-accent/25 rounded-sm px-3 py-3"
               >
-                <div className="min-w-0">
+                {artist.images?.[0] && (
+                  <img src={artist.images[0]} alt="" className="w-10 h-12 rounded-sm object-cover shrink-0" />
+                )}
+                <div className="min-w-0 flex-1">
                   <p className="font-display text-cream text-lg leading-tight truncate">{artistLabel(artist)}</p>
                   <p className="font-mono text-[0.6875rem] text-cream-muted tracking-widest">@{artist.handle}</p>
                 </div>
@@ -124,8 +127,11 @@ export default function Dashboard({ artists, ideas, boards }) {
       <Panel title="Top ranked">
         <div className="space-y-2">
           {summary.topArtists.map((artist) => (
-            <Link key={artist.id} to="/gallery" className="flex items-center justify-between gap-3 py-2">
-              <span className="font-body text-cream-muted truncate">{artistLabel(artist)}</span>
+            <Link key={artist.id} to="/gallery" className="flex items-center gap-2.5 py-1.5">
+              {artist.images?.[0] && (
+                <img src={artist.images[0]} alt="" className="w-7 h-7 rounded-sm object-cover shrink-0" />
+              )}
+              <span className="font-body text-cream-muted truncate flex-1">{artistLabel(artist)}</span>
               <span className="font-mono text-[0.6875rem] text-cream-muted/70 shrink-0">
                 #{artist.rank} · {artistStatusLabel(artist.status)}
               </span>
