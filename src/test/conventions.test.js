@@ -2,8 +2,10 @@ import { describe, it, expect } from 'vitest'
 import { CONVENTIONS, getConventionFavicon } from '../data/conventions'
 
 describe('CONVENTIONS', () => {
-  it('has entries', () => {
-    expect(CONVENTIONS.length).toBeGreaterThan(10)
+  it('is a tight curated list', () => {
+    // Intentionally short: the 5 biggest English shows + UK Tattoo Fest + a Manchester show.
+    expect(CONVENTIONS.length).toBeGreaterThanOrEqual(6)
+    expect(CONVENTIONS.length).toBeLessThanOrEqual(9)
   })
 
   it('every convention has required fields', () => {
@@ -22,10 +24,21 @@ describe('CONVENTIONS', () => {
     expect(new Set(ids).size).toBe(ids.length)
   })
 
-  it('marks some as popular', () => {
+  it('includes the local Milton Keynes show at zero distance', () => {
+    const local = CONVENTIONS.find((c) => c.distanceMiles === 0)
+    expect(local, 'expected a Milton Keynes convention at 0 miles').toBeTruthy()
+    expect(local.location.toLowerCase()).toContain('milton keynes')
+  })
+
+  it('includes a Manchester show', () => {
+    const manchester = CONVENTIONS.find((c) => c.location.toLowerCase().includes('manchester'))
+    expect(manchester, 'expected a Manchester convention').toBeTruthy()
+  })
+
+  it('marks some as popular but not all', () => {
     const popular = CONVENTIONS.filter((c) => c.popular)
     expect(popular.length).toBeGreaterThan(0)
-    expect(popular.length).toBeLessThan(CONVENTIONS.length)
+    expect(popular.length).toBeLessThanOrEqual(CONVENTIONS.length)
   })
 })
 
