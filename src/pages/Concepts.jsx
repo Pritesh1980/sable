@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import Logo from '../components/Logo'
+import TagPill from '../components/TagPill'
+import { STYLE_TAGS } from '../data/artists'
+import { matchArtistsForIdea } from '../data/planning'
 
 const TEXT_SYSTEM_PROMPT = `You are a creative tattoo concept consultant with deep knowledge of tattoo styles, placement, and aesthetics. When given a concept prompt, provide:
 1. A vivid visual description of the tattoo concept (2-3 sentences)
@@ -141,7 +144,7 @@ function PasteZone({ conceptId, onImage, onText, onDiscard }) {
   )
 }
 
-export default function Concepts({ concepts, setConcepts }) {
+export default function Concepts({ concepts, setConcepts, artists = [] }) {
   const [prompt, setPrompt] = useState('')
   const [storedKey, setStoredKey] = useState(() => localStorage.getItem('openai_api_key') || '')
   const [showKeyConfig, setShowKeyConfig] = useState(false)
@@ -180,6 +183,7 @@ export default function Concepts({ concepts, setConcepts }) {
         prompt,
         imageUrl: dataUrl,
         response: '',
+        tags: [],
         createdAt: new Date().toISOString(),
       }
       setConcepts((prev) => [concept, ...prev])
@@ -202,6 +206,7 @@ export default function Concepts({ concepts, setConcepts }) {
       fullPrompt: full,
       imageUrl: '',
       response: '',
+      tags: [],
       createdAt: new Date().toISOString(),
     }
     setConcepts((prev) => [concept, ...prev])
@@ -218,6 +223,10 @@ export default function Concepts({ concepts, setConcepts }) {
   function saveText(id, response) {
     setConcepts((prev) => prev.map((c) => c.id === id ? { ...c, response } : c))
     setPasting(null)
+  }
+
+  function saveTags(id, tags) {
+    setConcepts((prev) => prev.map((c) => c.id === id ? { ...c, tags } : c))
   }
 
   function discard(id) {
@@ -397,6 +406,61 @@ export default function Concepts({ concepts, setConcepts }) {
                     + Add image or response
                   </button>
                 )}
+
+                {/* Style tag picker + artist matching */}
+                <div className="mt-3 pt-3 border-t border-ink-border/40">
+                  <p className="text-[0.625rem] font-mono text-cream-muted/40 tracking-widest uppercase mb-2">Match to style</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {STYLE_TAGS.map((tag) => (
+                      <TagPill
+                        key={tag}
+                        tag={tag}
+                        active={(c.tags || []).includes(tag)}
+                        onClick={() => saveTags(c.id,
+                          (c.tags || []).includes(tag)
+                            ? (c.tags || []).filter((t) => t !== tag)
+                            : [...(c.tags || []), tag]
+                        )}
+                        small
+                      />
+                    ))}
+                  </div>
+
+                  {(c.tags || []).length > 0 && artists.length > 0 && (() => {
+                    const matched = matchArtistsForIdea({ tags: c.tags }, artists).slice(0, 3)
+                    if (!matched.length) return null
+                    return (
+                      <div className="mt-3">
+                        <p className="text-[0.625rem] font-mono text-accent/70 tracking-widest uppercase mb-2">Top artist matches</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          {matched.map(({ artist }) => (
+                            <a
+                              key={artist.id}
+                              href={`https://instagram.com/${artist.handle}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="group"
+                            >
+                              {artist.images?.[0] ? (
+                                <div className="aspect-square rounded-sm overflow-hidden bg-ink-muted mb-1">
+                                  <img src={artist.images[0]} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                </div>
+                              ) : (
+                                <div className="aspect-square rounded-sm bg-ink-muted mb-1 flex items-center justify-center">
+                                  <span className="font-display text-cream-muted/20 text-xl">
+                                    {(artist.name || artist.handle)[0].toUpperCase()}
+                                  </span>
+                                </div>
+                              )}
+                              <p className="font-display text-cream text-xs leading-tight truncate">{artist.name || `@${artist.handle}`}</p>
+                              <p className="font-mono text-cream-muted/40 text-[0.5rem] tracking-widest">#{artist.rank}</p>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })()}
+                </div>
 
                 <div className="flex justify-between items-center mt-4 pt-3 border-t border-ink-border/40">
                   <p className="text-[0.625rem] font-mono text-cream-muted/30">
