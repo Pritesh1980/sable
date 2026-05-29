@@ -111,6 +111,12 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
     }, 220)
   }
 
+  function undo() {
+    if (decisions.length === 0 || transitioning) return
+    setDecisions((prev) => prev.slice(0, -1))
+    setCurrentIdx((prev) => prev - 1)
+  }
+
   function onTouchStart(e) {
     touchStartX.current = e.touches[0].clientX
     touchStartY.current = e.touches[0].clientY
@@ -146,6 +152,7 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
       if (e.key === 'ArrowRight') decide('top')
       if (e.key === 'ArrowUp')    decide('maybe')
       if (e.key === 'Escape')     onClose()
+      if (e.key === 'Backspace' || e.key === 'z' || e.key === 'Z') undo()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -196,9 +203,19 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
         >
           Cancel
         </button>
-        <span className="font-mono text-xs text-cream-muted/60 tracking-widest">
-          {currentIdx + 1} / {queue.length}
-        </span>
+        <div className="flex items-center gap-4">
+          {decisions.length > 0 && (
+            <button
+              onClick={undo}
+              className="pointer-events-auto font-mono text-[0.625rem] text-cream-muted/50 hover:text-cream-muted transition-colors tracking-widest uppercase"
+            >
+              ← Undo
+            </button>
+          )}
+          <span className="font-mono text-xs text-cream-muted/60 tracking-widest">
+            {currentIdx + 1} / {queue.length}
+          </span>
+        </div>
       </div>
 
       {/* Image */}
