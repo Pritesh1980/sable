@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import TagPill from '../components/TagPill'
 import Logo from '../components/Logo'
 import { STYLE_TAGS, PLACEMENTS } from '../data/artists'
 import { IDEA_STATUSES, matchArtistsToIdea } from '../data/brief'
 import { buildIdeaBrief } from '../data/export'
+import { compressImages } from '../hooks/useImageUpload'
 import {
   ARTIST_STATUSES,
   getImageNote,
@@ -54,6 +55,8 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists }) {
   const [draft, setDraft] = useState({ status: 'idea', ...idea, images: normalizeReferenceImages(idea.images) })
   const [newImage, setNewImage] = useState('')
   const [copied, setCopied] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef()
   const isNew = !idea.id
 
   const matches = matchArtistsForIdea(draft, artists)
@@ -84,6 +87,22 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists }) {
       setDraft((d) => ({ ...d, images: [...(d.images || []), { url, note: '' }] }))
     }
     setNewImage('')
+  }
+
+  async function addFiles(e) {
+    const files = e.target.files
+    if (!files?.length) return
+    setUploading(true)
+    try {
+      const compressed = await compressImages(files)
+      setDraft((d) => ({
+        ...d,
+        images: [...(d.images || []), ...compressed.map((url) => ({ url, note: '' }))],
+      }))
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
   }
 
   function updateImageNote(url, note) {
@@ -224,6 +243,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists }) {
               })}
             </div>
           )}
+          <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={addFiles} />
           <div className="flex gap-2">
             <input
               className="flex-1 bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-mono placeholder-cream-muted/60"
@@ -232,6 +252,13 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists }) {
               onChange={(e) => setNewImage(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addImage()}
             />
+            <button
+              onClick={() => fileRef.current.click()}
+              disabled={uploading}
+              className="px-3 py-2 bg-ink-muted border border-ink-border rounded-sm text-sm text-cream hover:border-cream-muted/50 transition-colors disabled:opacity-40 whitespace-nowrap"
+            >
+              {uploading ? '…' : '+ Photo'}
+            </button>
             <button onClick={addImage} className="px-4 py-2 bg-ink-muted border border-ink-border rounded-sm text-sm text-cream hover:border-cream-muted/50 transition-colors">
               Add
             </button>
