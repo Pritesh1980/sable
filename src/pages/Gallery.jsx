@@ -62,7 +62,7 @@ function ArtistGrid({ items, sensors, onDragEnd, onOpen, onSaveImages }) {
   )
 }
 
-export default function Gallery({ artists, setArtists }) {
+export default function Gallery({ artists, setArtists, mergedConventions = [] }) {
   const [activeTag, setActiveTag] = useState(null)
   const [selected, setSelected] = useState(null)
   const [viewMode, setViewMode] = useState('filmstrip')
@@ -214,6 +214,7 @@ export default function Gallery({ artists, setArtists }) {
           artist={selected}
           onClose={() => setSelected(null)}
           onSave={saveArtist}
+          attendingConventions={mergedConventions.filter((c) => c.attendingArtistIds.includes(selected.id))}
         />
       )}
 

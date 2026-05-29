@@ -174,6 +174,13 @@ export const CONVENTIONS = [
   },
 ]
 
+export function mergeConventionOverrides(overrides = {}) {
+  return CONVENTIONS.map((c) => ({
+    ...c,
+    attendingArtistIds: overrides[c.id] ?? c.attendingArtistIds ?? [],
+  }))
+}
+
 export function getConventionFavicon(convention) {
   if (!convention.url) return ''
   try {

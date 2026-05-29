@@ -9,6 +9,7 @@ import Boards from './pages/Boards'
 import Manage from './pages/Manage'
 import { useStorage } from './hooks/useStorage'
 import { useArtistStorage } from './hooks/useArtistStorage'
+import { mergeConventionOverrides } from './data/conventions'
 
 export default function App() {
   const [artists, setArtists] = useArtistStorage()
@@ -16,12 +17,13 @@ export default function App() {
   const [concepts, setConcepts] = useStorage('tattoo_concepts', [])
   const [boards, setBoards] = useStorage('tattoo_boards', [])
   const [conventionOverrides, setConventionOverrides] = useStorage('tattoo_convention_attending', {})
+  const mergedConventions = mergeConventionOverrides(conventionOverrides)
 
   return (
     <div className="bg-ink-black min-h-screen pb-20">
       <Routes>
-        <Route path="/" element={<Dashboard artists={artists} ideas={ideas} boards={boards} />} />
-        <Route path="/gallery" element={<Gallery artists={artists} setArtists={setArtists} />} />
+        <Route path="/" element={<Dashboard artists={artists} ideas={ideas} boards={boards} mergedConventions={mergedConventions} />} />
+        <Route path="/gallery" element={<Gallery artists={artists} setArtists={setArtists} mergedConventions={mergedConventions} />} />
         <Route path="/brief" element={<Brief ideas={ideas} setIdeas={setIdeas} artists={artists} />} />
         <Route path="/conventions" element={<Conventions artists={artists} conventionOverrides={conventionOverrides} setConventionOverrides={setConventionOverrides} />} />
         <Route path="/concepts" element={<Concepts concepts={concepts} setConcepts={setConcepts} artists={artists} />} />

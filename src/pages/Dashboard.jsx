@@ -30,7 +30,7 @@ function Panel({ title, action, children }) {
   )
 }
 
-export default function Dashboard({ artists, ideas, boards }) {
+export default function Dashboard({ artists, ideas, boards, mergedConventions = [] }) {
   const summary = buildDashboardSummary({ artists, ideas, boards })
   const ideaMatches = summary.activeIdeas
     .map((idea) => ({ idea, matches: matchArtistsForIdea(idea, artists).slice(0, 3) }))
@@ -66,22 +66,30 @@ export default function Dashboard({ artists, ideas, boards }) {
       <Panel title="Next artists" action={<Link to="/manage" className="text-xs font-mono text-accent tracking-widest uppercase">Manage</Link>}>
         {summary.nextArtists.length > 0 ? (
           <div className="space-y-2">
-            {summary.nextArtists.slice(0, 4).map((artist) => (
-              <Link
-                key={artist.id}
-                to="/gallery"
-                className="flex items-center gap-3 bg-ink-card border border-accent/25 rounded-sm px-3 py-3"
-              >
-                {artist.images?.[0] && (
-                  <img src={artist.images[0]} alt="" className="w-10 h-12 rounded-sm object-cover shrink-0" />
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="font-display text-cream text-lg leading-tight truncate">{artistLabel(artist)}</p>
-                  <p className="font-mono text-[0.6875rem] text-cream-muted tracking-widest">@{artist.handle}</p>
-                </div>
-                <span className="font-mono text-xs text-accent shrink-0">#{artist.rank}</span>
-              </Link>
-            ))}
+            {summary.nextArtists.slice(0, 4).map((artist) => {
+              const conventions = mergedConventions.filter((c) => c.attendingArtistIds.includes(artist.id))
+              return (
+                <Link
+                  key={artist.id}
+                  to="/gallery"
+                  className="flex items-center gap-3 bg-ink-card border border-accent/25 rounded-sm px-3 py-3"
+                >
+                  {artist.images?.[0] && (
+                    <img src={artist.images[0]} alt="" className="w-10 h-12 rounded-sm object-cover shrink-0" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="font-display text-cream text-lg leading-tight truncate">{artistLabel(artist)}</p>
+                    <p className="font-mono text-[0.6875rem] text-cream-muted tracking-widest">@{artist.handle}</p>
+                    {conventions.length > 0 && (
+                      <p className="font-mono text-[0.625rem] text-accent/70 tracking-widest mt-1 truncate">
+                        ◎ {conventions.map((c) => c.name).join(' · ')}
+                      </p>
+                    )}
+                  </div>
+                  <span className="font-mono text-xs text-accent shrink-0">#{artist.rank}</span>
+                </Link>
+              )
+            })}
           </div>
         ) : (
           <p className="text-cream-muted/90 text-sm font-body">No artists marked contact next yet.</p>

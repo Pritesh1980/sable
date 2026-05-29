@@ -4,7 +4,7 @@ import { STYLE_TAGS, DEFAULT_STUDIOS } from '../data/artists'
 import { compressImages } from '../hooks/useImageUpload'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
 
-export default function ArtistDetail({ artist, onClose, onSave }) {
+export default function ArtistDetail({ artist, onClose, onSave, attendingConventions = [] }) {
   const [images, setImages] = useState(artist.images || [])
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState({ ...artist })
@@ -281,6 +281,34 @@ export default function ArtistDetail({ artist, onClose, onSave }) {
                 </select>
               </div>
             </>
+          )}
+
+          {/* Attending conventions */}
+          {attendingConventions.length > 0 && (
+            <div className="mb-6">
+              <p className="text-xs font-mono text-accent tracking-widest uppercase mb-3">Attending conventions</p>
+              <div className="space-y-2">
+                {attendingConventions.map((c) => (
+                  <a
+                    key={c.id}
+                    href={c.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-start justify-between gap-3 p-3 bg-ink-card border border-accent/25 rounded-sm hover:border-accent/50 transition-colors group"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-display text-cream text-base leading-tight truncate group-hover:text-accent transition-colors">{c.name}</p>
+                      <p className="font-mono text-cream-muted/60 text-[0.625rem] tracking-widest mt-0.5">{c.dates}</p>
+                    </div>
+                    {c.distanceMiles != null && (
+                      <span className="font-mono text-[0.625rem] text-cream-muted/50 shrink-0 mt-0.5">
+                        {c.distanceMiles === 0 ? 'local' : `${c.distanceMiles} mi`}
+                      </span>
+                    )}
+                  </a>
+                ))}
+              </div>
+            </div>
           )}
 
           {/* Notes */}
