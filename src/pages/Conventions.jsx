@@ -194,6 +194,9 @@ function AttendeeEditor({ convention, artists, onSave, onClose }) {
 export default function Conventions({ artists = [], conventionOverrides = {}, setConventionOverrides }) {
   const [sortBy, setSortBy] = useState('date')
   const [editingId, setEditingId] = useState(null)
+  const [showPast, setShowPast] = useState(false)
+
+  const today = new Date().toISOString().split('T')[0]
 
   const conventions = CONVENTIONS.map((c) => ({
     ...c,
@@ -209,8 +212,11 @@ export default function Conventions({ artists = [], conventionOverrides = {}, se
     return 0
   })
 
-  const popular = sorted.filter((c) => c.popular)
-  const rest = sorted.filter((c) => !c.popular)
+  const upcoming = sorted.filter((c) => !c.endDate || c.endDate >= today)
+  const past = sorted.filter((c) => c.endDate && c.endDate < today).reverse()
+
+  const upcomingPopular = upcoming.filter((c) => c.popular)
+  const upcomingRest = upcoming.filter((c) => !c.popular)
 
   function saveAttendees(conventionId, artistIds) {
     setConventionOverrides?.((prev) => ({ ...prev, [conventionId]: artistIds }))
@@ -250,30 +256,56 @@ export default function Conventions({ artists = [], conventionOverrides = {}, se
 
       {sortBy === 'date' ? (
         <>
-          <section className="mb-8">
-            <h2 className="text-xs font-mono text-accent tracking-widest uppercase mb-3">★ Highlights</h2>
-            <div className="space-y-3">
-              {popular.map((c) => (
-                <ConventionCard key={c.id} convention={c} artists={artists} onEditAttendees={setEditingId} />
-              ))}
-            </div>
-          </section>
-          <section>
-            <h2 className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-3">More shows</h2>
-            <div className="space-y-3">
-              {rest.map((c) => (
-                <ConventionCard key={c.id} convention={c} artists={artists} onEditAttendees={setEditingId} />
-              ))}
-            </div>
-          </section>
+          {upcomingPopular.length > 0 && (
+            <section className="mb-8">
+              <h2 className="text-xs font-mono text-accent tracking-widest uppercase mb-3">★ Highlights</h2>
+              <div className="space-y-3">
+                {upcomingPopular.map((c) => (
+                  <ConventionCard key={c.id} convention={c} artists={artists} onEditAttendees={setEditingId} />
+                ))}
+              </div>
+            </section>
+          )}
+          {upcomingRest.length > 0 && (
+            <section className="mb-8">
+              <h2 className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-3">More shows</h2>
+              <div className="space-y-3">
+                {upcomingRest.map((c) => (
+                  <ConventionCard key={c.id} convention={c} artists={artists} onEditAttendees={setEditingId} />
+                ))}
+              </div>
+            </section>
+          )}
+          {upcoming.length === 0 && (
+            <p className="text-cream-muted/50 text-sm font-body py-8 text-center">No upcoming conventions — check back later.</p>
+          )}
         </>
       ) : (
-        <section>
+        <section className="mb-8">
           <div className="space-y-3">
-            {sorted.map((c) => (
+            {upcoming.map((c) => (
               <ConventionCard key={c.id} convention={c} artists={artists} onEditAttendees={setEditingId} />
             ))}
           </div>
+        </section>
+      )}
+
+      {past.length > 0 && (
+        <section className="mt-4">
+          <button
+            onClick={() => setShowPast((v) => !v)}
+            className="flex items-center gap-2 text-[0.625rem] font-mono text-cream-muted/30 hover:text-cream-muted/60 tracking-widest uppercase transition-colors mb-3"
+          >
+            <span className={`transition-transform ${showPast ? 'rotate-180' : ''}`}>▾</span>
+            {showPast ? 'Hide' : `Show ${past.length} past`} shows
+          </button>
+          {showPast && (
+            <div className="space-y-3 opacity-40">
+              {past.map((c) => (
+                <ConventionCard key={c.id} convention={c} artists={artists} onEditAttendees={setEditingId} />
+              ))}
+            </div>
+          )}
         </section>
       )}
 

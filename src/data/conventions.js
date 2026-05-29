@@ -2,6 +2,7 @@
 // most recur annually so treat as an ongoing calendar.
 // `popular: true` highlights the largest / longest-running shows.
 // `distanceMiles` is approximate driving distance from Milton Keynes.
+// `endDate` is ISO YYYY-MM-DD of the last day; null means TBC.
 // `attendingArtistIds` lists artist IDs from your saved list who are confirmed attending.
 
 export const CONVENTIONS = [
@@ -14,6 +15,7 @@ export const CONVENTIONS = [
     summary: 'The UK\'s first major tattoo show of the year. Now merged with the Great British Tattoo Show, drawing a large international line-up to Telford.',
     popular: true,
     distanceMiles: 68,
+    endDate: '2026-02-01',
     attendingArtistIds: [],
   },
   {
@@ -25,6 +27,7 @@ export const CONVENTIONS = [
     summary: '17th edition. 375+ hand-picked artists and studios, 50+ vendors, live music and competitions by the seafront.',
     popular: true,
     distanceMiles: 95,
+    endDate: '2026-03-01',
     attendingArtistIds: [],
   },
   {
@@ -36,6 +39,7 @@ export const CONVENTIONS = [
     summary: 'Your local one. 250+ award-winning artists across two days at Marshall Arena.',
     popular: true,
     distanceMiles: 0,
+    endDate: '2026-03-15',
     attendingArtistIds: [],
   },
   {
@@ -46,6 +50,7 @@ export const CONVENTIONS = [
     url: 'https://www.worldtattooevents.com/north-lakes-tattoo-show/',
     summary: '17th annual three-day gathering in Cumbria. Well-established regional show with a loyal artist base.',
     distanceMiles: 220,
+    endDate: '2026-03-29',
     attendingArtistIds: [],
   },
   {
@@ -56,6 +61,7 @@ export const CONVENTIONS = [
     url: 'https://www.worldtattooevents.com/portsmouth-tattoo-fest/',
     summary: 'South coast tattoo weekend with a growing artist roster and relaxed, regional atmosphere.',
     distanceMiles: 100,
+    endDate: '2026-03-29',
     attendingArtistIds: [],
   },
   {
@@ -67,6 +73,7 @@ export const CONVENTIONS = [
     summary: 'Billed as the UK\'s biggest tattoo convention. Huge artist line-up in the Midlands, plus a sister Manchester edition later in the year.',
     popular: true,
     distanceMiles: 50,
+    endDate: '2026-04-12',
     attendingArtistIds: [],
   },
   {
@@ -77,6 +84,7 @@ export const CONVENTIONS = [
     url: 'https://www.bignorthtattooshow.com/',
     summary: '8th year. 250+ artists from around the world, plus fire, magic, alternative performance and live gaming.',
     distanceMiles: 230,
+    endDate: '2026-04-26',
     attendingArtistIds: [],
   },
   {
@@ -87,6 +95,7 @@ export const CONVENTIONS = [
     url: 'https://www.thetattooexpo.co.uk/',
     summary: 'May Day bank holiday show. 300+ tattoo artists, traders and galleries drawn from around the world.',
     distanceMiles: null,
+    endDate: '2026-05-03',
     attendingArtistIds: [],
   },
   {
@@ -97,6 +106,7 @@ export const CONVENTIONS = [
     url: 'https://www.bigtattoomeltdown.co.uk/',
     summary: 'High-energy second edition taking over Nottingham\'s Motorpoint Arena with a mix of UK and European artists.',
     distanceMiles: 72,
+    endDate: '2026-05-17',
     attendingArtistIds: [],
   },
   {
@@ -108,6 +118,7 @@ export const CONVENTIONS = [
     summary: '11th annual expo with 200+ top artists — traditional, realism, neo-traditional, blackwork, fine line and contemporary.',
     popular: true,
     distanceMiles: 135,
+    endDate: '2026-06-07',
     attendingArtistIds: [],
   },
   {
@@ -118,6 +129,7 @@ export const CONVENTIONS = [
     url: 'https://www.worldtattooevents.com/great-western-tattoo-show/',
     summary: 'South-west regional show for the Bristol / Swindon / Oxford crowd.',
     distanceMiles: 65,
+    endDate: '2026-07-26',
     attendingArtistIds: [],
   },
   {
@@ -129,6 +141,7 @@ export const CONVENTIONS = [
     summary: '400+ artists at Depot Mayfield. Northern sister event to UKTTA Birmingham.',
     popular: true,
     distanceMiles: 130,
+    endDate: '2026-08-09',
     attendingArtistIds: [],
   },
   {
@@ -139,6 +152,7 @@ export const CONVENTIONS = [
     url: 'https://www.worldtattooevents.com/ink-and-engines-fest/',
     summary: 'East-of-England festival mixing tattoos with custom car and motorcycle culture.',
     distanceMiles: 105,
+    endDate: '2026-08-16',
     attendingArtistIds: [],
   },
   {
@@ -149,6 +163,7 @@ export const CONVENTIONS = [
     url: 'https://www.worldtattooevents.com/cornwalls-tattoo-convention/',
     summary: '8th edition. Small, characterful show in the far south-west of England.',
     distanceMiles: 240,
+    endDate: '2026-08-23',
     attendingArtistIds: [],
   },
   {
@@ -160,6 +175,7 @@ export const CONVENTIONS = [
     summary: '3-day flagship at London\'s biggest indoor venue. 450 of the best international artists, plus funfair, sideshows, fire performers and alternative markets.',
     popular: true,
     distanceMiles: 55,
+    endDate: '2026-09-06',
     attendingArtistIds: [],
   },
   {
@@ -170,6 +186,7 @@ export const CONVENTIONS = [
     url: 'https://www.bristoltattooconvention.com/',
     summary: 'Independent Bristol-based show with a tight regional focus.',
     distanceMiles: 110,
+    endDate: null,
     attendingArtistIds: [],
   },
 ]
