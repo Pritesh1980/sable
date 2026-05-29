@@ -40,16 +40,19 @@ export const DEFAULT_ARTISTS = [
   { id: 'andro', handle: 'androprimo_', name: 'Andro', tags: ["dark-illustrative","surrealism"], images: ["/images/artists/andro/1.jpg","/images/artists/andro/2.jpg","/images/artists/andro/3.jpg","/images/artists/andro/4.jpg","/images/artists/andro/5.jpg","/images/artists/andro/6.jpg","/images/artists/andro/7.jpg","/images/artists/andro/8.jpg","/images/artists/andro/9.jpg","/images/artists/andro/10.jpg","/images/artists/andro/11.jpg","/images/artists/andro/12.jpg","/images/artists/andro/13.jpg","/images/artists/andro/14.jpg","/images/artists/andro/15.jpg"], rank: 30, studio: 'no-regrets-birmingham' },
 ]
 
+// `city` + `distanceMiles` (approx driving distance from Milton Keynes) power the
+// Studios page so you can see which studios are realistically reachable.
+// `url` links to the studio / booking page where known.
 export const DEFAULT_STUDIOS = [
-  { id: 'no-regrets-london', name: 'No Regrets London', confirmed: true, notes: 'Hackney' },
-  { id: 'no-regrets-bristol', name: 'No Regrets Bristol', confirmed: true, notes: '' },
-  { id: 'no-regrets-cardiff', name: 'No Regrets Cardiff', confirmed: true, notes: '' },
-  { id: 'no-regrets-cheltenham', name: 'No Regrets Cheltenham', confirmed: true, notes: '' },
-  { id: 'no-regrets-worcester', name: 'No Regrets Worcester', confirmed: true, notes: '' },
-  { id: 'london-glitch', name: 'London Glitch', confirmed: true, notes: '' },
-  { id: 'straight-line', name: 'Straight Line', confirmed: false, notes: 'To be confirmed' },
-  { id: 'fatfugu', name: 'Fatfugu', confirmed: false, notes: 'To be confirmed' },
-  { id: 'no-regrets-birmingham', name: 'No Regrets Birmingham', confirmed: true, notes: '' },
+  { id: 'no-regrets-london', name: 'No Regrets London', confirmed: true, notes: 'Hackney', city: 'London', distanceMiles: 55, url: 'https://www.noregretsuk.com/' },
+  { id: 'no-regrets-bristol', name: 'No Regrets Bristol', confirmed: true, notes: '', city: 'Bristol', distanceMiles: 80, url: 'https://www.noregretsuk.com/' },
+  { id: 'no-regrets-cardiff', name: 'No Regrets Cardiff', confirmed: true, notes: '', city: 'Cardiff', distanceMiles: 110, url: 'https://www.noregretsuk.com/' },
+  { id: 'no-regrets-cheltenham', name: 'No Regrets Cheltenham', confirmed: true, notes: '', city: 'Cheltenham', distanceMiles: 55, url: 'https://www.noregretsuk.com/' },
+  { id: 'no-regrets-worcester', name: 'No Regrets Worcester', confirmed: true, notes: '', city: 'Worcester', distanceMiles: 65, url: 'https://www.noregretsuk.com/' },
+  { id: 'london-glitch', name: 'London Glitch', confirmed: true, notes: '', city: 'London', distanceMiles: 55, url: '' },
+  { id: 'straight-line', name: 'Straight Line', confirmed: false, notes: 'To be confirmed', city: '', distanceMiles: null, url: '' },
+  { id: 'fatfugu', name: 'Fatfugu', confirmed: false, notes: 'To be confirmed', city: '', distanceMiles: null, url: '' },
+  { id: 'no-regrets-birmingham', name: 'No Regrets Birmingham', confirmed: true, notes: '', city: 'Birmingham', distanceMiles: 50, url: 'https://www.noregretsuk.com/' },
 ]
 
 export const PLACEMENTS = [

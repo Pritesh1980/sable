@@ -11,6 +11,7 @@ const PRIMARY_LINKS = [
 ]
 
 const MORE_LINKS = [
+  { to: '/studios', label: 'Studios', icon: '⌂', description: 'Where your artists work' },
   { to: '/boards', label: 'Boards', icon: '▦', description: 'Mood boards & collections' },
   { to: '/manage', label: 'Manage', icon: '⊞', description: 'Artists, data & settings' },
 ]
@@ -26,7 +27,7 @@ function MoreMenu({ onClose }) {
   return (
     <div className="fixed inset-0 z-40" onClick={onClose}>
       <div
-        className="absolute bottom-[calc(env(safe-area-inset-bottom,0px)+3.5rem)] left-4 right-4 max-w-screen-sm mx-auto bg-ink-card border border-ink-border rounded-sm overflow-hidden animate-slide-up shadow-2xl shadow-black/60"
+        className="absolute bottom-[calc(env(safe-area-inset-bottom,0px)+3.5rem)] left-4 right-4 max-w-2xl mx-auto bg-ink-card border border-ink-border rounded-sm overflow-hidden animate-slide-up shadow-2xl shadow-black/60"
         onClick={(e) => e.stopPropagation()}
       >
         {MORE_LINKS.map(({ to, label, icon, description }) => (
@@ -74,7 +75,7 @@ export default function Nav() {
       {moreOpen && <MoreMenu onClose={() => setMoreOpen(false)} />}
 
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-ink-dark border-t border-ink-border safe-bottom">
-        <div className="flex items-stretch max-w-screen-sm mx-auto">
+        <div className="flex items-stretch max-w-2xl mx-auto">
           {PRIMARY_LINKS.map(({ to, label, icon }) => (
             <NavLink
               key={to}

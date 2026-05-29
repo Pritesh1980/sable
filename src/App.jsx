@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard'
 import Gallery from './pages/Gallery'
 import Brief from './pages/Brief'
 import Conventions from './pages/Conventions'
+import Studios from './pages/Studios'
 import Concepts from './pages/Concepts'
 import Boards from './pages/Boards'
 import Manage from './pages/Manage'
@@ -25,7 +26,8 @@ export default function App() {
         <Route path="/" element={<Dashboard artists={artists} ideas={ideas} boards={boards} mergedConventions={mergedConventions} />} />
         <Route path="/gallery" element={<Gallery artists={artists} setArtists={setArtists} mergedConventions={mergedConventions} />} />
         <Route path="/brief" element={<Brief ideas={ideas} setIdeas={setIdeas} artists={artists} mergedConventions={mergedConventions} />} />
-        <Route path="/conventions" element={<Conventions artists={artists} conventionOverrides={conventionOverrides} setConventionOverrides={setConventionOverrides} />} />
+        <Route path="/conventions" element={<Conventions />} />
+        <Route path="/studios" element={<Studios artists={artists} />} />
         <Route path="/concepts" element={<Concepts concepts={concepts} setConcepts={setConcepts} artists={artists} />} />
         <Route path="/boards" element={<Boards boards={boards} setBoards={setBoards} ideas={ideas} artists={artists} />} />
         <Route
