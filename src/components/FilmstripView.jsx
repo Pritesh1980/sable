@@ -1,15 +1,37 @@
 import { useRef, useState } from 'react'
 import TagPill from './TagPill'
 import { DEFAULT_STUDIOS } from '../data/artists'
+import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
 
-function FilmstripRow({ artist, onOpen, index, onSetRank, isFirst, isLast, totalArtists }) {
+function StatusPicker({ artist, onSetStatus, onClose }) {
+  const current = normalizeArtistStatus(artist.status)
+  return (
+    <div className="absolute top-full left-0 z-30 mt-1 bg-ink-card border border-ink-border rounded-sm shadow-2xl shadow-black/70 min-w-[148px]">
+      {ARTIST_STATUSES.map((s) => (
+        <button
+          key={s.value}
+          onClick={(e) => { e.stopPropagation(); onSetStatus(artist.id, s.value); onClose() }}
+          className={`w-full text-left px-3 py-2 text-[0.625rem] font-mono tracking-widest uppercase transition-colors hover:bg-ink-muted ${
+            s.value === current ? 'bg-ink-muted/60' : ''
+          } ${s.tone}`}
+        >
+          {s.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function FilmstripRow({ artist, onOpen, index, onSetRank, onSetStatus, isFirst, isLast, totalArtists }) {
   const scrollRef = useRef(null)
   const [editingRank, setEditingRank] = useState(false)
   const [rankInput, setRankInput] = useState('')
+  const [statusOpen, setStatusOpen] = useState(false)
   const displayName = artist.name || `@${artist.handle}`
   const studio = artist.studio ? DEFAULT_STUDIOS.find((s) => s.id === artist.studio) : null
   const hasImages = artist.images?.length > 0
   const instagramUrl = `https://www.instagram.com/${artist.handle}/`
+  const currentStatus = ARTIST_STATUSES.find((s) => s.value === normalizeArtistStatus(artist.status))
 
   function startEdit() {
     setRankInput(String(artist.rank))
@@ -75,7 +97,7 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, isFirst, isLast, total
 
       {/* Artist info */}
       <div
-        className="w-44 shrink-0 px-3 py-4 border-r border-ink-border/30 cursor-pointer flex flex-col justify-center"
+        className="w-40 shrink-0 px-3 py-3 border-r border-ink-border/30 cursor-pointer flex flex-col justify-center"
         onClick={() => onOpen(artist)}
       >
         <h3 className="font-display text-cream text-base leading-tight truncate mb-0.5">{displayName}</h3>
@@ -84,14 +106,31 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, isFirst, isLast, total
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="font-mono text-[0.6875rem] text-cream-muted/60 hover:text-accent transition-colors mb-2"
+          className="font-mono text-[0.6875rem] text-cream-muted/60 hover:text-accent transition-colors mb-1.5"
         >
           @{artist.handle}
         </a>
         {studio && (
-          <p className="font-mono text-[0.625rem] text-cream-muted/40 tracking-widest mb-2">{studio.name}</p>
+          <p className="font-mono text-[0.625rem] text-cream-muted/40 tracking-widest mb-1.5">{studio.name}</p>
         )}
-        <div className="flex flex-wrap gap-1">
+
+        {/* Status chip — tap to change */}
+        <div className="relative" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={() => setStatusOpen((v) => !v)}
+            className={`text-[0.625rem] font-mono tracking-widest uppercase transition-opacity hover:opacity-70 ${currentStatus.tone}`}
+          >
+            {currentStatus.label}
+          </button>
+          {statusOpen && (
+            <>
+              <div className="fixed inset-0 z-20" onClick={() => setStatusOpen(false)} />
+              <StatusPicker artist={artist} onSetStatus={onSetStatus} onClose={() => setStatusOpen(false)} />
+            </>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-1 mt-2">
           {artist.tags?.map((t) => <TagPill key={t} tag={t} active small />)}
         </div>
       </div>
@@ -121,7 +160,7 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, isFirst, isLast, total
   )
 }
 
-export default function FilmstripView({ artists, onOpenArtist, onSetRank }) {
+export default function FilmstripView({ artists, onOpenArtist, onSetRank, onSetStatus }) {
   return (
     <div className="mx-4 border border-ink-border/50 rounded-sm overflow-hidden">
       {artists.map((artist, i) => (
@@ -130,6 +169,7 @@ export default function FilmstripView({ artists, onOpenArtist, onSetRank }) {
           artist={artist}
           onOpen={onOpenArtist}
           onSetRank={onSetRank}
+          onSetStatus={onSetStatus}
           index={i}
           isFirst={i === 0}
           isLast={i === artists.length - 1}

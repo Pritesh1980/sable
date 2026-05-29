@@ -15,6 +15,7 @@ export default function App() {
   const [ideas, setIdeas] = useStorage('tattoo_ideas', [])
   const [concepts, setConcepts] = useStorage('tattoo_concepts', [])
   const [boards, setBoards] = useStorage('tattoo_boards', [])
+  const [conventionOverrides, setConventionOverrides] = useStorage('tattoo_convention_attending', {})
 
   return (
     <div className="bg-ink-black min-h-screen pb-20">
@@ -22,7 +23,7 @@ export default function App() {
         <Route path="/" element={<Dashboard artists={artists} ideas={ideas} boards={boards} />} />
         <Route path="/gallery" element={<Gallery artists={artists} setArtists={setArtists} />} />
         <Route path="/brief" element={<Brief ideas={ideas} setIdeas={setIdeas} artists={artists} />} />
-        <Route path="/conventions" element={<Conventions artists={artists} />} />
+        <Route path="/conventions" element={<Conventions artists={artists} conventionOverrides={conventionOverrides} setConventionOverrides={setConventionOverrides} />} />
         <Route path="/concepts" element={<Concepts concepts={concepts} setConcepts={setConcepts} />} />
         <Route path="/boards" element={<Boards boards={boards} setBoards={setBoards} ideas={ideas} artists={artists} />} />
         <Route

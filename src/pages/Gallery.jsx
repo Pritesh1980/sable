@@ -116,6 +116,10 @@ export default function Gallery({ artists, setArtists }) {
     })
   }
 
+  function setStatus(artistId, status) {
+    setArtists((prev) => prev.map((a) => a.id === artistId ? { ...a, status } : a))
+  }
+
   return (
     <div className="min-h-screen bg-ink-black pt-safe-top">
       {/* Page header */}
@@ -173,7 +177,7 @@ export default function Gallery({ artists, setArtists }) {
                 key={mode}
                 onClick={() => setViewMode(mode)}
                 title={title}
-                className={`px-2 py-1 rounded-sm text-[13px] font-mono transition-colors ${viewMode === mode ? 'text-cream bg-ink-card' : 'text-cream-muted/50 hover:text-cream-muted'}`}
+                className={`px-2 py-1 rounded-sm text-[0.8125rem] font-mono transition-colors ${viewMode === mode ? 'text-cream bg-ink-card' : 'text-cream-muted/50 hover:text-cream-muted'}`}
               >
                 {label}
               </button>
@@ -185,7 +189,7 @@ export default function Gallery({ artists, setArtists }) {
       {viewMode === 'wall' ? (
         <StyleWall artists={artists} onOpenArtist={setSelected} />
       ) : viewMode === 'filmstrip' ? (
-        <FilmstripView artists={sorted} onOpenArtist={setSelected} onSetRank={setRank} />
+        <FilmstripView artists={sorted} onOpenArtist={setSelected} onSetRank={setRank} onSetStatus={setStatus} />
       ) : viewMode === 'compare' ? (
         <CompareView artists={artists} onOpenArtist={setSelected} />
       ) : (

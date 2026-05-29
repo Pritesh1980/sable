@@ -12,7 +12,7 @@ function GroupSection({ label, items, accent }) {
       </div>
       <div className="flex flex-wrap gap-2">
         {items.map((a) => (
-          <span key={a.id} className="font-body text-[13px] text-cream-muted bg-ink-card px-2.5 py-1 rounded-sm">
+          <span key={a.id} className="font-body text-[0.8125rem] text-cream-muted bg-ink-card px-2.5 py-1 rounded-sm">
             {a.name || `@${a.handle}`}
           </span>
         ))}
@@ -253,7 +253,7 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
         <div className="mb-4">
           <h2 className="font-display text-2xl text-cream leading-tight">{displayName}</h2>
           {artist.name && (
-            <p className="font-mono text-[13px] text-cream-muted/50 mt-0.5">@{artist.handle}</p>
+            <p className="font-mono text-[0.8125rem] text-cream-muted/50 mt-0.5">@{artist.handle}</p>
           )}
         </div>
 

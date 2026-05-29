@@ -131,7 +131,7 @@ export default function ArtistBrowse({ artists, startIndex = 0, onClose }) {
           <div>
             <h2 className="font-display text-2xl text-cream leading-tight">{displayName}</h2>
             {artist.name && (
-              <p className="font-mono text-[13px] text-cream-muted/60 mt-0.5">@{artist.handle}</p>
+              <p className="font-mono text-[0.8125rem] text-cream-muted/60 mt-0.5">@{artist.handle}</p>
             )}
             <p className="font-mono text-xs text-cream-muted/40 mt-1 tracking-widest">
               {imageIdx + 1} / {images.length}
@@ -146,7 +146,7 @@ export default function ArtistBrowse({ artists, startIndex = 0, onClose }) {
                 }
               }}
               disabled={artistIdx === 0}
-              className="font-mono text-[13px] text-cream-muted/70 hover:text-cream disabled:opacity-20 transition-colors tracking-widest uppercase"
+              className="font-mono text-[0.8125rem] text-cream-muted/70 hover:text-cream disabled:opacity-20 transition-colors tracking-widest uppercase"
             >
               ← Artist
             </button>
@@ -158,7 +158,7 @@ export default function ArtistBrowse({ artists, startIndex = 0, onClose }) {
                 }
               }}
               disabled={artistIdx === withImages.length - 1}
-              className="font-mono text-[13px] text-cream-muted/70 hover:text-cream disabled:opacity-20 transition-colors tracking-widest uppercase"
+              className="font-mono text-[0.8125rem] text-cream-muted/70 hover:text-cream disabled:opacity-20 transition-colors tracking-widest uppercase"
             >
               Artist →
             </button>

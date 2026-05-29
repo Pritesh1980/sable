@@ -35,11 +35,7 @@ function AttendingArtists({ convention, artists }) {
             className="flex items-center gap-1.5 bg-ink-muted/60 rounded-sm px-2 py-1 hover:bg-ink-muted transition-colors"
           >
             {artist.images?.[0] && (
-              <img
-                src={artist.images[0]}
-                alt=""
-                className="w-5 h-5 rounded-sm object-cover"
-              />
+              <img src={artist.images[0]} alt="" className="w-5 h-5 rounded-sm object-cover" />
             )}
             <span className="text-[0.6875rem] font-mono text-cream-muted">
               @{artist.handle}
@@ -51,8 +47,9 @@ function AttendingArtists({ convention, artists }) {
   )
 }
 
-function ConventionCard({ convention, artists }) {
+function ConventionCard({ convention, artists, onEditAttendees }) {
   const favicon = getConventionFavicon(convention)
+  const attendingCount = (convention.attendingArtistIds || []).length
 
   return (
     <a
@@ -93,31 +90,133 @@ function ConventionCard({ convention, artists }) {
       </div>
       <p className="text-cream-muted text-sm font-body leading-relaxed mt-2">{convention.summary}</p>
       <AttendingArtists convention={convention} artists={artists} />
-      <p className="text-[0.6875rem] font-mono text-cream-muted/70 tracking-widest uppercase mt-3 group-hover:text-accent transition-colors">
-        Visit site →
-      </p>
+
+      <div className="flex items-center justify-between mt-3 pt-3 border-t border-ink-border/40">
+        <p className="text-[0.6875rem] font-mono text-cream-muted/70 tracking-widest uppercase group-hover:text-accent transition-colors">
+          Visit site →
+        </p>
+        <button
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEditAttendees(convention.id) }}
+          className={`text-[0.625rem] font-mono tracking-widest uppercase transition-colors ${
+            attendingCount > 0
+              ? 'text-accent/70 hover:text-accent'
+              : 'text-cream-muted/30 hover:text-cream-muted/60'
+          }`}
+        >
+          {attendingCount > 0 ? `${attendingCount} attending · Edit` : '+ Add attending artists'}
+        </button>
+      </div>
     </a>
   )
 }
 
-export default function Conventions({ artists = [] }) {
-  const [sortBy, setSortBy] = useState('date')
+function AttendeeEditor({ convention, artists, onSave, onClose }) {
+  const [selected, setSelected] = useState(new Set(convention.attendingArtistIds || []))
 
-  const sorted = [...CONVENTIONS].sort((a, b) => {
+  function toggle(id) {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const sorted = [...artists].sort((a, b) => (a.rank || 99) - (b.rank || 99))
+
+  return (
+    <div className="fixed inset-0 z-50 bg-ink-black flex flex-col animate-fade-in">
+      <div className="flex items-center justify-between px-5 pt-14 pb-4 border-b border-ink-border shrink-0">
+        <div>
+          <p className="text-[0.625rem] font-mono text-accent tracking-widest uppercase mb-1">Attending artists</p>
+          <h2 className="font-display text-xl text-cream leading-tight">{convention.name}</h2>
+          <p className="text-cream-muted/60 text-xs font-mono mt-0.5">{convention.dates}</p>
+        </div>
+        <button
+          onClick={() => { onSave(convention.id, [...selected]); onClose() }}
+          className="text-accent hover:text-accent-hover text-sm font-body transition-colors"
+        >
+          Done
+        </button>
+      </div>
+
+      <div className="shrink-0 px-5 py-3 border-b border-ink-border/40">
+        <p className="text-cream-muted/50 text-[0.625rem] font-mono tracking-widest">
+          {selected.size} artist{selected.size !== 1 ? 's' : ''} marked attending · tap to toggle
+        </p>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-5 py-3">
+        <div className="space-y-2">
+          {sorted.map((artist) => {
+            const isSelected = selected.has(artist.id)
+            return (
+              <button
+                key={artist.id}
+                onClick={() => toggle(artist.id)}
+                className={`w-full flex items-center gap-3 p-3 rounded-sm border transition-colors text-left ${
+                  isSelected
+                    ? 'border-accent/50 bg-accent/5'
+                    : 'border-ink-border hover:border-cream-muted/30'
+                }`}
+              >
+                {artist.images?.[0] ? (
+                  <img src={artist.images[0]} alt="" className="w-9 h-9 rounded-sm object-cover shrink-0" />
+                ) : (
+                  <div className="w-9 h-9 rounded-sm bg-ink-muted shrink-0 flex items-center justify-center">
+                    <span className="font-display text-cream-muted/30 text-sm">
+                      {(artist.name || artist.handle)[0].toUpperCase()}
+                    </span>
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className={`font-display text-base leading-tight truncate ${isSelected ? 'text-cream' : 'text-cream-muted'}`}>
+                    {artist.name || `@${artist.handle}`}
+                  </p>
+                  <p className="font-mono text-cream-muted/40 text-[0.625rem] tracking-widest mt-0.5">
+                    #{artist.rank} · @{artist.handle}
+                  </p>
+                </div>
+                <span className={`w-5 h-5 rounded-sm border flex items-center justify-center shrink-0 text-[0.625rem] transition-colors ${
+                  isSelected ? 'bg-accent border-accent text-cream font-bold' : 'border-ink-border text-transparent'
+                }`}>
+                  ✓
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function Conventions({ artists = [], conventionOverrides = {}, setConventionOverrides }) {
+  const [sortBy, setSortBy] = useState('date')
+  const [editingId, setEditingId] = useState(null)
+
+  const conventions = CONVENTIONS.map((c) => ({
+    ...c,
+    attendingArtistIds: conventionOverrides[c.id] ?? c.attendingArtistIds ?? [],
+  }))
+
+  const sorted = [...conventions].sort((a, b) => {
     if (sortBy === 'distance') {
       const da = a.distanceMiles ?? Infinity
       const db = b.distanceMiles ?? Infinity
       return da - db
     }
-    return 0 // preserve original date order
+    return 0
   })
-
-  const hasAttending = CONVENTIONS.some((c) =>
-    (c.attendingArtistIds || []).some((id) => artists.find((a) => a.id === id))
-  )
 
   const popular = sorted.filter((c) => c.popular)
   const rest = sorted.filter((c) => !c.popular)
+
+  function saveAttendees(conventionId, artistIds) {
+    setConventionOverrides?.((prev) => ({ ...prev, [conventionId]: artistIds }))
+  }
+
+  const editingConvention = editingId ? conventions.find((c) => c.id === editingId) : null
 
   return (
     <div className="min-h-screen bg-ink-black px-4 pt-safe-top pb-24">
@@ -132,9 +231,7 @@ export default function Conventions({ artists = [] }) {
             <button
               onClick={() => setSortBy('date')}
               className={`text-[0.625rem] font-mono tracking-widest uppercase px-2 py-1 rounded-sm transition-colors ${
-                sortBy === 'date'
-                  ? 'bg-accent/20 text-accent'
-                  : 'text-cream-muted/50 hover:text-cream-muted'
+                sortBy === 'date' ? 'bg-accent/20 text-accent' : 'text-cream-muted/50 hover:text-cream-muted'
               }`}
             >
               Date
@@ -142,9 +239,7 @@ export default function Conventions({ artists = [] }) {
             <button
               onClick={() => setSortBy('distance')}
               className={`text-[0.625rem] font-mono tracking-widest uppercase px-2 py-1 rounded-sm transition-colors ${
-                sortBy === 'distance'
-                  ? 'bg-accent/20 text-accent'
-                  : 'text-cream-muted/50 hover:text-cream-muted'
+                sortBy === 'distance' ? 'bg-accent/20 text-accent' : 'text-cream-muted/50 hover:text-cream-muted'
               }`}
             >
               Distance
@@ -159,7 +254,7 @@ export default function Conventions({ artists = [] }) {
             <h2 className="text-xs font-mono text-accent tracking-widest uppercase mb-3">★ Highlights</h2>
             <div className="space-y-3">
               {popular.map((c) => (
-                <ConventionCard key={c.id} convention={c} artists={artists} />
+                <ConventionCard key={c.id} convention={c} artists={artists} onEditAttendees={setEditingId} />
               ))}
             </div>
           </section>
@@ -167,22 +262,28 @@ export default function Conventions({ artists = [] }) {
             <h2 className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-3">More shows</h2>
             <div className="space-y-3">
               {rest.map((c) => (
-                <ConventionCard key={c.id} convention={c} artists={artists} />
+                <ConventionCard key={c.id} convention={c} artists={artists} onEditAttendees={setEditingId} />
               ))}
             </div>
           </section>
         </>
       ) : (
         <section>
-          {hasAttending && (
-            <h2 className="text-xs font-mono text-accent tracking-widest uppercase mb-3">Nearest first</h2>
-          )}
           <div className="space-y-3">
             {sorted.map((c) => (
-              <ConventionCard key={c.id} convention={c} artists={artists} />
+              <ConventionCard key={c.id} convention={c} artists={artists} onEditAttendees={setEditingId} />
             ))}
           </div>
         </section>
+      )}
+
+      {editingConvention && (
+        <AttendeeEditor
+          convention={editingConvention}
+          artists={artists}
+          onSave={saveAttendees}
+          onClose={() => setEditingId(null)}
+        />
       )}
     </div>
   )

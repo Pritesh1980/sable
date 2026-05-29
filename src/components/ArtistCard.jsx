@@ -49,7 +49,7 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
             {/* Quick upload prompt on empty tiles */}
             <button
               onClick={(e) => { e.stopPropagation(); fileRef.current.click() }}
-              className="text-[13px] font-mono text-cream-muted/75 hover:text-cream-muted/80 tracking-widest uppercase transition-colors"
+              className="text-[0.8125rem] font-mono text-cream-muted/75 hover:text-cream-muted/80 tracking-widest uppercase transition-colors"
             >
               {uploading ? 'Importing…' : '+ Add photo'}
             </button>
@@ -96,7 +96,7 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
             {artist.name || `@${artist.handle}`}
           </p>
           {artist.name && (
-            <p className="font-mono text-cream-muted/90 text-[13px] tracking-widest mt-0.5">
+            <p className="font-mono text-cream-muted/90 text-[0.8125rem] tracking-widest mt-0.5">
               @{artist.handle}
             </p>
           )}
@@ -109,7 +109,7 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
 
         {/* Rank badge */}
         <div className="absolute top-2 left-2 w-5 h-5 rounded-full bg-ink-black/70 flex items-center justify-center backdrop-blur-sm">
-          <span className="text-[13px] font-mono text-cream-muted/80">{artist.rank}</span>
+          <span className="text-[0.8125rem] font-mono text-cream-muted/80">{artist.rank}</span>
         </div>
       </div>
     </div>

@@ -29,7 +29,7 @@ export default function StyleWall({ artists, onOpenArtist }) {
               {artist.name || `@${artist.handle}`}
             </p>
             {artist.name && (
-              <p className="font-mono text-cream-muted/60 text-[13px] mt-0.5">@{artist.handle}</p>
+              <p className="font-mono text-cream-muted/60 text-[0.8125rem] mt-0.5">@{artist.handle}</p>
             )}
           </div>
         </div>

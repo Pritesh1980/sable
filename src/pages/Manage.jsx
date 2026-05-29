@@ -80,7 +80,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
-            className="font-mono text-[13px] text-cream-muted hover:text-accent transition-colors inline-flex items-center gap-1"
+            className="font-mono text-[0.8125rem] text-cream-muted hover:text-accent transition-colors inline-flex items-center gap-1"
           >
             Instagram ↗
           </a>
@@ -98,7 +98,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
             <button
               onClick={(e) => { e.stopPropagation(); fileRef.current.click() }}
               disabled={uploading}
-              className="font-mono text-[13px] text-cream-muted hover:text-cream border border-ink-border hover:border-cream-muted/40 px-2 py-1 rounded-sm transition-colors disabled:opacity-40 whitespace-nowrap"
+              className="font-mono text-[0.8125rem] text-cream-muted hover:text-cream border border-ink-border hover:border-cream-muted/40 px-2 py-1 rounded-sm transition-colors disabled:opacity-40 whitespace-nowrap"
             >
               {uploading ? 'Importing…' : '+ Photos'}
             </button>
@@ -124,7 +124,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
 
               {/* Tags */}
               <div>
-                <p className="text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Style Tags</p>
+                <p className="text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Style Tags</p>
                 <div className="flex flex-wrap gap-1.5">
                   {STYLE_TAGS.map((tag) => (
                     <TagPill key={tag} tag={tag} active={artist.tags.includes(tag)} onClick={() => toggleTag(tag)} small />
@@ -134,7 +134,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
 
               {/* Status */}
               <div>
-                <p className="text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Shortlist Status</p>
+                <p className="text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Shortlist Status</p>
                 <select
                   className="bg-ink-muted border border-ink-border rounded-sm px-3 py-1.5 text-sm text-cream outline-none focus:border-cream-muted/40 font-body"
                   value={normalizeArtistStatus(artist.status)}
@@ -148,7 +148,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
 
               {/* Studio */}
               <div>
-                <p className="text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Studio</p>
+                <p className="text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Studio</p>
                 <select
                   className="bg-ink-muted border border-ink-border rounded-sm px-3 py-1.5 text-sm text-cream outline-none focus:border-cream-muted/40 font-body"
                   value={artist.studio || ''}
@@ -163,7 +163,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
 
               {/* Notes */}
               <div>
-                <p className="text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Notes</p>
+                <p className="text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Notes</p>
                 <div className="flex gap-2">
                   <input
                     className="flex-1 bg-ink-muted border border-ink-border rounded-sm px-3 py-1.5 text-sm text-cream outline-none focus:border-cream-muted/40 font-body placeholder-cream-muted/60"
@@ -179,7 +179,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
               {/* Image thumbnails */}
               {imageCount > 0 && (
                 <div>
-                  <p className="text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Photos ({imageCount})</p>
+                  <p className="text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Photos ({imageCount})</p>
                   <div className="flex gap-2 flex-wrap">
                     {artist.images.map((src, idx) => (
                       <div key={idx} className="relative w-14 h-14 rounded-sm overflow-hidden group bg-ink-muted shrink-0">
@@ -233,7 +233,7 @@ function AddArtistForm({ onAdd }) {
       <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-4">Add New Artist</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
         <div>
-          <label className="text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase block mb-1">Instagram Handle *</label>
+          <label className="text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase block mb-1">Instagram Handle *</label>
           <input
             className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/40 font-mono placeholder-cream-muted/60"
             placeholder="@handle"
@@ -242,7 +242,7 @@ function AddArtistForm({ onAdd }) {
           />
         </div>
         <div>
-          <label className="text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase block mb-1">Display Name</label>
+          <label className="text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase block mb-1">Display Name</label>
           <input
             className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/40 font-body placeholder-cream-muted/60"
             placeholder="Full name (optional)"
@@ -410,10 +410,10 @@ export default function Manage({ artists, setArtists, ideas, setIdeas, boards, s
         <table className="w-full">
           <thead>
             <tr className="border-b border-ink-border bg-ink-card">
-              <th className="text-left py-2.5 pl-4 pr-2 text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase">Artist</th>
-              <th className="text-left py-2.5 px-2 text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase">Instagram</th>
-              <th className="text-left py-2.5 px-2 text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase">Status</th>
-              <th className="text-left py-2.5 px-2 text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase">Photos</th>
+              <th className="text-left py-2.5 pl-4 pr-2 text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase">Artist</th>
+              <th className="text-left py-2.5 px-2 text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase">Instagram</th>
+              <th className="text-left py-2.5 px-2 text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase">Status</th>
+              <th className="text-left py-2.5 px-2 text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase">Photos</th>
               <th className="py-2.5 pr-4" />
             </tr>
           </thead>
