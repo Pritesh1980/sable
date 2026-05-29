@@ -4,8 +4,8 @@
   "description": "Artist discovery and tattoo planning",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#0a0a0a",
+  "background_color": "#141210",
+  "theme_color": "#141210",
   "orientation": "portrait",
   "icons": [
     {
