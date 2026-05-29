@@ -150,7 +150,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
         </div>
       </div>
 
-      <div className="flex-1 px-5 py-6 max-w-screen-sm mx-auto w-full space-y-6">
+      <div className="flex-1 px-5 py-6 max-w-2xl mx-auto w-full space-y-6">
         <div>
           <input
             autoFocus
@@ -394,7 +394,7 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
   }, {})
 
   return (
-    <div className="min-h-screen bg-ink-black px-4 pt-safe-top pb-24">
+    <div className="min-h-screen bg-ink-black max-w-5xl mx-auto px-4 md:px-8 pt-safe-top pb-24">
       <div className="pt-12 pb-6 flex items-end justify-between">
         <div>
           <Logo size={24} className="mb-2" />
@@ -443,7 +443,7 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
       ) : filtered.length === 0 ? (
         <p className="text-cream-muted/90 text-center text-xs font-mono tracking-widest py-16">No ideas with this status.</p>
       ) : (
-        <div className="space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((idea) => (
             <IdeaCard key={idea.id} idea={idea} onOpen={setModal} />
           ))}

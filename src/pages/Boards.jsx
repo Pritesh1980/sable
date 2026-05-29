@@ -107,7 +107,7 @@ function BoardModal({ board, onClose, onSave, onDelete, ideas, artists }) {
         </div>
       </div>
 
-      <div className="flex-1 px-5 py-6 max-w-screen-sm mx-auto w-full space-y-6">
+      <div className="flex-1 px-5 py-6 max-w-2xl mx-auto w-full space-y-6">
         <input
           autoFocus
           className="bg-transparent border-b border-ink-border text-cream font-display text-2xl w-full outline-none pb-1 placeholder-cream-muted/60"
@@ -209,7 +209,7 @@ export default function Boards({ boards, setBoards, ideas, artists }) {
   }
 
   return (
-    <div className="min-h-screen bg-ink-black px-4 pt-safe-top pb-24">
+    <div className="min-h-screen bg-ink-black max-w-5xl mx-auto px-4 md:px-8 pt-safe-top pb-24">
       <div className="pt-12 pb-6 flex items-end justify-between">
         <div>
           <Logo size={24} className="mb-2" />

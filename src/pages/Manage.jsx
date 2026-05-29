@@ -372,7 +372,7 @@ export default function Manage({ artists, setArtists, ideas, setIdeas, boards, s
   const withImages = artists.filter((a) => a.images?.length > 0).length
 
   return (
-    <div className="min-h-screen bg-ink-black px-4 pt-safe-top pb-24">
+    <div className="min-h-screen bg-ink-black max-w-5xl mx-auto px-4 md:px-8 pt-safe-top pb-24">
       {/* Header */}
       <div className="pt-10 pb-6">
         <Logo size={28} className="mb-3" />

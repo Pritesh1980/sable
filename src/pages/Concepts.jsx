@@ -235,7 +235,7 @@ export default function Concepts({ concepts, setConcepts, artists = [] }) {
   }
 
   return (
-    <div className="min-h-screen bg-ink-black px-4 pt-safe-top pb-24">
+    <div className="min-h-screen bg-ink-black max-w-5xl mx-auto px-4 md:px-8 pt-safe-top pb-24">
 
       <div className="pt-12 pb-6 flex items-end justify-between">
         <div>

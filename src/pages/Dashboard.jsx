@@ -37,14 +37,14 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
     .filter(({ matches }) => matches.length > 0)
 
   return (
-    <div className="min-h-screen bg-ink-black px-4 pt-safe-top pb-24">
+    <div className="min-h-screen bg-ink-black max-w-5xl mx-auto px-4 md:px-8 pt-safe-top pb-24">
       <div className="pt-10 pb-6">
         <Logo size={28} className="mb-3" />
         <p className="font-mono text-xs text-accent tracking-[0.4em] uppercase mb-2">Planning</p>
         <h1 className="font-display text-5xl text-cream leading-none tracking-tight">Dashboard</h1>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-6">
         <Link to="/brief" className="bg-ink-card border border-ink-border rounded-sm p-4">
           <p className="font-display text-3xl text-cream leading-none">{summary.activeIdeas.length}</p>
           <p className="font-mono text-[0.6875rem] text-cream-muted tracking-widest uppercase mt-2">Active ideas</p>
@@ -65,7 +65,7 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
 
       <Panel title="Next artists" action={<Link to="/manage" className="text-xs font-mono text-accent tracking-widest uppercase">Manage</Link>}>
         {summary.nextArtists.length > 0 ? (
-          <div className="space-y-2">
+          <div className="grid sm:grid-cols-2 gap-2">
             {summary.nextArtists.slice(0, 4).map((artist) => {
               const conventions = mergedConventions.filter((c) => c.attendingArtistIds.includes(artist.id))
               return (
@@ -98,7 +98,7 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
 
       <Panel title="Idea matches" action={<Link to="/brief" className="text-xs font-mono text-accent tracking-widest uppercase">Brief</Link>}>
         {ideaMatches.length > 0 ? (
-          <div className="space-y-3">
+          <div className="grid lg:grid-cols-2 gap-3">
             {ideaMatches.slice(0, 4).map(({ idea, matches }) => {
               const status = IDEA_STATUSES.find((s) => s.value === (idea.status || 'idea'))
               return (

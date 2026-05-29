@@ -42,9 +42,9 @@ function ArtistGrid({ items, sensors, onDragEnd, onOpen, onSaveImages }) {
             ))}
           </div>
         )}
-        {/* Remaining — 2-col grid */}
+        {/* Remaining — responsive grid: 2 on mobile, up to 5 on a wide desktop */}
         {items.filter((a) => a.rank > 3).length > 0 && (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
             {items.filter((a) => a.rank > 3).map((artist, i) => (
               <SortableArtistCard
                 key={artist.id}
@@ -193,7 +193,7 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
       ) : viewMode === 'compare' ? (
         <CompareView artists={artists} onOpenArtist={setSelected} />
       ) : (
-        <div className="px-4">
+        <div className="px-4 max-w-7xl mx-auto">
           <ArtistGrid
             items={sorted}
             sensors={sensors}
