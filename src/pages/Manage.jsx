@@ -3,13 +3,13 @@ import { STYLE_TAGS, DEFAULT_STUDIOS } from '../data/artists'
 import Logo from '../components/Logo'
 import { createBackup, parseBackup } from '../data/export'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
+import { compressImages } from '../hooks/useImageUpload'
+import TagPill from '../components/TagPill'
 
 function studioName(id) {
   const s = DEFAULT_STUDIOS.find((s) => s.id === id)
   return s ? s.name : null
 }
-import { compressImages } from '../hooks/useImageUpload'
-import TagPill from '../components/TagPill'
 
 function downloadJson(filename, payload) {
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
