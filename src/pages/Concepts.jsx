@@ -54,7 +54,7 @@ export default function Concepts({ concepts, setConcepts }) {
 
       {/* How it works */}
       <div className="mb-6 p-4 bg-ink-card/50 border border-ink-border rounded-sm">
-        <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase mb-2">How it works</p>
+        <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-2">How it works</p>
         <ol className="text-cream-muted/80 text-xs font-body space-y-1 list-decimal list-inside">
           <li>Describe your tattoo idea below</li>
           <li>Tap <span className="text-accent">Copy Prompt</span> — a detailed AI prompt is copied to your clipboard</li>
@@ -74,7 +74,7 @@ export default function Concepts({ concepts, setConcepts }) {
           onKeyDown={(e) => { if (e.key === 'Enter' && e.metaKey) copyPrompt() }}
         />
         <div className="flex items-center justify-between mt-2">
-          <span className="text-[12px] font-mono text-cream-muted/90">⌘ Enter to copy</span>
+          <span className="text-xs font-mono text-cream-muted/90">⌘ Enter to copy</span>
           <button
             onClick={copyPrompt}
             disabled={!prompt.trim()}
@@ -99,19 +99,19 @@ export default function Concepts({ concepts, setConcepts }) {
               key={c.id}
               className="bg-ink-card border border-ink-border rounded-sm p-4 animate-slide-up"
             >
-              <p className="text-cream-muted/90 text-[12px] font-mono tracking-widest uppercase mb-2">Prompt</p>
+              <p className="text-cream-muted/90 text-xs font-mono tracking-widest uppercase mb-2">Prompt</p>
               <p className="text-cream font-body text-sm mb-3 italic">"{c.prompt}"</p>
 
               {c.fullPrompt && (
                 <details className="mb-3 group">
-                  <summary className="text-[11px] font-mono text-cream-muted/50 tracking-widest uppercase cursor-pointer hover:text-cream-muted transition-colors">
+                  <summary className="text-[0.6875rem] font-mono text-cream-muted/50 tracking-widest uppercase cursor-pointer hover:text-cream-muted transition-colors">
                     View generated prompt
                   </summary>
                   <div className="mt-2 p-3 bg-ink-muted/50 border border-ink-border rounded-sm relative">
                     <pre className="text-cream-muted/70 text-xs font-mono whitespace-pre-wrap leading-relaxed">{c.fullPrompt}</pre>
                     <button
                       onClick={() => navigator.clipboard.writeText(c.fullPrompt)}
-                      className="absolute top-2 right-2 text-[10px] font-mono text-cream-muted/40 hover:text-cream-muted tracking-widest uppercase transition-colors"
+                      className="absolute top-2 right-2 text-[0.625rem] font-mono text-cream-muted/40 hover:text-cream-muted tracking-widest uppercase transition-colors"
                     >
                       Copy
                     </button>
@@ -121,7 +121,7 @@ export default function Concepts({ concepts, setConcepts }) {
 
               {pasting === c.id ? (
                 <div className="mt-3 pt-3 border-t border-ink-border">
-                  <p className="text-[12px] font-mono text-accent tracking-widest uppercase mb-2">Paste AI response</p>
+                  <p className="text-xs font-mono text-accent tracking-widest uppercase mb-2">Paste AI response</p>
                   <textarea
                     autoFocus
                     className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-body placeholder-cream-muted/60 resize-none"
@@ -132,13 +132,13 @@ export default function Concepts({ concepts, setConcepts }) {
                   <div className="flex justify-end gap-3 mt-2">
                     <button
                       onClick={() => { setConcepts((prev) => prev.filter((x) => x.id !== c.id)); setPasting(null) }}
-                      className="text-[12px] font-mono text-cream-muted/60 hover:text-cream-muted transition-colors tracking-widest uppercase"
+                      className="text-xs font-mono text-cream-muted/60 hover:text-cream-muted transition-colors tracking-widest uppercase"
                     >
                       Discard
                     </button>
                     <button
                       onClick={() => saveResponse(c.id, document.getElementById(`paste-${c.id}`).value)}
-                      className="text-[12px] font-mono text-accent hover:text-accent-hover transition-colors tracking-widest uppercase"
+                      className="text-xs font-mono text-accent hover:text-accent-hover transition-colors tracking-widest uppercase"
                     >
                       Save
                     </button>
@@ -160,7 +160,7 @@ export default function Concepts({ concepts, setConcepts }) {
               ) : (
                 <button
                   onClick={() => setPasting(c.id)}
-                  className="mt-2 text-[12px] font-mono text-accent hover:text-accent-hover transition-colors tracking-widest uppercase"
+                  className="mt-2 text-xs font-mono text-accent hover:text-accent-hover transition-colors tracking-widest uppercase"
                 >
                   + Paste response
                 </button>
@@ -170,7 +170,7 @@ export default function Concepts({ concepts, setConcepts }) {
                 <div className="flex justify-end mt-3">
                   <button
                     onClick={() => setConcepts((prev) => prev.filter((x) => x.id !== c.id))}
-                    className="text-[12px] font-mono text-cream-muted/90 hover:text-accent transition-colors tracking-widest uppercase"
+                    className="text-xs font-mono text-cream-muted/90 hover:text-accent transition-colors tracking-widest uppercase"
                   >
                     Delete
                   </button>

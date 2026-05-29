@@ -101,7 +101,7 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
             </p>
           )}
           {studio && (
-            <span className="inline-block mt-1 px-1.5 py-px bg-ink-black/70 backdrop-blur-sm font-mono text-cream-muted/90 text-[10px] tracking-widest truncate max-w-full">
+            <span className="inline-block mt-1 px-1.5 py-px bg-ink-black/70 backdrop-blur-sm font-mono text-cream-muted/90 text-[0.625rem] tracking-widest truncate max-w-full">
               {studio.name}
             </span>
           )}

@@ -36,7 +36,7 @@ function BoardCard({ board, ideas, onOpen }) {
         {board.description && (
           <p className="text-cream-muted text-sm font-body line-clamp-2 mb-2">{board.description}</p>
         )}
-        <p className="text-cream-muted/80 text-[11px] font-mono tracking-widest uppercase">
+        <p className="text-cream-muted/80 text-[0.6875rem] font-mono tracking-widest uppercase">
           {count} idea{count !== 1 ? 's' : ''}
         </p>
       </div>
@@ -116,7 +116,7 @@ function BoardModal({ board, onClose, onSave, onDelete, ideas, artists }) {
         />
 
         <div>
-          <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase mb-3">Description</p>
+          <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-3">Description</p>
           <textarea
             className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-body placeholder-cream-muted/60 resize-none"
             rows={3}
@@ -128,7 +128,7 @@ function BoardModal({ board, onClose, onSave, onDelete, ideas, artists }) {
 
         {/* Ideas in board */}
         <div>
-          <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase mb-3">
+          <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-3">
             In this board ({boardIdeas.length})
           </p>
           {boardIdeas.length === 0 ? (
@@ -170,7 +170,7 @@ function BoardModal({ board, onClose, onSave, onDelete, ideas, artists }) {
         {/* Available ideas to add */}
         {availableIdeas.length > 0 && (
           <div>
-            <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase mb-3">Add ideas</p>
+            <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-3">Add ideas</p>
             <div className="space-y-1">
               {availableIdeas.map((idea) => (
                 <button

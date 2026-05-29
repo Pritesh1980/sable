@@ -19,12 +19,12 @@ function CompareColumn({ artist, onOpen, onRemove }) {
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="font-mono text-[11px] text-cream-muted/60 hover:text-accent transition-colors"
+              className="font-mono text-[0.6875rem] text-cream-muted/60 hover:text-accent transition-colors"
             >
               @{artist.handle}
             </a>
             {studio && (
-              <p className="font-mono text-[10px] text-cream-muted/40 tracking-widest mt-0.5">{studio.name}</p>
+              <p className="font-mono text-[0.625rem] text-cream-muted/40 tracking-widest mt-0.5">{studio.name}</p>
             )}
           </div>
           <button

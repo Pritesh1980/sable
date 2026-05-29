@@ -7,18 +7,18 @@
 /* rgb(var(--x) / <alpha-value>) opacity modifier syntax to work.          */
 
 :root {
-  /* Dark theme (default) */
-  --ink-black: 10 10 10;
-  --ink-dark: 17 17 17;
-  --ink-card: 22 22 22;
-  --ink-border: 34 34 34;
-  --ink-muted: 42 42 42;
+  /* Dark theme (default) — warm charcoal */
+  --ink-black: 20 18 16;
+  --ink-dark: 26 24 21;
+  --ink-card: 30 28 25;
+  --ink-border: 46 43 38;
+  --ink-muted: 58 54 48;
   --cream: 240 235 224;
   --cream-muted: 158 154 142;
 
-  --bg-html: #0a0a0a;
-  --scrollbar-track: #0a0a0a;
-  --scrollbar-thumb: #2a2a2a;
+  --bg-html: #141210;
+  --scrollbar-track: #141210;
+  --scrollbar-thumb: #3a3630;
   --selection-text: #f0ebe0;
 }
 

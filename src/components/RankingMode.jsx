@@ -6,8 +6,8 @@ function GroupSection({ label, items, accent }) {
   return (
     <div className="mb-6">
       <div className="flex items-center gap-3 mb-2">
-        <span className={`font-mono text-[11px] tracking-[0.35em] uppercase ${accent}`}>{label}</span>
-        <span className="font-mono text-[11px] text-cream-muted/40">({items.length})</span>
+        <span className={`font-mono text-[0.6875rem] tracking-[0.35em] uppercase ${accent}`}>{label}</span>
+        <span className="font-mono text-[0.6875rem] text-cream-muted/40">({items.length})</span>
         <div className="flex-1 h-px bg-ink-border" />
       </div>
       <div className="flex flex-wrap gap-2">
@@ -35,7 +35,7 @@ function SummaryScreen({ decisions, artists, onApply, onDiscard }) {
   return (
     <div className="fixed inset-0 z-50 bg-ink-black flex flex-col animate-fade-in">
       <div className="flex-1 overflow-y-auto px-5 pt-14 pb-4">
-        <p className="font-mono text-[11px] text-accent tracking-[0.4em] uppercase mb-2">Ranking Complete</p>
+        <p className="font-mono text-[0.6875rem] text-accent tracking-[0.4em] uppercase mb-2">Ranking Complete</p>
         <h2 className="font-display text-4xl text-cream mb-8 leading-none">
           {total} artists<br />sorted
         </h2>
@@ -61,13 +61,13 @@ function SummaryScreen({ decisions, artists, onApply, onDiscard }) {
       <div className="shrink-0 px-5 pb-10 pt-4 border-t border-ink-border flex gap-3">
         <button
           onClick={onDiscard}
-          className="flex-1 py-3.5 font-mono text-[12px] tracking-widest uppercase text-cream-muted/60 border border-ink-border rounded-sm hover:text-cream-muted transition-colors"
+          className="flex-1 py-3.5 font-mono text-xs tracking-widest uppercase text-cream-muted/60 border border-ink-border rounded-sm hover:text-cream-muted transition-colors"
         >
           Discard
         </button>
         <button
           onClick={onApply}
-          className="flex-1 py-3.5 font-mono text-[12px] tracking-widest uppercase text-cream border border-cream/30 rounded-sm hover:bg-cream/5 transition-colors"
+          className="flex-1 py-3.5 font-mono text-xs tracking-widest uppercase text-cream border border-cream/30 rounded-sm hover:bg-cream/5 transition-colors"
         >
           Apply Ranking
         </button>
@@ -195,7 +195,7 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
         >
           Cancel
         </button>
-        <span className="font-mono text-[12px] text-cream-muted/60 tracking-widest">
+        <span className="font-mono text-xs text-cream-muted/60 tracking-widest">
           {currentIdx + 1} / {queue.length}
         </span>
       </div>
@@ -241,7 +241,7 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
         {/* Swipe hint (first card only) */}
         {currentIdx === 0 && !hasDragged && (
           <div className="absolute bottom-32 inset-x-0 flex justify-center pointer-events-none">
-            <p className="font-mono text-[11px] text-cream-muted/30 tracking-widest uppercase">
+            <p className="font-mono text-[0.6875rem] text-cream-muted/30 tracking-widest uppercase">
               swipe to rank
             </p>
           </div>
@@ -263,24 +263,24 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
             className="py-4 flex flex-col items-center gap-1 font-mono tracking-widest uppercase text-cream-muted/60 bg-ink-card border border-ink-border rounded-sm hover:border-cream-muted/40 hover:text-cream-muted transition-colors active:scale-95"
           >
             <span className="text-xl leading-none">←</span>
-            <span className="text-[11px]">Pass</span>
-            <span className="text-[10px] text-cream-muted/30 hidden sm:block">arrow left</span>
+            <span className="text-[0.6875rem]">Pass</span>
+            <span className="text-[0.625rem] text-cream-muted/30 hidden sm:block">arrow left</span>
           </button>
           <button
             onClick={() => decide('maybe')}
             className="py-4 flex flex-col items-center gap-1 font-mono tracking-widest uppercase text-cream bg-ink-card border border-cream-muted/30 rounded-sm hover:border-cream-muted/60 hover:bg-cream/5 transition-colors active:scale-95"
           >
             <span className="text-xl leading-none">↑</span>
-            <span className="text-[11px]">Maybe</span>
-            <span className="text-[10px] text-cream-muted/30 hidden sm:block">arrow up</span>
+            <span className="text-[0.6875rem]">Maybe</span>
+            <span className="text-[0.625rem] text-cream-muted/30 hidden sm:block">arrow up</span>
           </button>
           <button
             onClick={() => decide('top')}
             className="py-4 flex flex-col items-center gap-1 font-mono tracking-widest uppercase text-accent bg-accent/5 border border-accent/50 rounded-sm hover:bg-accent/15 hover:border-accent transition-colors active:scale-95"
           >
             <span className="text-xl leading-none">→</span>
-            <span className="text-[11px]">Top</span>
-            <span className="text-[10px] text-accent/40 hidden sm:block">arrow right</span>
+            <span className="text-[0.6875rem]">Top</span>
+            <span className="text-[0.625rem] text-accent/40 hidden sm:block">arrow right</span>
           </button>
         </div>
       </div>

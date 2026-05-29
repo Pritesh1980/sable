@@ -122,20 +122,20 @@ export default function Gallery({ artists, setArtists }) {
       <div className="px-4 pt-10 pb-4 flex items-end justify-between">
         <div>
           <Logo size={28} className="mb-3" />
-          <p className="font-mono text-[12px] text-accent tracking-[0.4em] uppercase mb-2">Your Collection</p>
+          <p className="font-mono text-xs text-accent tracking-[0.4em] uppercase mb-2">Your Collection</p>
           <h1 className="font-display text-5xl text-cream leading-none tracking-tight">Artists</h1>
         </div>
         {artistsWithImages.length > 0 && (
           <div className="flex gap-2 mb-1">
             <button
               onClick={() => setRanking(true)}
-              className="font-mono text-[12px] text-accent hover:text-cream border border-accent/40 hover:border-accent px-3 py-2 rounded-sm transition-colors tracking-widest uppercase"
+              className="font-mono text-xs text-accent hover:text-cream border border-accent/40 hover:border-accent px-3 py-2 rounded-sm transition-colors tracking-widest uppercase"
             >
               Rank
             </button>
             <button
               onClick={() => setBrowsing(true)}
-              className="font-mono text-[12px] text-cream-muted hover:text-cream border border-ink-border hover:border-cream-muted/40 px-3 py-2 rounded-sm transition-colors tracking-widest uppercase"
+              className="font-mono text-xs text-cream-muted hover:text-cream border border-ink-border hover:border-cream-muted/40 px-3 py-2 rounded-sm transition-colors tracking-widest uppercase"
             >
               Browse
             </button>

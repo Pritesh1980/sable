@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { STYLE_TAGS, DEFAULT_STUDIOS } from '../data/artists'
 import Logo from '../components/Logo'
 import { createBackup, parseBackup } from '../data/export'
+import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
 
 function studioName(id) {
   const s = DEFAULT_STUDIOS.find((s) => s.id === id)
@@ -57,6 +58,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
 
   const igUrl = `https://www.instagram.com/${artist.handle}/`
   const imageCount = artist.images?.length || 0
+  const status = ARTIST_STATUSES.find((s) => s.value === normalizeArtistStatus(artist.status))
 
   return (
     <>
@@ -67,8 +69,8 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
         {/* Name */}
         <td className="py-3 pl-4 pr-2">
           <p className="font-display text-cream text-sm leading-tight">{artist.name || `@${artist.handle}`}</p>
-          {artist.name && <p className="font-mono text-cream-muted/90 text-[12px]">@{artist.handle}</p>}
-          {artist.studio && <p className="font-mono text-cream-muted/60 text-[11px] tracking-widest">{studioName(artist.studio)}</p>}
+          {artist.name && <p className="font-mono text-cream-muted/90 text-xs">@{artist.handle}</p>}
+          {artist.studio && <p className="font-mono text-cream-muted/60 text-[0.6875rem] tracking-widest">{studioName(artist.studio)}</p>}
         </td>
 
         {/* Instagram */}
@@ -84,6 +86,11 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
           </a>
         </td>
 
+        {/* Status */}
+        <td className="py-3 px-2">
+          <p className={`font-mono text-xs tracking-widest uppercase ${status.tone}`}>{status.label}</p>
+        </td>
+
         {/* Photos */}
         <td className="py-3 px-2">
           <div className="flex items-center gap-2">
@@ -96,9 +103,9 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
               {uploading ? 'Importing…' : '+ Photos'}
             </button>
             {imageCount > 0 ? (
-              <span className="font-mono text-[12px] text-accent font-semibold">{imageCount}</span>
+              <span className="font-mono text-xs text-accent font-semibold">{imageCount}</span>
             ) : (
-              <span className="font-mono text-[12px] text-cream-muted/40 italic">none</span>
+              <span className="font-mono text-xs text-cream-muted/40 italic">none</span>
             )}
           </div>
         </td>
@@ -123,6 +130,20 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
                     <TagPill key={tag} tag={tag} active={artist.tags.includes(tag)} onClick={() => toggleTag(tag)} small />
                   ))}
                 </div>
+              </div>
+
+              {/* Status */}
+              <div>
+                <p className="text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Shortlist Status</p>
+                <select
+                  className="bg-ink-muted border border-ink-border rounded-sm px-3 py-1.5 text-sm text-cream outline-none focus:border-cream-muted/40 font-body"
+                  value={normalizeArtistStatus(artist.status)}
+                  onChange={(e) => onUpdate(artist.id, { status: e.target.value })}
+                >
+                  {ARTIST_STATUSES.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </select>
               </div>
 
               {/* Studio */}
@@ -179,7 +200,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
               <div className="flex justify-end">
                 <button
                   onClick={() => { if (window.confirm(`Remove ${artist.name || '@' + artist.handle}?`)) onRemove(artist.id) }}
-                  className="text-[12px] font-mono text-cream-muted/90 hover:text-accent transition-colors tracking-widest uppercase"
+                  className="text-xs font-mono text-cream-muted/90 hover:text-accent transition-colors tracking-widest uppercase"
                 >
                   Remove artist
                 </button>
@@ -209,7 +230,7 @@ function AddArtistForm({ onAdd }) {
 
   return (
     <form onSubmit={submit} className="bg-ink-card border border-ink-border rounded-sm p-4 mb-8">
-      <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase mb-4">Add New Artist</p>
+      <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-4">Add New Artist</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
         <div>
           <label className="text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase block mb-1">Instagram Handle *</label>
@@ -276,7 +297,7 @@ function BackupPanel({ artists, setArtists, ideas, setIdeas, boards, setBoards, 
     <div className="bg-ink-card border border-ink-border rounded-sm p-4 mb-8">
       <div className="flex items-start justify-between gap-4 mb-4">
         <div>
-          <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase mb-1">Backup</p>
+          <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-1">Backup</p>
           <p className="text-cream-muted/90 text-sm font-body leading-relaxed">
             Export or restore artists, ideas, boards, concepts, notes, ranks, tags, and saved images.
           </p>
@@ -297,7 +318,7 @@ function BackupPanel({ artists, setArtists, ideas, setIdeas, boards, setBoards, 
           Import Backup
         </button>
       </div>
-      {message && <p className="text-[12px] font-mono text-cream-muted/90 mt-3">{message}</p>}
+      {message && <p className="text-xs font-mono text-cream-muted/90 mt-3">{message}</p>}
     </div>
   )
 }
@@ -327,6 +348,7 @@ export default function Manage({ artists, setArtists, ideas, setIdeas, boards, s
       tags: [],
       images: [],
       rank: maxRank + 1,
+      status: 'researching',
       notes: '',
       studio: null,
     }
@@ -354,7 +376,7 @@ export default function Manage({ artists, setArtists, ideas, setIdeas, boards, s
       <div className="pt-10 pb-6">
         <Logo size={28} className="mb-3" />
         <h1 className="font-display text-5xl text-cream leading-none tracking-tight">Manage</h1>
-        <p className="font-mono text-[12px] text-cream-muted/90 mt-3 tracking-widest">
+        <p className="font-mono text-xs text-cream-muted/90 mt-3 tracking-widest">
           {artists.length} artists · {withImages} with photos · {totalImages} total images
         </p>
       </div>
@@ -390,6 +412,7 @@ export default function Manage({ artists, setArtists, ideas, setIdeas, boards, s
             <tr className="border-b border-ink-border bg-ink-card">
               <th className="text-left py-2.5 pl-4 pr-2 text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase">Artist</th>
               <th className="text-left py-2.5 px-2 text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase">Instagram</th>
+              <th className="text-left py-2.5 px-2 text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase">Status</th>
               <th className="text-left py-2.5 px-2 text-[13px] font-mono text-cream-muted/90 tracking-widest uppercase">Photos</th>
               <th className="py-2.5 pr-4" />
             </tr>

@@ -2,7 +2,8 @@ import { NavLink } from 'react-router-dom'
 import { useTheme } from '../context/useTheme'
 
 const links = [
-  { to: '/', label: 'Gallery', icon: '◈' },
+  { to: '/', label: 'Home', icon: '◈' },
+  { to: '/gallery', label: 'Artists', icon: '◇' },
   { to: '/brief', label: 'Brief', icon: '◇' },
   { to: '/boards', label: 'Boards', icon: '▦' },
   { to: '/conventions', label: 'Radar', icon: '◎' },
@@ -47,7 +48,7 @@ export default function Nav() {
               }
             >
               <span className="text-base leading-none">{icon}</span>
-              <span className="tracking-widest uppercase text-[12px]">{label}</span>
+              <span className="tracking-widest uppercase text-xs">{label}</span>
             </NavLink>
           ))}
         </div>

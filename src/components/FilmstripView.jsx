@@ -33,7 +33,7 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, isFirst, isLast, total
       <div className="w-12 shrink-0 flex flex-col items-center justify-center border-r border-ink-border/30 py-2">
         <button
           onClick={() => !isFirst && onSetRank(artist.id, artist.rank - 1)}
-          className={`text-[10px] leading-none px-1 py-0.5 transition-colors ${
+          className={`text-[0.625rem] leading-none px-1 py-0.5 transition-colors ${
             isFirst ? 'text-transparent cursor-default' : 'text-cream-muted/30 hover:text-cream opacity-0 group-hover:opacity-100'
           }`}
         >
@@ -45,7 +45,7 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, isFirst, isLast, total
             type="number"
             min={1}
             max={totalArtists}
-            className="w-8 text-center bg-ink-muted border border-cream-muted/40 rounded-sm text-[12px] font-mono text-cream outline-none py-0.5"
+            className="w-8 text-center bg-ink-muted border border-cream-muted/40 rounded-sm text-xs font-mono text-cream outline-none py-0.5"
             value={rankInput}
             onChange={(e) => setRankInput(e.target.value)}
             onBlur={commitRank}
@@ -58,14 +58,14 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, isFirst, isLast, total
           <button
             onClick={startEdit}
             title="Click to set rank"
-            className="text-[12px] font-mono text-cream-muted/50 hover:text-cream hover:bg-ink-card/60 w-7 h-6 rounded-sm transition-colors flex items-center justify-center"
+            className="text-xs font-mono text-cream-muted/50 hover:text-cream hover:bg-ink-card/60 w-7 h-6 rounded-sm transition-colors flex items-center justify-center"
           >
             {artist.rank}
           </button>
         )}
         <button
           onClick={() => !isLast && onSetRank(artist.id, artist.rank + 1)}
-          className={`text-[10px] leading-none px-1 py-0.5 transition-colors ${
+          className={`text-[0.625rem] leading-none px-1 py-0.5 transition-colors ${
             isLast ? 'text-transparent cursor-default' : 'text-cream-muted/30 hover:text-cream opacity-0 group-hover:opacity-100'
           }`}
         >
@@ -84,12 +84,12 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, isFirst, isLast, total
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="font-mono text-[11px] text-cream-muted/60 hover:text-accent transition-colors mb-2"
+          className="font-mono text-[0.6875rem] text-cream-muted/60 hover:text-accent transition-colors mb-2"
         >
           @{artist.handle}
         </a>
         {studio && (
-          <p className="font-mono text-[10px] text-cream-muted/40 tracking-widest mb-2">{studio.name}</p>
+          <p className="font-mono text-[0.625rem] text-cream-muted/40 tracking-widest mb-2">{studio.name}</p>
         )}
         <div className="flex flex-wrap gap-1">
           {artist.tags?.map((t) => <TagPill key={t} tag={t} active small />)}

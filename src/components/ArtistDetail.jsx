@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import TagPill from './TagPill'
 import { STYLE_TAGS, DEFAULT_STUDIOS } from '../data/artists'
 import { compressImages } from '../hooks/useImageUpload'
+import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
 
 export default function ArtistDetail({ artist, onClose, onSave }) {
   const [images, setImages] = useState(artist.images || [])
@@ -25,6 +26,7 @@ export default function ArtistDetail({ artist, onClose, onSave }) {
   }, [images.length])
 
   const instagramUrl = `https://www.instagram.com/${artist.handle}/`
+  const currentStatus = ARTIST_STATUSES.find((s) => s.value === normalizeArtistStatus(artist.status))
 
   // Images auto-save immediately — no need to be in edit mode
   function saveImages(newImages) {
@@ -129,12 +131,17 @@ export default function ArtistDetail({ artist, onClose, onSave }) {
                 {DEFAULT_STUDIOS.find((s) => s.id === artist.studio).name}
               </p>
             )}
+            {!editing && (
+              <p className={`font-mono text-xs tracking-widest uppercase mt-3 ${currentStatus.tone}`}>
+                {currentStatus.label}
+              </p>
+            )}
           </div>
 
           {/* ── PHOTOS ── always editable */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase">
+              <p className="text-xs font-mono text-cream-muted tracking-widest uppercase">
                 Photos
                 {images.length > 0 && (
                   <span className="text-cream-muted/90 ml-2">
@@ -186,7 +193,7 @@ export default function ArtistDetail({ artist, onClose, onSave }) {
                   <img src={src} alt="" className="w-full h-full object-cover" loading="lazy" />
 
                   {idx === 0 && (
-                    <div className="absolute top-3 left-3 bg-accent/80 text-cream text-[11px] font-mono tracking-widest px-2 py-1 rounded-sm uppercase">
+                    <div className="absolute top-3 left-3 bg-accent/80 text-cream text-[0.6875rem] font-mono tracking-widest px-2 py-1 rounded-sm uppercase">
                       Cover
                     </div>
                   )}
@@ -195,7 +202,7 @@ export default function ArtistDetail({ artist, onClose, onSave }) {
                     {idx !== 0 && (
                       <button
                         onClick={(e) => { e.stopPropagation(); setCover(idx) }}
-                        className="text-[11px] font-mono text-cream tracking-widest uppercase bg-ink-black/70 hover:bg-ink-black px-2.5 py-1 rounded-sm transition-colors backdrop-blur-sm"
+                        className="text-[0.6875rem] font-mono text-cream tracking-widest uppercase bg-ink-black/70 hover:bg-ink-black px-2.5 py-1 rounded-sm transition-colors backdrop-blur-sm"
                       >
                         Set cover
                       </button>
@@ -230,7 +237,7 @@ export default function ArtistDetail({ artist, onClose, onSave }) {
 
           {/* Style tags */}
           <div className="mb-6">
-            <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase mb-3">Style</p>
+            <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-3">Style</p>
             <div className="flex flex-wrap gap-2">
               {STYLE_TAGS.map((tag) => (
                 <TagPill
@@ -241,29 +248,44 @@ export default function ArtistDetail({ artist, onClose, onSave }) {
                 />
               ))}
             </div>
-            {!editing && <p className="text-cream-muted/90 text-[12px] font-mono mt-2">Tap tags to tune matching.</p>}
+            {!editing && <p className="text-cream-muted/90 text-xs font-mono mt-2">Tap tags to tune matching.</p>}
           </div>
 
           {/* Studio (edit mode) */}
           {editing && (
-            <div className="mb-6">
-              <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase mb-3">Studio</p>
-              <select
-                className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-body"
-                value={draft.studio || ''}
-                onChange={(e) => setDraft((d) => ({ ...d, studio: e.target.value || null }))}
-              >
-                <option value="">— None —</option>
-                {DEFAULT_STUDIOS.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-            </div>
+            <>
+              <div className="mb-6">
+                <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-3">Shortlist status</p>
+                <select
+                  className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-body"
+                  value={normalizeArtistStatus(draft.status)}
+                  onChange={(e) => setDraft((d) => ({ ...d, status: e.target.value }))}
+                >
+                  {ARTIST_STATUSES.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="mb-6">
+                <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-3">Studio</p>
+                <select
+                  className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-body"
+                  value={draft.studio || ''}
+                  onChange={(e) => setDraft((d) => ({ ...d, studio: e.target.value || null }))}
+                >
+                  <option value="">— None —</option>
+                  {DEFAULT_STUDIOS.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+            </>
           )}
 
           {/* Notes */}
           <div className="mb-10">
-            <p className="text-[12px] font-mono text-cream-muted tracking-widest uppercase mb-3">Notes</p>
+            <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-3">Notes</p>
             {editing ? (
               <textarea
                 className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-body placeholder-cream-muted/60 resize-none"
