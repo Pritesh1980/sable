@@ -264,12 +264,12 @@ function AddArtistForm({ onAdd }) {
   )
 }
 
-function BackupPanel({ artists, setArtists, ideas, setIdeas, boards, setBoards, concepts, setConcepts }) {
+function BackupPanel({ artists, setArtists, ideas, setIdeas, boards, setBoards, concepts, setConcepts, conventionOverrides, setConventionOverrides }) {
   const fileRef = useRef()
   const [message, setMessage] = useState('')
 
   function exportBackup() {
-    const backup = createBackup({ artists, ideas, boards, concepts })
+    const backup = createBackup({ artists, ideas, boards, concepts, conventionOverrides })
     const date = backup.exportedAt.slice(0, 10)
     downloadJson(`tattoo-backup-${date}.json`, backup)
     setMessage('Backup exported.')
@@ -285,6 +285,7 @@ function BackupPanel({ artists, setArtists, ideas, setIdeas, boards, setBoards, 
       setIdeas(data.ideas)
       setBoards(data.boards)
       setConcepts(data.concepts)
+      setConventionOverrides(data.conventionOverrides)
       setMessage('Backup imported.')
     } catch (error) {
       setMessage(error.message || 'Could not import backup.')
@@ -323,7 +324,7 @@ function BackupPanel({ artists, setArtists, ideas, setIdeas, boards, setBoards, 
   )
 }
 
-export default function Manage({ artists, setArtists, ideas, setIdeas, boards, setBoards, concepts, setConcepts }) {
+export default function Manage({ artists, setArtists, ideas, setIdeas, boards, setBoards, concepts, setConcepts, conventionOverrides, setConventionOverrides }) {
   const [search, setSearch] = useState('')
 
   const allInOrder = artists.slice().sort((a, b) => a.rank - b.rank)
@@ -393,6 +394,8 @@ export default function Manage({ artists, setArtists, ideas, setIdeas, boards, s
         setBoards={setBoards}
         concepts={concepts}
         setConcepts={setConcepts}
+        conventionOverrides={conventionOverrides}
+        setConventionOverrides={setConventionOverrides}
       />
 
       {/* Search */}

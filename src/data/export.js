@@ -25,7 +25,7 @@ function formatImageList(images = []) {
   }).join('\n')
 }
 
-export function createBackup({ artists = [], ideas = [], boards = [], concepts = [] }, exportedAt = new Date().toISOString()) {
+export function createBackup({ artists = [], ideas = [], boards = [], concepts = [], conventionOverrides = {} }, exportedAt = new Date().toISOString()) {
   return {
     version: BACKUP_VERSION,
     exportedAt,
@@ -34,6 +34,7 @@ export function createBackup({ artists = [], ideas = [], boards = [], concepts =
       ideas,
       boards,
       concepts,
+      conventionOverrides,
     },
   }
 }
@@ -45,10 +46,10 @@ export function parseBackup(raw) {
   }
 
   const data = parsed.data || parsed
-  const keys = ['artists', 'ideas', 'boards', 'concepts']
+  const arrayKeys = ['artists', 'ideas', 'boards', 'concepts']
   const out = {}
 
-  keys.forEach((key) => {
+  arrayKeys.forEach((key) => {
     if (data[key] === undefined) {
       out[key] = []
     } else if (Array.isArray(data[key])) {
@@ -57,6 +58,10 @@ export function parseBackup(raw) {
       throw new Error(`Backup field "${key}" must be an array.`)
     }
   })
+
+  out.conventionOverrides = (data.conventionOverrides && typeof data.conventionOverrides === 'object' && !Array.isArray(data.conventionOverrides))
+    ? data.conventionOverrides
+    : {}
 
   return out
 }

@@ -21,6 +21,7 @@ describe('createBackup', () => {
         ideas: [{ id: 'idea-1' }],
         boards: [{ id: 'board-1' }],
         concepts: [{ id: 'concept-1' }],
+        conventionOverrides: {},
       },
     })
   })

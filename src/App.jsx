@@ -40,6 +40,8 @@ export default function App() {
               setBoards={setBoards}
               concepts={concepts}
               setConcepts={setConcepts}
+              conventionOverrides={conventionOverrides}
+              setConventionOverrides={setConventionOverrides}
             />
           )}
         />
