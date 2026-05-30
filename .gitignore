@@ -36,6 +36,7 @@ dist-ssr
 # Session memory
 .remember/
 .ijfw/
+.superpowers/
 
 # Local audit/tagging artifacts
 audit-page*.png
