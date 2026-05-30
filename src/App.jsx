@@ -8,6 +8,7 @@ import Studios from './pages/Studios'
 import Concepts from './pages/Concepts'
 import Boards from './pages/Boards'
 import Manage from './pages/Manage'
+import Help from './pages/Help'
 import { useStorage } from './hooks/useStorage'
 import { useArtistStorage } from './hooks/useArtistStorage'
 import { mergeConventionOverrides } from './data/conventions'
@@ -30,6 +31,7 @@ export default function App() {
         <Route path="/studios" element={<Studios artists={artists} />} />
         <Route path="/concepts" element={<Concepts concepts={concepts} setConcepts={setConcepts} artists={artists} />} />
         <Route path="/boards" element={<Boards boards={boards} setBoards={setBoards} ideas={ideas} artists={artists} />} />
+        <Route path="/help" element={<Help />} />
         <Route
           path="/manage"
           element={(

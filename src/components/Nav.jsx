@@ -14,6 +14,7 @@ const MORE_LINKS = [
   { to: '/studios', label: 'Studios', icon: '⌂', description: 'Where your artists work' },
   { to: '/boards', label: 'Boards', icon: '▦', description: 'Mood boards & collections' },
   { to: '/manage', label: 'Manage', icon: '⊞', description: 'Artists, data & settings' },
+  { to: '/help', label: 'Help', icon: '?', description: 'How to use Tattoo' },
 ]
 
 function MoreMenu({ onClose }) {

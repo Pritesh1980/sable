@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/docs-drift-check.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,16 +1,30 @@
-# React + Vite
+# Tattoo
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A personal, visual-first Progressive Web App for planning a tattoo journey — collecting
+favourite artists, capturing ideas, matching the two together, and tracking conventions
+and studios. Dark, editorial, offline-capable, and stored entirely on your device.
 
-Currently, two official plugins are available:
+## User guide
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Full, screenshot-rich documentation lives in **[`docs/`](docs/README.md)** — start there
+for a tour of every workflow. The same guide is also available inside the app under
+**More → Help**.
 
-## React Compiler
+## Tech
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **React** + **React Router** (PWA-configured)
+- **Tailwind CSS**
+- **Vite** build tooling
+- **localStorage** + **IndexedDB** for data and images (no backend)
+- **Vitest** + Testing Library for tests
 
-## Expanding the ESLint configuration
+## Develop
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+npm install
+npm run dev      # start the dev server (http://localhost:5173)
+npm test         # run the test suite
+npm run build    # production build
+```
+
+See [`CLAUDE.md`](CLAUDE.md) for the full project context, design direction and conventions.

@@ -23,8 +23,9 @@ dist-ssr
 *.sln
 *.sw?
 
-# Claude Code (personal settings + memory)
-.claude/
+# Claude Code: ignore everything personal, but share the project settings (hooks etc.)
+.claude/*
+!.claude/settings.json
 
 # Instagram session (contains auth cookies — never commit)
 .ig-session.json

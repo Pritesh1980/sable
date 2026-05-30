@@ -24,11 +24,11 @@ This is a personal app for one user (Pritesh) + occasional sharing with his tatt
 ## Tech Stack
 
 - **Framework**: React (PWA-configured)
+- **Routing**: React Router (`react-router-dom` v7) — 8 deep-linkable routes
 - **Styling**: Tailwind CSS
-- **Hosting**: AWS S3 + CloudFront (static site deployment)
-- **AI**: Claude API (claude-sonnet-4-20250514) for concept image generation and artist style matching
-- **Storage**: localStorage to start — easy to migrate later
-- **No backend required for MVP**
+- **Hosting**: AWS S3 + CloudFront (planned — not yet set up; see `BACKLOG.md`)
+- **AI (Concepts page)**: copy-prompt → paste into ChatGPT/Claude/Gemini and bring the result back, **or** optional OpenAI DALL·E 3 image generation with a user-supplied key (stored locally). Artist ↔ idea/concept matching is local tag-overlap (`src/data/planning.js`) — no API.
+- **Storage**: localStorage for metadata (`tattoo_*` keys) + IndexedDB for artist images; JSON export/import backup. No backend.
 
 ### PWA Requirements
 - `manifest.json` with app name, icons, dark background colour
@@ -43,8 +43,8 @@ This is a personal app for one user (Pritesh) + occasional sharing with his tatt
 The heart of the app. Visual-first browsing of saved artists.
 
 - Each artist card shows: name, Instagram handle (linked), style tags, personal priority tier, and a gallery of reference images (manually added URLs or uploaded screenshots)
-- Two starting tiers: **Favourite** (17 artists) and **Also Like** (5 artists)
-- Drag-to-rank within tiers to set personal priority
+- A single ranked list set via drag (grid), rank nudge (filmstrip), or swipe-compare (the **Rank** button), plus a per-artist shortlist **status** (researching → shortlisted → contact-next → contacted → maybe → pass)
+- Four gallery views: filmstrip, compare, grid, style wall. Seed artists are grouped Favourite / Also Like / Retained — see the artist tables below
 - Filter by style tag
 - Tap/click to open full artist detail view
 - Studios displayed separately but consistently
@@ -59,13 +59,13 @@ A personal mood board / brief section.
 ### 3. Convention Radar
 - List of upcoming tattoo conventions
 - Distance from **Milton Keynes** shown for each
-- Cross-reference: which saved artists are attending each convention
-- Manual data entry for V1
+- Cross-reference: which saved artists are attending each convention (surfaced on the dashboard, artist detail, and idea editor)
+- Curated in `src/data/conventions.js`; date-aware ordering (upcoming first)
 
-### 4. AI Concept Generator
-- Text prompt input → generated concept image via Claude API
+### 4. AI Concept Generator (Concepts page)
+- Text prompt → copy a structured prompt into ChatGPT/Claude/Gemini and paste the result back, **or** generate a DALL·E 3 image directly with a user-supplied OpenAI key
+- Tag a concept with styles to surface matching artists
 - Results saved to a personal gallery
-- Simple, clean interface
 
 ---
 
@@ -118,14 +118,12 @@ Kept in the data but not in Pritesh's current list of favourites. Do not remove.
 | tattooluckyone | Tyler Payne (No Regrets Cheltenham) |
 | androprimo_ | Andro (No Regrets Birmingham) |
 
-### Studios (4 — to be expanded)
+### Studios
 
-| Name | Notes |
-|---|---|
-| No Regrets | |
-| London Glitch | |
-| Straight Line | To be confirmed |
-| Fatfugu | To be confirmed |
+Canonical list lives in `DEFAULT_STUDIOS` (`src/data/artists.js`), each with `city` +
+`distanceMiles` from Milton Keynes (powers the Studios page). Currently: No Regrets
+(London, Bristol, Cardiff, Cheltenham, Worcester, Birmingham), London Glitch, Straight
+Line (TBC), Fatfugu (TBC).
 
 ---
 
@@ -138,7 +136,7 @@ Kept in the data but not in Pritesh's current list of favourites. Do not remove.
 - `dark-fantasy`
 - `realism`
 
-Artist style tags to be assigned by user in-app — don't pre-assign without confirmation.
+Each artist in `src/data/artists.js` already carries style tags; they drive matching across Brief, Concepts and the dashboard. Keep them accurate when adding artists.
 
 ---
 
@@ -152,61 +150,50 @@ Artist style tags to be assigned by user in-app — don't pre-assign without con
 
 ---
 
-## V2 Features (Do Not Build Yet — For Reference)
+## Beyond MVP
 
-- Mood boards (group ideas visually)
-- Read-only shareable link for tattoo artist
-- Artist ↔ idea matching / recommendation
-- Status tracking (idea → booked → done)
+**Already built (originally scoped as V2):**
+- Mood boards (Boards page — group ideas)
+- Artist ↔ idea/concept matching (tag-overlap, `src/data/planning.js`)
+- Status tracking (idea → booked → done; per-artist shortlist statuses)
+- Dashboard, Studios, Manage and Help pages; four gallery views + swipe-ranking
+
+**Still to do (see `BACKLOG.md`, blocked on deployment):**
+- Deploy to AWS S3 + CloudFront
+- Read-only shareable link for the tattoo artist
 - Convention artist attendance auto-lookup
 
 ---
 
-## File Structure (Suggested)
+## Project Structure (actual)
 
 ```
-tattoo-app/
-├── public/
-│   ├── manifest.json
-│   ├── icons/
-│   └── index.html
-├── src/
-│   ├── components/
-│   │   ├── ArtistCard.jsx
-│   │   ├── ArtistDetail.jsx
-│   │   ├── BriefIdea.jsx
-│   │   ├── ConventionCard.jsx
-│   │   └── ConceptGenerator.jsx
-│   ├── data/
-│   │   └── artists.js        ← pre-loaded artist list
-│   ├── pages/
-│   │   ├── Gallery.jsx
-│   │   ├── Brief.jsx
-│   │   ├── Conventions.jsx
-│   │   └── Concepts.jsx
-│   ├── App.jsx
-│   ├── main.jsx
-│   └── index.css
-├── CLAUDE.md                  ← this file
-├── package.json
-└── vite.config.js
+src/
+├── pages/        Dashboard, Gallery, Brief, Boards, Conventions, Studios, Concepts, Manage, Help
+├── components/   Nav, ArtistCard, ArtistDetail, ArtistBrowse, CompareView, FilmstripView,
+│                 RankingMode, SortableArtistCard, StyleWall, TagPill, Logo
+├── data/         artists.js (DEFAULT_ARTISTS, DEFAULT_STUDIOS, STYLE_TAGS, PLACEMENTS),
+│                 conventions.js, brief.js, boards.js, planning.js (matching), export.js, ranking.js
+├── hooks/        useArtistStorage.js (localStorage meta + IndexedDB images), useStorage.js, useImageUpload.js
+├── context/      ThemeContext (dark/light theme + font size)
+├── test/         Vitest specs (data integrity, hooks, transforms)
+├── App.jsx       routes  ·  main.jsx  ·  index.css
+docs/             User guide (Markdown) — see "Documentation" below
+public/guide/     Documentation screenshots (regenerated via Playwright)
 ```
 
 ---
 
-## How to Start
-
-In Claude Code, run:
+## Running the app
 
 ```bash
-npm create vite@latest tattoo-app -- --template react
-cd tattoo-app
 npm install
-npm install -D tailwindcss postcss autoprefixer
-npx tailwindcss init -p
+npm run dev      # http://localhost:5173
+npm test         # Vitest (npm run test:watch during dev)
+npm run build
 ```
 
-Then say: **"Build the MVP per CLAUDE.md"**
+The MVP is already built. See `docs/README.md` (or in-app **More → Help**) for the user guide.
 
 ---
 
@@ -229,6 +216,21 @@ Then say: **"Build the MVP per CLAUDE.md"**
 2. Run `npm test` to confirm it fails
 3. Write the minimum implementation to make it pass
 4. Refactor if needed, keeping tests green
+
+---
+
+## Documentation — keep it in sync
+
+User docs live in two mirrored places, both driven by the same screenshots in `public/guide/`:
+- **`docs/`** — Markdown guide (`README.md` index + `01`–`07` workflow files). Image links use `../public/guide/*.png`.
+- **In-app Help** — `src/pages/Help.jsx`, route `/help`, reached via **More → Help**; references `/guide/*.png`.
+
+**When you change UI (anything under `src/pages/` or `src/components/`), update the docs in the same change:**
+1. Edit the relevant `docs/NN-*.md` **and** the matching `SECTIONS` entry in `src/pages/Help.jsx`.
+2. Re-capture any affected screenshots — exact Playwright + sample-data steps are in **`docs/MAINTAINING.md`**.
+3. Keep the image set tight: every file in `public/guide/` should be referenced, and every reference should resolve (the cross-check command is in `docs/MAINTAINING.md`).
+
+A **Stop hook** (`scripts/docs-drift-check.sh`, wired in `.claude/settings.json`) prints a reminder when UI files changed but `docs/` / `public/guide/` didn't.
 
 <!-- IJFW-MEMORY-START (managed -- do not edit manually) -->
 <ijfw-memory>
