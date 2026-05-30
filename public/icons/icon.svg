@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Tattoo app icon">
+  <rect width="512" height="512" rx="96" fill="#141210"/>
+  <rect x="34" y="34" width="444" height="444" rx="78" fill="none" stroke="#2e2b26" stroke-width="12"/>
+  <path d="M121 342c62-117 111-177 196-223 14-8 30 7 22 21-45 85-105 135-222 197-4 2-8-1-6-5Z" fill="#f0ebe0"/>
+  <path d="M320 113c18 2 35 10 50 25 24 24 32 59 22 90-7 22-28 36-51 35-32-2-60-18-80-45l-10-14c-7-9-5-22 4-29l39-31c9-8 17-18 26-31Z" fill="#c0392b"/>
+  <path d="M147 329c55-29 101-60 137-96" fill="none" stroke="#141210" stroke-width="15" stroke-linecap="round"/>
+  <path d="M339 154c21 11 34 33 33 57" fill="none" stroke="#f0ebe0" stroke-width="14" stroke-linecap="round" opacity=".86"/>
+  <circle cx="177" cy="175" r="10" fill="#c0392b"/>
+  <circle cx="223" cy="132" r="6" fill="#f0ebe0" opacity=".7"/>
+  <path d="M135 370h242" fill="none" stroke="#86382f" stroke-width="10" stroke-linecap="round"/>
+  <path d="M172 401h168" fill="none" stroke="#2e2b26" stroke-width="10" stroke-linecap="round"/>
+</svg>
