@@ -86,6 +86,16 @@ export function hasPromptPackSource({ sourceType, prompt = '', sourceIdeaId = ''
   return Boolean(clean(prompt))
 }
 
+export function getPromptPackFields(promptPack) {
+  if (!promptPack) return []
+  return PROMPT_PACK_PROVIDERS
+    .map((provider) => ({
+      ...provider,
+      value: promptPack[provider.field] || '',
+    }))
+    .filter((provider) => provider.value)
+}
+
 export function buildPromptPackFromFreeText(prompt, options = {}) {
   return createPack({
     sourceType: 'free-text',

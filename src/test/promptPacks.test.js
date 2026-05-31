@@ -3,6 +3,7 @@ import {
   PROMPT_PACK_PROVIDERS,
   buildPromptPackFromFreeText,
   buildPromptPackFromIdea,
+  getPromptPackFields,
   hasPromptPackSource,
 } from '../data/promptPacks'
 
@@ -28,6 +29,28 @@ describe('hasPromptPackSource', () => {
 
   it('accepts an existing idea id', () => {
     expect(hasPromptPackSource({ sourceType: 'brief-idea', sourceIdeaId: 'idea-1' })).toBe(true)
+  })
+})
+
+describe('getPromptPackFields', () => {
+  it('returns provider fields from a saved prompt pack', () => {
+    const fields = getPromptPackFields({
+      chatgptImagePrompt: 'chatgpt prompt',
+      adobeFireflyPrompt: 'firefly prompt',
+      geminiCritiquePrompt: 'gemini prompt',
+      claudeRefinementPrompt: 'claude prompt',
+    })
+
+    expect(fields).toEqual([
+      { id: 'chatgpt', label: 'ChatGPT', field: 'chatgptImagePrompt', value: 'chatgpt prompt' },
+      { id: 'adobe-firefly', label: 'Adobe Firefly', field: 'adobeFireflyPrompt', value: 'firefly prompt' },
+      { id: 'gemini', label: 'Gemini', field: 'geminiCritiquePrompt', value: 'gemini prompt' },
+      { id: 'claude', label: 'Claude', field: 'claudeRefinementPrompt', value: 'claude prompt' },
+    ])
+  })
+
+  it('returns an empty list for legacy concepts without prompt packs', () => {
+    expect(getPromptPackFields(null)).toEqual([])
   })
 })
 

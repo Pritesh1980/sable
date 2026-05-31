@@ -4,6 +4,7 @@ import PromptPackComposer from '../components/PromptPackComposer'
 import TagPill from '../components/TagPill'
 import { STYLE_TAGS } from '../data/artists'
 import { matchArtistsForIdea } from '../data/planning'
+import { getPromptPackFields } from '../data/promptPacks'
 
 const TEXT_SYSTEM_PROMPT = `You are a creative tattoo concept consultant with deep knowledge of tattoo styles, placement, and aesthetics. When given a concept prompt, provide:
 1. A vivid visual description of the tattoo concept (2-3 sentences)
@@ -141,6 +142,54 @@ function PasteZone({ conceptId, onImage, onText, onDiscard }) {
           </button>
         )}
       </div>
+    </div>
+  )
+}
+
+function SavedPromptPack({ promptPack }) {
+  const [activeField, setActiveField] = useState('')
+  const [copied, setCopied] = useState('')
+  const fields = getPromptPackFields(promptPack)
+  if (!fields.length) return null
+
+  const active = fields.find((field) => field.field === activeField) || fields[0]
+
+  async function copySavedPrompt() {
+    await navigator.clipboard.writeText(active.value)
+    setCopied(active.field)
+    setTimeout(() => setCopied(''), 1600)
+  }
+
+  return (
+    <div className="mt-3 pt-3 border-t border-ink-border/40">
+      <p className="text-[0.625rem] font-mono text-accent/70 tracking-widest uppercase mb-2">Saved prompt pack</p>
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        {fields.map((field) => (
+          <button
+            key={field.id}
+            onClick={() => setActiveField(field.field)}
+            className={`px-2 py-1 rounded-sm border text-[0.625rem] font-mono tracking-widest uppercase transition-colors ${
+              active.field === field.field
+                ? 'border-accent/50 text-accent bg-accent/5'
+                : 'border-ink-border text-cream-muted/60 hover:text-cream-muted'
+            }`}
+          >
+            {field.label}
+          </button>
+        ))}
+      </div>
+      <textarea
+        readOnly
+        className="w-full bg-ink-black border border-ink-border rounded-sm px-3 py-2 text-xs text-cream-muted outline-none font-body resize-none"
+        rows={5}
+        value={active.value}
+      />
+      <button
+        onClick={copySavedPrompt}
+        className="mt-2 text-[0.625rem] font-mono text-accent hover:text-accent-hover transition-colors tracking-widest uppercase"
+      >
+        {copied === active.field ? 'Copied' : `Copy ${active.label}`}
+      </button>
     </div>
   )
 }
@@ -403,6 +452,7 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
               <div className="p-4">
                 <p className="text-cream-muted/50 text-[0.625rem] font-mono tracking-widest uppercase mb-1">Concept</p>
                 <p className="text-cream font-body text-sm italic mb-3">"{c.prompt}"</p>
+                <SavedPromptPack promptPack={c.promptPack} />
 
                 {c.response ? (
                   <div
