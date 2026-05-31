@@ -149,15 +149,21 @@ function PasteZone({ conceptId, onImage, onText, onDiscard }) {
 function SavedPromptPack({ promptPack }) {
   const [activeField, setActiveField] = useState('')
   const [copied, setCopied] = useState('')
+  const [copyError, setCopyError] = useState('')
   const fields = getPromptPackFields(promptPack)
   if (!fields.length) return null
 
   const active = fields.find((field) => field.field === activeField) || fields[0]
 
   async function copySavedPrompt() {
-    await navigator.clipboard.writeText(active.value)
-    setCopied(active.field)
-    setTimeout(() => setCopied(''), 1600)
+    try {
+      await navigator.clipboard.writeText(active.value)
+      setCopied(active.field)
+      setCopyError('')
+      setTimeout(() => setCopied(''), 1600)
+    } catch {
+      setCopyError('Could not copy. Select the prompt text and copy manually.')
+    }
   }
 
   return (
@@ -190,6 +196,7 @@ function SavedPromptPack({ promptPack }) {
       >
         {copied === active.field ? 'Copied' : `Copy ${active.label}`}
       </button>
+      {copyError && <p className="text-xs font-mono text-accent mt-2">{copyError}</p>}
     </div>
   )
 }
