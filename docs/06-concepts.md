@@ -1,20 +1,42 @@
 # AI concepts
 
-*Turn a written description into a tattoo concept, then see which of your artists suit it.*
+*Turn rough tattoo ideas into prompt packs, saved AI results, and artist matches.*
 
 ← [Back to contents](README.md)
 
 ---
 
-**AI** is a sketchpad for concepts. You describe an idea, generate or paste in a visual,
-and the app matches it to artists by style.
+**AI** is a sketchpad and prompt workbench for concepts. You can turn a short idea
+or an existing Brief idea into provider-specific prompts for ChatGPT, Adobe Firefly,
+Gemini and Claude, then bring the generated results back into Tattoo.
 
 ![The AI Concepts page](../public/guide/concepts.png)
 
-## Describe a concept
+## Build a prompt pack
+
+The **Prompt Pack** workbench is the recommended starting point. Choose a source:
+
+- **Free text** — type a loose concept, such as *"A raven breaking apart into dark
+  botanicals for a chest tattoo."*
+- **Brief idea** — select an idea from **Brief** to pull in its title, description,
+  placement, style tags, linked artists and reference-image notes.
+
+Tap **Generate Prompt Pack** to create tailored prompts for:
+
+- **ChatGPT** — visual image generation.
+- **Adobe Firefly** — polished tattoo-reference composition and refinement.
+- **Gemini** — visual critique, placement and tattooability risks.
+- **Claude** — artist-facing language, consultation brief and DM wording.
+
+Switch between providers, then tap **Save Pack** before leaving Tattoo so the full
+prompt pack is kept as a concept card. Copy the active prompt, run it in the AI tool,
+then use **Paste image** or **Paste text** on the saved card to bring generated output
+back into Tattoo.
+
+## Quick concept prompt
 
 Type a description in the prompt box, e.g. *"A moth emerging from a skull wreathed in dark
-botanicals."* There are two ways to turn it into a concept:
+botanicals."* This older quick path still works:
 
 ### Without an API key (default)
 
@@ -31,14 +53,16 @@ box gains a **Generate Image** button — press **⌘ + Enter** to create a DALL
 
 ## Work with a concept
 
-Each concept card holds the image, the original prompt and the saved AI response (tap to
-expand). Below that:
+Each concept card holds the original prompt, any saved prompt pack, and any saved image
+or AI response (tap to expand). Prompt-pack cards can start image-less until you paste
+or upload a result. Below that:
 
-![A concept card with artist matches](../public/guide/concept-card.png)
+![A saved concept card with prompt pack and style matching](../public/guide/concept-card.png)
 
 - **Match to style** — tag the concept with styles. The moment you do, its **top artist
   matches** appear; tap one to open their Instagram.
-- **Open in Firefly** — jump to Adobe Firefly to take the image further.
+- **Saved prompt pack** — switch between provider prompts and copy them again later.
+- **Open in Firefly** — appears once the concept has an image, so you can take it further.
 - **Delete** removes the concept.
 
 > **Tip:** the concept tags use the same six styles as the rest of the app, so a well-tagged

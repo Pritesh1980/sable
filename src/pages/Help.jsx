@@ -68,12 +68,13 @@ const SECTIONS = [
   {
     id: 'concepts',
     label: 'AI concepts',
-    blurb: 'Turn a description into a concept, then match it to artists by style.',
+    blurb: 'Create prompt packs, save AI results, and match concepts to artists by style.',
     image: 'concepts.png',
     steps: [
-      'Open AI and describe a tattoo concept in the prompt box.',
-      'Without an API key: tap Copy Prompt, paste it into ChatGPT, Claude or Gemini, then bring the result back via Paste image / Paste text.',
-      'With an OpenAI key configured (⚙ Configure AI): press ⌘+Enter to generate a DALL·E image directly.',
+      'Open AI. In Prompt Pack, start from free text or select a Brief idea to pull in placement, tags, linked artists and reference notes.',
+      'Tap Generate Prompt Pack, switch between ChatGPT, Adobe Firefly, Gemini and Claude prompts, then Save Pack before leaving Tattoo.',
+      'Copy the provider prompt you want to use. Bring results back to the saved card with Paste image or Paste text.',
+      'The older quick prompt box still works: Copy Prompt opens the manual paste flow, or configure an OpenAI key (⚙ Configure AI) to generate an image directly.',
       'Tag each concept with styles to reveal its top artist matches; tap a match to open their Instagram.',
     ],
   },
