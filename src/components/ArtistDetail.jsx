@@ -136,6 +136,11 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
                 {currentStatus.label}
               </p>
             )}
+            {!editing && artist.styleNote && (
+              <p className="font-body text-sm text-cream-muted/80 italic leading-relaxed mt-3">
+                {artist.styleNote}
+              </p>
+            )}
           </div>
 
           {/* ── PHOTOS ── always editable */}
