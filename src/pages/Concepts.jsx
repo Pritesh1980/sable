@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Logo from '../components/Logo'
+import PromptPackComposer from '../components/PromptPackComposer'
 import TagPill from '../components/TagPill'
 import { STYLE_TAGS } from '../data/artists'
 import { matchArtistsForIdea } from '../data/planning'
@@ -144,7 +145,7 @@ function PasteZone({ conceptId, onImage, onText, onDiscard }) {
   )
 }
 
-export default function Concepts({ concepts, setConcepts, artists = [] }) {
+export default function Concepts({ concepts, setConcepts, artists = [], ideas = [] }) {
   const [prompt, setPrompt] = useState('')
   const [storedKey, setStoredKey] = useState(() => localStorage.getItem('openai_api_key') || '')
   const [showKeyConfig, setShowKeyConfig] = useState(false)
@@ -215,6 +216,20 @@ export default function Concepts({ concepts, setConcepts, artists = [] }) {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  function savePromptPack(pack) {
+    const concept = {
+      id: Date.now().toString(),
+      prompt: pack.sourceSummary,
+      promptPack: pack,
+      imageUrl: '',
+      response: '',
+      tags: [],
+      createdAt: pack.createdAt,
+    }
+    setConcepts((prev) => [concept, ...prev])
+    setPasting(concept.id)
+  }
+
   function saveImage(id, dataUrl) {
     setConcepts((prev) => prev.map((c) => c.id === id ? { ...c, imageUrl: dataUrl } : c))
     setPasting(null)
@@ -283,6 +298,12 @@ export default function Concepts({ concepts, setConcepts, artists = [] }) {
           )}
         </div>
       )}
+
+      <PromptPackComposer
+        ideas={ideas}
+        artists={artists}
+        onSavePromptPack={savePromptPack}
+      />
 
       <div className="mb-8">
         <textarea
