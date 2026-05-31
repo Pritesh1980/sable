@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import Logo from '../components/Logo'
 import TagPill from '../components/TagPill'
 import { IDEA_STATUSES } from '../data/brief'
-import { ARTIST_STATUSES, buildDashboardSummary, matchArtistsForIdea, normalizeArtistStatus } from '../data/planning'
+import { ARTIST_STATUSES, buildDashboardSummary, buildMatchRationale, matchArtistsForIdea, normalizeArtistStatus } from '../data/planning'
 
 const STATUS_DOTS = {
   idea: 'bg-cream-muted/40',
@@ -116,12 +116,20 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
                     </span>
                   </div>
                   <div className="space-y-1.5">
-                    {matches.map(({ artist, overlapTags }) => (
-                      <div key={artist.id} className="flex items-center justify-between gap-3 text-sm">
-                        <span className="text-cream-muted truncate">{artistLabel(artist)}</span>
-                        <span className="font-mono text-[0.6875rem] text-accent shrink-0">{overlapTags.length} tag match</span>
-                      </div>
-                    ))}
+                    {matches.map(({ artist, overlapTags, status }) => {
+                      const rationale = buildMatchRationale(idea, { artist, overlapTags, status })
+                      return (
+                        <div key={artist.id} className="text-sm">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-cream-muted truncate">{artistLabel(artist)}</span>
+                            <span className="font-mono text-[0.6875rem] text-accent shrink-0">{overlapTags.length} tag match</span>
+                          </div>
+                          {rationale && (
+                            <p className="text-cream-muted/70 text-xs leading-snug mt-0.5 line-clamp-2">{rationale}</p>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               )
