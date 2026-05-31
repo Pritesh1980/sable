@@ -7,6 +7,7 @@ import { buildIdeaBrief } from '../data/export'
 import { compressImages } from '../hooks/useImageUpload'
 import {
   ARTIST_STATUSES,
+  buildMatchRationale,
   getImageNote,
   getImageUrl,
   matchArtistsForIdea,
@@ -293,6 +294,12 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
                           <span className="font-mono text-[0.6875rem] text-accent shrink-0">{overlapTags.length} match</span>
                         </div>
                         <p className="font-mono text-[0.6875rem] text-cream-muted/70 mt-1">#{artist.rank} · {statusLabel(status)}</p>
+                        {(() => {
+                          const rationale = buildMatchRationale(draft, { artist, overlapTags, status })
+                          return rationale ? (
+                            <p className="font-body text-[0.8125rem] text-cream-muted/80 leading-snug mt-1">{rationale}</p>
+                          ) : null
+                        })()}
                         {(() => {
                           const conventions = mergedConventions.filter((c) => c.attendingArtistIds.includes(artist.id))
                           return conventions.length > 0 ? (
