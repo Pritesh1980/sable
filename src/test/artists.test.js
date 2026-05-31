@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { DEFAULT_ARTISTS, DEFAULT_STUDIOS } from '../data/artists'
+import { DEFAULT_ARTISTS, DEFAULT_STUDIOS, STYLE_TAGS } from '../data/artists'
 
 describe('DEFAULT_ARTISTS data integrity', () => {
   it('has no tier field on any artist', () => {
@@ -39,6 +39,22 @@ describe('DEFAULT_ARTISTS data integrity', () => {
       expect(a).toHaveProperty('tags')
       expect(a).toHaveProperty('rank')
       expect(a).toHaveProperty('studio')
+    }
+  })
+
+  it('every artist has a non-empty styleNote and styleDescriptor', () => {
+    for (const a of DEFAULT_ARTISTS) {
+      expect(typeof a.styleNote).toBe('string')
+      expect(a.styleNote.trim().length).toBeGreaterThan(0)
+      expect(typeof a.styleDescriptor).toBe('string')
+      expect(a.styleDescriptor.trim().length).toBeGreaterThan(0)
+    }
+  })
+
+  it('every artist tag is a known STYLE_TAG', () => {
+    const valid = new Set(STYLE_TAGS)
+    for (const a of DEFAULT_ARTISTS) {
+      for (const tag of a.tags) expect(valid.has(tag)).toBe(true)
     }
   })
 })
