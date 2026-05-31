@@ -64,6 +64,28 @@ export function matchArtistsForIdea(idea, artists = []) {
     .sort((a, b) => b.score - a.score || (a.artist.rank || 999) - (b.artist.rank || 999))
 }
 
+function joinAnd(items) {
+  if (items.length <= 1) return items[0] || ''
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`
+}
+
+export function buildMatchRationale(idea, match) {
+  if (!match) return ''
+  const shared = (match.overlapTags || []).join(' + ')
+  const phrases = String(match.artist?.styleDescriptor || '')
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .slice(0, 2)
+  const subject = idea?.placement ? `this ${idea.placement}` : 'this idea'
+  const clause = joinAnd(phrases)
+
+  if (shared && clause) return `Shares ${shared} — their ${clause} suit ${subject}.`
+  if (shared) return `Shares ${shared} with ${subject}.`
+  if (clause) return `Their ${clause} suit ${subject}.`
+  return ''
+}
+
 export function buildDashboardSummary({ artists = [], ideas = [], boards = [] }) {
   const activeIdeas = ideas.filter((idea) => (idea.status || 'idea') !== 'done')
   const exportReadyIdeas = ideas.filter((idea) => (

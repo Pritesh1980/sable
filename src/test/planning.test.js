@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   buildDashboardSummary,
+  buildMatchRationale,
   getImageNote,
   getImageUrl,
   matchArtistsForIdea,
@@ -79,5 +80,36 @@ describe('buildDashboardSummary', () => {
     expect(summary.nextArtists.map((a) => a.id)).toEqual(['later'])
     expect(summary.openBoards.map((b) => b.id)).toEqual(['board'])
     expect(summary.topArtists.map((a) => a.id)).toEqual(['top', 'later'])
+  })
+})
+
+describe('buildMatchRationale', () => {
+  const artist = { id: 'zoia.ink', styleDescriptor: 'black-and-grey, fine-line geometry, dotwork shading' }
+
+  it('composes shared tags + first two descriptor phrases + placement', () => {
+    const idea = { tags: ['dark-illustrative', 'fine-line'], placement: 'sleeve' }
+    const match = { artist, overlapTags: ['dark-illustrative', 'fine-line'] }
+    expect(buildMatchRationale(idea, match)).toBe(
+      'Shares dark-illustrative + fine-line — their black-and-grey and fine-line geometry suit this sleeve.'
+    )
+  })
+
+  it('falls back to "this idea" when there is no placement', () => {
+    const idea = { tags: ['fine-line'] }
+    const match = { artist, overlapTags: ['fine-line'] }
+    expect(buildMatchRationale(idea, match)).toBe(
+      'Shares fine-line — their black-and-grey and fine-line geometry suit this idea.'
+    )
+  })
+
+  it('drops the descriptor clause when the artist has no styleDescriptor', () => {
+    const idea = { placement: 'forearm' }
+    const match = { artist: { id: 'x' }, overlapTags: ['blackwork'] }
+    expect(buildMatchRationale(idea, match)).toBe('Shares blackwork with this forearm.')
+  })
+
+  it('returns empty string for a null match or no signal', () => {
+    expect(buildMatchRationale({}, null)).toBe('')
+    expect(buildMatchRationale({}, { artist: { id: 'x' }, overlapTags: [] })).toBe('')
   })
 })
