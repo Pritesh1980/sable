@@ -21,6 +21,15 @@ function resultTitle(variant) {
   return safeText(variant.title) || 'Untitled result'
 }
 
+function resultActionLabel(variant) {
+  const title = resultTitle(variant)
+  return title === 'Untitled result' ? title : `${title} result`
+}
+
+function conceptLabel(concept) {
+  return safeText(concept?.prompt) || safeText(concept?.id) || 'this concept'
+}
+
 function resultCountLabel(count) {
   return `${count} ${count === 1 ? 'result' : 'results'}`
 }
@@ -93,7 +102,7 @@ function RatingButtons({ value, onChange, labelPrefix = 'Rating' }) {
   )
 }
 
-function AddVariantForm({ conceptId, onAddVariant, onCancel }) {
+function AddVariantForm({ conceptId, label, onAddVariant, onCancel }) {
   const [form, setForm] = useState(EMPTY_FORM)
   const [dragOver, setDragOver] = useState(false)
 
@@ -252,12 +261,17 @@ function AddVariantForm({ conceptId, onAddVariant, onCancel }) {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <FieldLabel>Rating</FieldLabel>
-          <RatingButtons value={form.rating} onChange={(rating) => update('rating', rating)} />
+          <RatingButtons
+            value={form.rating}
+            labelPrefix={`Rating for ${label}`}
+            onChange={(rating) => update('rating', rating)}
+          />
         </div>
 
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
+            aria-label={`Cancel result for ${label}`}
             onClick={onCancel}
             className="rounded-sm border border-ink-border px-4 py-2 text-sm text-cream-muted transition-colors hover:border-cream-muted/50 hover:text-cream"
           >
@@ -265,6 +279,7 @@ function AddVariantForm({ conceptId, onAddVariant, onCancel }) {
           </button>
           <button
             type="button"
+            aria-label={`Save result for ${label}`}
             disabled={!hasContent}
             onClick={save}
             className="rounded-sm bg-accent px-4 py-2 text-sm text-cream transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-30"
@@ -279,12 +294,14 @@ function AddVariantForm({ conceptId, onAddVariant, onCancel }) {
 
 function VariantDetails({
   conceptId,
+  label,
   variant,
   onMarkBest,
   onDeleteVariant,
   onRateVariant,
 }) {
   const title = resultTitle(variant)
+  const actionLabel = resultActionLabel(variant)
   const imageUrl = imageSource(variant.imageUrl)
   const response = safeText(variant.response)
   const notes = safeText(variant.notes)
@@ -309,7 +326,7 @@ function VariantDetails({
             <FieldLabel>Rating</FieldLabel>
             <RatingButtons
               value={variant.rating}
-              labelPrefix={`Rate ${title}`}
+              labelPrefix={`Rate ${title} for ${label}`}
               onChange={(rating) => onRateVariant(conceptId, variant.id, rating)}
             />
           </div>
@@ -345,6 +362,7 @@ function VariantDetails({
             {!variant.isBest && (
               <button
                 type="button"
+                aria-label={`Mark ${title} as Best for ${label}`}
                 onClick={() => onMarkBest(conceptId, variant.id)}
                 className="rounded-sm border border-accent/45 px-3 py-2 text-xs text-accent transition-colors hover:bg-accent/10"
               >
@@ -353,6 +371,7 @@ function VariantDetails({
             )}
             <button
               type="button"
+              aria-label={`Delete ${actionLabel} for ${label}`}
               onClick={() => onDeleteVariant(conceptId, variant.id)}
               className="rounded-sm border border-ink-border px-3 py-2 text-xs text-cream-muted transition-colors hover:border-accent/60 hover:text-accent"
             >
@@ -367,6 +386,7 @@ function VariantDetails({
 
 function VariantCard({
   conceptId,
+  label,
   variant,
   isExpanded,
   onToggle,
@@ -375,13 +395,14 @@ function VariantCard({
   onRateVariant,
 }) {
   const title = resultTitle(variant)
+  const actionLabel = resultActionLabel(variant)
   const imageUrl = imageSource(variant.imageUrl)
 
   return (
     <article className="overflow-hidden rounded-sm border border-ink-border bg-ink-black/20">
       <button
         type="button"
-        aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${title} result details`}
+        aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${actionLabel} for ${label}`}
         aria-expanded={isExpanded}
         aria-controls={`variant-details-${variant.id}`}
         onClick={onToggle}
@@ -423,6 +444,7 @@ function VariantCard({
         <div id={`variant-details-${variant.id}`}>
           <VariantDetails
             conceptId={conceptId}
+            label={label}
             variant={variant}
             onMarkBest={onMarkBest}
             onDeleteVariant={onDeleteVariant}
@@ -448,6 +470,7 @@ export default function ConceptVariantLab({
     () => sortConceptVariants(getConceptVariants(concept)),
     [concept]
   )
+  const label = conceptLabel(concept)
 
   return (
     <section className="mt-5 rounded-sm border border-ink-border bg-ink-card/70 p-4">
@@ -467,6 +490,7 @@ export default function ConceptVariantLab({
         {!isAdding && (
           <button
             type="button"
+            aria-label={`Add result to ${label}`}
             onClick={() => setIsAdding(true)}
             className="rounded-sm bg-accent px-4 py-2 text-sm text-cream transition-colors hover:bg-accent-hover"
           >
@@ -478,6 +502,7 @@ export default function ConceptVariantLab({
       {isAdding && (
         <AddVariantForm
           conceptId={concept.id}
+          label={label}
           onAddVariant={onAddVariant}
           onCancel={() => setIsAdding(false)}
         />
@@ -493,6 +518,7 @@ export default function ConceptVariantLab({
             <VariantCard
               key={variant.id}
               conceptId={concept.id}
+              label={label}
               variant={variant}
               isExpanded={expandedVariantId === variant.id}
               onToggle={() => {

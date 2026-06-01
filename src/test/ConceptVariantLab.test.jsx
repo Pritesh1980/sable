@@ -58,14 +58,14 @@ describe('ConceptVariantLab', () => {
 
     expect(screen.getByRole('heading', { name: 'AI Results' })).toBeTruthy()
     expect(screen.getByText('0 results')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Add Result' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Add result to Raven chest tattoo' })).toBeTruthy()
   })
 
   it('saving a variant with image URL and AI text calls onAddVariant with the payload', () => {
     const onAddVariant = vi.fn()
     renderLab({ onAddVariant })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add Result' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add result to Raven chest tattoo' }))
     fireEvent.change(screen.getByLabelText('Provider'), { target: { value: 'chatgpt' } })
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Raven silhouette' } })
     fireEvent.change(screen.getByLabelText('Image URL'), {
@@ -77,8 +77,8 @@ describe('ConceptVariantLab', () => {
     fireEvent.change(screen.getByLabelText('Notes'), {
       target: { value: 'Best candidate so far.' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Rating 4' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Save Result' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Rating for Raven chest tattoo 4' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save result for Raven chest tattoo' }))
 
     expect(onAddVariant).toHaveBeenCalledWith('concept-1', {
       provider: 'chatgpt',
@@ -93,7 +93,7 @@ describe('ConceptVariantLab', () => {
   it('reads a dropped image file into the image URL field', async () => {
     renderLab()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add Result' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add result to Raven chest tattoo' }))
     fireEvent.drop(screen.getByLabelText('Image drop zone'), {
       dataTransfer: {
         files: [new File(['raven'], 'raven.png', { type: 'image/png' })],
@@ -109,7 +109,7 @@ describe('ConceptVariantLab', () => {
   it('reads a dropped http URL into the image URL field', () => {
     renderLab()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add Result' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add result to Raven chest tattoo' }))
     fireEvent.drop(screen.getByLabelText('Image drop zone'), {
       dataTransfer: {
         files: [],
@@ -123,7 +123,7 @@ describe('ConceptVariantLab', () => {
   it('renders a saved image and text result after the parent updates concept variants', () => {
     render(<ControlledLab />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add Result' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add result to Raven chest tattoo' }))
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Raven silhouette' } })
     fireEvent.change(screen.getByLabelText('Image URL'), {
       target: { value: 'https://example.com/raven.png' },
@@ -131,12 +131,14 @@ describe('ConceptVariantLab', () => {
     fireEvent.change(screen.getByLabelText('AI text'), {
       target: { value: 'Strong shape but simplify feathers.' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Save Result' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save result for Raven chest tattoo' }))
 
     expect(screen.getByText('1 result')).toBeTruthy()
     expect(screen.getByRole('img', { name: 'Raven silhouette thumbnail' })).toBeTruthy()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Expand Raven silhouette result details' }))
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Expand Raven silhouette result for Raven chest tattoo',
+    }))
 
     expect(screen.getByRole('img', { name: 'Raven silhouette result' })).toBeTruthy()
     expect(screen.getByText('Strong shape but simplify feathers.')).toBeTruthy()
@@ -177,10 +179,14 @@ describe('ConceptVariantLab', () => {
 
     expect(screen.getByText('Best')).toBeTruthy()
     expect(screen.getByText('2 results')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Add Result' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Add result to Raven chest tattoo' })).toBeTruthy()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Expand Critique result details' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Mark Critique as Best' }))
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Expand Critique result for Raven chest tattoo',
+    }))
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Mark Critique as Best for Raven chest tattoo',
+    }))
 
     expect(onMarkBest).toHaveBeenCalledWith('concept-1', 'variant-old')
   })
@@ -205,7 +211,9 @@ describe('ConceptVariantLab', () => {
       },
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Expand Claude pass result details' }))
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Expand Claude pass result for Raven chest tattoo',
+    }))
 
     expect(screen.getByText('Provider')).toBeTruthy()
     expect(screen.getAllByText('Claude').length).toBeGreaterThan(0)
@@ -261,9 +269,11 @@ describe('ConceptVariantLab', () => {
       onDeleteVariant,
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Expand Action check result details' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Rate Action check 5' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Expand Action check result for Raven chest tattoo',
+    }))
+    fireEvent.click(screen.getByRole('button', { name: 'Rate Action check for Raven chest tattoo 5' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Action check result for Raven chest tattoo' }))
 
     expect(onRateVariant).toHaveBeenCalledWith('concept-1', 'variant-actions', 5)
     expect(onDeleteVariant).toHaveBeenCalledWith('concept-1', 'variant-actions')
@@ -293,7 +303,9 @@ describe('ConceptVariantLab', () => {
     expect(screen.getByText('Other')).toBeTruthy()
     expect(screen.getByText('Unrated')).toBeTruthy()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Expand Untitled result result details' }))
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Expand Untitled result for Raven chest tattoo',
+    }))
 
     expect(screen.getByText('No AI text saved.')).toBeTruthy()
     expect(screen.getByText('No notes saved.')).toBeTruthy()
@@ -303,9 +315,9 @@ describe('ConceptVariantLab', () => {
   it('keeps Save Result disabled until image URL, AI text, or notes exists', () => {
     renderLab()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add Result' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add result to Raven chest tattoo' }))
 
-    const save = screen.getByRole('button', { name: 'Save Result' })
+    const save = screen.getByRole('button', { name: 'Save result for Raven chest tattoo' })
     expect(save).toBeDisabled()
 
     fireEvent.change(screen.getByLabelText('Notes'), { target: { value: 'Promising direction.' } })

@@ -1,8 +1,15 @@
 import { useState } from 'react'
+import ConceptVariantLab from '../components/ConceptVariantLab'
 import Logo from '../components/Logo'
 import PromptPackComposer from '../components/PromptPackComposer'
 import TagPill from '../components/TagPill'
 import { STYLE_TAGS } from '../data/artists'
+import {
+  addConceptVariant,
+  markBestVariant,
+  removeConceptVariant,
+  updateVariantRating,
+} from '../data/conceptVariants'
 import { matchArtistsForIdea } from '../data/planning'
 import { getPromptPackFields } from '../data/promptPacks'
 
@@ -21,6 +28,10 @@ function buildTextPrompt(userPrompt) {
 
 function buildImagePrompt(userPrompt) {
   return `Professional tattoo concept art: ${userPrompt}. Black ink tattoo design on white background, fine line illustration, high contrast, clean lines, suitable for tattooing, tattoo flash art style, no text, no watermarks`
+}
+
+function conceptActionLabel(concept) {
+  return String(concept?.prompt || concept?.id || 'this concept').trim() || 'this concept'
 }
 
 async function generateWithDallE(apiKey, prompt) {
@@ -305,6 +316,30 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
     setPasting(null)
   }
 
+  function addVariant(conceptId, input) {
+    setConcepts((prev) => prev.map((c) => (
+      c.id === conceptId ? addConceptVariant(c, input) : c
+    )))
+  }
+
+  function markBest(conceptId, variantId) {
+    setConcepts((prev) => prev.map((c) => (
+      c.id === conceptId ? markBestVariant(c, variantId) : c
+    )))
+  }
+
+  function deleteVariant(conceptId, variantId) {
+    setConcepts((prev) => prev.map((c) => (
+      c.id === conceptId ? removeConceptVariant(c, variantId) : c
+    )))
+  }
+
+  function rateVariant(conceptId, variantId, rating) {
+    setConcepts((prev) => prev.map((c) => (
+      c.id === conceptId ? updateVariantRating(c, variantId, rating) : c
+    )))
+  }
+
   return (
     <div className="min-h-screen bg-ink-black max-w-5xl mx-auto px-4 md:px-8 pt-safe-top pb-24">
 
@@ -460,6 +495,13 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
                 <p className="text-cream-muted/50 text-[0.625rem] font-mono tracking-widest uppercase mb-1">Concept</p>
                 <p className="text-cream font-body text-sm italic mb-3">"{c.prompt}"</p>
                 <SavedPromptPack promptPack={c.promptPack} />
+                <ConceptVariantLab
+                  concept={c}
+                  onAddVariant={addVariant}
+                  onMarkBest={markBest}
+                  onDeleteVariant={deleteVariant}
+                  onRateVariant={rateVariant}
+                />
 
                 {c.response ? (
                   <div
@@ -545,6 +587,7 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
                     {new Date(c.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </p>
                   <button
+                    aria-label={`Delete concept ${conceptActionLabel(c)}`}
                     onClick={() => setConcepts((prev) => prev.filter((x) => x.id !== c.id))}
                     className="text-[0.625rem] font-mono text-cream-muted/30 hover:text-accent transition-colors tracking-widest uppercase"
                   >
