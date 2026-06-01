@@ -62,6 +62,9 @@ or upload a result. Below that:
 - **Match to style** — tag the concept with styles. The moment you do, its **top artist
   matches** appear; tap one to open their Instagram.
 - **Saved prompt pack** — switch between provider prompts and copy them again later.
+- **AI Results** — add ChatGPT, Firefly, Gemini, Claude, or other outputs as curated
+  variants. Each result can hold an image, generated text, personal notes, and a rating.
+- **Best result** — mark one variant as Best to keep the strongest direction visible first.
 - **Open in Firefly** — appears once the concept has an image, so you can take it further.
 - **Delete** removes the concept.
 
