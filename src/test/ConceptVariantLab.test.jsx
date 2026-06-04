@@ -191,6 +191,74 @@ describe('ConceptVariantLab', () => {
     expect(onMarkBest).toHaveBeenCalledWith('concept-1', 'variant-old')
   })
 
+  it('shows Make STL for expanded variants with images and calls onMakeStl', () => {
+    const onMakeStl = vi.fn()
+    renderLab({
+      concept: {
+        ...baseConcept,
+        variants: [
+          {
+            id: 'variant-image',
+            provider: 'chatgpt',
+            title: 'Relief candidate',
+            imageUrl: 'data:image/png;base64,relief',
+            response: '',
+            notes: '',
+            rating: 4,
+            isBest: false,
+            createdAt: '2026-05-31T08:00:00.000Z',
+          },
+        ],
+      },
+      onMakeStl,
+    })
+
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Expand Relief candidate result for Raven chest tattoo',
+    }))
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Make STL from Relief candidate result for Raven chest tattoo',
+    }))
+
+    expect(onMakeStl).toHaveBeenCalledWith({
+      conceptId: 'concept-1',
+      conceptLabel: 'Raven chest tattoo',
+      variantId: 'variant-image',
+      variantLabel: 'Relief candidate',
+      imageUrl: 'data:image/png;base64,relief',
+    })
+  })
+
+  it('does not show Make STL for variants without images', () => {
+    renderLab({
+      concept: {
+        ...baseConcept,
+        variants: [
+          {
+            id: 'variant-text',
+            provider: 'chatgpt',
+            title: 'Text only',
+            imageUrl: '',
+            response: 'Use this as artist-facing language.',
+            notes: '',
+            rating: 4,
+            isBest: false,
+            createdAt: '2026-05-31T08:00:00.000Z',
+          },
+        ],
+      },
+      onMakeStl: vi.fn(),
+    })
+
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Expand Text only result for Raven chest tattoo',
+    }))
+
+    expect(screen.queryByRole('button', {
+      name: 'Make STL from Text only result for Raven chest tattoo',
+    })).toBeNull()
+  })
+
   it('shows provider and created date metadata in expanded details', () => {
     renderLab({
       concept: {
