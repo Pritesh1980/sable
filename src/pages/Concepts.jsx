@@ -10,6 +10,7 @@ import {
   removeConceptVariant,
   updateVariantRating,
 } from '../data/conceptVariants'
+import { generateImageWithGemini } from '../data/geminiImage'
 import { matchArtistsForIdea } from '../data/planning'
 import { getPromptPackFields } from '../data/promptPacks'
 
@@ -251,6 +252,8 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
   const [openaiKey, setOpenaiKey] = useState(() => localStorage.getItem('openai_api_key') || '')
   const [geminiKey, setGeminiKey] = useState(() => localStorage.getItem('gemini_api_key') || '')
   const [showKeyConfig, setShowKeyConfig] = useState(false)
+  const [provider, setProvider] = useState('gemini')
+  const [steerArtistId, setSteerArtistId] = useState('')
   const [generating, setGenerating] = useState(false)
   const [genError, setGenError] = useState(null)
   const [copied, setCopied] = useState(false)
@@ -272,16 +275,25 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
 
   async function generate() {
     if (!prompt.trim() || generating) return
+    const useGemini = hasGemini && (provider === 'gemini' || !hasOpenai)
     setGenError(null)
     setGenerating(true)
     try {
-      const dataUrl = await generateWithDallE(openaiKey, prompt)
+      const steerArtist = artists.find((a) => a.id === steerArtistId)
+      const dataUrl = useGemini
+        ? await generateImageWithGemini(geminiKey, {
+            prompt,
+            styleDescriptor: steerArtist?.styleDescriptor || '',
+            tags: steerArtist?.tags || [],
+          })
+        : await generateWithDallE(openaiKey, prompt)
       const concept = {
         id: Date.now().toString(),
         prompt,
         imageUrl: dataUrl,
         response: '',
-        tags: [],
+        tags: steerArtist?.tags || [],
+        provider: useGemini ? 'gemini' : 'dalle',
         createdAt: new Date().toISOString(),
       }
       setConcepts((prev) => [concept, ...prev])
@@ -428,17 +440,41 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
         )}
 
         {hasApiKey ? (
-          <div className="flex items-center justify-between mt-2">
-            <span className="text-[0.625rem] font-mono text-cream-muted/50">⌘ Enter to generate</span>
+          <div className="mt-3 space-y-3">
+            {hasOpenai && hasGemini && (
+              <div className="flex gap-1">
+                {[{ id: 'gemini', label: 'Gemini · free' }, { id: 'dalle', label: 'DALL·E' }].map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => setProvider(p.id)}
+                    className={`px-3 py-1 rounded-sm font-mono text-[0.625rem] tracking-widest uppercase transition-colors border ${
+                      provider === p.id ? 'border-accent/50 text-accent bg-accent/5' : 'border-ink-border text-cream-muted/50 hover:text-cream-muted'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            {artists.length > 0 && (
+              <select
+                value={steerArtistId}
+                onChange={(e) => setSteerArtistId(e.target.value)}
+                className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-body"
+              >
+                <option value="">No style steering</option>
+                {artists.map((a) => (
+                  <option key={a.id} value={a.id}>Steer by {a.name || `@${a.handle}`}</option>
+                ))}
+              </select>
+            )}
             <button
               onClick={generate}
               disabled={!prompt.trim() || generating}
-              className="px-5 py-2.5 bg-accent hover:bg-accent-hover disabled:opacity-30 disabled:cursor-not-allowed text-cream text-sm font-body rounded-sm transition-colors flex items-center gap-2"
+              className="w-full py-2.5 bg-accent hover:bg-accent-hover disabled:opacity-30 disabled:cursor-not-allowed text-cream text-sm font-body rounded-sm transition-colors flex items-center justify-center gap-2"
             >
-              {generating && (
-                <span className="w-3.5 h-3.5 rounded-full border-2 border-cream/30 border-t-cream animate-spin" />
-              )}
-              {generating ? 'Generating…' : 'Generate Image'}
+              {generating && <span className="w-3.5 h-3.5 rounded-full border-2 border-cream/30 border-t-cream animate-spin" />}
+              {generating ? 'Generating…' : 'Generate image'}
             </button>
           </div>
         ) : (
