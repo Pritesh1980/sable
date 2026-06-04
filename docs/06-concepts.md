@@ -42,14 +42,21 @@ botanicals."* This older quick path still works:
 
 1. Tap **Copy Prompt** — a richly-structured prompt is copied to your clipboard, and a new
    concept card is started.
-2. Use the **ChatGPT / Claude.ai / Gemini** buttons to open your AI of choice, paste, and run it.
+2. Use the **ChatGPT / Claude.ai / Gemini / AI Studio** buttons to open your AI of choice,
+   paste, and run it. This route is free — and especially good with a **Google AI Pro**
+   subscription, which gives generous image quotas in the Gemini app and AI Studio.
 3. Bring the result back: on the concept card use **Paste image** (drop or choose a file) or
    **Paste text** to save the written response.
 
-### With an OpenAI key
+### With a paid API key (optional)
 
-Tap **⚙ Configure AI**, paste an OpenAI key (stored only on your device), and the prompt
-box gains a **Generate Image** button — press **⌘ + Enter** to create a DALL·E image directly.
+Tap **⚙ Configure AI** to add an **OpenAI key** (DALL·E 3) or a **Gemini key**, each stored
+only on your device. The prompt box then gains a **Generate image** button — press
+**⌘ + Enter** to create an image in-app. Both are **paid APIs that need billing enabled**
+(≈$0.04/image); a Google AI Pro subscription does **not** cover Gemini *API* usage. If both
+keys are set, a **Gemini / DALL·E** toggle lets you pick the provider, and **Steer by [artist]**
+shapes the image toward a favourite artist's style. To stay free, use the Copy Prompt →
+paste route above instead.
 
 ## Work with a concept
 

@@ -1,4 +1,4 @@
-// Live tattoo-concept image generation via Google's free Gemini tier.
+// Live tattoo-concept image generation via the Gemini image API (paid tier — billing required).
 // Pure helpers (buildGeminiImagePrompt, parseGeminiImage) are unit-tested;
 // generateImageWithGemini is a thin network wrapper around them.
 

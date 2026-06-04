@@ -62,6 +62,7 @@ const DESTINATIONS = [
   { id: 'chatgpt', label: 'ChatGPT', url: 'https://chatgpt.com' },
   { id: 'claude', label: 'Claude.ai', url: 'https://claude.ai' },
   { id: 'gemini', label: 'Gemini', url: 'https://gemini.google.com' },
+  { id: 'aistudio', label: 'AI Studio', url: 'https://aistudio.google.com' },
 ]
 
 function PasteZone({ conceptId, onImage, onText, onDiscard }) {
@@ -402,7 +403,7 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
         <div className="mb-6 p-4 bg-ink-card border border-ink-border rounded-sm animate-slide-up">
           <KeyField
             label="Gemini API key"
-            help="Free image generation via Google AI Studio. Stored locally on your device only."
+            help="Direct image generation via the Gemini API — paid, billing required (~$0.04/image). For free, skip this and use Copy Prompt → paste into Gemini or AI Studio below. Stored locally on your device only."
             placeholder="AIza…"
             value={geminiKey}
             onSave={(v) => persistKey('gemini', v)}
@@ -443,7 +444,7 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
           <div className="mt-3 space-y-3">
             {hasOpenai && hasGemini && (
               <div className="flex gap-1">
-                {[{ id: 'gemini', label: 'Gemini · free' }, { id: 'dalle', label: 'DALL·E' }].map((p) => (
+                {[{ id: 'gemini', label: 'Gemini' }, { id: 'dalle', label: 'DALL·E' }].map((p) => (
                   <button
                     key={p.id}
                     onClick={() => setProvider(p.id)}
@@ -479,14 +480,14 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
           </div>
         ) : (
           <div className="mt-3 space-y-3">
-            <div className="flex gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {DESTINATIONS.map(({ id, label, url }) => (
                 <a
                   key={id}
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 text-center py-2 border border-ink-border rounded-sm font-mono text-cream-muted hover:text-cream hover:border-cream-muted/50 transition-colors text-[0.6875rem] tracking-widest uppercase"
+                  className="text-center py-2 border border-ink-border rounded-sm font-mono text-cream-muted hover:text-cream hover:border-cream-muted/50 transition-colors text-[0.6875rem] tracking-widest uppercase"
                 >
                   {label} ↗
                 </a>
