@@ -212,32 +212,62 @@ function SavedPromptPack({ promptPack }) {
   )
 }
 
+function KeyField({ label, help, placeholder, value, onSave, onRemove }) {
+  const [draft, setDraft] = useState(value)
+  return (
+    <div className="mb-4 last:mb-0">
+      <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-1">{label}</p>
+      <p className="text-cream-muted/60 text-xs font-body mb-2 leading-relaxed">{help}</p>
+      <div className="flex gap-2">
+        <input
+          type="password"
+          className="flex-1 bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-mono placeholder-cream-muted/40"
+          placeholder={placeholder}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && onSave(draft)}
+        />
+        <button
+          onClick={() => onSave(draft)}
+          className="px-4 py-2 bg-accent hover:bg-accent-hover text-cream text-sm font-body rounded-sm transition-colors"
+        >
+          Save
+        </button>
+      </div>
+      {value && (
+        <button
+          onClick={() => { setDraft(''); onRemove() }}
+          className="mt-2 text-[0.625rem] font-mono text-cream-muted/40 hover:text-accent transition-colors tracking-widest uppercase"
+        >
+          Remove key
+        </button>
+      )}
+    </div>
+  )
+}
+
 export default function Concepts({ concepts, setConcepts, artists = [], ideas = [] }) {
   const [prompt, setPrompt] = useState('')
-  const [storedKey, setStoredKey] = useState(() => localStorage.getItem('openai_api_key') || '')
+  const [openaiKey, setOpenaiKey] = useState(() => localStorage.getItem('openai_api_key') || '')
+  const [geminiKey, setGeminiKey] = useState(() => localStorage.getItem('gemini_api_key') || '')
   const [showKeyConfig, setShowKeyConfig] = useState(false)
-  const [keyDraft, setKeyDraft] = useState('')
   const [generating, setGenerating] = useState(false)
   const [genError, setGenError] = useState(null)
   const [copied, setCopied] = useState(false)
   const [selected, setSelected] = useState(null)
   const [pasting, setPasting] = useState(null)
 
-  const hasApiKey = Boolean(storedKey)
+  const hasOpenai = Boolean(openaiKey)
+  const hasGemini = Boolean(geminiKey)
+  const hasApiKey = hasOpenai || hasGemini
 
-  function saveKey() {
-    const trimmed = keyDraft.trim()
-    setStoredKey(trimmed)
-    if (trimmed) localStorage.setItem('openai_api_key', trimmed)
-    else localStorage.removeItem('openai_api_key')
-    setKeyDraft('')
-    setShowKeyConfig(false)
-  }
-
-  function clearKey() {
-    setStoredKey('')
-    localStorage.removeItem('openai_api_key')
-    setShowKeyConfig(false)
+  function persistKey(which, value) {
+    const v = value.trim()
+    const storageKey = which === 'gemini' ? 'gemini_api_key' : 'openai_api_key'
+    if (which === 'gemini') setGeminiKey(v)
+    else setOpenaiKey(v)
+    if (v) localStorage.setItem(storageKey, v)
+    else localStorage.removeItem(storageKey)
   }
 
   async function generate() {
@@ -245,7 +275,7 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
     setGenError(null)
     setGenerating(true)
     try {
-      const dataUrl = await generateWithDallE(storedKey, prompt)
+      const dataUrl = await generateWithDallE(openaiKey, prompt)
       const concept = {
         id: Date.now().toString(),
         prompt,
@@ -349,7 +379,7 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
           <h1 className="font-display text-3xl text-cream">AI Concepts</h1>
         </div>
         <button
-          onClick={() => { setShowKeyConfig((v) => !v); setKeyDraft(storedKey) }}
+          onClick={() => setShowKeyConfig((v) => !v)}
           className="flex items-center gap-1.5 font-mono text-cream-muted/50 hover:text-cream-muted text-[0.625rem] tracking-widest uppercase transition-colors"
         >
           ⚙ {hasApiKey ? 'Key set' : 'Configure AI'}
@@ -358,35 +388,22 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
 
       {showKeyConfig && (
         <div className="mb-6 p-4 bg-ink-card border border-ink-border rounded-sm animate-slide-up">
-          <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-1">OpenAI API Key</p>
-          <p className="text-cream-muted/60 text-xs font-body mb-3 leading-relaxed">
-            Used to generate images via DALL·E 3. Stored locally on your device only.
-          </p>
-          <div className="flex gap-2">
-            <input
-              type="password"
-              autoFocus
-              className="flex-1 bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-mono placeholder-cream-muted/40"
-              placeholder="sk-..."
-              value={keyDraft}
-              onChange={(e) => setKeyDraft(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && saveKey()}
-            />
-            <button
-              onClick={saveKey}
-              className="px-4 py-2 bg-accent hover:bg-accent-hover text-cream text-sm font-body rounded-sm transition-colors"
-            >
-              Save
-            </button>
-          </div>
-          {hasApiKey && (
-            <button
-              onClick={clearKey}
-              className="mt-2 text-[0.625rem] font-mono text-cream-muted/40 hover:text-accent transition-colors tracking-widest uppercase"
-            >
-              Remove key
-            </button>
-          )}
+          <KeyField
+            label="Gemini API key"
+            help="Free image generation via Google AI Studio. Stored locally on your device only."
+            placeholder="AIza…"
+            value={geminiKey}
+            onSave={(v) => persistKey('gemini', v)}
+            onRemove={() => persistKey('gemini', '')}
+          />
+          <KeyField
+            label="OpenAI API key"
+            help="Image generation via DALL·E 3 (paid). Stored locally on your device only."
+            placeholder="sk-…"
+            value={openaiKey}
+            onSave={(v) => persistKey('openai', v)}
+            onRemove={() => persistKey('openai', '')}
+          />
         </div>
       )}
 
