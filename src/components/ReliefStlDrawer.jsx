@@ -4,6 +4,15 @@ import { buildReliefStl, DETAIL_PRESETS, DEFAULT_RELIEF_SETTINGS } from '../data
 const CANVAS_READ_ERROR = 'This image cannot be read by the browser. Use an uploaded image or data URL.'
 const IMAGE_LOAD_ERROR = 'Could not load this image for STL export.'
 
+const DEFAULT_DRAWER_SETTINGS = {
+  widthMm: String(DEFAULT_RELIEF_SETTINGS.widthMm),
+  maxReliefMm: String(DEFAULT_RELIEF_SETTINGS.maxReliefMm),
+  baseMm: String(DEFAULT_RELIEF_SETTINGS.baseMm),
+  detail: DEFAULT_RELIEF_SETTINGS.detail,
+  smoothing: DEFAULT_RELIEF_SETTINGS.smoothing,
+  invert: DEFAULT_RELIEF_SETTINGS.invert,
+}
+
 function slugify(value) {
   const slug = String(value || '')
     .trim()
@@ -74,42 +83,20 @@ function imageToHeightmap(image, detail) {
   return { width, height, values }
 }
 
-export default function ReliefStlDrawer({ source, onClose }) {
+function ReliefStlDrawerContent({ source, onClose }) {
   const closeButtonRef = useRef(null)
   const revokeTimerRef = useRef(null)
   const pendingRevokeUrlRef = useRef('')
   const onCloseRef = useRef(onClose)
-  const [settings, setSettings] = useState({
-    widthMm: String(DEFAULT_RELIEF_SETTINGS.widthMm),
-    maxReliefMm: String(DEFAULT_RELIEF_SETTINGS.maxReliefMm),
-    baseMm: String(DEFAULT_RELIEF_SETTINGS.baseMm),
-    detail: DEFAULT_RELIEF_SETTINGS.detail,
-    smoothing: DEFAULT_RELIEF_SETTINGS.smoothing,
-    invert: DEFAULT_RELIEF_SETTINGS.invert,
-  })
+  const [settings, setSettings] = useState(DEFAULT_DRAWER_SETTINGS)
   const [imageElement, setImageElement] = useState(null)
   const [error, setError] = useState('')
-
-  useEffect(() => {
-    setImageElement(null)
-    setError('')
-    setSettings({
-      widthMm: String(DEFAULT_RELIEF_SETTINGS.widthMm),
-      maxReliefMm: String(DEFAULT_RELIEF_SETTINGS.maxReliefMm),
-      baseMm: String(DEFAULT_RELIEF_SETTINGS.baseMm),
-      detail: DEFAULT_RELIEF_SETTINGS.detail,
-      smoothing: DEFAULT_RELIEF_SETTINGS.smoothing,
-      invert: DEFAULT_RELIEF_SETTINGS.invert,
-    })
-  }, [source?.imageUrl])
 
   useEffect(() => {
     onCloseRef.current = onClose
   }, [onClose])
 
   useEffect(() => {
-    if (!source) return undefined
-
     const previousActiveElement = document.activeElement
     closeButtonRef.current?.focus()
 
@@ -141,10 +128,6 @@ export default function ReliefStlDrawer({ source, onClose }) {
   }, [])
 
   const validation = useMemo(() => validateSettings(settings), [settings])
-
-  if (!source) {
-    return null
-  }
 
   const sourceLabel = source.label || 'Selected image'
   const filenameSlug = slugify(source.filenameSeed || source.label)
@@ -336,5 +319,19 @@ export default function ReliefStlDrawer({ source, onClose }) {
         </div>
       </section>
     </div>
+  )
+}
+
+export default function ReliefStlDrawer({ source, onClose }) {
+  if (!source) {
+    return null
+  }
+
+  return (
+    <ReliefStlDrawerContent
+      key={source.imageUrl || 'empty-source'}
+      source={source}
+      onClose={onClose}
+    />
   )
 }
