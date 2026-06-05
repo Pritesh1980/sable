@@ -157,4 +157,45 @@ describe('Concepts variant integration', () => {
       name: 'Delete Image pass result for Raven chest piece with blackwork botanicals',
     })).toBeInTheDocument()
   })
+
+  it('opens the relief STL drawer from an image result variant', () => {
+    const concepts = [{
+      id: 'concept-1',
+      prompt: 'Raven chest tattoo',
+      imageUrl: '',
+      response: '',
+      tags: [],
+      createdAt: '2026-05-31T08:00:00.000Z',
+      variants: [{
+        id: 'variant-image',
+        provider: 'chatgpt',
+        title: 'Relief candidate',
+        imageUrl: 'data:image/png;base64,relief',
+        response: '',
+        notes: '',
+        rating: 4,
+        isBest: false,
+        createdAt: '2026-05-31T08:00:00.000Z',
+      }],
+    }]
+
+    render(
+      <Concepts
+        concepts={concepts}
+        setConcepts={() => {}}
+        artists={[]}
+        ideas={[]}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Expand Relief candidate result for Raven chest tattoo',
+    }))
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Make STL from Relief candidate result for Raven chest tattoo',
+    }))
+
+    expect(screen.getByRole('dialog', { name: 'Make Relief STL' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Relief candidate STL source' })).toBeInTheDocument()
+  })
 })
