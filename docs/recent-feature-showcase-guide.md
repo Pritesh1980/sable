@@ -5,7 +5,7 @@ Use this checklist to try out the features added recently.
 - Start the app:
   - Run `npm run dev`.
   - Open the local URL shown by Vite.
-  - Use the `codex/ai-result-variants` branch if you want the latest AI Results work.
+  - The latest AI Results work is on `master` — no separate branch needed.
 
 - Try AI Concepts prompt packs:
   - Go to **AI**.
