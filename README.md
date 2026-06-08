@@ -1,6 +1,6 @@
 # Tattoo
 
-Tattoo is a local-first Progressive Web App for planning a personal tattoo journey. It keeps a curated artist collection, ranks favourites, links artists to tattoo ideas, groups ideas into mood boards, and tracks useful studio and convention context.
+Tattoo is a local-first Progressive Web App for planning a personal tattoo journey. It keeps a curated artist collection, ranks favourites, links artists to tattoo ideas, groups ideas into mood boards, generates AI concept prompts/results, exports relief STL files from concept images, and tracks useful studio and convention context.
 
 The app is built for Pritesh's own workflow. It runs locally today, with S3 + CloudFront deployment intentionally left for later.
 
@@ -16,7 +16,7 @@ Full workflow documentation lives in [`docs/`](docs/README.md), including artist
 - **Mood Boards**: grouped ideas that can be ordered and copied as a board brief.
 - **Convention Radar**: curated UK convention shortlist with distances from Milton Keynes and artist attendance override support.
 - **Studios**: artist grouping by studio and reachability.
-- **AI Concepts**: prompt-building workflow for external AI tools, pasted responses/images, and optional direct OpenAI image generation.
+- **AI Concepts**: multi-provider prompt packs (ChatGPT, Adobe Firefly, Gemini, Claude) built from free text or a Brief idea, paste-back of AI results as rated variants with a "Best" pick, optional in-app image generation via an OpenAI (DALL·E 3) or Gemini key with artist-style steering, relief STL export from image results, and style-based artist matching on each concept.
 - **Manage**: artist CRUD, tags, statuses, studios, notes, image import, and backup/import.
 
 ## Tech Stack

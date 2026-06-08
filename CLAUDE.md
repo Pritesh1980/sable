@@ -27,7 +27,7 @@ This is a personal app for one user (Pritesh) + occasional sharing with his tatt
 - **Routing**: React Router (`react-router-dom` v7) — 8 deep-linkable routes
 - **Styling**: Tailwind CSS
 - **Hosting**: AWS S3 + CloudFront (planned — not yet set up; see `BACKLOG.md`)
-- **AI (Concepts page)**: copy-prompt → paste into ChatGPT/Claude/Gemini and bring the result back, **or** optional OpenAI DALL·E 3 image generation with a user-supplied key (stored locally). Artist ↔ idea/concept matching is local tag-overlap (`src/data/planning.js`) — no API.
+- **AI (Concepts page)**: copy-prompt → paste into ChatGPT/Claude/Gemini and bring the result back, **or** optional OpenAI DALL·E 3 / Gemini image generation with user-supplied keys (stored locally). Saved image results can export browser-generated relief STL files. Artist ↔ idea/concept matching is local tag-overlap (`src/data/planning.js`) — no API.
 - **Storage**: localStorage for metadata (`tattoo_*` keys) + IndexedDB for artist images; JSON export/import backup. No backend.
 
 ### PWA Requirements
@@ -63,9 +63,9 @@ A personal mood board / brief section.
 - Curated in `src/data/conventions.js`; date-aware ordering (upcoming first)
 
 ### 4. AI Concept Generator (Concepts page)
-- Text prompt → copy a structured prompt into ChatGPT/Claude/Gemini and paste the result back, **or** generate a DALL·E 3 image directly with a user-supplied OpenAI key
+- Text prompt → copy a structured prompt into ChatGPT/Claude/Gemini and paste the result back, **or** generate an image directly with a user-supplied OpenAI or Gemini key
 - Tag a concept with styles to surface matching artists
-- Results saved to a personal gallery
+- Results saved to a personal gallery, with inline variants and relief STL export for image results
 
 ---
 
@@ -235,6 +235,13 @@ A **Stop hook** (`scripts/docs-drift-check.sh`, wired in `.claude/settings.json`
 <!-- IJFW-MEMORY-START (managed -- do not edit manually) -->
 <ijfw-memory>
 Project memory at .ijfw/memory/. Call `ijfw_memory_prelude` for full context.
+
+Recent decisions:
+**Why:** This keeps the first result-comparison slice close to the existing Concepts workflow while making external AI outputs comparable and reusable.
+**How to apply:** When implementing AI result comparison, extend concept records with optional variants. Preserve legacy concepts. Render the best variant first inside the concept card, with compact expandable cards for the rest. Do not add a separate Result Lab page yet.
+
+Last handoff: Handoff: 2026-06-04T19:15:00Z
+====================
 </ijfw-memory>
 
 <ijfw-routing>

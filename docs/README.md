@@ -40,7 +40,7 @@ The same guidance is built into the app under **More → Help**:
 3. **[Gallery & ranking](03-gallery-and-ranking.md)** — browse four ways, filter, and rank.
 4. **[Brief & boards](04-brief-and-boards.md)** — capture ideas, link artists, build boards.
 5. **[Conventions & studios](05-conventions-and-studios.md)** — shows near you, where artists work.
-6. **[AI concepts](06-concepts.md)** — turn a description into a concept and match it to artists.
+6. **[AI concepts](06-concepts.md)** — build multi-provider prompt packs, save AI results as rated variants, export relief STLs, and match concepts to artists.
 7. **[Backup & restore](07-backup-and-settings.md)** — keep your data safe and move it between devices.
 
 ---
