@@ -28,7 +28,23 @@ This is a personal app for one user (Pritesh) + occasional sharing with his tatt
 - **Styling**: Tailwind CSS
 - **Hosting**: AWS S3 + CloudFront (planned — not yet set up; see `BACKLOG.md`)
 - **AI (Concepts page)**: copy-prompt → paste into ChatGPT/Claude/Gemini and bring the result back, **or** optional OpenAI DALL·E 3 / Gemini image generation with user-supplied keys (stored locally). Saved image results can export browser-generated relief STL files. Artist ↔ idea/concept matching is local tag-overlap (`src/data/planning.js`) — no API.
-- **Storage**: localStorage for metadata (`tattoo_*` keys) + IndexedDB for artist images; JSON export/import backup. No backend.
+- **Accounts & sync**: email/password login, per-user data, cross-device sync. All
+  vendor SDK access is quarantined behind a thin adapter boundary (`src/backend/`,
+  selected by `VITE_BACKEND` = `local` | `supabase` | `aws`, default `local`) so the
+  app never imports a vendor SDK directly — swapping Supabase → AWS later is one new
+  adapter. Auth/context lives in `src/context/AuthContext.jsx`; the gate is
+  `src/components/ProtectedRoute.jsx` + `src/pages/Login.jsx`. Owner seeding
+  (`src/backend/owner.js`, `VITE_OWNER_EMAIL`): the owner keeps the curated
+  `DEFAULT_ARTISTS`; other accounts start empty.
+- **Storage**: local-first-with-sync. localStorage (`tattoo_*` keys) + IndexedDB stay
+  as an offline cache; changes mirror to the backend document store and reconcile by
+  last-write-wins on `updatedAt` (`src/backend/sync.js`, wired into `useStorage` /
+  `useArtistStorage`). Images are referenced by small canonical `{ key }` refs in
+  synced data with bytes in blob storage (`src/data/blobUrls.js`, `uploadImages`);
+  legacy IndexedDB images migrate to blobs on first authed load. Device-local and
+  NOT synced: `tattoo_theme`, `tattoo_font`, `openai_api_key`, `gemini_api_key`.
+  JSON export/import backup still available. (Idea/concept images still sync inline
+  for now — see `BACKLOG.md`.)
 
 ### PWA Requirements
 - `manifest.json` with app name, icons, dark background colour

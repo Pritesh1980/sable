@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { AuthContext } from './auth-context'
 import { backend } from '../backend'
+import { purgeLocalUserData } from '../backend/purge'
 
 // Holds the current auth session and exposes signIn/signOut, wired to
 // backend.auth. Mirrors the ThemeContext split (context · provider · hook).
@@ -23,7 +24,11 @@ export function AuthProvider({ children }) {
   }, [])
 
   const signIn = useCallback((creds) => backend.auth.signIn(creds), [])
-  const signOut = useCallback(() => backend.auth.signOut(), [])
+  const signOut = useCallback(async () => {
+    await backend.auth.signOut()
+    // Drop the signed-out user's local caches so the next account starts clean.
+    purgeLocalUserData()
+  }, [])
 
   const value = {
     user: session?.user || null,

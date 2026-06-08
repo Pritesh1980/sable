@@ -10,9 +10,10 @@ const SECTIONS = [
     blurb: 'The home dashboard, navigation, and the controls that are always within reach.',
     image: 'dashboard.png',
     steps: [
+      'Sign in with your email and password to open the app. Your artists, ideas, boards and concepts are tied to your account and follow you across devices — add something on your Mac and it appears on your iPhone.',
       'The bottom bar holds the five main areas: Home, Artists, Brief, Radar and AI. Tap More (⋯) for Studios, Boards, Manage and this Help page.',
       'Home is your dashboard — it surfaces active ideas, artists to contact next, idea→artist matches, and your top-ranked artists.',
-      'Top-right: tap A+/A− to change text size and ◑/◐ to switch between dark and light themes.',
+      'Top-right: tap A+/A− to change text size, ◑/◐ to switch dark/light theme, and ⏻ to sign out (this clears your data from the current device).',
       'Your artists, studios and conventions come pre-loaded. Ideas, boards and concepts start empty — you build those.',
     ],
   },
@@ -24,7 +25,7 @@ const SECTIONS = [
     steps: [
       'Go to More → Manage. Use Add New Artist to add an Instagram handle (display name optional).',
       'Tap a row to expand it. Set Style Tags, Shortlist Status, Studio, and free-text Notes (notes save on blur or Enter).',
-      'Use + Photos to upload screenshots — they are compressed and stored locally on your device.',
+      'Use + Photos to upload screenshots — they are compressed, stored in your account, and synced to your other devices.',
       'Style tags drive the artist-matching you see in Brief and Concepts, so keep them accurate.',
     ],
   },
@@ -84,12 +85,13 @@ const SECTIONS = [
   {
     id: 'backup',
     label: 'Backup & restore',
-    blurb: 'Your data lives on this device — export it to keep it safe or move it.',
+    blurb: 'Your data syncs to your account — export a copy any time to keep it safe or move it.',
     image: 'manage-backup.png',
     steps: [
+      'Your data is saved to your account and synced across your devices automatically; a local copy is also kept on each device so the app works offline.',
       'In More → Manage, use Export Backup to download a JSON file containing artists, ideas, boards, concepts, notes, ranks, tags and saved images.',
       'Use Import Backup to restore from a previously exported file — this replaces the current data.',
-      'Export before clearing your browser data, switching devices, or making big changes.',
+      'Export before making big changes if you want a restore point you control.',
     ],
   },
 ]
