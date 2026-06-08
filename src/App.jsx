@@ -9,11 +9,22 @@ import Concepts from './pages/Concepts'
 import Boards from './pages/Boards'
 import Manage from './pages/Manage'
 import Help from './pages/Help'
+import ProtectedRoute from './components/ProtectedRoute'
 import { useStorage } from './hooks/useStorage'
 import { useArtistStorage } from './hooks/useArtistStorage'
 import { mergeConventionOverrides } from './data/conventions'
 
+// Gate first so the data hooks (which sync per-user once wired) only mount for a
+// signed-in user.
 export default function App() {
+  return (
+    <ProtectedRoute>
+      <AppShell />
+    </ProtectedRoute>
+  )
+}
+
+function AppShell() {
   const [artists, setArtists] = useArtistStorage()
   const [ideas, setIdeas] = useStorage('tattoo_ideas', [])
   const [concepts, setConcepts] = useStorage('tattoo_concepts', [])

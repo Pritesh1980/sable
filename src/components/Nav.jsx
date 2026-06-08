@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useTheme } from '../context/useTheme'
+import { useAuth } from '../context/useAuth'
 
 const PRIMARY_LINKS = [
   { to: '/', label: 'Home', icon: '◈' },
@@ -51,12 +52,22 @@ function MoreMenu({ onClose }) {
 
 export default function Nav() {
   const { theme, toggle, fontSize, toggleFont } = useTheme()
+  const auth = useAuth()
   const [moreOpen, setMoreOpen] = useState(false)
 
   return (
     <>
       {/* Accessibility + theme controls — fixed top-right */}
       <div className="fixed top-4 right-4 z-50 flex items-center gap-1.5">
+        {auth?.user && (
+          <button
+            onClick={() => auth.signOut()}
+            title={`Sign out (${auth.user.email})`}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-ink-card border border-ink-border text-cream-muted hover:text-accent transition-colors duration-200 text-sm"
+          >
+            ⏻
+          </button>
+        )}
         <button
           onClick={toggleFont}
           title={fontSize === 'large' ? 'Reduce font size' : 'Increase font size'}
