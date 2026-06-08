@@ -6,6 +6,9 @@
 import { createLocalAuth } from './local/localAuth'
 import { createLocalStore } from './local/localStore'
 import { createLocalBlobs } from './local/localBlobs'
+import { createSupabaseAuth } from './supabase/supabaseAuth'
+import { createSupabaseStore } from './supabase/supabaseStore'
+import { createSupabaseBlobs } from './supabase/supabaseBlobs'
 
 function createLocalBackend() {
   return {
@@ -28,9 +31,15 @@ export function createBackend(kind = import.meta.env?.VITE_BACKEND || 'local') {
   }
 }
 
-// Wired in Wave 2 once the Supabase adapter modules exist.
+// The supabase client itself is constructed lazily inside these factories
+// (getSupabaseClient), so selecting 'local' never touches the SDK or env config.
 function createSupabaseBackend() {
-  throw new Error('Supabase backend not wired yet')
+  return {
+    kind: 'supabase',
+    auth: createSupabaseAuth(),
+    store: createSupabaseStore(),
+    blobs: createSupabaseBlobs(),
+  }
 }
 
 // App-wide singleton. Hooks/contexts import this; tests can call createBackend()
