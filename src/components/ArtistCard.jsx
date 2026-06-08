@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
-import { compressImages } from '../hooks/useImageUpload'
+import { uploadImages } from '../hooks/useImageUpload'
+import { useAuth } from '../context/useAuth'
 import { DEFAULT_STUDIOS } from '../data/artists'
 
 export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandleProps, isDragging, featured, index = 0 }) {
@@ -9,6 +10,7 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
   const [imgError, setImgError] = useState(false)
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef()
+  const { user } = useAuth() || {}
 
   async function handleFiles(e) {
     e.stopPropagation()
@@ -16,8 +18,8 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
     if (!files?.length) return
     setUploading(true)
     try {
-      const compressed = await compressImages(files)
-      onSaveImages(artist, [...(artist.images || []), ...compressed])
+      const uploaded = await uploadImages(files, { userId: user?.id, scope: 'artists', id: artist.id })
+      onSaveImages(artist, [...(artist.images || []), ...uploaded])
     } finally {
       setUploading(false)
       e.target.value = ''

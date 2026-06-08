@@ -93,7 +93,7 @@ describe('useArtistStorage', () => {
     result.current[0].forEach((a) => expect(a).not.toHaveProperty('tier'))
   })
 
-  it('saves metadata without images to localStorage', async () => {
+  it('never persists raw base64 image data to localStorage metadata', async () => {
     const { result } = renderHook(() => useArtistStorage())
 
     // Wait for IndexedDB init
@@ -105,9 +105,12 @@ describe('useArtistStorage', () => {
       )
     })
 
-    const saved = JSON.parse(localStorage.getItem('tattoo_artists_meta'))
-    expect(saved).not.toBeNull()
-    saved.forEach((a) => expect(a).not.toHaveProperty('images'))
+    // Metadata may carry small canonical refs ({ key } / static paths) but never
+    // inline base64 data-URLs (those stay in IndexedDB until migrated to blobs).
+    const raw = localStorage.getItem('tattoo_artists_meta')
+    expect(raw).not.toBeNull()
+    expect(raw).not.toContain('data:image')
+    expect(raw).not.toContain('base64')
   })
 
   it('setArtists with a plain array works as well as a function', async () => {

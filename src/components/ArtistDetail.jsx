@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import TagPill from './TagPill'
 import { STYLE_TAGS, DEFAULT_STUDIOS } from '../data/artists'
-import { compressImages } from '../hooks/useImageUpload'
+import { uploadImages } from '../hooks/useImageUpload'
+import { useAuth } from '../context/useAuth'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
 
 export default function ArtistDetail({ artist, onClose, onSave, attendingConventions = [] }) {
@@ -13,6 +14,7 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
   const [currentIdx, setCurrentIdx] = useState(0)
   const fileRef = useRef()
   const carouselRef = useRef(null)
+  const { user } = useAuth() || {}
 
   useEffect(() => {
     const el = carouselRef.current
@@ -39,9 +41,8 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
     if (!files?.length) return
     setUploading(true)
     try {
-      const compressed = await compressImages(files)
-      const merged = [...images, ...compressed]
-      saveImages(merged)
+      const uploaded = await uploadImages(files, { userId: user?.id, scope: 'artists', id: artist.id })
+      saveImages([...images, ...uploaded])
     } finally {
       setUploading(false)
       e.target.value = ''

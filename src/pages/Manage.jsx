@@ -3,7 +3,8 @@ import { STYLE_TAGS, DEFAULT_STUDIOS } from '../data/artists'
 import Logo from '../components/Logo'
 import { createBackup, parseBackup } from '../data/export'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
-import { compressImages } from '../hooks/useImageUpload'
+import { uploadImages } from '../hooks/useImageUpload'
+import { useAuth } from '../context/useAuth'
 import TagPill from '../components/TagPill'
 
 function studioName(id) {
@@ -26,14 +27,15 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
   const [uploading, setUploading] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [note, setNote] = useState(artist.notes || '')
+  const { user } = useAuth() || {}
 
   async function handleFiles(e) {
     const files = e.target.files
     if (!files?.length) return
     setUploading(true)
     try {
-      const compressed = await compressImages(files)
-      onSaveImages(artist.id, [...(artist.images || []), ...compressed])
+      const uploaded = await uploadImages(files, { userId: user?.id, scope: 'artists', id: artist.id })
+      onSaveImages(artist.id, [...(artist.images || []), ...uploaded])
     } finally {
       setUploading(false)
       e.target.value = ''

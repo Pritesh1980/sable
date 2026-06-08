@@ -1,3 +1,5 @@
+import { getCachedBlobUrl } from './blobUrls'
+
 export const ARTIST_STATUSES = [
   { value: 'researching', label: 'Researching', tone: 'text-cream-muted' },
   { value: 'shortlisted', label: 'Shortlisted', tone: 'text-cream' },
@@ -14,7 +16,10 @@ export function normalizeArtistStatus(status) {
 }
 
 export function getImageUrl(image) {
-  return typeof image === 'string' ? image : image?.url || ''
+  if (typeof image === 'string') return image
+  if (image?.url) return image.url
+  if (image?.key) return getCachedBlobUrl(image.key)
+  return ''
 }
 
 export function getImageNote(image) {
@@ -25,9 +30,13 @@ export function normalizeReferenceImages(images = []) {
   return images
     .map((image) => {
       if (typeof image === 'string') return { url: image, note: '' }
-      return { url: image?.url || '', note: image?.note || '' }
+      // Preserve a key alongside url/note so blob-backed entries survive a
+      // normalize round-trip.
+      const out = { url: image?.url || '', note: image?.note || '' }
+      if (image?.key) out.key = image.key
+      return out
     })
-    .filter((image) => image.url)
+    .filter((image) => image.url || image.key)
 }
 
 export function scoreArtistForIdea(artist, idea) {
