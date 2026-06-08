@@ -2,6 +2,7 @@ import { useState } from 'react'
 import ConceptVariantLab from '../components/ConceptVariantLab'
 import Logo from '../components/Logo'
 import PromptPackComposer from '../components/PromptPackComposer'
+import ReliefStlDrawer from '../components/ReliefStlDrawer'
 import TagPill from '../components/TagPill'
 import { STYLE_TAGS } from '../data/artists'
 import {
@@ -260,6 +261,7 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
   const [copied, setCopied] = useState(false)
   const [selected, setSelected] = useState(null)
   const [pasting, setPasting] = useState(null)
+  const [stlSource, setStlSource] = useState(null)
 
   const hasOpenai = Boolean(openaiKey)
   const hasGemini = Boolean(geminiKey)
@@ -381,6 +383,14 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
     setConcepts((prev) => prev.map((c) => (
       c.id === conceptId ? updateVariantRating(c, variantId, rating) : c
     )))
+  }
+
+  function makeStlFromVariant(input) {
+    setStlSource({
+      imageUrl: input.imageUrl,
+      label: input.variantLabel,
+      filenameSeed: `${input.conceptLabel} ${input.variantLabel}`,
+    })
   }
 
   return (
@@ -555,6 +565,7 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
                   onMarkBest={markBest}
                   onDeleteVariant={deleteVariant}
                   onRateVariant={rateVariant}
+                  onMakeStl={makeStlFromVariant}
                 />
 
                 {c.response ? (
@@ -653,6 +664,11 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
           ))}
         </div>
       )}
+
+      <ReliefStlDrawer
+        source={stlSource}
+        onClose={() => setStlSource(null)}
+      />
     </div>
   )
 }

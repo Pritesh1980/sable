@@ -296,6 +296,7 @@ function VariantDetails({
   conceptId,
   label,
   variant,
+  onMakeStl,
   onMarkBest,
   onDeleteVariant,
   onRateVariant,
@@ -359,6 +360,22 @@ function VariantDetails({
           </div>
 
           <div className="flex flex-wrap gap-2 pt-1">
+            {imageUrl && onMakeStl && (
+              <button
+                type="button"
+                aria-label={`Make STL from ${title} result for ${label}`}
+                onClick={() => onMakeStl({
+                  conceptId,
+                  conceptLabel: label,
+                  variantId: variant.id,
+                  variantLabel: title,
+                  imageUrl,
+                })}
+                className="rounded-sm border border-accent/45 px-3 py-2 text-xs text-accent transition-colors hover:bg-accent/10"
+              >
+                Make STL
+              </button>
+            )}
             {!variant.isBest && (
               <button
                 type="button"
@@ -390,6 +407,7 @@ function VariantCard({
   variant,
   isExpanded,
   onToggle,
+  onMakeStl,
   onMarkBest,
   onDeleteVariant,
   onRateVariant,
@@ -446,6 +464,7 @@ function VariantCard({
             conceptId={conceptId}
             label={label}
             variant={variant}
+            onMakeStl={onMakeStl}
             onMarkBest={onMarkBest}
             onDeleteVariant={onDeleteVariant}
             onRateVariant={onRateVariant}
@@ -459,6 +478,7 @@ function VariantCard({
 export default function ConceptVariantLab({
   concept,
   onAddVariant,
+  onMakeStl,
   onMarkBest,
   onDeleteVariant,
   onRateVariant,
@@ -526,6 +546,7 @@ export default function ConceptVariantLab({
                   current === variant.id ? '' : variant.id
                 ))
               }}
+              onMakeStl={onMakeStl}
               onMarkBest={onMarkBest}
               onDeleteVariant={onDeleteVariant}
               onRateVariant={onRateVariant}

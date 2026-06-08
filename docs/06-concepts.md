@@ -75,6 +75,23 @@ or upload a result. Below that:
 - **Open in Firefly** — appears once the concept has an image, so you can take it further.
 - **Delete** removes the concept.
 
+## Export a relief STL
+
+When a saved AI result has an image, open the result and choose **Make STL**. Tattoo turns
+the image into a relief-style heightmap where brighter areas become raised surface detail.
+
+Start with the defaults:
+
+- Width: `80mm`
+- Max relief: `3mm`
+- Base: `1.2mm`
+- Detail: `medium`
+- Smoothing: `light`
+
+Use **Invert** when the wrong parts of the image are raised. Download the STL and open it
+in your slicer before printing. This first version creates relief plaques only; lithophane,
+line-art extrusion, and live 3D preview are later enhancements.
+
 > **Tip:** the concept tags use the same six styles as the rest of the app, so a well-tagged
 > concept points straight at the artists already in your collection.
 

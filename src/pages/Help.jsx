@@ -75,6 +75,7 @@ const SECTIONS = [
       'Tap Generate Prompt Pack, switch between ChatGPT, Adobe Firefly, Gemini and Claude prompts, then Save Pack before leaving Tattoo.',
       'Copy the provider prompt you want to use. Bring results back to the saved card with Paste image or Paste text.',
       'Save multiple AI outputs as result variants on a concept. Each variant can hold an image, generated text, notes and a rating.',
+      'For result variants with images, open the result and use Make STL to export a printable relief-style heightmap file.',
       'Mark the strongest variant as Best, then keep style matching on the concept to reveal artist fits.',
       'The older quick prompt box still works: Copy Prompt opens the free manual paste flow (ChatGPT, Claude, Gemini or AI Studio — great with a Google AI Pro subscription), or add a paid OpenAI or Gemini API key (⚙ Configure AI) to generate an image in-app (~$0.04/image, billing required).',
       'Tag each concept with styles to reveal its top artist matches; tap a match to open their Instagram.',
