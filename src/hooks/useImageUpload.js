@@ -60,3 +60,19 @@ export async function uploadImages(files, { userId, scope, id }) {
     })
   )
 }
+
+// Upload an already-compressed data-URL (no re-compression) to blob storage and
+// register key↔url. Returns the key, or null if it couldn't/shouldn't upload.
+// Used by the storage-layer image codecs to move inline data-URLs to blobs.
+export async function uploadDataUrl(dataUrl, { userId, scope, id }) {
+  if (!userId || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) return null
+  const key = `user/${userId}/${scope}/${id}/${uuid()}.jpg`
+  try {
+    await backend.blobs.upload(userId, key, dataUrlToBlob(dataUrl), 'image/jpeg')
+    registerBlobUrl(key, dataUrl)
+    return key
+  } catch (e) {
+    console.error('[tattoo] data-url upload failed:', e)
+    return null
+  }
+}

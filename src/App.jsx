@@ -12,6 +12,7 @@ import Help from './pages/Help'
 import ProtectedRoute from './components/ProtectedRoute'
 import { useStorage } from './hooks/useStorage'
 import { useArtistStorage } from './hooks/useArtistStorage'
+import { ideasCodec, conceptsCodec } from './data/imageCodec'
 import { mergeConventionOverrides } from './data/conventions'
 
 // Gate first so the data hooks (which sync per-user once wired) only mount for a
@@ -26,8 +27,8 @@ export default function App() {
 
 function AppShell() {
   const [artists, setArtists] = useArtistStorage()
-  const [ideas, setIdeas] = useStorage('tattoo_ideas', [])
-  const [concepts, setConcepts] = useStorage('tattoo_concepts', [])
+  const [ideas, setIdeas] = useStorage('tattoo_ideas', [], ideasCodec)
+  const [concepts, setConcepts] = useStorage('tattoo_concepts', [], conceptsCodec)
   const [boards, setBoards] = useStorage('tattoo_boards', [])
   const [conventionOverrides, setConventionOverrides] = useStorage('tattoo_convention_attending', {})
   const mergedConventions = mergeConventionOverrides(conventionOverrides)

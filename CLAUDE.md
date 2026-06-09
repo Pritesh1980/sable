@@ -41,10 +41,12 @@ This is a personal app for one user (Pritesh) + occasional sharing with his tatt
   last-write-wins on `updatedAt` (`src/backend/sync.js`, wired into `useStorage` /
   `useArtistStorage`). Images are referenced by small canonical `{ key }` refs in
   synced data with bytes in blob storage (`src/data/blobUrls.js`, `uploadImages`);
-  legacy IndexedDB images migrate to blobs on first authed load. Device-local and
-  NOT synced: `tattoo_theme`, `tattoo_font`, `openai_api_key`, `gemini_api_key`.
-  JSON export/import backup still available. (Idea/concept images still sync inline
-  for now — see `BACKLOG.md`.)
+  legacy IndexedDB/inline images migrate to blobs on first authed load. Idea and
+  concept images use the same key-based blob storage via per-collection codecs
+  (`src/data/imageCodec.js`) wired into `useStorage` — the in-memory value stays a
+  displayable URL (so consumers like STL export are unchanged) while only `{ key }`
+  is persisted/synced. Device-local and NOT synced: `tattoo_theme`, `tattoo_font`,
+  `openai_api_key`, `gemini_api_key`. JSON export/import backup still available.
 
 ### PWA Requirements
 - `manifest.json` with app name, icons, dark background colour
