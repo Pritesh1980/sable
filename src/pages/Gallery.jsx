@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   DndContext,
   closestCenter,
@@ -21,7 +22,9 @@ import StyleWall from '../components/StyleWall'
 import FilmstripView from '../components/FilmstripView'
 import CompareView from '../components/CompareView'
 import TagPill from '../components/TagPill'
-import { STYLE_TAGS } from '../data/artists'
+import AddArtistForm from '../components/AddArtistForm'
+import ArtistTable from '../components/ArtistTable'
+import { STYLE_TAGS, createArtist } from '../data/artists'
 
 function ArtistGrid({ items, sensors, onDragEnd, onOpen, onSaveImages }) {
   return (
@@ -63,11 +66,15 @@ function ArtistGrid({ items, sensors, onDragEnd, onOpen, onSaveImages }) {
 }
 
 export default function Gallery({ artists, setArtists, mergedConventions = [] }) {
+  const [searchParams] = useSearchParams()
   const [activeTag, setActiveTag] = useState(null)
   const [selected, setSelected] = useState(null)
   const [viewMode, setViewMode] = useState('filmstrip')
   const [browsing, setBrowsing] = useState(false)
   const [ranking, setRanking] = useState(false)
+  // Deep links (?mode=manage) open maintenance directly; after that it's plain
+  // state so toggling doesn't spam history.
+  const [manageMode, setManageMode] = useState(() => searchParams.get('mode') === 'manage')
 
   const artistsWithImages = artists.filter((a) => a.images?.length > 0)
 
@@ -120,6 +127,24 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
     setArtists((prev) => prev.map((a) => a.id === artistId ? { ...a, status } : a))
   }
 
+  function addArtist({ handle, name }) {
+    const artist = createArtist({ handle, name }, artists)
+    if (!artist) return
+    setArtists((prev) => [...prev, artist])
+  }
+
+  function updateArtist(id, patch) {
+    setArtists((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a)))
+  }
+
+  function removeArtist(id) {
+    setArtists((prev) => prev.filter((a) => a.id !== id))
+  }
+
+  function saveImagesById(id, images) {
+    setArtists((prev) => prev.map((a) => (a.id === id ? { ...a, images } : a)))
+  }
+
   return (
     <div className="min-h-screen bg-ink-black pt-safe-top">
       {/* Page header */}
@@ -129,24 +154,56 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
           <p className="font-mono text-xs text-accent tracking-[0.4em] uppercase mb-2">Your Collection</p>
           <h1 className="font-display text-5xl text-cream leading-none tracking-tight">Artists</h1>
         </div>
-        {artistsWithImages.length > 0 && (
-          <div className="flex gap-2 mb-1">
-            <button
-              onClick={() => setRanking(true)}
-              className="font-mono text-xs text-accent hover:text-cream border border-accent/40 hover:border-accent px-3 py-2 rounded-sm transition-colors tracking-widest uppercase"
-            >
-              Rank
-            </button>
-            <button
-              onClick={() => setBrowsing(true)}
-              className="font-mono text-xs text-cream-muted hover:text-cream border border-ink-border hover:border-cream-muted/40 px-3 py-2 rounded-sm transition-colors tracking-widest uppercase"
-            >
-              Browse
-            </button>
-          </div>
-        )}
+        <div className="flex gap-2 mb-1">
+          {artistsWithImages.length > 0 && !manageMode && (
+            <>
+              <button
+                onClick={() => setRanking(true)}
+                className="font-mono text-xs text-accent hover:text-cream border border-accent/40 hover:border-accent px-3 py-2 rounded-sm transition-colors tracking-widest uppercase"
+              >
+                Rank
+              </button>
+              <button
+                onClick={() => setBrowsing(true)}
+                className="font-mono text-xs text-cream-muted hover:text-cream border border-ink-border hover:border-cream-muted/40 px-3 py-2 rounded-sm transition-colors tracking-widest uppercase"
+              >
+                Browse
+              </button>
+            </>
+          )}
+          {/* Always reachable — it's how a new account adds its first artist */}
+          <button
+            onClick={() => setManageMode((v) => !v)}
+            className={`font-mono text-xs px-3 py-2 rounded-sm transition-colors tracking-widest uppercase border ${
+              manageMode
+                ? 'text-cream border-accent/50 bg-accent/10'
+                : 'text-cream-muted hover:text-cream border-ink-border hover:border-cream-muted/40'
+            }`}
+          >
+            <span aria-hidden="true">⊞ </span>Manage
+          </button>
+        </div>
       </div>
 
+      {/* Maintenance mode replaces the browsing views entirely */}
+      {manageMode && (
+        <div className="px-4 max-w-5xl mx-auto md:px-8">
+          <p className="font-mono text-xs text-cream-muted/90 mb-6 tracking-widest">
+            {artists.length} artists · {artists.filter((a) => a.images?.length > 0).length} with photos
+          </p>
+          <AddArtistForm onAdd={addArtist} />
+          <ArtistTable
+            artists={artists}
+            onSaveImages={saveImagesById}
+            onUpdate={updateArtist}
+            onRemove={removeArtist}
+          />
+        </div>
+      )}
+
+      {/* Browsing chrome — hidden while managing */}
+      {!manageMode && (
+      <>
       {/* Sticky filter bar */}
       <div className="sticky top-0 z-20 bg-ink-black/80 backdrop-blur-md border-b border-ink-border px-4 py-3 mb-8">
         <div className="flex items-center gap-2">
@@ -207,6 +264,8 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
             </p>
           )}
         </div>
+      )}
+      </>
       )}
 
       {selected && (

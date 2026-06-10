@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import Nav from './components/Nav'
 import Dashboard from './pages/Dashboard'
 import Gallery from './pages/Gallery'
@@ -7,7 +7,6 @@ import Conventions from './pages/Conventions'
 import Studios from './pages/Studios'
 import Concepts from './pages/Concepts'
 import Boards from './pages/Boards'
-import Manage from './pages/Manage'
 import Settings from './pages/Settings'
 import Help from './pages/Help'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -62,23 +61,8 @@ function AppShell() {
             />
           )}
         />
-        <Route
-          path="/manage"
-          element={(
-            <Manage
-              artists={artists}
-              setArtists={setArtists}
-              ideas={ideas}
-              setIdeas={setIdeas}
-              boards={boards}
-              setBoards={setBoards}
-              concepts={concepts}
-              setConcepts={setConcepts}
-              conventionOverrides={conventionOverrides}
-              setConventionOverrides={setConventionOverrides}
-            />
-          )}
-        />
+        {/* Legacy deep links (old PWA home screens, bookmarks) */}
+        <Route path="/manage" element={<Navigate to="/gallery?mode=manage" replace />} />
       </Routes>
       <Nav />
     </div>

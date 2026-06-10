@@ -63,7 +63,7 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
         </Link>
       </div>
 
-      <Panel title="Next artists" action={<Link to="/manage" className="text-xs font-mono text-accent tracking-widest uppercase">Manage</Link>}>
+      <Panel title="Next artists" action={<Link to="/gallery?mode=manage" className="text-xs font-mono text-accent tracking-widest uppercase">Manage</Link>}>
         {summary.nextArtists.length > 0 ? (
           <div className="grid sm:grid-cols-2 gap-2">
             {summary.nextArtists.slice(0, 4).map((artist) => {
