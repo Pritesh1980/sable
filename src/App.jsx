@@ -8,6 +8,7 @@ import Studios from './pages/Studios'
 import Concepts from './pages/Concepts'
 import Boards from './pages/Boards'
 import Manage from './pages/Manage'
+import Settings from './pages/Settings'
 import Help from './pages/Help'
 import ProtectedRoute from './components/ProtectedRoute'
 import { useStorage } from './hooks/useStorage'
@@ -44,6 +45,23 @@ function AppShell() {
         <Route path="/concepts" element={<Concepts concepts={concepts} setConcepts={setConcepts} artists={artists} ideas={ideas} />} />
         <Route path="/boards" element={<Boards boards={boards} setBoards={setBoards} ideas={ideas} artists={artists} />} />
         <Route path="/help" element={<Help />} />
+        <Route
+          path="/settings"
+          element={(
+            <Settings
+              artists={artists}
+              setArtists={setArtists}
+              ideas={ideas}
+              setIdeas={setIdeas}
+              boards={boards}
+              setBoards={setBoards}
+              concepts={concepts}
+              setConcepts={setConcepts}
+              conventionOverrides={conventionOverrides}
+              setConventionOverrides={setConventionOverrides}
+            />
+          )}
+        />
         <Route
           path="/manage"
           element={(
