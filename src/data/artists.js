@@ -59,3 +59,25 @@ export const PLACEMENTS = [
   'chest', 'back', 'upper arm', 'forearm', 'sleeve', 'thigh',
   'calf', 'ribs', 'neck', 'hand', 'foot', 'other',
 ]
+
+// Build a new user-added artist record, or null if the handle is already taken
+// (case-insensitive). Rank goes to the back of the queue.
+export function createArtist({ handle, name }, existingArtists = []) {
+  const duplicate = existingArtists.some(
+    (a) => a.handle.toLowerCase() === handle.toLowerCase()
+  )
+  if (duplicate) return null
+
+  const maxRank = existingArtists.reduce((m, a) => Math.max(m, a.rank), 0)
+  return {
+    id: handle,
+    handle,
+    name,
+    tags: [],
+    images: [],
+    rank: maxRank + 1,
+    status: 'researching',
+    notes: '',
+    studio: null,
+  }
+}

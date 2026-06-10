@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { DEFAULT_ARTISTS, DEFAULT_STUDIOS, STYLE_TAGS } from '../data/artists'
+import { DEFAULT_ARTISTS, DEFAULT_STUDIOS, STYLE_TAGS, createArtist } from '../data/artists'
 
 describe('DEFAULT_ARTISTS data integrity', () => {
   it('has no tier field on any artist', () => {
@@ -63,5 +63,36 @@ describe('DEFAULT_STUDIOS data integrity', () => {
   it('has unique IDs', () => {
     const ids = DEFAULT_STUDIOS.map((s) => s.id)
     expect(new Set(ids).size).toBe(ids.length)
+  })
+})
+
+describe('createArtist', () => {
+  const existing = [
+    { id: 'zoia.ink', handle: 'zoia.ink', name: '', rank: 1 },
+    { id: 'oscarakermo', handle: 'oscarakermo', name: 'Oscar Akermo', rank: 4 },
+  ]
+
+  it('creates an artist with defaults and rank after the current max', () => {
+    const artist = createArtist({ handle: 'new_artist', name: 'New Artist' }, existing)
+    expect(artist).toEqual({
+      id: 'new_artist',
+      handle: 'new_artist',
+      name: 'New Artist',
+      tags: [],
+      images: [],
+      rank: 5,
+      status: 'researching',
+      notes: '',
+      studio: null,
+    })
+  })
+
+  it('starts at rank 1 when the list is empty', () => {
+    expect(createArtist({ handle: 'first', name: '' }, []).rank).toBe(1)
+  })
+
+  it('returns null for a duplicate handle, case-insensitively', () => {
+    expect(createArtist({ handle: 'zoia.ink', name: '' }, existing)).toBeNull()
+    expect(createArtist({ handle: 'OscarAkermo', name: '' }, existing)).toBeNull()
   })
 })
