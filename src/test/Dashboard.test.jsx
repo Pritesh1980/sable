@@ -21,12 +21,22 @@ function renderHome({ a = artists, ideas = [], boards = [] } = {}) {
 describe('Home pipeline', () => {
   beforeEach(() => localStorage.clear())
 
-  it('is titled Home and shows the four pipeline stages in order', () => {
+  it('is titled Home and shows the three active pipeline stages', () => {
     renderHome()
     expect(screen.getByRole('heading', { name: 'Home' })).toBeInTheDocument()
-    const labels = ['Researching', 'Shortlisted', 'Contact next', 'Contacted']
-    const found = labels.map((l) => screen.getAllByText(l)[0])
-    found.forEach((el) => expect(el).toBeInTheDocument())
+    const labels = ['Researching', 'Shortlisted', 'Contact next']
+    labels.forEach((l) => expect(screen.getAllByText(l)[0]).toBeInTheDocument())
+  })
+
+  it('shows contacted artists only as a count, never as a stage card', () => {
+    renderHome({
+      a: [
+        ...artists,
+        { id: 'done1', handle: 'done1', name: '', tags: [], images: [], rank: 5, status: 'contacted' },
+      ],
+    })
+    expect(screen.getByText(/contacted: 1/i)).toBeInTheDocument()
+    expect(screen.queryByText('@done1')).not.toBeInTheDocument()
   })
 
   it('shows artists inside their stage cards and a parked count', () => {

@@ -118,7 +118,7 @@ describe('buildMatchRationale', () => {
 describe('buildPipelineSummary', () => {
   const a = (id, status, rank) => ({ id, handle: id, status, rank })
 
-  it('returns the four active stages in workflow order with counts', () => {
+  it('returns the three active stages in workflow order with counts', () => {
     const artists = [
       a('r1', 'researching', 5),
       a('s1', 'shortlisted', 2),
@@ -126,10 +126,17 @@ describe('buildPipelineSummary', () => {
       a('c2', 'contact-next', 3),
       a('d1', 'contacted', 4),
     ]
-    const { stages } = buildPipelineSummary(artists)
-    expect(stages.map((s) => s.status)).toEqual(['researching', 'shortlisted', 'contact-next', 'contacted'])
-    expect(stages.map((s) => s.count)).toEqual([1, 1, 2, 1])
-    expect(stages.map((s) => s.label)).toEqual(['Researching', 'Shortlisted', 'Contact next', 'Contacted'])
+    const { stages, contacted } = buildPipelineSummary(artists)
+    expect(stages.map((s) => s.status)).toEqual(['researching', 'shortlisted', 'contact-next'])
+    expect(stages.map((s) => s.count)).toEqual([1, 1, 2])
+    expect(stages.map((s) => s.label)).toEqual(['Researching', 'Shortlisted', 'Contact next'])
+    expect(contacted).toBe(1)
+  })
+
+  it('keeps contacted artists out of the strip — only a count remains', () => {
+    const { stages, contacted } = buildPipelineSummary([a('d1', 'contacted', 1), a('d2', 'contacted', 2)])
+    expect(stages.reduce((n, s) => n + s.count, 0)).toBe(0)
+    expect(contacted).toBe(2)
   })
 
   it('rank-sorts artists within a stage', () => {
@@ -152,8 +159,9 @@ describe('buildPipelineSummary', () => {
   })
 
   it('handles an empty list', () => {
-    const { stages, parked } = buildPipelineSummary([])
+    const { stages, parked, contacted } = buildPipelineSummary([])
     expect(stages.every((s) => s.count === 0)).toBe(true)
     expect(parked).toBe(0)
+    expect(contacted).toBe(0)
   })
 })

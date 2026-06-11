@@ -33,7 +33,7 @@ function Panel({ title, action, children }) {
 
 export default function Dashboard({ artists, ideas, boards, mergedConventions = [] }) {
   const summary = buildDashboardSummary({ artists, ideas, boards })
-  const { stages, parked } = buildPipelineSummary(artists)
+  const { stages, parked, contacted } = buildPipelineSummary(artists)
   const pipelineEmpty = artists.length === 0
   const ideaMatches = summary.activeIdeas
     .map((idea) => ({ idea, matches: matchArtistsForIdea(idea, artists).slice(0, 3) }))
@@ -64,7 +64,7 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {stages.map(({ status, label, count, artists: stageArtists }) => (
                 <Link
                   key={status}
@@ -85,9 +85,11 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
                 </Link>
               ))}
             </div>
-            {parked > 0 && (
+            {(parked > 0 || contacted > 0) && (
               <p className="font-mono text-[0.625rem] text-cream-muted/70 tracking-widest uppercase text-right mt-2">
-                parked (maybe / pass): {parked}
+                {contacted > 0 && <>contacted: {contacted}</>}
+                {contacted > 0 && parked > 0 && ' · '}
+                {parked > 0 && <>parked (maybe / pass): {parked}</>}
               </p>
             )}
           </>

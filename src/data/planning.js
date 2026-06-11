@@ -95,17 +95,20 @@ export function buildMatchRationale(idea, match) {
   return ''
 }
 
-// The four ACTIVE shortlist stages in workflow order. maybe/pass are parked —
-// excluded from the strip but surfaced as a count so artists never vanish.
-const PIPELINE_STAGES = ['researching', 'shortlisted', 'contact-next', 'contacted']
+// The three ACTIVE shortlist stages in workflow order. Contacted artists need no
+// further attention, and maybe/pass are parked — both are excluded from the
+// strip but surfaced as counts so artists never vanish.
+const PIPELINE_STAGES = ['researching', 'shortlisted', 'contact-next']
 
 export function buildPipelineSummary(artists = []) {
   const byStage = new Map(PIPELINE_STAGES.map((s) => [s, []]))
   let parked = 0
+  let contacted = 0
 
   for (const artist of artists) {
     const status = normalizeArtistStatus(artist.status)
     if (byStage.has(status)) byStage.get(status).push(artist)
+    else if (status === 'contacted') contacted += 1
     else parked += 1
   }
 
@@ -116,7 +119,7 @@ export function buildPipelineSummary(artists = []) {
     count: byStage.get(status).length,
   }))
 
-  return { stages, parked }
+  return { stages, parked, contacted }
 }
 
 export function buildDashboardSummary({ artists = [], ideas = [], boards = [] }) {
@@ -130,11 +133,17 @@ export function buildDashboardSummary({ artists = [], ideas = [], boards = [] })
     .filter((artist) => normalizeArtistStatus(artist.status) === 'contact-next')
     .sort((a, b) => (a.rank || 999) - (b.rank || 999))
 
+  // "Top 5" means current artists — contacted and parked (maybe/pass) drop out.
+  const activeArtists = artists
+    .filter((artist) => PIPELINE_STAGES.includes(normalizeArtistStatus(artist.status)))
+    .sort((a, b) => (a.rank || 999) - (b.rank || 999))
+
   return {
     activeIdeas,
     exportReadyIdeas,
     nextArtists,
-    topArtists: artists.slice().sort((a, b) => (a.rank || 999) - (b.rank || 999)).slice(0, 5),
+    topArtists: activeArtists.slice(0, 5),
+    benchArtists: activeArtists.slice(5, 9),
     openBoards: boards.filter((board) => board.ideaIds?.length > 0),
   }
 }
