@@ -6,10 +6,11 @@
 
 ---
 
-Everything to do with the artist list itself lives in **More → Manage**. The header shows
-a running count of artists, how many have photos, and total images.
+Everything to do with the artist list itself lives on the **Artists** page — tap the
+**Manage** button in the header (or deep-link to `/gallery?mode=manage`). A count of
+artists and photos sits at the top.
 
-![The Manage screen — add an artist and the backup panel](../public/guide/manage-backup.png)
+![Manage mode on the Artists page](../public/guide/manage-list.png)
 
 ## Add an artist
 
@@ -21,10 +22,8 @@ a running count of artists, how many have photos, and total images.
 
 ## The artist table
 
-Below the backup panel is a searchable table of every artist with their Instagram link,
-status and photo count. Type in the **search** box to filter by name or handle.
-
-![The artist table](../public/guide/manage-list.png)
+Below the add-artist panel is a searchable table of every artist with their Instagram
+link, status and photo count. Type in the **search** box to filter by name or handle.
 
 ## Edit an artist
 
@@ -33,9 +32,9 @@ status and photo count. Type in the **search** box to filter by name or handle.
 ![An expanded artist row](../public/guide/manage-artist-expanded.png)
 
 - **Style tags** — tap to toggle (`dark-illustrative`, `fine-line`, `blackwork`,
-  `surrealism`, `dark-fantasy`, `realism`). These power the matching in *Brief* and *AI*.
+  `surrealism`, `dark-fantasy`, `realism`). These power the matching in *Ideas* and *AI*.
 - **Shortlist status** — `Researching`, `Shortlisted`, `Contact next`, `Contacted`,
-  `Maybe`, `Pass`. *Contact next* feeds the dashboard's "Next artists" list.
+  `Maybe`, `Pass`. *Contact next* feeds Home's pipeline and "Contact next" list.
 - **Studio** — pick where they work; this populates the [Studios](05-conventions-and-studios.md) page.
 - **Notes** — free text; saves when you tap away or press Enter.
 - **Photos** — tap **+ Photos** to upload screenshots (they're compressed automatically).
@@ -43,7 +42,9 @@ status and photo count. Type in the **search** box to filter by name or handle.
 - **Remove artist** — deletes them from your collection (with a confirmation).
 
 > **Tip:** you can also upload photos and edit tags/status/studio from an artist's full
-> detail card in the [Gallery](03-gallery-and-ranking.md) — whichever is handier.
+> detail card in the [gallery views](03-gallery-and-ranking.md) — whichever is handier.
+> Tap **Manage** again to flip back to the visual views. Backups now live in
+> [More → Settings](07-backup-and-settings.md).
 
 ---
 

@@ -1,4 +1,4 @@
-# Backup & restore
+# Settings, backup & restore
 
 *Your data lives on this device. Export it to keep it safe, or to move it to another device.*
 
@@ -8,9 +8,9 @@
 
 Tattoo has no server — everything you create (artists, photos, ideas, boards, concepts,
 ranks, tags, notes) is stored in your browser on this device. The **Backup** panel in
-**More → Manage** is how you protect and move it.
+**More → Settings** is how you protect and move it — it also shows your account and sign-out.
 
-![The backup panel in Manage](../public/guide/manage-backup.png)
+![The Settings page with the backup panel](../public/guide/settings.png)
 
 ## Export a backup
 

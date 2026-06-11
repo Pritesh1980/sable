@@ -7,12 +7,13 @@ const SECTIONS = [
   {
     id: 'getting-started',
     label: 'Getting started',
-    blurb: 'The home dashboard, navigation, and the controls that are always within reach.',
+    blurb: 'The Home pipeline, navigation, and the controls that are always within reach.',
     image: 'dashboard.png',
     steps: [
       'Sign in with your email and password to open the app. Your artists, ideas, boards and concepts are tied to your account and follow you across devices — add something on your Mac and it appears on your iPhone.',
-      'The bottom bar holds the five main areas: Home, Artists, Brief, Radar and AI. Tap More (⋯) for Studios, Boards, Manage and this Help page.',
-      'Home is your dashboard — it surfaces active ideas, artists to contact next, idea→artist matches, and your top-ranked artists.',
+      'The bottom bar mirrors the workflow: Home (what’s next), Artists (curate & rank), Ideas (capture & match), AI (generate concepts). Tap More (⋯) for Radar, Studios, Settings and this Help page.',
+      'Home leads with your shortlist pipeline — Researching → Shortlisted → Contact next → Contacted — plus idea stats, contact-next cards and idea→artist matches. Artists parked as Maybe/Pass show as a count under the strip.',
+      'The "How Tattoo works" strip on Home links each step of the loop; dismiss it with ✕ once you don’t need it (it stays dismissed on that device).',
       'Top-right: tap A+/A− to change text size, ◑/◐ to switch dark/light theme, and ⏻ to sign out (this clears your data from the current device).',
       'Your artists, studios and conventions come pre-loaded. Ideas, boards and concepts start empty — you build those.',
     ],
@@ -23,10 +24,11 @@ const SECTIONS = [
     blurb: 'Add artists, upload portfolio photos, and set tags, status, studio and notes.',
     image: 'manage-artist-expanded.png',
     steps: [
-      'Go to More → Manage. Use Add New Artist to add an Instagram handle (display name optional).',
+      'Open Artists and tap the Manage button (top right). Use Add New Artist to add an Instagram handle (display name optional).',
       'Tap a row to expand it. Set Style Tags, Shortlist Status, Studio, and free-text Notes (notes save on blur or Enter).',
       'Use + Photos to upload screenshots — they are compressed, stored in your account, and synced to your other devices.',
-      'Style tags drive the artist-matching you see in Brief and Concepts, so keep them accurate.',
+      'Style tags drive the artist-matching you see in Ideas and AI concepts, so keep them accurate.',
+      'Tap Manage again to flip back to the visual gallery views.',
     ],
   },
   {
@@ -44,14 +46,14 @@ const SECTIONS = [
   },
   {
     id: 'brief-boards',
-    label: 'Brief & boards',
+    label: 'Ideas & boards',
     blurb: 'Capture tattoo ideas, link artists to them, and group ideas into mood boards.',
     image: 'brief-idea-editor.png',
     steps: [
-      'Open Brief and tap + to create an idea. Add a title, description, style tags, body placement and reference images.',
+      'Open Ideas and tap + to create an idea. Add a title, description, style tags, body placement and reference images.',
       'As you add style tags, matching artists appear ranked by overlap, status and rank — tap to link them to the idea.',
       'Use Copy brief to put a shareable, formatted summary on your clipboard.',
-      'In Boards (More → Boards), group related ideas into a themed board, reorder them, and copy a board-level brief.',
+      'Switch to the Boards tab on the same page to group related ideas into a themed board, reorder them, and copy a board-level brief.',
     ],
   },
   {
@@ -60,10 +62,10 @@ const SECTIONS = [
     blurb: 'See upcoming conventions by distance and where your artists work.',
     image: 'conventions.png',
     steps: [
-      'Radar lists conventions, nearest to Milton Keynes first, with dates, distance and a link to each event.',
-      'Where an artist is attending a convention, you will see it on their detail card and on the dashboard.',
+      'More → Radar lists conventions, nearest to Milton Keynes first, with dates, distance and a link to each event.',
+      'Where an artist is attending a convention, you will see it on their detail card and on Home.',
       'More → Studios groups your saved artists by the studio they work at, sorted by distance, with links to Instagram and the studio site.',
-      'Assign an artist to a studio in Manage (or the artist detail) to make them appear under Studios.',
+      'Assign an artist to a studio in Artists → Manage (or the artist detail) to make them appear under Studios.',
     ],
   },
   {
@@ -84,12 +86,13 @@ const SECTIONS = [
   },
   {
     id: 'backup',
-    label: 'Backup & restore',
+    label: 'Settings, backup & restore',
     blurb: 'Your data syncs to your account — export a copy any time to keep it safe or move it.',
-    image: 'manage-backup.png',
+    image: 'settings.png',
     steps: [
       'Your data is saved to your account and synced across your devices automatically; a local copy is also kept on each device so the app works offline.',
-      'In More → Manage, use Export Backup to download a JSON file containing artists, ideas, boards, concepts, notes, ranks, tags and saved images.',
+      'More → Settings shows your account (with sign out) and the backup tools.',
+      'Use Export Backup to download a JSON file containing artists, ideas, boards, concepts, notes, ranks, tags and saved images.',
       'Use Import Backup to restore from a previously exported file — this replaces the current data.',
       'Export before making big changes if you want a restore point you control.',
     ],

@@ -24,7 +24,7 @@ This is a personal app for one user (Pritesh) + occasional sharing with his tatt
 ## Tech Stack
 
 - **Framework**: React (PWA-configured)
-- **Routing**: React Router (`react-router-dom` v7) — 8 deep-linkable routes
+- **Routing**: React Router (`react-router-dom` v7) — 8 deep-linkable routes (Home, Artists `/gallery`, Ideas `/brief`, Radar `/conventions`, Studios, AI `/concepts`, Settings, Help); legacy `/manage` → `/gallery?mode=manage` and `/boards` → `/brief?tab=boards` redirect
 - **Styling**: Tailwind CSS
 - **Hosting**: AWS S3 + CloudFront (planned — not yet set up; see `BACKLOG.md`)
 - **AI (Concepts page)**: copy-prompt → paste into ChatGPT/Claude/Gemini and bring the result back, **or** optional OpenAI DALL·E 3 / Gemini image generation with user-supplied keys (stored locally). Saved image results can export browser-generated relief STL files. Artist ↔ idea/concept matching is local tag-overlap (`src/data/planning.js`) — no API.
@@ -62,7 +62,7 @@ The heart of the app. Visual-first browsing of saved artists.
 
 - Each artist card shows: name, Instagram handle (linked), style tags, personal priority tier, and a gallery of reference images (manually added URLs or uploaded screenshots)
 - A single ranked list set via drag (grid), rank nudge (filmstrip), or swipe-compare (the **Rank** button), plus a per-artist shortlist **status** (researching → shortlisted → contact-next → contacted → maybe → pass)
-- Four gallery views: filmstrip, compare, grid, style wall. Seed artists are grouped Favourite / Also Like / Retained — see the artist tables below
+- Four gallery views: filmstrip, compare, grid, style wall — plus a Manage mode (add-artist form + maintenance table) toggled from the page header. Tiers were removed; the artist tables below record provenance only
 - Filter by style tag
 - Tap/click to open full artist detail view
 - Studios displayed separately but consistently
@@ -171,10 +171,10 @@ Each artist in `src/data/artists.js` already carries style tags; they drive matc
 ## Beyond MVP
 
 **Already built (originally scoped as V2):**
-- Mood boards (Boards page — group ideas)
+- Mood boards (Boards tab on the Ideas page — group ideas)
 - Artist ↔ idea/concept matching (tag-overlap, `src/data/planning.js`)
 - Status tracking (idea → booked → done; per-artist shortlist statuses)
-- Dashboard, Studios, Manage and Help pages; four gallery views + swipe-ranking
+- Home pipeline (shortlist stages), Studios, Settings and Help pages; four gallery views + swipe-ranking; Manage merged into Artists
 
 **Still to do (see `BACKLOG.md`, blocked on deployment):**
 - Deploy to AWS S3 + CloudFront
@@ -187,7 +187,8 @@ Each artist in `src/data/artists.js` already carries style tags; they drive matc
 
 ```
 src/
-├── pages/        Dashboard, Gallery, Brief, Boards, Conventions, Studios, Concepts, Manage, Help
+├── pages/        Dashboard (Home), Gallery (Artists + manage mode), Brief (Ideas + Boards tab),
+│                 Conventions, Studios, Concepts, Settings, Help, Login
 ├── components/   Nav, ArtistCard, ArtistDetail, ArtistBrowse, CompareView, FilmstripView,
 │                 RankingMode, SortableArtistCard, StyleWall, TagPill, Logo
 ├── data/         artists.js (DEFAULT_ARTISTS, DEFAULT_STUDIOS, STYLE_TAGS, PLACEMENTS),

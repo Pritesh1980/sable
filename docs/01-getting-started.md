@@ -1,36 +1,44 @@
 # Getting started
 
-*The home dashboard, how to move around, and the controls that are always within reach.*
+*The Home pipeline, how to move around, and the controls that are always within reach.*
 
 ← [Back to contents](README.md)
 
 ---
 
-## The dashboard
+## Home — what's next
 
-**Home** is your at-a-glance overview. It pulls together what matters right now so you
-don't have to dig for it.
+**Home** answers one question: *where is each artist in your shortlist, and what should
+you do next?*
 
-![The dashboard](../public/guide/dashboard.png)
+![Home with the shortlist pipeline](../public/guide/dashboard.png)
 
-- **Four metric cards** — active ideas, briefs ready to share, artists to *contact next*,
-  and live boards. Each links to the relevant area.
-- **Next artists** — the artists you've marked *Contact next*, in rank order, with thumbnails.
-- **Idea matches** — each idea paired with the artists whose styles overlap it.
-- **Top ranked** — your highest-ranked artists.
+- **How Tattoo works** — a dismissible three-step strip of the core loop: curate your
+  artists → rank & shortlist → match ideas & contact. Tap ✕ once you know your way around
+  (it stays dismissed on that device).
+- **Shortlist pipeline** — four stage cards in workflow order: *Researching →
+  Shortlisted → Contact next → Contacted*, each with its count and top-ranked artists.
+  *Contact next* is highlighted — that's your action stage. Artists parked as
+  *Maybe* / *Pass* show as a small count under the strip so they never silently vanish.
+- **Idea stats** — active ideas, briefs ready to share, and live boards, each linking
+  into the Ideas page.
+- **Contact next** — the artists you've marked *Contact next*, in rank order, with thumbnails.
+- **Idea matches** — each idea paired with the artists whose styles overlap it, with a
+  one-line rationale.
 
-On a wide screen the same dashboard spreads into a multi-column layout:
+On a wide screen the same page spreads into a multi-column layout:
 
-![The dashboard on desktop](../public/guide/dashboard-desktop.png)
+![Home on desktop](../public/guide/dashboard-desktop.png)
 
 ---
 
 ## Moving around
 
-The bar pinned to the bottom of the screen is your main navigation:
+The bar pinned to the bottom of the screen mirrors the workflow:
 
-- **Home · Artists · Brief · Radar · AI** are one tap away.
-- **More (⋯)** opens a menu with **Studios**, **Boards**, **Manage** and **Help**.
+- **Home** — what's next · **Artists** — curate & rank · **Ideas** — capture & match ·
+  **AI** — generate concepts.
+- **More (⋯)** opens a menu with **Radar** (conventions), **Studios**, **Settings** and **Help**.
 
 ## Text size & theme
 
@@ -38,6 +46,7 @@ Two controls sit at the top-right of every screen:
 
 - **A+ / A−** — increase or decrease text size.
 - **◑ / ◐** — switch between dark and light themes.
+- **⏻** — sign out (clears this device's copy; everything syncs back on sign-in).
 
 ---
 
@@ -46,10 +55,10 @@ Two controls sit at the top-right of every screen:
 You don't start from a blank app:
 
 - **Artists**, **Studios** and **Conventions** are pre-loaded so you can explore immediately.
-- **Brief** (ideas), **Boards** and **AI concepts** start empty — those are yours to build.
+- **Ideas**, **Boards** and **AI concepts** start empty — those are yours to build.
 
-> **Tip:** everything is stored locally on the device. Use **Manage → Export Backup**
-> early and often (see [Backup & restore](07-backup-and-settings.md)).
+> **Tip:** your data syncs to your account, and **More → Settings → Export Backup** gives
+> you a restore point you control (see [Settings, backup & restore](07-backup-and-settings.md)).
 
 ---
 

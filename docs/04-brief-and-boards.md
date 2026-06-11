@@ -1,4 +1,4 @@
-# Brief & boards
+# Ideas & boards
 
 *Capture tattoo ideas, link the artists who suit them, and group related ideas into mood boards you can share.*
 
@@ -40,7 +40,7 @@ and its linked artists goes to your clipboard, ready to paste to an artist.
 
 ## Mood boards
 
-**Boards** (More → Boards) group related ideas into a themed collection — handy for a
+**Boards** (the second tab on the Ideas page) group related ideas into a themed collection — handy for a
 sleeve or a connected set of pieces. The board's cover is taken from its first idea's image.
 
 ![The Boards list](../public/guide/boards-list.png)

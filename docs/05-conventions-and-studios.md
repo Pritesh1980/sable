@@ -8,7 +8,7 @@
 
 ## Convention Radar
 
-**Radar** lists notable UK tattoo conventions, **nearest to Milton Keynes first**. The
+**More → Radar** lists notable UK tattoo conventions, **nearest to Milton Keynes first**. The
 closest show is highlighted as a hero card at the top.
 
 ![Convention Radar](../public/guide/conventions.png)

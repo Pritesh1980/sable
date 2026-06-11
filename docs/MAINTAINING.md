@@ -18,7 +18,10 @@ Screenshots are captured against the dev server with Playwright at a phone viewp
 (`430 × 920`), plus a couple at desktop width (`1280 × 900`). Capture **viewport** shots,
 not `fullPage` — the fixed bottom nav floats to the middle on full-page captures.
 
-1. Start the dev server: `npm run dev` (→ http://localhost:5173).
+1. Start a dev server pinned to the offline backend so seeded sample data can't sync to a
+   real account: `VITE_BACKEND=local npm run dev -- --port 5174` (then capture against
+   http://localhost:5174). Seed a local session first:
+   `localStorage.setItem('tattoo_local_session', JSON.stringify({ user: { id: 'local-me@pritesh.net', email: 'me@pritesh.net' } }))`.
 2. Seed sample data **in the capture browser only** so empty pages (Brief, Boards, Concepts)
    have content. Run this in the browser console / Playwright `evaluate` against the
    localhost origin, then reload. Object shapes must match the app (`src/data/brief.js`,
@@ -48,12 +51,13 @@ not `fullPage` — the fixed bottom nav floats to the middle on full-page captur
    |---|---|
    | `/` | `dashboard.png`, `dashboard-desktop.png` |
    | `/gallery` | `gallery-filmstrip.png`, `gallery-grid.png`, `gallery-grid-desktop.png`, `gallery-compare.png`, `gallery-stylewall.png`, `artist-detail.png`, `ranking-swipe.png` |
+   | `/gallery?mode=manage` | `manage-list.png`, `manage-artist-expanded.png` |
    | `/brief` | `brief-list.png`, `brief-idea-editor.png` |
-   | `/boards` | `boards-list.png`, `board-editor.png` |
+   | `/brief?tab=boards` | `boards-list.png`, `board-editor.png` |
    | `/conventions` | `conventions.png` |
    | `/studios` | `studios.png` |
    | `/concepts` | `concepts.png`, `concept-card.png` |
-   | `/manage` | `manage-list.png`, `manage-artist-expanded.png`, `manage-backup.png` |
+   | `/settings` | `settings.png` |
    | `/help` | `help-overview.png` |
 
    (Doing this with the Playwright MCP: resize → navigate → `browser_evaluate` to seed → reload →
