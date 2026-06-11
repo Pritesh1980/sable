@@ -60,9 +60,20 @@ export const PLACEMENTS = [
   'calf', 'ribs', 'neck', 'hand', 'foot', 'other',
 ]
 
+// Accepts '@handle', a bare handle, or a pasted Instagram URL; returns the bare
+// handle ('' when nothing usable is found).
+export function parseInstagramHandle(input = '') {
+  const trimmed = input.trim().replace(/^@/, '')
+  if (!trimmed) return ''
+  const urlMatch = trimmed.match(/instagram\.com\/([^/?#\s]+)/i)
+  if (urlMatch) return urlMatch[1]
+  if (/^https?:\/\//i.test(trimmed)) return ''
+  return trimmed
+}
+
 // Build a new user-added artist record, or null if the handle is already taken
 // (case-insensitive). Rank goes to the back of the queue.
-export function createArtist({ handle, name }, existingArtists = []) {
+export function createArtist({ handle, name, tags = [], status = 'researching' }, existingArtists = []) {
   const duplicate = existingArtists.some(
     (a) => a.handle.toLowerCase() === handle.toLowerCase()
   )
@@ -73,10 +84,10 @@ export function createArtist({ handle, name }, existingArtists = []) {
     id: handle,
     handle,
     name,
-    tags: [],
+    tags,
     images: [],
     rank: maxRank + 1,
-    status: 'researching',
+    status,
     notes: '',
     studio: null,
   }

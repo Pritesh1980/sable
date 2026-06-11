@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { DEFAULT_ARTISTS, DEFAULT_STUDIOS, STYLE_TAGS, createArtist } from '../data/artists'
+import { DEFAULT_ARTISTS, DEFAULT_STUDIOS, STYLE_TAGS, createArtist, parseInstagramHandle } from '../data/artists'
 
 describe('DEFAULT_ARTISTS data integrity', () => {
   it('has no tier field on any artist', () => {
@@ -94,5 +94,44 @@ describe('createArtist', () => {
   it('returns null for a duplicate handle, case-insensitively', () => {
     expect(createArtist({ handle: 'zoia.ink', name: '' }, existing)).toBeNull()
     expect(createArtist({ handle: 'OscarAkermo', name: '' }, existing)).toBeNull()
+  })
+})
+
+describe('parseInstagramHandle', () => {
+  it('strips @ and whitespace', () => {
+    expect(parseInstagramHandle(' @zoia.ink ')).toBe('zoia.ink')
+  })
+
+  it('extracts the handle from a full Instagram URL', () => {
+    expect(parseInstagramHandle('https://www.instagram.com/zoia.ink/?hl=en')).toBe('zoia.ink')
+    expect(parseInstagramHandle('http://instagram.com/oscarakermo')).toBe('oscarakermo')
+    expect(parseInstagramHandle('instagram.com/johndarktattoo_/')).toBe('johndarktattoo_')
+  })
+
+  it('passes a bare handle through', () => {
+    expect(parseInstagramHandle('tattoo__amir')).toBe('tattoo__amir')
+  })
+
+  it('returns empty string for empty or junk input', () => {
+    expect(parseInstagramHandle('')).toBe('')
+    expect(parseInstagramHandle('   ')).toBe('')
+    expect(parseInstagramHandle('https://www.instagram.com/')).toBe('')
+  })
+})
+
+describe('createArtist with tags and status', () => {
+  it('accepts optional tags and status', () => {
+    const artist = createArtist(
+      { handle: 'new_one', name: '', tags: ['blackwork', 'dark-fantasy'], status: 'shortlisted' },
+      []
+    )
+    expect(artist.tags).toEqual(['blackwork', 'dark-fantasy'])
+    expect(artist.status).toBe('shortlisted')
+  })
+
+  it('still defaults tags/status when omitted', () => {
+    const artist = createArtist({ handle: 'plain', name: '' }, [])
+    expect(artist.tags).toEqual([])
+    expect(artist.status).toBe('researching')
   })
 })

@@ -24,6 +24,7 @@ import CompareView from '../components/CompareView'
 import TagPill from '../components/TagPill'
 import AddArtistForm from '../components/AddArtistForm'
 import ArtistTable from '../components/ArtistTable'
+import QuickAddArtist from '../components/QuickAddArtist'
 import { STYLE_TAGS, createArtist } from '../data/artists'
 
 function ArtistGrid({ items, sensors, onDragEnd, onOpen, onSaveImages }) {
@@ -75,6 +76,7 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
   // Deep links (?mode=manage) open maintenance directly; after that it's plain
   // state so toggling doesn't spam history.
   const [manageMode, setManageMode] = useState(() => searchParams.get('mode') === 'manage')
+  const [quickAdding, setQuickAdding] = useState(false)
 
   const artistsWithImages = artists.filter((a) => a.images?.length > 0)
 
@@ -127,8 +129,8 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
     setArtists((prev) => prev.map((a) => a.id === artistId ? { ...a, status } : a))
   }
 
-  function addArtist({ handle, name }) {
-    const artist = createArtist({ handle, name }, artists)
+  function addArtist(draft) {
+    const artist = createArtist(draft, artists)
     if (!artist) return
     setArtists((prev) => [...prev, artist])
   }
@@ -171,7 +173,13 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
               </button>
             </>
           )}
-          {/* Always reachable — it's how a new account adds its first artist */}
+          {/* Always reachable — one-step onboarding for a new artist */}
+          <button
+            onClick={() => setQuickAdding(true)}
+            className="font-mono text-xs text-accent hover:text-cream border border-accent/40 hover:border-accent px-3 py-2 rounded-sm transition-colors tracking-widest uppercase"
+          >
+            + Add
+          </button>
           <button
             onClick={() => setManageMode((v) => !v)}
             className={`font-mono text-xs px-3 py-2 rounded-sm transition-colors tracking-widest uppercase border ${
@@ -291,6 +299,14 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
         <ArtistBrowse
           artists={artists}
           onClose={() => setBrowsing(false)}
+        />
+      )}
+
+      {quickAdding && (
+        <QuickAddArtist
+          artists={artists}
+          onAdd={addArtist}
+          onClose={() => setQuickAdding(false)}
         />
       )}
 

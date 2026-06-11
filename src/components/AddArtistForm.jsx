@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { parseInstagramHandle } from '../data/artists'
 
 export default function AddArtistForm({ onAdd }) {
   const [handle, setHandle] = useState('')
@@ -7,7 +8,7 @@ export default function AddArtistForm({ onAdd }) {
 
   function submit(e) {
     e.preventDefault()
-    const clean = handle.replace(/^@/, '').trim()
+    const clean = parseInstagramHandle(handle)
     if (!clean) { setError('Instagram handle is required'); return }
     onAdd({ handle: clean, name: name.trim() })
     setHandle('')
