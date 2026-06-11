@@ -35,4 +35,12 @@ describe('legacy route redirects', () => {
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Artists' })).toBeInTheDocument())
     expect(screen.getByText('Add New Artist')).toBeInTheDocument()
   })
+
+  it('redirects /boards to the Ideas page on the Boards tab', async () => {
+    renderAt('/boards')
+    await waitFor(() => expect(screen.getByRole('heading', { name: /ideas/i })).toBeInTheDocument())
+    // The Boards tab is rendered and active (it shows the boards empty state).
+    expect(screen.getByRole('button', { name: /boards \(\d+\)/i })).toBeInTheDocument()
+    expect(screen.getByText(/boards group them/i)).toBeInTheDocument()
+  })
 })

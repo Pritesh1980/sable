@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import Logo from '../components/Logo'
 import { getImageUrl } from '../data/planning'
 import {
   BLANK_BOARD,
@@ -193,7 +192,9 @@ function BoardModal({ board, onClose, onSave, onDelete, ideas, artists }) {
   )
 }
 
-export default function Boards({ boards, setBoards, ideas, artists }) {
+// The Boards tab of the Ideas page. Boards stay their own synced collection
+// (tattoo_boards) — only the UI lives here now.
+export default function BoardsSection({ boards, setBoards, ideas, artists, onGoToIdeas }) {
   const [modal, setModal] = useState(null)
 
   function saveBoard(board) {
@@ -209,17 +210,16 @@ export default function Boards({ boards, setBoards, ideas, artists }) {
   }
 
   return (
-    <div className="min-h-screen bg-ink-black max-w-5xl mx-auto px-4 md:px-8 pt-safe-top pb-24">
-      <div className="pt-12 pb-6 flex items-end justify-between">
-        <div>
-          <Logo size={24} className="mb-2" />
-          <h1 className="font-display text-3xl text-cream">Mood Boards</h1>
-        </div>
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-xs font-mono text-cream-muted/90 tracking-widest uppercase">
+          Boards group related ideas
+        </p>
         <button
           onClick={() => setModal({ ...BLANK_BOARD })}
           disabled={ideas.length === 0}
           className="w-10 h-10 rounded-full border border-ink-border text-cream-muted hover:text-cream hover:border-cream-muted/50 transition-colors flex items-center justify-center text-xl disabled:opacity-30 disabled:cursor-not-allowed"
-          title={ideas.length === 0 ? 'Add ideas in Brief first' : 'New board'}
+          title={ideas.length === 0 ? 'Add ideas first' : 'New board'}
         >
           +
         </button>
@@ -229,7 +229,12 @@ export default function Boards({ boards, setBoards, ideas, artists }) {
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <span className="text-5xl mb-4 opacity-10">▦</span>
           <p className="text-cream-muted/90 font-body text-sm">No ideas yet.</p>
-          <p className="text-cream-muted/90 font-body text-xs mt-1">Boards group ideas from your Brief.</p>
+          <button
+            onClick={onGoToIdeas}
+            className="text-accent hover:text-accent-hover font-body text-xs mt-1 underline underline-offset-4"
+          >
+            Capture ideas first — boards group them
+          </button>
         </div>
       ) : boards.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">

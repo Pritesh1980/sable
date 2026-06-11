@@ -1,6 +1,8 @@
 import { useState, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import TagPill from '../components/TagPill'
 import Logo from '../components/Logo'
+import BoardsSection from '../components/BoardsSection'
 import { STYLE_TAGS, PLACEMENTS } from '../data/artists'
 import { IDEA_STATUSES, matchArtistsToIdea } from '../data/brief'
 import { buildIdeaBrief } from '../data/export'
@@ -375,9 +377,12 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
 
 const BLANK_IDEA = { title: '', description: '', tags: [], placement: '', images: [], linkedArtists: [], status: 'idea' }
 
-export default function Brief({ ideas, setIdeas, artists, mergedConventions = [] }) {
+export default function Brief({ ideas, setIdeas, artists, mergedConventions = [], boards = [], setBoards = () => {} }) {
+  const [searchParams] = useSearchParams()
   const [modal, setModal] = useState(null)
   const [statusFilter, setStatusFilter] = useState(null)
+  // Deep links (?tab=boards) land on the Boards tab; afterwards plain state.
+  const [tab, setTab] = useState(() => (searchParams.get('tab') === 'boards' ? 'boards' : 'ideas'))
 
   function saveIdea(idea) {
     setIdeas((prev) => {
@@ -402,19 +407,53 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
 
   return (
     <div className="min-h-screen bg-ink-black max-w-5xl mx-auto px-4 md:px-8 pt-safe-top pb-24">
-      <div className="pt-12 pb-6 flex items-end justify-between">
+      <div className="pt-12 pb-4 flex items-end justify-between">
         <div>
           <Logo size={24} className="mb-2" />
-          <h1 className="font-display text-3xl text-cream">My Brief</h1>
+          <p className="font-mono text-xs text-accent tracking-[0.4em] uppercase mb-1">My Brief</p>
+          <h1 className="font-display text-3xl text-cream">Ideas</h1>
         </div>
-        <button
-          onClick={() => setModal(BLANK_IDEA)}
-          className="w-10 h-10 rounded-full border border-ink-border text-cream-muted hover:text-cream hover:border-cream-muted/50 transition-colors flex items-center justify-center text-xl"
-        >
-          +
-        </button>
+        {tab === 'ideas' && (
+          <button
+            onClick={() => setModal(BLANK_IDEA)}
+            className="w-10 h-10 rounded-full border border-ink-border text-cream-muted hover:text-cream hover:border-cream-muted/50 transition-colors flex items-center justify-center text-xl"
+            title="New idea"
+          >
+            +
+          </button>
+        )}
       </div>
 
+      {/* Ideas | Boards tabs */}
+      <div className="inline-flex border border-ink-border rounded-sm overflow-hidden mb-6">
+        {[
+          { value: 'ideas', label: `Ideas (${ideas.length})` },
+          { value: 'boards', label: `Boards (${boards.length})` },
+        ].map(({ value, label }) => (
+          <button
+            key={value}
+            onClick={() => setTab(value)}
+            className={`px-4 py-2 text-xs font-mono tracking-widest uppercase transition-colors ${
+              tab === value
+                ? 'bg-ink-muted text-cream shadow-[inset_0_-1.5px_0_theme(colors.accent.DEFAULT)]'
+                : 'text-cream-muted hover:text-cream/70'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'boards' ? (
+        <BoardsSection
+          boards={boards}
+          setBoards={setBoards}
+          ideas={ideas}
+          artists={artists}
+          onGoToIdeas={() => setTab('ideas')}
+        />
+      ) : (
+      <>
       {/* Status filter tabs */}
       {ideas.length > 0 && (
         <div className="flex gap-2 mb-6">
@@ -455,6 +494,8 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
             <IdeaCard key={idea.id} idea={idea} onOpen={setModal} />
           ))}
         </div>
+      )}
+      </>
       )}
 
       {modal && (

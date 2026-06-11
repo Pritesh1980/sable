@@ -57,7 +57,7 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
           <p className="font-display text-3xl text-cream leading-none">{summary.nextArtists.length}</p>
           <p className="font-mono text-[0.6875rem] text-cream-muted tracking-widest uppercase mt-2">Contact next</p>
         </Link>
-        <Link to="/boards" className="bg-ink-card border border-ink-border rounded-sm p-4">
+        <Link to="/brief?tab=boards" className="bg-ink-card border border-ink-border rounded-sm p-4">
           <p className="font-display text-3xl text-cream leading-none">{summary.openBoards.length}</p>
           <p className="font-mono text-[0.6875rem] text-cream-muted tracking-widest uppercase mt-2">Live boards</p>
         </Link>

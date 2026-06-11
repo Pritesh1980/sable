@@ -13,7 +13,6 @@ const PRIMARY_LINKS = [
 
 const MORE_LINKS = [
   { to: '/studios', label: 'Studios', icon: '⌂', description: 'Where your artists work' },
-  { to: '/boards', label: 'Boards', icon: '▦', description: 'Mood boards & collections' },
   { to: '/settings', label: 'Settings', icon: '⚙', description: 'Backup, account & sign out' },
   { to: '/help', label: 'Help', icon: '?', description: 'How to use Tattoo' },
 ]

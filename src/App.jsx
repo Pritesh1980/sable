@@ -6,7 +6,6 @@ import Brief from './pages/Brief'
 import Conventions from './pages/Conventions'
 import Studios from './pages/Studios'
 import Concepts from './pages/Concepts'
-import Boards from './pages/Boards'
 import Settings from './pages/Settings'
 import Help from './pages/Help'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -38,11 +37,11 @@ function AppShell() {
       <Routes>
         <Route path="/" element={<Dashboard artists={artists} ideas={ideas} boards={boards} mergedConventions={mergedConventions} />} />
         <Route path="/gallery" element={<Gallery artists={artists} setArtists={setArtists} mergedConventions={mergedConventions} />} />
-        <Route path="/brief" element={<Brief ideas={ideas} setIdeas={setIdeas} artists={artists} mergedConventions={mergedConventions} />} />
+        <Route path="/brief" element={<Brief ideas={ideas} setIdeas={setIdeas} artists={artists} mergedConventions={mergedConventions} boards={boards} setBoards={setBoards} />} />
         <Route path="/conventions" element={<Conventions />} />
         <Route path="/studios" element={<Studios artists={artists} />} />
         <Route path="/concepts" element={<Concepts concepts={concepts} setConcepts={setConcepts} artists={artists} ideas={ideas} />} />
-        <Route path="/boards" element={<Boards boards={boards} setBoards={setBoards} ideas={ideas} artists={artists} />} />
+        <Route path="/boards" element={<Navigate to="/brief?tab=boards" replace />} />
         <Route path="/help" element={<Help />} />
         <Route
           path="/settings"
