@@ -4,6 +4,7 @@ import TagPill from '../components/TagPill'
 import HowItWorksStrip from '../components/HowItWorksStrip'
 import { IDEA_STATUSES } from '../data/brief'
 import { ARTIST_STATUSES, buildDashboardSummary, buildMatchRationale, buildPipelineSummary, matchArtistsForIdea, normalizeArtistStatus } from '../data/planning'
+import { moveIntoTop5, moveOutOfTop5 } from '../data/ranking'
 
 const STATUS_DOTS = {
   idea: 'bg-cream-muted/40',
@@ -31,7 +32,7 @@ function Panel({ title, action, children }) {
   )
 }
 
-export default function Dashboard({ artists, ideas, boards, mergedConventions = [] }) {
+export default function Dashboard({ artists, ideas, boards, mergedConventions = [], setArtists = () => {} }) {
   const summary = buildDashboardSummary({ artists, ideas, boards })
   const { stages, parked, contacted } = buildPipelineSummary(artists)
   const pipelineEmpty = artists.length === 0
@@ -192,20 +193,47 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
         )}
       </Panel>
 
-      <Panel title="Top ranked">
+      <Panel title="Top 5" action={<Link to="/gallery" className="text-xs font-mono text-accent tracking-widest uppercase">Rank</Link>}>
         <div className="space-y-2">
           {summary.topArtists.map((artist) => (
-            <Link key={artist.id} to="/gallery" className="flex items-center gap-2.5 py-1.5">
+            <div key={artist.id} className="flex items-center gap-2.5 py-1.5">
               {artist.images?.[0] && (
                 <img src={artist.images[0]} alt="" className="w-7 h-7 rounded-sm object-cover shrink-0" />
               )}
-              <span className="font-body text-cream-muted truncate flex-1">{artistLabel(artist)}</span>
+              <Link to="/gallery" className="font-body text-cream truncate flex-1">{artistLabel(artist)}</Link>
               <span className="font-mono text-[0.6875rem] text-cream-muted/70 shrink-0">
                 #{artist.rank} · {artistStatusLabel(artist.status)}
               </span>
-            </Link>
+              <button
+                onClick={() => setArtists(moveOutOfTop5(artists, artist.id))}
+                aria-label={`Move ${artistLabel(artist)} out of your top 5`}
+                title="Move out of top 5"
+                className="font-mono text-xs text-cream-muted/60 hover:text-accent border border-ink-border hover:border-accent/40 rounded-sm w-6 h-6 shrink-0 transition-colors"
+              >
+                ↓
+              </button>
+            </div>
           ))}
         </div>
+        {summary.benchArtists.length > 0 && (
+          <div className="mt-4 pt-3 border-t border-ink-border/60">
+            <p className="font-mono text-[0.625rem] text-cream-muted/70 tracking-widest uppercase mb-2">Waiting in the wings</p>
+            <div className="flex flex-wrap gap-1.5">
+              {summary.benchArtists.map((artist) => (
+                <button
+                  key={artist.id}
+                  onClick={() => setArtists(moveIntoTop5(artists, artist.id))}
+                  aria-label={`Move ${artistLabel(artist)} into your top 5`}
+                  title="Move into top 5"
+                  className="flex items-center gap-1.5 font-mono text-xs text-cream-muted hover:text-cream border border-ink-border hover:border-accent/40 rounded-sm px-2 py-1 transition-colors"
+                >
+                  <span aria-hidden="true" className="text-accent">↑</span>
+                  {artistLabel(artist)}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </Panel>
     </div>
   )

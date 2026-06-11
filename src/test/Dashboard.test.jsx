@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import Dashboard from '../pages/Dashboard'
 
@@ -49,5 +49,50 @@ describe('Home pipeline', () => {
     renderHome({ a: [] })
     const cta = screen.getByRole('link', { name: /add artists/i })
     expect(cta).toHaveAttribute('href', '/gallery?mode=manage')
+  })
+})
+
+describe('Top 5 panel', () => {
+  const six = [
+    { id: 'a1', handle: 'a1', name: '', tags: [], images: [], rank: 1, status: 'contact-next' },
+    { id: 'a2', handle: 'a2', name: '', tags: [], images: [], rank: 2, status: 'shortlisted' },
+    { id: 'a3', handle: 'a3', name: '', tags: [], images: [], rank: 3, status: 'researching' },
+    { id: 'a4', handle: 'a4', name: '', tags: [], images: [], rank: 4, status: 'researching' },
+    { id: 'a5', handle: 'a5', name: '', tags: [], images: [], rank: 5, status: 'researching' },
+    { id: 'a6', handle: 'a6', name: '', tags: [], images: [], rank: 6, status: 'researching' },
+  ]
+
+  function renderWithSetter() {
+    const setArtists = vi.fn()
+    render(
+      <MemoryRouter>
+        <Dashboard artists={six} ideas={[]} boards={[]} setArtists={setArtists} />
+      </MemoryRouter>
+    )
+    return setArtists
+  }
+
+  it('shows the top five active artists with a bench below', () => {
+    renderWithSetter()
+    expect(screen.getByText('Top 5')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Move @a2 out of your top 5' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Move @a6 into your top 5' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Move @a6 out of your top 5' })).not.toBeInTheDocument()
+  })
+
+  it('dropping an artist out re-ranks them to 6', () => {
+    const setArtists = renderWithSetter()
+    fireEvent.click(screen.getByRole('button', { name: 'Move @a2 out of your top 5' }))
+    const next = setArtists.mock.calls[0][0]
+    expect(next.find((a) => a.id === 'a2').rank).toBe(6)
+    expect(next.find((a) => a.id === 'a6').rank).toBe(5)
+  })
+
+  it('pulling a bench artist in re-ranks them to 5', () => {
+    const setArtists = renderWithSetter()
+    fireEvent.click(screen.getByRole('button', { name: 'Move @a6 into your top 5' }))
+    const next = setArtists.mock.calls[0][0]
+    expect(next.find((a) => a.id === 'a6').rank).toBe(5)
+    expect(next.find((a) => a.id === 'a5').rank).toBe(6)
   })
 })

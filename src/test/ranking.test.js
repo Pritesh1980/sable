@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeSwipeRanking } from '../data/ranking'
+import { computeSwipeRanking, moveIntoTop5, moveOutOfTop5 } from '../data/ranking'
 
 const ARTISTS = [
   { id: 'a', rank: 1, images: ['img1.jpg'] },
@@ -93,5 +93,37 @@ describe('computeSwipeRanking', () => {
     ARTISTS.forEach((a, i) => {
       expect(a.rank).toBe(original[i].rank)
     })
+  })
+})
+
+describe('moveIntoTop5 / moveOutOfTop5', () => {
+  const list = (n) => Array.from({ length: n }, (_, i) => ({ id: `a${i + 1}`, rank: i + 1 }))
+  const order = (artists) => artists.slice().sort((a, b) => a.rank - b.rank).map((a) => a.id)
+
+  it('pulls an artist into rank 5, pushing the old #5 down', () => {
+    const next = moveIntoTop5(list(8), 'a8')
+    expect(order(next)).toEqual(['a1', 'a2', 'a3', 'a4', 'a8', 'a5', 'a6', 'a7'])
+    expect(next.find((a) => a.id === 'a8').rank).toBe(5)
+  })
+
+  it('drops an artist out to rank 6, promoting the next one up', () => {
+    const next = moveOutOfTop5(list(8), 'a2')
+    expect(order(next)).toEqual(['a1', 'a3', 'a4', 'a5', 'a6', 'a2', 'a7', 'a8'])
+    expect(next.find((a) => a.id === 'a2').rank).toBe(6)
+  })
+
+  it('keeps ranks sequential from 1 with no gaps', () => {
+    const next = moveIntoTop5(list(8), 'a7')
+    expect(next.map((a) => a.rank).sort((x, y) => x - y)).toEqual([1, 2, 3, 4, 5, 6, 7, 8])
+  })
+
+  it('returns the list unchanged for an unknown id', () => {
+    const artists = list(4)
+    expect(moveIntoTop5(artists, 'nope')).toEqual(artists)
+  })
+
+  it('handles lists shorter than five', () => {
+    const next = moveIntoTop5(list(3), 'a3')
+    expect(order(next)).toEqual(['a1', 'a2', 'a3'])
   })
 })
