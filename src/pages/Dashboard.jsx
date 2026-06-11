@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import Logo from '../components/Logo'
 import TagPill from '../components/TagPill'
 import { IDEA_STATUSES } from '../data/brief'
-import { ARTIST_STATUSES, buildDashboardSummary, buildMatchRationale, matchArtistsForIdea, normalizeArtistStatus } from '../data/planning'
+import { ARTIST_STATUSES, buildDashboardSummary, buildMatchRationale, buildPipelineSummary, matchArtistsForIdea, normalizeArtistStatus } from '../data/planning'
 
 const STATUS_DOTS = {
   idea: 'bg-cream-muted/40',
@@ -32,6 +32,8 @@ function Panel({ title, action, children }) {
 
 export default function Dashboard({ artists, ideas, boards, mergedConventions = [] }) {
   const summary = buildDashboardSummary({ artists, ideas, boards })
+  const { stages, parked } = buildPipelineSummary(artists)
+  const pipelineEmpty = artists.length === 0
   const ideaMatches = summary.activeIdeas
     .map((idea) => ({ idea, matches: matchArtistsForIdea(idea, artists).slice(0, 3) }))
     .filter(({ matches }) => matches.length > 0)
@@ -40,30 +42,72 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
     <div className="min-h-screen bg-ink-black max-w-5xl mx-auto px-4 md:px-8 pt-safe-top pb-24">
       <div className="pt-10 pb-6">
         <Logo size={28} className="mb-3" />
-        <p className="font-mono text-xs text-accent tracking-[0.4em] uppercase mb-2">Planning</p>
-        <h1 className="font-display text-5xl text-cream leading-none tracking-tight">Dashboard</h1>
+        <p className="font-mono text-xs text-accent tracking-[0.4em] uppercase mb-2">What's next</p>
+        <h1 className="font-display text-5xl text-cream leading-none tracking-tight">Home</h1>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-6">
-        <Link to="/brief" className="bg-ink-card border border-ink-border rounded-sm p-4">
-          <p className="font-display text-3xl text-cream leading-none">{summary.activeIdeas.length}</p>
-          <p className="font-mono text-[0.6875rem] text-cream-muted tracking-widest uppercase mt-2">Active ideas</p>
+      {/* Shortlist pipeline — the artist-first loop at a glance */}
+      <div className="mb-2">
+        <p className="font-mono text-xs text-cream-muted tracking-widest uppercase mb-3">Shortlist pipeline</p>
+        {pipelineEmpty ? (
+          <div className="bg-ink-card border border-ink-border rounded-sm p-6 text-center">
+            <p className="text-cream-muted/90 text-sm font-body mb-2">No artists in your collection yet.</p>
+            <Link
+              to="/gallery?mode=manage"
+              className="text-accent hover:text-accent-hover font-body text-sm underline underline-offset-4"
+            >
+              Add artists to start your shortlist
+            </Link>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {stages.map(({ status, label, count, artists: stageArtists }) => (
+                <Link
+                  key={status}
+                  to="/gallery"
+                  className={`rounded-sm p-3 border transition-colors ${
+                    status === 'contact-next'
+                      ? 'bg-accent/10 border-accent/40'
+                      : 'bg-ink-card border-ink-border hover:border-cream-muted/40'
+                  }`}
+                >
+                  <p className="font-display text-2xl text-cream leading-none">{count}</p>
+                  <p className="font-mono text-[0.625rem] text-cream-muted tracking-widest uppercase mt-1.5">{label}</p>
+                  <p className={`font-mono text-[0.6875rem] mt-2 leading-relaxed truncate ${status === 'contact-next' ? 'text-cream' : 'text-cream-muted/80'}`}>
+                    {stageArtists.length > 0
+                      ? stageArtists.slice(0, 3).map((a) => artistLabel(a)).join(' · ')
+                      : '—'}
+                  </p>
+                </Link>
+              ))}
+            </div>
+            {parked > 0 && (
+              <p className="font-mono text-[0.625rem] text-cream-muted/70 tracking-widest uppercase text-right mt-2">
+                parked (maybe / pass): {parked}
+              </p>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Ideas at a glance */}
+      <div className="grid grid-cols-3 gap-2 mb-6 mt-4">
+        <Link to="/brief" className="bg-ink-card border border-ink-border rounded-sm p-3">
+          <p className="font-display text-2xl text-cream leading-none">{summary.activeIdeas.length}</p>
+          <p className="font-mono text-[0.625rem] text-cream-muted tracking-widest uppercase mt-1.5">Active ideas</p>
         </Link>
-        <Link to="/brief" className="bg-ink-card border border-ink-border rounded-sm p-4">
-          <p className="font-display text-3xl text-cream leading-none">{summary.exportReadyIdeas.length}</p>
-          <p className="font-mono text-[0.6875rem] text-cream-muted tracking-widest uppercase mt-2">Briefs ready</p>
+        <Link to="/brief" className="bg-ink-card border border-ink-border rounded-sm p-3">
+          <p className="font-display text-2xl text-cream leading-none">{summary.exportReadyIdeas.length}</p>
+          <p className="font-mono text-[0.625rem] text-cream-muted tracking-widest uppercase mt-1.5">Briefs ready</p>
         </Link>
-        <Link to="/gallery" className="bg-ink-card border border-ink-border rounded-sm p-4">
-          <p className="font-display text-3xl text-cream leading-none">{summary.nextArtists.length}</p>
-          <p className="font-mono text-[0.6875rem] text-cream-muted tracking-widest uppercase mt-2">Contact next</p>
-        </Link>
-        <Link to="/brief?tab=boards" className="bg-ink-card border border-ink-border rounded-sm p-4">
-          <p className="font-display text-3xl text-cream leading-none">{summary.openBoards.length}</p>
-          <p className="font-mono text-[0.6875rem] text-cream-muted tracking-widest uppercase mt-2">Live boards</p>
+        <Link to="/brief?tab=boards" className="bg-ink-card border border-ink-border rounded-sm p-3">
+          <p className="font-display text-2xl text-cream leading-none">{summary.openBoards.length}</p>
+          <p className="font-mono text-[0.625rem] text-cream-muted tracking-widest uppercase mt-1.5">Live boards</p>
         </Link>
       </div>
 
-      <Panel title="Next artists" action={<Link to="/gallery?mode=manage" className="text-xs font-mono text-accent tracking-widest uppercase">Manage</Link>}>
+      <Panel title="Contact next" action={<Link to="/gallery?mode=manage" className="text-xs font-mono text-accent tracking-widest uppercase">Manage</Link>}>
         {summary.nextArtists.length > 0 ? (
           <div className="grid sm:grid-cols-2 gap-2">
             {summary.nextArtists.slice(0, 4).map((artist) => {
@@ -96,7 +140,7 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
         )}
       </Panel>
 
-      <Panel title="Idea matches" action={<Link to="/brief" className="text-xs font-mono text-accent tracking-widest uppercase">Brief</Link>}>
+      <Panel title="Idea matches" action={<Link to="/brief" className="text-xs font-mono text-accent tracking-widest uppercase">Ideas</Link>}>
         {ideaMatches.length > 0 ? (
           <div className="grid lg:grid-cols-2 gap-3">
             {ideaMatches.slice(0, 4).map(({ idea, matches }) => {

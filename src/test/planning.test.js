@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   buildDashboardSummary,
+  buildPipelineSummary,
   buildMatchRationale,
   getImageNote,
   getImageUrl,
@@ -111,5 +112,48 @@ describe('buildMatchRationale', () => {
   it('returns empty string for a null match or no signal', () => {
     expect(buildMatchRationale({}, null)).toBe('')
     expect(buildMatchRationale({}, { artist: { id: 'x' }, overlapTags: [] })).toBe('')
+  })
+})
+
+describe('buildPipelineSummary', () => {
+  const a = (id, status, rank) => ({ id, handle: id, status, rank })
+
+  it('returns the four active stages in workflow order with counts', () => {
+    const artists = [
+      a('r1', 'researching', 5),
+      a('s1', 'shortlisted', 2),
+      a('c1', 'contact-next', 1),
+      a('c2', 'contact-next', 3),
+      a('d1', 'contacted', 4),
+    ]
+    const { stages } = buildPipelineSummary(artists)
+    expect(stages.map((s) => s.status)).toEqual(['researching', 'shortlisted', 'contact-next', 'contacted'])
+    expect(stages.map((s) => s.count)).toEqual([1, 1, 2, 1])
+    expect(stages.map((s) => s.label)).toEqual(['Researching', 'Shortlisted', 'Contact next', 'Contacted'])
+  })
+
+  it('rank-sorts artists within a stage', () => {
+    const artists = [a('low', 'contact-next', 9), a('top', 'contact-next', 1)]
+    const { stages } = buildPipelineSummary(artists)
+    const contactNext = stages.find((s) => s.status === 'contact-next')
+    expect(contactNext.artists.map((x) => x.id)).toEqual(['top', 'low'])
+  })
+
+  it('normalizes unknown statuses to researching', () => {
+    const { stages } = buildPipelineSummary([a('x', 'banana', 1), a('y', undefined, 2)])
+    expect(stages.find((s) => s.status === 'researching').count).toBe(2)
+  })
+
+  it('parks maybe/pass artists out of the strip with a count', () => {
+    const artists = [a('m', 'maybe', 1), a('p', 'pass', 2), a('r', 'researching', 3)]
+    const { stages, parked } = buildPipelineSummary(artists)
+    expect(parked).toBe(2)
+    expect(stages.reduce((n, s) => n + s.count, 0)).toBe(1)
+  })
+
+  it('handles an empty list', () => {
+    const { stages, parked } = buildPipelineSummary([])
+    expect(stages.every((s) => s.count === 0)).toBe(true)
+    expect(parked).toBe(0)
   })
 })

@@ -95,6 +95,30 @@ export function buildMatchRationale(idea, match) {
   return ''
 }
 
+// The four ACTIVE shortlist stages in workflow order. maybe/pass are parked —
+// excluded from the strip but surfaced as a count so artists never vanish.
+const PIPELINE_STAGES = ['researching', 'shortlisted', 'contact-next', 'contacted']
+
+export function buildPipelineSummary(artists = []) {
+  const byStage = new Map(PIPELINE_STAGES.map((s) => [s, []]))
+  let parked = 0
+
+  for (const artist of artists) {
+    const status = normalizeArtistStatus(artist.status)
+    if (byStage.has(status)) byStage.get(status).push(artist)
+    else parked += 1
+  }
+
+  const stages = PIPELINE_STAGES.map((status) => ({
+    status,
+    label: ARTIST_STATUSES.find((s) => s.value === status).label,
+    artists: byStage.get(status).slice().sort((a, b) => (a.rank || 999) - (b.rank || 999)),
+    count: byStage.get(status).length,
+  }))
+
+  return { stages, parked }
+}
+
 export function buildDashboardSummary({ artists = [], ideas = [], boards = [] }) {
   const activeIdeas = ideas.filter((idea) => (idea.status || 'idea') !== 'done')
   const exportReadyIdeas = ideas.filter((idea) => (
