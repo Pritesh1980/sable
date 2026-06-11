@@ -484,7 +484,12 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <span className="text-5xl mb-4 opacity-10">◇</span>
           <p className="text-cream-muted/90 font-body text-sm">No ideas yet.</p>
-          <p className="text-cream-muted/90 font-body text-xs mt-1">Tap + to capture your first concept.</p>
+          <button
+            onClick={() => setModal(BLANK_IDEA)}
+            className="text-accent hover:text-accent-hover font-body text-xs mt-1 underline underline-offset-4"
+          >
+            Capture your first idea — tag it to see matching artists
+          </button>
         </div>
       ) : filtered.length === 0 ? (
         <p className="text-cream-muted/90 text-center text-xs font-mono tracking-widest py-16">No ideas with this status.</p>

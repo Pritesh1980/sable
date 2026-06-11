@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import Logo from '../components/Logo'
 import TagPill from '../components/TagPill'
+import HowItWorksStrip from '../components/HowItWorksStrip'
 import { IDEA_STATUSES } from '../data/brief'
 import { ARTIST_STATUSES, buildDashboardSummary, buildMatchRationale, buildPipelineSummary, matchArtistsForIdea, normalizeArtistStatus } from '../data/planning'
 
@@ -45,6 +46,8 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
         <p className="font-mono text-xs text-accent tracking-[0.4em] uppercase mb-2">What's next</p>
         <h1 className="font-display text-5xl text-cream leading-none tracking-tight">Home</h1>
       </div>
+
+      <HowItWorksStrip />
 
       {/* Shortlist pipeline — the artist-first loop at a glance */}
       <div className="mb-2">
@@ -180,7 +183,10 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
             })}
           </div>
         ) : (
-          <p className="text-cream-muted/90 text-sm font-body">Add style tags to ideas to see artist matches.</p>
+          <p className="text-cream-muted/90 text-sm font-body">
+            <Link to="/brief" className="text-accent hover:text-accent-hover underline underline-offset-4">Tag an idea</Link>
+            {' '}with styles to see matching artists here.
+          </p>
         )}
       </Panel>
 

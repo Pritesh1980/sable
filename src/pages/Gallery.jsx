@@ -259,9 +259,19 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
             onSaveImages={saveImages}
           />
           {sorted.length === 0 && (
-            <p className="text-cream-muted/90 py-10 text-center tracking-widest uppercase text-xs font-mono">
-              No artists match this filter
-            </p>
+            <div className="py-10 text-center">
+              <p className="text-cream-muted/90 tracking-widest uppercase text-xs font-mono">
+                {artists.length === 0 ? 'No artists yet' : 'No artists match this filter'}
+              </p>
+              {artists.length === 0 && (
+                <button
+                  onClick={() => setManageMode(true)}
+                  className="text-accent hover:text-accent-hover font-body text-sm mt-3 underline underline-offset-4"
+                >
+                  Add your first artist
+                </button>
+              )}
+            </div>
           )}
         </div>
       )}

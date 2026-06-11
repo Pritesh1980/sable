@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import ConceptVariantLab from '../components/ConceptVariantLab'
 import Logo from '../components/Logo'
 import PromptPackComposer from '../components/PromptPackComposer'
@@ -526,6 +527,12 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
               ? 'Describe an idea above and tap Generate Image.'
               : 'Describe an idea, copy the prompt, paste into your AI of choice, then bring the result back.'}
           </p>
+          <Link
+            to="/brief"
+            className="text-accent hover:text-accent-hover font-body text-xs mt-2 underline underline-offset-4"
+          >
+            Or seed one from a Brief idea
+          </Link>
         </div>
       ) : (
         <div className="space-y-4">
