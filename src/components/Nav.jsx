@@ -3,15 +3,17 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useTheme } from '../context/useTheme'
 import { useAuth } from '../context/useAuth'
 
+// Four tabs mirror the workflow: see what's next, curate artists, match ideas,
+// generate concepts. Everything reference/admin lives under More.
 const PRIMARY_LINKS = [
   { to: '/', label: 'Home', icon: '◈' },
   { to: '/gallery', label: 'Artists', icon: '◇' },
-  { to: '/brief', label: 'Brief', icon: '◇' },
-  { to: '/conventions', label: 'Radar', icon: '◎' },
+  { to: '/brief', label: 'Ideas', icon: '✎' },
   { to: '/concepts', label: 'AI', icon: '✦' },
 ]
 
 const MORE_LINKS = [
+  { to: '/conventions', label: 'Radar', icon: '◎', description: 'Conventions near you' },
   { to: '/studios', label: 'Studios', icon: '⌂', description: 'Where your artists work' },
   { to: '/settings', label: 'Settings', icon: '⚙', description: 'Backup, account & sign out' },
   { to: '/help', label: 'Help', icon: '?', description: 'How to use Tattoo' },
@@ -37,7 +39,7 @@ function MoreMenu({ onClose }) {
             onClick={() => go(to)}
             className="w-full flex items-center gap-4 px-5 py-4 hover:bg-ink-muted transition-colors border-b border-ink-border last:border-b-0 text-left"
           >
-            <span className="text-xl text-cream-muted leading-none w-6 text-center">{icon}</span>
+            <span aria-hidden="true" className="text-xl text-cream-muted leading-none w-6 text-center">{icon}</span>
             <div>
               <p className="font-body text-cream text-sm">{label}</p>
               <p className="font-mono text-cream-muted/60 text-[0.625rem] tracking-widest mt-0.5">{description}</p>
@@ -98,7 +100,7 @@ export default function Nav() {
                 }`
               }
             >
-              <span className="text-base leading-none">{icon}</span>
+              <span aria-hidden="true" className="text-base leading-none">{icon}</span>
               <span className="tracking-widest uppercase text-xs">{label}</span>
             </NavLink>
           ))}
@@ -109,7 +111,7 @@ export default function Nav() {
               moreOpen ? 'text-cream' : 'text-cream-muted hover:text-cream/70'
             }`}
           >
-            <span className="text-base leading-none">⋯</span>
+            <span aria-hidden="true" className="text-base leading-none">⋯</span>
             <span className="tracking-widest uppercase text-xs">More</span>
           </button>
         </div>
