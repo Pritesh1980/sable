@@ -16,13 +16,17 @@ you do next?*
 - **How Tattoo works** — a dismissible three-step strip of the core loop: curate your
   artists → rank & shortlist → match ideas & contact. Tap ✕ once you know your way around
   (it stays dismissed on that device).
-- **Shortlist pipeline** — four stage cards in workflow order: *Researching →
-  Shortlisted → Contact next → Contacted*, each with its count and top-ranked artists.
-  *Contact next* is highlighted — that's your action stage. Artists parked as
-  *Maybe* / *Pass* show as a small count under the strip so they never silently vanish.
+- **Shortlist pipeline** — three stage cards in workflow order: *Researching →
+  Shortlisted → Contact next*, each with its count and top-ranked artists.
+  *Contact next* is highlighted — that's your action stage. Artists you've already
+  contacted, and ones parked as *Maybe* / *Pass*, show only as small counts under
+  the strip — out of the way, but never silently gone.
 - **Idea stats** — active ideas, briefs ready to share, and live boards, each linking
   into the Ideas page.
 - **Contact next** — the artists you've marked *Contact next*, in rank order, with thumbnails.
+- **Top 5** — your five highest-ranked *current* artists (contacted and parked drop out).
+  Tap ↓ on a row to move someone out, or tap a name in *waiting in the wings* to pull
+  them into the five — ranks reshuffle automatically.
 - **Idea matches** — each idea paired with the artists whose styles overlap it, with a
   one-line rationale.
 

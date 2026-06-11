@@ -12,13 +12,19 @@ artists and photos sits at the top.
 
 ![Manage mode on the Artists page](../public/guide/manage-list.png)
 
-## Add an artist
+## Add an artist — the quick way
 
-1. In the **Add New Artist** panel, type the **Instagram handle** (the `@` is optional).
+Tap **+ Add** in the Artists header (visible in every view). One small form does the
+whole onboarding:
+
+1. Paste the **Instagram handle or the full Instagram URL** — the handle is extracted
+   automatically.
 2. Optionally add a **display name** (e.g. *Carlos Valera* for `@carl245tattoo`).
-3. Tap **Add Artist**. They appear at the bottom of the list, ready to fill in.
+3. Toggle their **style tags** and pick a **shortlist status** right there.
+4. Tap **Add Artist** — they land at the bottom of your ranking, fully tagged.
 
-> Duplicate handles are ignored, so you can't accidentally add the same artist twice.
+Duplicate handles are rejected with a message, so you can't add the same artist twice.
+The **Add New Artist** panel inside Manage mode still works too (and also accepts URLs).
 
 ## The artist table
 

@@ -12,7 +12,8 @@ const SECTIONS = [
     steps: [
       'Sign in with your email and password to open the app. Your artists, ideas, boards and concepts are tied to your account and follow you across devices — add something on your Mac and it appears on your iPhone.',
       'The bottom bar mirrors the workflow: Home (what’s next), Artists (curate & rank), Ideas (capture & match), AI (generate concepts). Tap More (⋯) for Radar, Studios, Settings and this Help page.',
-      'Home leads with your shortlist pipeline — Researching → Shortlisted → Contact next → Contacted — plus idea stats, contact-next cards and idea→artist matches. Artists parked as Maybe/Pass show as a count under the strip.',
+      'Home leads with your shortlist pipeline — Researching → Shortlisted → Contact next — plus idea stats, contact-next cards, your Top 5 and idea→artist matches. Contacted and parked (Maybe/Pass) artists show only as counts under the strip.',
+      'The Top 5 panel shows your five highest-ranked current artists. Tap ↓ to move one out, or tap a name under "waiting in the wings" to pull them in — ranks reshuffle automatically.',
       'The "How Tattoo works" strip on Home links each step of the loop; dismiss it with ✕ once you don’t need it (it stays dismissed on that device).',
       'Top-right: tap A+/A− to change text size, ◑/◐ to switch dark/light theme, and ⏻ to sign out (this clears your data from the current device).',
       'Your artists, studios and conventions come pre-loaded. Ideas, boards and concepts start empty — you build those.',
@@ -24,7 +25,8 @@ const SECTIONS = [
     blurb: 'Add artists, upload portfolio photos, and set tags, status, studio and notes.',
     image: 'manage-artist-expanded.png',
     steps: [
-      'Open Artists and tap the Manage button (top right). Use Add New Artist to add an Instagram handle (display name optional).',
+      'Tap + Add in the Artists header to onboard an artist in one step: paste their handle or Instagram URL, toggle style tags and pick a status, done.',
+      'For bulk upkeep, tap Manage (top right): a searchable table of every artist.',
       'Tap a row to expand it. Set Style Tags, Shortlist Status, Studio, and free-text Notes (notes save on blur or Enter).',
       'Use + Photos to upload screenshots — they are compressed, stored in your account, and synced to your other devices.',
       'Style tags drive the artist-matching you see in Ideas and AI concepts, so keep them accurate.',
