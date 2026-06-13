@@ -16,6 +16,11 @@ closest show is highlighted as a hero card at the top.
 Each card shows the venue, dates, distance from Milton Keynes, a short summary, and a link
 to the event's site. Popular shows are marked with a ★.
 
+**Mark who's going.** Each card has a *Your artists attending* line — tap **Edit** to toggle
+which of your saved artists are appearing at that show. Those names then surface on the
+artist's detail card, on Home, and next to the artist in idea matches. (Automatic look-up is
+on the backlog; for now you set this yourself.)
+
 > Conventions recur annually — the dates shown are for the latest known edition, so follow
 > the link for the next one.
 

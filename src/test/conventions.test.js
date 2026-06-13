@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { CONVENTIONS, getConventionFavicon } from '../data/conventions'
+import { CONVENTIONS, getConventionFavicon, toggleConventionAttendee } from '../data/conventions'
 
 describe('CONVENTIONS', () => {
   it('is a tight curated list', () => {
@@ -56,5 +56,29 @@ describe('getConventionFavicon', () => {
 
   it('returns empty string for missing url', () => {
     expect(getConventionFavicon({})).toBe('')
+  })
+})
+
+describe('toggleConventionAttendee', () => {
+  it('adds an artist when not already attending', () => {
+    const next = toggleConventionAttendee({}, 'brighton', 'zoia.ink', [])
+    expect(next.brighton).toEqual(['zoia.ink'])
+  })
+
+  it('removes an artist when already attending', () => {
+    const next = toggleConventionAttendee({ brighton: ['zoia.ink', 'keremtattz'] }, 'brighton', 'zoia.ink', ['zoia.ink', 'keremtattz'])
+    expect(next.brighton).toEqual(['keremtattz'])
+  })
+
+  it('seeds from the current merged list so base attendees are preserved', () => {
+    // No override yet for this convention, but base data lists keremtattz.
+    const next = toggleConventionAttendee({}, 'brighton', 'zoia.ink', ['keremtattz'])
+    expect(next.brighton).toEqual(['keremtattz', 'zoia.ink'])
+  })
+
+  it('leaves other conventions untouched', () => {
+    const next = toggleConventionAttendee({ 'big-london': ['oscarakermo'] }, 'brighton', 'zoia.ink', [])
+    expect(next['big-london']).toEqual(['oscarakermo'])
+    expect(next.brighton).toEqual(['zoia.ink'])
   })
 })

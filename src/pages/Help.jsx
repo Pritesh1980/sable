@@ -65,6 +65,7 @@ const SECTIONS = [
     image: 'conventions.png',
     steps: [
       'More → Radar lists conventions, nearest to Milton Keynes first, with dates, distance and a link to each event.',
+      'On each convention card, tap Edit under "Your artists attending" to toggle which of your saved artists are appearing there.',
       'Where an artist is attending a convention, you will see it on their detail card and on Home.',
       'More → Studios groups your saved artists by the studio they work at, sorted by distance, with links to Instagram and the studio site.',
       'Assign an artist to a studio in Artists → Manage (or the artist detail) to make them appear under Studios.',

@@ -108,6 +108,16 @@ export function mergeConventionOverrides(overrides = {}) {
   }))
 }
 
+// Toggle one artist's attendance for a convention, returning the next overrides
+// map. `currentIds` is the merged current attendee list (override-or-base) so
+// the first edit seeds from base data rather than wiping it.
+export function toggleConventionAttendee(overrides = {}, conventionId, artistId, currentIds = []) {
+  const next = currentIds.includes(artistId)
+    ? currentIds.filter((id) => id !== artistId)
+    : [...currentIds, artistId]
+  return { ...overrides, [conventionId]: next }
+}
+
 export function getConventionFavicon(convention) {
   if (!convention.url) return ''
   try {
