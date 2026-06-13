@@ -6,8 +6,17 @@ import App from './App.jsx'
 import { ThemeProvider } from './context/ThemeContext'
 import { AuthProvider } from './context/AuthContext'
 
-// Register service worker
+// Register service worker. When a new SW takes control (after a deploy), reload
+// once so the page swaps to the fresh assets — but not on the first-ever visit
+// (no prior controller), which would be a pointless reload.
 if ('serviceWorker' in navigator) {
+  const hadController = !!navigator.serviceWorker.controller
+  let reloading = false
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (reloading || !hadController) return
+    reloading = true
+    window.location.reload()
+  })
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(() => {})
   })
