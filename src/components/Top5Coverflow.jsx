@@ -6,10 +6,10 @@ import { coverflowLayout } from '../data/coverflowLayout'
 // three.js stays out of the initial bundle. Pure geometry comes from
 // coverflowLayout; this file only turns those transforms into animated meshes.
 
-const CARD_W = 1.35
-const CARD_H = 1.8
-const SPREAD = 2.3 // world units per layout x-unit
-const DEPTH = 1.25 // world units per layout z-unit
+const CARD_W = 1.7
+const CARD_H = 2.3
+const SPREAD = 2.9 // world units per layout x-unit — neighbours pushed to the edges
+const DEPTH = 1.5 // world units per layout z-unit
 const LERP = 0.16 // easing toward target each frame
 const ACCENT = 0x8b1a1a // deep red backing glow on the focused card
 
@@ -29,8 +29,8 @@ export default function Top5Coverflow({ items, activeIndex, onSelect }) {
     const height = mount.clientHeight || 280
 
     const scene = new THREE.Scene()
-    const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100)
-    camera.position.set(0, 0, 4.4)
+    const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 100)
+    camera.position.set(0, 0, 3.25)
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
@@ -172,5 +172,5 @@ export default function Top5Coverflow({ items, activeIndex, onSelect }) {
     // items identity drives a full rebuild; activeIndex is read via ref.
   }, [items])
 
-  return <div ref={mountRef} className="w-full h-[300px] select-none" aria-hidden="true" />
+  return <div ref={mountRef} className="w-full h-[62vh] min-h-[440px] select-none" aria-hidden="true" />
 }

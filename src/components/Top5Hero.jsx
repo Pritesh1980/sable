@@ -14,7 +14,7 @@ const statusLabel = (s) =>
 // permanent experience for offline / no-WebGL / reduced-motion users.
 function StaticGallery({ items, activeIndex, onSelect }) {
   return (
-    <div className="flex items-end justify-center gap-2 h-[300px] py-4">
+    <div className="flex items-center justify-center gap-2 h-[62vh] min-h-[440px] py-4">
       {items.map((item, i) => {
         const focused = i === activeIndex
         return (
@@ -25,8 +25,8 @@ function StaticGallery({ items, activeIndex, onSelect }) {
             aria-pressed={focused}
             className={`relative shrink-0 overflow-hidden rounded-sm border transition-all duration-300 ${
               focused
-                ? 'border-accent/60 w-40 sm:w-44 h-64'
-                : 'border-ink-border w-20 sm:w-24 h-44 opacity-70 hover:opacity-100'
+                ? 'border-accent/60 w-[68%] max-w-md h-full'
+                : 'border-ink-border w-16 sm:w-20 h-2/3 opacity-50 hover:opacity-90'
             }`}
           >
             {item.image ? (
