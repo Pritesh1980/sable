@@ -11,11 +11,17 @@
 **Home** answers one question: *where is each artist in your shortlist, and what should
 you do next?*
 
-![Home with the shortlist pipeline](../public/guide/dashboard.png)
+![Home led by the Top 5 coverflow](../public/guide/dashboard.png)
 
 - **How Tattoo works** — a dismissible three-step strip of the core loop: curate your
   artists → rank & shortlist → match ideas & contact. Tap ✕ once you know your way around
   (it stays dismissed on that device).
+- **Top 5** — the hero of Home: your five highest-ranked *current* artists (contacted and
+  parked drop out), shown as a 3D coverflow of their artwork. Drag sideways or tap a card
+  to bring it to the front; the focused artist's name, rank and status sit below it. Tap
+  **Drop ↓** to move the focused artist out, or tap a name in *waiting in the wings* to
+  pull them in — ranks reshuffle automatically. On devices without 3D (or with *reduced
+  motion* set) it falls back to a flat artwork gallery with the same controls.
 - **Shortlist pipeline** — three stage cards in workflow order: *Researching →
   Shortlisted → Contact next*, each with its count and top-ranked artists.
   *Contact next* is highlighted — that's your action stage. Artists you've already
@@ -24,9 +30,6 @@ you do next?*
 - **Idea stats** — active ideas, briefs ready to share, and live boards, each linking
   into the Ideas page.
 - **Contact next** — the artists you've marked *Contact next*, in rank order, with thumbnails.
-- **Top 5** — your five highest-ranked *current* artists (contacted and parked drop out).
-  Tap ↓ on a row to move someone out, or tap a name in *waiting in the wings* to pull
-  them into the five — ranks reshuffle automatically.
 - **Idea matches** — each idea paired with the artists whose styles overlap it, with a
   one-line rationale.
 

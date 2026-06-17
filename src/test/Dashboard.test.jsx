@@ -75,13 +75,18 @@ describe('Top 5 panel', () => {
   it('shows the top five active artists with a bench below', () => {
     renderWithSetter()
     expect(screen.getByText('Top 5')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Move @a2 out of your top 5' })).toBeInTheDocument()
+    // every top-five artist is focusable in the hero
+    expect(screen.getByRole('button', { name: /Focus @a2 \(rank 2\)/ })).toBeInTheDocument()
+    // the focused card (default #1) can be dropped out
+    expect(screen.getByRole('button', { name: 'Move @a1 out of your top 5' })).toBeInTheDocument()
+    // bench artist can be pulled in, and is not itself droppable
     expect(screen.getByRole('button', { name: 'Move @a6 into your top 5' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Move @a6 out of your top 5' })).not.toBeInTheDocument()
   })
 
-  it('dropping an artist out re-ranks them to 6', () => {
+  it('dropping the focused artist out re-ranks them to 6', () => {
     const setArtists = renderWithSetter()
+    fireEvent.click(screen.getByRole('button', { name: /Focus @a2 \(rank 2\)/ }))
     fireEvent.click(screen.getByRole('button', { name: 'Move @a2 out of your top 5' }))
     const next = setArtists.mock.calls[0][0]
     expect(next.find((a) => a.id === 'a2').rank).toBe(6)

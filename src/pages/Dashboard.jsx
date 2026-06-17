@@ -2,8 +2,9 @@ import { Link } from 'react-router-dom'
 import Logo from '../components/Logo'
 import TagPill from '../components/TagPill'
 import HowItWorksStrip from '../components/HowItWorksStrip'
+import Top5Hero from '../components/Top5Hero'
 import { IDEA_STATUSES } from '../data/brief'
-import { ARTIST_STATUSES, buildDashboardSummary, buildMatchRationale, buildPipelineSummary, matchArtistsForIdea, normalizeArtistStatus } from '../data/planning'
+import { buildDashboardSummary, buildMatchRationale, buildPipelineSummary, matchArtistsForIdea } from '../data/planning'
 import { moveIntoTop5, moveOutOfTop5 } from '../data/ranking'
 
 const STATUS_DOTS = {
@@ -14,10 +15,6 @@ const STATUS_DOTS = {
 
 function artistLabel(artist) {
   return artist?.name || `@${artist?.handle}`
-}
-
-function artistStatusLabel(status) {
-  return ARTIST_STATUSES.find((s) => s.value === normalizeArtistStatus(status))?.label
 }
 
 function Panel({ title, action, children }) {
@@ -49,6 +46,16 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
       </div>
 
       <HowItWorksStrip />
+
+      {/* Top 5 — the marquee "who am I prioritising" view, hero of Home */}
+      <Panel title="Top 5" action={<Link to="/gallery" className="text-xs font-mono text-accent tracking-widest uppercase">Rank</Link>}>
+        <Top5Hero
+          artists={summary.topArtists}
+          bench={summary.benchArtists}
+          onDropOut={(id) => setArtists(moveOutOfTop5(artists, id))}
+          onPullIn={(id) => setArtists(moveIntoTop5(artists, id))}
+        />
+      </Panel>
 
       {/* Shortlist pipeline — the artist-first loop at a glance */}
       <div className="mb-2">
@@ -193,48 +200,6 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
         )}
       </Panel>
 
-      <Panel title="Top 5" action={<Link to="/gallery" className="text-xs font-mono text-accent tracking-widest uppercase">Rank</Link>}>
-        <div className="space-y-2">
-          {summary.topArtists.map((artist) => (
-            <div key={artist.id} className="flex items-center gap-2.5 py-1.5">
-              {artist.images?.[0] && (
-                <img src={artist.images[0]} alt="" className="w-7 h-7 rounded-sm object-cover shrink-0" />
-              )}
-              <Link to="/gallery" className="font-body text-cream truncate flex-1">{artistLabel(artist)}</Link>
-              <span className="font-mono text-[0.6875rem] text-cream-muted/70 shrink-0">
-                #{artist.rank} · {artistStatusLabel(artist.status)}
-              </span>
-              <button
-                onClick={() => setArtists(moveOutOfTop5(artists, artist.id))}
-                aria-label={`Move ${artistLabel(artist)} out of your top 5`}
-                title="Move out of top 5"
-                className="font-mono text-xs text-cream-muted/60 hover:text-accent border border-ink-border hover:border-accent/40 rounded-sm w-6 h-6 shrink-0 transition-colors"
-              >
-                ↓
-              </button>
-            </div>
-          ))}
-        </div>
-        {summary.benchArtists.length > 0 && (
-          <div className="mt-4 pt-3 border-t border-ink-border/60">
-            <p className="font-mono text-[0.625rem] text-cream-muted/70 tracking-widest uppercase mb-2">Waiting in the wings</p>
-            <div className="flex flex-wrap gap-1.5">
-              {summary.benchArtists.map((artist) => (
-                <button
-                  key={artist.id}
-                  onClick={() => setArtists(moveIntoTop5(artists, artist.id))}
-                  aria-label={`Move ${artistLabel(artist)} into your top 5`}
-                  title="Move into top 5"
-                  className="flex items-center gap-1.5 font-mono text-xs text-cream-muted hover:text-cream border border-ink-border hover:border-accent/40 rounded-sm px-2 py-1 transition-colors"
-                >
-                  <span aria-hidden="true" className="text-accent">↑</span>
-                  {artistLabel(artist)}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </Panel>
     </div>
   )
 }
