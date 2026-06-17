@@ -60,7 +60,7 @@ This is a personal app for one user (Pritesh) + occasional sharing with his tatt
 ### 1. Artist Gallery
 The heart of the app. Visual-first browsing of saved artists.
 
-- Each artist card shows: name, Instagram handle (linked), style tags, personal priority tier, and a gallery of reference images (manually added URLs or uploaded screenshots)
+- Each artist card shows: name, Instagram handle (linked), style tags, shortlist status, and a gallery of reference images (manually added URLs or uploaded screenshots)
 - A single ranked list set via drag (grid), rank nudge (filmstrip), or swipe-compare (the **Rank** button), plus a per-artist shortlist **status** (researching → shortlisted → contact-next → contacted → maybe → pass)
 - Four gallery views: filmstrip, compare, grid, style wall — plus a Manage mode (add-artist form + maintenance table) toggled from the page header. Tiers were removed; the artist tables below record provenance only
 - Filter by style tag
@@ -72,7 +72,7 @@ A personal mood board / brief section.
 
 - Capture tattoo themes and ideas (title, description, style tags, body placement, reference images)
 - Each idea can be linked to one or more artists from the gallery
-- No status tracking in V1
+- Per-idea status (idea → booked → done), and an optional Boards tab to group ideas
 
 ### 3. Convention Radar
 - List of upcoming tattoo conventions
@@ -89,7 +89,7 @@ A personal mood board / brief section.
 
 ## Artist Data (Pre-load this)
 
-### Favourite Artists (Tier 1 — 20 artists)
+### Favourite Artists (20)
 All are Instagram handles unless otherwise noted.
 
 | Handle | Notes |
@@ -115,7 +115,7 @@ All are Instagram handles unless otherwise noted.
 | sink_tattoo | |
 | adamblakeytattoos | |
 
-### Also Like (Tier 2 — 6 artists)
+### Also Like (6)
 
 | Handle | Notes |
 |---|---|
@@ -224,6 +224,8 @@ The MVP is already built. See `docs/README.md` (or in-app **More → Help**) for
 - Tests live in `src/test/`
 - Setup file: `src/test/setup.js` (provides localStorage mock + fake-indexeddb)
 - Use `@testing-library/react` for hooks and components
+- `npm test` is pinned to the **local** backend via `vite.config.js` (`test.env`), so a `VITE_BACKEND=supabase` in your `.env.local` won't leak in and fail the sync/owner specs.
+- Non-bundled files (e.g. `public/sw.js`) can't be imported: put the logic in a pure `src/` module with unit tests, plus a "contract test" that reads the file and asserts key invariants.
 
 ### What to test
 - **Pure functions** (data transforms, rank logic, defaults merging) — test these directly
@@ -235,6 +237,14 @@ The MVP is already built. See `docs/README.md` (or in-app **More → Help**) for
 2. Run `npm test` to confirm it fails
 3. Write the minimum implementation to make it pass
 4. Refactor if needed, keeping tests green
+
+---
+
+## Verifying in the browser (Playwright)
+
+- The PWA service worker can serve a **stale build** during local verification. Before/after checking a change, unregister SWs + clear caches, then reload (`navigator.serviceWorker.getRegistrations()` → unregister; `caches.keys()` → delete).
+- Verify against a **local-backend** dev server with a seeded fake session, never the real Supabase origin, so test data can't sync to a real account: `VITE_BACKEND=local npm run dev -- --port <p>` then set `tattoo_local_session` in localStorage.
+- Playwright MCP **real mouse clicks are flaky** on some cards/modals; if one doesn't register, drive it with a DOM-level `.click()` via `browser_evaluate`.
 
 ---
 
