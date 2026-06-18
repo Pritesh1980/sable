@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import TagPill from './TagPill'
+import ArtistImage from './ArtistImage'
 import { STYLE_TAGS, DEFAULT_STUDIOS } from '../data/artists'
 import { uploadImages } from '../hooks/useImageUpload'
 import { useAuth } from '../context/useAuth'
@@ -196,7 +197,7 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
                   className={`relative snap-center shrink-0 w-[88%] sm:w-[520px] aspect-[4/5] bg-ink-muted rounded-sm overflow-hidden cursor-pointer ${idx === 0 ? 'ring-1 ring-accent' : ''}`}
                   onClick={() => setLightbox(idx)}
                 >
-                  <img src={src} alt="" className="w-full h-full object-cover" loading="lazy" />
+                  <ArtistImage src={src} label={artist.name || `@${artist.handle}`} className="w-full h-full object-cover" monogramClassName="text-6xl" loading="lazy" />
 
                   {idx === 0 && (
                     <div className="absolute top-3 left-3 bg-accent/80 text-cream text-[0.6875rem] font-mono tracking-widest px-2 py-1 rounded-sm uppercase">
@@ -344,10 +345,11 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
           className="fixed inset-0 z-60 bg-ink-black flex items-center justify-center"
           onClick={() => setLightbox(null)}
         >
-          <img
+          <ArtistImage
             src={images[lightbox]}
-            alt=""
+            label={artist.name || `@${artist.handle}`}
             className="max-w-full max-h-full object-contain"
+            monogramClassName="text-8xl"
           />
           <button className="absolute top-5 right-5 text-cream-muted text-2xl">×</button>
           {lightbox > 0 && (

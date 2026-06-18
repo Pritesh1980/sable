@@ -1,5 +1,6 @@
 import { DEFAULT_STUDIOS } from '../data/artists'
 import Logo from '../components/Logo'
+import ArtistImage from '../components/ArtistImage'
 
 function DistanceBadge({ distanceMiles }) {
   if (distanceMiles === null || distanceMiles === undefined) {
@@ -23,13 +24,9 @@ function ArtistChip({ artist }) {
       rel="noopener noreferrer"
       className="flex items-center gap-2 bg-ink-muted/60 rounded-sm pl-1 pr-2.5 py-1 hover:bg-ink-muted transition-colors"
     >
-      {artist.images?.[0] ? (
-        <img src={artist.images[0]} alt="" className="w-6 h-6 rounded-sm object-cover shrink-0" />
-      ) : (
-        <span className="w-6 h-6 rounded-sm bg-ink-card flex items-center justify-center font-display text-cream-muted/40 text-xs shrink-0">
-          {(artist.name || artist.handle)[0].toUpperCase()}
-        </span>
-      )}
+      <span className="w-6 h-6 rounded-sm overflow-hidden shrink-0">
+        <ArtistImage src={artist.images?.[0]} label={artist.name || `@${artist.handle}`} className="w-full h-full object-cover" monogramClassName="text-xs" />
+      </span>
       <span className="text-xs font-mono text-cream-muted">@{artist.handle}</span>
     </a>
   )

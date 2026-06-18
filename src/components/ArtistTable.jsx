@@ -4,6 +4,7 @@ import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
 import { uploadImages } from '../hooks/useImageUpload'
 import { useAuth } from '../context/useAuth'
 import TagPill from './TagPill'
+import ArtistImage from './ArtistImage'
 
 function studioName(id) {
   const s = DEFAULT_STUDIOS.find((s) => s.id === id)
@@ -173,7 +174,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
                   <div className="flex gap-2 flex-wrap">
                     {artist.images.map((src, idx) => (
                       <div key={idx} className="relative w-14 h-14 rounded-sm overflow-hidden group bg-ink-muted shrink-0">
-                        <img src={src} alt="" className="w-full h-full object-cover" />
+                        <ArtistImage src={src} label={artist.name || `@${artist.handle}`} className="w-full h-full object-cover" monogramClassName="text-lg" />
                         <button
                           onClick={() => removeImage(idx)}
                           className="absolute inset-0 bg-ink-black/60 text-accent text-xs opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"

@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import TagPill from '../components/TagPill'
 import Logo from '../components/Logo'
 import BoardsSection from '../components/BoardsSection'
+import ArtistImage from '../components/ArtistImage'
 import { STYLE_TAGS, PLACEMENTS } from '../data/artists'
 import { IDEA_STATUSES, matchArtistsToIdea } from '../data/brief'
 import { buildIdeaBrief } from '../data/export'
@@ -288,7 +289,9 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
                   >
                     <div className="flex items-start gap-3">
                       {artist.images?.[0] && (
-                        <img src={artist.images[0]} alt="" className="w-12 h-14 object-cover rounded-sm shrink-0" />
+                        <span className="w-12 h-14 rounded-sm overflow-hidden shrink-0">
+                          <ArtistImage src={artist.images[0]} label={artist.name || `@${artist.handle}`} className="w-full h-full object-cover" monogramClassName="text-xl" />
+                        </span>
                       )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
@@ -334,7 +337,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
                   onClick={() => toggleArtist(a.id)}
                   className="w-full flex items-center gap-2.5 px-3 py-2 rounded-sm text-sm font-body transition-colors border border-accent/20 text-cream-muted hover:border-accent/50 hover:text-cream"
                 >
-                  {a.images?.[0] && <img src={a.images[0]} alt="" className="w-6 h-6 rounded-sm object-cover shrink-0" />}
+                  {a.images?.[0] && <span className="w-6 h-6 rounded-sm overflow-hidden shrink-0"><ArtistImage src={a.images[0]} label={a.name || `@${a.handle}`} className="w-full h-full object-cover" monogramClassName="text-xs" /></span>}
                   {a.name || `@${a.handle}`}
                 </button>
               ))}
@@ -354,7 +357,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
                 onClick={() => toggleArtist(a.id)}
                 className="w-full flex items-center gap-2.5 px-3 py-2 rounded-sm text-sm font-body transition-colors border border-accent/40 bg-accent/5 text-cream"
               >
-                {a.images?.[0] && <img src={a.images[0]} alt="" className="w-6 h-6 rounded-sm object-cover shrink-0" />}
+                {a.images?.[0] && <span className="w-6 h-6 rounded-sm overflow-hidden shrink-0"><ArtistImage src={a.images[0]} label={a.name || `@${a.handle}`} className="w-full h-full object-cover" monogramClassName="text-xs" /></span>}
                 {a.name || `@${a.handle}`}
               </button>
             ))}
@@ -364,7 +367,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
                 onClick={() => toggleArtist(a.id)}
                 className="w-full flex items-center gap-2.5 px-3 py-2 rounded-sm text-sm font-body transition-colors border border-ink-border text-cream-muted hover:border-cream-muted/50"
               >
-                {a.images?.[0] && <img src={a.images[0]} alt="" className="w-6 h-6 rounded-sm object-cover shrink-0" />}
+                {a.images?.[0] && <span className="w-6 h-6 rounded-sm overflow-hidden shrink-0"><ArtistImage src={a.images[0]} label={a.name || `@${a.handle}`} className="w-full h-full object-cover" monogramClassName="text-xs" /></span>}
                 {a.name || `@${a.handle}`}
               </button>
             ))}

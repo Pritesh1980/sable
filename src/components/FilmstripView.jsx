@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import TagPill from './TagPill'
+import ArtistImage from './ArtistImage'
 import { DEFAULT_STUDIOS } from '../data/artists'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
 
@@ -147,7 +148,7 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onSetStatus, isFirst, 
               className="shrink-0 w-24 h-24 lg:w-28 lg:h-28 xl:w-32 xl:h-32 rounded-sm overflow-hidden bg-ink-muted cursor-pointer hover:ring-1 hover:ring-cream-muted/30 transition-all"
               onClick={() => onOpen(artist)}
             >
-              <img src={src} alt="" className="w-full h-full object-cover" />
+              <ArtistImage src={src} label={artist.name || `@${artist.handle}`} className="w-full h-full object-cover" monogramClassName="text-2xl" />
             </div>
           ))
         ) : (

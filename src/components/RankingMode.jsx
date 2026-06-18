@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { computeSwipeRanking } from '../data/ranking'
+import ArtistImage from './ArtistImage'
 
 function GroupSection({ label, items, accent }) {
   if (items.length === 0) return null
@@ -13,7 +14,7 @@ function GroupSection({ label, items, accent }) {
       <div className="flex flex-wrap gap-2">
         {items.map((a) => (
           <span key={a.id} className="inline-flex items-center gap-1.5 font-body text-[0.8125rem] text-cream-muted bg-ink-card px-2 py-1 rounded-sm">
-            {a.images?.[0] && <img src={a.images[0]} alt="" className="w-5 h-5 rounded-sm object-cover shrink-0" />}
+            {a.images?.[0] && <span className="w-5 h-5 rounded-sm overflow-hidden shrink-0"><ArtistImage src={a.images[0]} label={a.name || `@${a.handle}`} className="w-full h-full object-cover" monogramClassName="text-[0.625rem]" /></span>}
             {a.name || `@${a.handle}`}
           </span>
         ))}
@@ -221,10 +222,11 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
       {/* Image */}
       <div className="flex-1 relative overflow-hidden">
         {coverImage ? (
-          <img
+          <ArtistImage
             key={currentIdx}
             src={coverImage}
-            alt={displayName}
+            label={displayName}
+            monogramClassName="text-8xl"
             className={`w-full h-full object-cover transition-all duration-200 ${transitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
             style={{
               transform: `rotate(${dragX * 0.025}deg) translateX(${dragX * 0.25}px)`,

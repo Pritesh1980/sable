@@ -10,6 +10,27 @@ const artistLabel = (a) => a?.name || `@${a?.handle}`
 const statusLabel = (s) =>
   ARTIST_STATUSES.find((x) => x.value === normalizeArtistStatus(s))?.label || ''
 
+// A single cover that degrades to the rank glyph if the image is absent or
+// fails to load (e.g. the public build ships without the curated seed images).
+function CoverTile({ item }) {
+  const [failed, setFailed] = useState(false)
+  if (item.image && !failed) {
+    return (
+      <img
+        src={item.image}
+        alt=""
+        className="w-full h-full object-cover"
+        onError={() => setFailed(true)}
+      />
+    )
+  }
+  return (
+    <span className="flex items-center justify-center w-full h-full bg-ink-card text-cream-muted/50 font-display text-2xl">
+      {item.rank}
+    </span>
+  )
+}
+
 // Flat, dependency-free gallery. Shown while the WebGL chunk loads, and as the
 // permanent experience for offline / no-WebGL / reduced-motion users.
 function StaticGallery({ items, activeIndex, onSelect }) {
@@ -29,13 +50,7 @@ function StaticGallery({ items, activeIndex, onSelect }) {
                 : 'border-ink-border w-16 sm:w-20 h-2/3 opacity-50 hover:opacity-90'
             }`}
           >
-            {item.image ? (
-              <img src={item.image} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <span className="flex items-center justify-center w-full h-full bg-ink-card text-cream-muted/50 font-display text-2xl">
-                {item.rank}
-              </span>
-            )}
+            <CoverTile item={item} />
             <span className="absolute top-1 left-1.5 font-display text-cream text-lg drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
               {item.rank}
             </span>

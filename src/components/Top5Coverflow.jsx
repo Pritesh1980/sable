@@ -13,6 +13,27 @@ const DEPTH = 1.5 // world units per layout z-unit
 const LERP = 0.16 // easing toward target each frame
 const ACCENT = 0x8b1a1a // deep red backing glow on the focused card
 
+// A dark card bearing the rank glyph — used until (or instead of) the artist
+// image, so cards stay identifiable when the seed images aren't shipped.
+function makeLabelTexture(label) {
+  const canvas = document.createElement('canvas')
+  canvas.width = 256
+  canvas.height = 346
+  const ctx = canvas.getContext('2d')
+  if (ctx) {
+    ctx.fillStyle = '#141210'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.fillStyle = 'rgba(245, 240, 232, 0.18)'
+    ctx.font = '600 140px Georgia, "Times New Roman", serif'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(String(label ?? ''), canvas.width / 2, canvas.height / 2)
+  }
+  const tex = new THREE.CanvasTexture(canvas)
+  tex.colorSpace = THREE.SRGBColorSpace
+  return tex
+}
+
 export default function Top5Coverflow({ items, activeIndex, onSelect }) {
   const mountRef = useRef(null)
   const activeRef = useRef(activeIndex)
@@ -46,14 +67,16 @@ export default function Top5Coverflow({ items, activeIndex, onSelect }) {
 
     // One mesh per artist; a dim placeholder material until the texture loads.
     const cards = items.map((item) => {
+      // Start every card on a rank-glyph texture; the photo replaces it on load.
+      const labelTex = makeLabelTexture(item.rank)
       const material = new THREE.MeshBasicMaterial({
-        color: 0x222020,
+        map: labelTex,
         transparent: true,
         side: THREE.DoubleSide,
       })
       const mesh = new THREE.Mesh(geometry, material)
       scene.add(mesh)
-      disposables.push(material)
+      disposables.push(material, labelTex)
       if (item.image) {
         loader.load(
           item.image,
@@ -65,7 +88,7 @@ export default function Top5Coverflow({ items, activeIndex, onSelect }) {
             disposables.push(tex)
           },
           undefined,
-          () => {}, // keep the placeholder on load failure
+          () => {}, // keep the rank-glyph placeholder on load failure
         )
       }
       return mesh

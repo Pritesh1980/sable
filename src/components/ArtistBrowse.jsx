@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import ArtistImage from './ArtistImage'
 
 export default function ArtistBrowse({ artists, startIndex = 0, onClose }) {
   const withImages = artists.filter((a) => a.images?.length > 0)
@@ -91,11 +92,12 @@ export default function ArtistBrowse({ artists, startIndex = 0, onClose }) {
         onTouchEnd={onTouchEnd}
         onClick={onTapImage}
       >
-        <img
+        <ArtistImage
           key={`${artistIdx}-${imageIdx}`}
           src={images[imageIdx]}
-          alt={displayName}
+          label={displayName}
           className="w-full h-full object-contain animate-fade-in"
+          monogramClassName="text-8xl"
         />
 
         {/* Image progress dots */}

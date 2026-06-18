@@ -1,3 +1,5 @@
+import ArtistImage from './ArtistImage'
+
 export default function StyleWall({ artists, onOpenArtist }) {
   const allImages = artists
     .filter((a) => a.images?.length > 0)
@@ -19,10 +21,11 @@ export default function StyleWall({ artists, onOpenArtist }) {
           className="relative mb-2 break-inside-avoid rounded-sm overflow-hidden cursor-pointer group"
           onClick={() => onOpenArtist(artist)}
         >
-          <img
+          <ArtistImage
             src={src}
-            alt=""
+            label={artist.name || `@${artist.handle}`}
             className="w-full block group-hover:scale-105 transition-transform duration-500"
+            fallbackClassName="aspect-[4/5]"
           />
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink-black/90 to-transparent px-2.5 py-3 translate-y-1 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-300">
             <p className="font-display text-cream text-sm leading-tight">

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import TagPill from './TagPill'
+import ArtistImage from './ArtistImage'
 import { DEFAULT_STUDIOS } from '../data/artists'
 
 function CompareColumn({ artist, onOpen, onRemove }) {
@@ -46,7 +47,7 @@ function CompareColumn({ artist, onOpen, onRemove }) {
           <div className="grid grid-cols-2 gap-2">
             {artist.images.map((src, i) => (
               <div key={i} className="aspect-square bg-ink-muted rounded-sm overflow-hidden">
-                <img src={src} alt="" className="w-full h-full object-cover" />
+                <ArtistImage src={src} label={displayName} className="w-full h-full object-cover" monogramClassName="text-2xl" />
               </div>
             ))}
           </div>
@@ -84,7 +85,7 @@ function ArtistPicker({ artists, selected, onSelect }) {
             onClick={() => { onSelect(a.id); setSearch('') }}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-sm text-sm font-body transition-colors border border-ink-border text-cream-muted hover:border-cream-muted/50 hover:text-cream"
           >
-            {a.images?.[0] && <img src={a.images[0]} alt="" className="w-6 h-6 rounded-sm object-cover shrink-0" />}
+            {a.images?.[0] && <span className="w-6 h-6 rounded-sm overflow-hidden shrink-0"><ArtistImage src={a.images[0]} label={a.name || `@${a.handle}`} className="w-full h-full object-cover" monogramClassName="text-xs" /></span>}
             {a.name || `@${a.handle}`}
           </button>
         ))}

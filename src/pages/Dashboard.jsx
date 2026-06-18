@@ -3,6 +3,7 @@ import Logo from '../components/Logo'
 import TagPill from '../components/TagPill'
 import HowItWorksStrip from '../components/HowItWorksStrip'
 import Top5Hero from '../components/Top5Hero'
+import ArtistImage from '../components/ArtistImage'
 import { IDEA_STATUSES } from '../data/brief'
 import { buildDashboardSummary, buildMatchRationale, buildPipelineSummary, matchArtistsForIdea } from '../data/planning'
 import { moveIntoTop5, moveOutOfTop5 } from '../data/ranking'
@@ -132,7 +133,9 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
                   className="flex items-center gap-3 bg-ink-card border border-accent/25 rounded-sm px-3 py-3"
                 >
                   {artist.images?.[0] && (
-                    <img src={artist.images[0]} alt="" className="w-10 h-12 rounded-sm object-cover shrink-0" />
+                    <span className="w-10 h-12 rounded-sm overflow-hidden shrink-0">
+                      <ArtistImage src={artist.images[0]} label={artistLabel(artist)} className="w-full h-full object-cover" monogramClassName="text-base" />
+                    </span>
                   )}
                   <div className="min-w-0 flex-1">
                     <p className="font-display text-cream text-lg leading-tight truncate">{artistLabel(artist)}</p>

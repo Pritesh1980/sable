@@ -5,6 +5,7 @@ import Logo from '../components/Logo'
 import PromptPackComposer from '../components/PromptPackComposer'
 import ReliefStlDrawer from '../components/ReliefStlDrawer'
 import TagPill from '../components/TagPill'
+import ArtistImage from '../components/ArtistImage'
 import { STYLE_TAGS } from '../data/artists'
 import {
   addConceptVariant,
@@ -633,17 +634,9 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
                               rel="noopener noreferrer"
                               className="group"
                             >
-                              {artist.images?.[0] ? (
-                                <div className="aspect-square rounded-sm overflow-hidden bg-ink-muted mb-1">
-                                  <img src={artist.images[0]} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                </div>
-                              ) : (
-                                <div className="aspect-square rounded-sm bg-ink-muted mb-1 flex items-center justify-center">
-                                  <span className="font-display text-cream-muted/20 text-xl">
-                                    {(artist.name || artist.handle)[0].toUpperCase()}
-                                  </span>
-                                </div>
-                              )}
+                              <div className="aspect-square rounded-sm overflow-hidden bg-ink-muted mb-1">
+                                <ArtistImage src={artist.images?.[0]} label={artist.name || `@${artist.handle}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" monogramClassName="text-xl" />
+                              </div>
                               <p className="font-display text-cream text-xs leading-tight truncate">{artist.name || `@${artist.handle}`}</p>
                               <p className="font-mono text-cream-muted/40 text-[0.5rem] tracking-widest">#{artist.rank}</p>
                             </a>
