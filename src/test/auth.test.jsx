@@ -27,7 +27,7 @@ describe('auth gate (local backend)', () => {
     expect(screen.queryByText('secret content')).not.toBeInTheDocument()
 
     fireEvent.change(screen.getByPlaceholderText('you@example.com'), {
-      target: { value: 'me@pritesh.net' },
+      target: { value: 'owner@example.com' },
     })
     fireEvent.change(screen.getByPlaceholderText('••••••••'), {
       target: { value: 'hunter2' },

@@ -21,7 +21,7 @@ not `fullPage` — the fixed bottom nav floats to the middle on full-page captur
 1. Start a dev server pinned to the offline backend so seeded sample data can't sync to a
    real account: `VITE_BACKEND=local npm run dev -- --port 5174` (then capture against
    http://localhost:5174). Seed a local session first:
-   `localStorage.setItem('tattoo_local_session', JSON.stringify({ user: { id: 'local-me@pritesh.net', email: 'me@pritesh.net' } }))`.
+   `localStorage.setItem('tattoo_local_session', JSON.stringify({ user: { id: 'local-owner@example.com', email: 'owner@example.com' } }))`.
 2. Seed sample data **in the capture browser only** so empty pages (Brief, Boards, Concepts)
    have content. Run this in the browser console / Playwright `evaluate` against the
    localhost origin, then reload. Object shapes must match the app (`src/data/brief.js`,

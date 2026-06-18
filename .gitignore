@@ -46,3 +46,8 @@ dist-ssr
 # Local audit/tagging artifacts
 audit-page*.png
 tags-batch*.jpeg
+
+# Curated artist reference images — third-party portfolio work kept local only,
+# never redistributed in the public repo. The app falls back to monogram
+# placeholders (see src/components/ArtistImage.jsx) when these are absent.
+public/images/artists/

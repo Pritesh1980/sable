@@ -52,6 +52,11 @@ npm run preview
 
 Seed data lives in `src/data/`, with the artist list in `src/data/artists.js`.
 
+> **Artist images:** the curated reference images under `public/images/artists/`
+> are third-party portfolio work and are **not** included in this repository.
+> When they are absent (e.g. a fresh clone), the UI falls back to monogram
+> placeholders via `src/components/ArtistImage.jsx`.
+
 Runtime edits are stored locally in the browser:
 
 - `localStorage`: artist metadata, ideas, boards, concepts, theme, font size, convention overrides
@@ -68,3 +73,8 @@ Static deployment has not been configured yet. Before hosting on S3 + CloudFront
 ## Development Notes
 
 Follow the project convention in `AGENTS.md`: use TDD for new behavior, keep changes local-first unless deployment infrastructure exists, and do not build public sharing features until hosting is ready.
+
+## Licence
+
+All rights reserved — see [`LICENSE`](LICENSE). The code is published for
+reference only; it is not licensed for reuse or redistribution.

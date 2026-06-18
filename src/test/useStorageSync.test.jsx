@@ -11,7 +11,7 @@ const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>
 function seedSession() {
   localStorage.setItem(
     'tattoo_local_session',
-    JSON.stringify({ user: { id: 'local-me@pritesh.net', email: 'me@pritesh.net' } })
+    JSON.stringify({ user: { id: 'local-owner@example.com', email: 'owner@example.com' } })
   )
 }
 

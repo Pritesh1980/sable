@@ -76,7 +76,7 @@ describe('artist image blob pipeline', () => {
   it('migrates a legacy IndexedDB data-URL to a blob key in the remote metadata', async () => {
     const artistId = DEFAULT_ARTISTS[0].id
     await idbPut('tattoo-images-v1', 'artist-images', artistId, ['data:image/jpeg;base64,LEGACY'])
-    seedSession('me@pritesh.net')
+    seedSession('owner@example.com')
 
     const { result } = renderSynced()
     await waitFor(() => expect(result.current.auth.user).toBeTruthy())

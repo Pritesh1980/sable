@@ -48,7 +48,7 @@ describe('idea/concept image migration to blobs', () => {
       'tattoo_ideas',
       JSON.stringify([{ id: 'i1', title: 'Koi', images: [{ url: 'data:image/jpeg;base64,IDEA', note: 'n' }] }])
     )
-    seedSession('me@pritesh.net')
+    seedSession('owner@example.com')
 
     const { result } = render('tattoo_ideas', [], ideasCodec)
     await waitFor(() => expect(result.current.auth.user).toBeTruthy())
@@ -79,7 +79,7 @@ describe('idea/concept image migration to blobs', () => {
         },
       ])
     )
-    seedSession('me@pritesh.net')
+    seedSession('owner@example.com')
 
     const { result } = render('tattoo_concepts', [], conceptsCodec)
     await waitFor(() => expect(result.current.auth.user).toBeTruthy())

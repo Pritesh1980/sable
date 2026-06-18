@@ -60,8 +60,8 @@ describe.each(adapters)('backend contract: %s', (_name, make) => {
       const events = []
       const unsub = backend.auth.onAuthStateChange((s) => events.push(s))
 
-      const session = await backend.auth.signIn({ email: 'me@pritesh.net', password: 'x' })
-      expect(session.user.email).toContain('pritesh')
+      const session = await backend.auth.signIn({ email: 'owner@example.com', password: 'x' })
+      expect(session.user.email).toBe('owner@example.com')
       expect(await backend.auth.getSession()).not.toBeNull()
       expect(events.at(-1)?.user).toBeTruthy()
 

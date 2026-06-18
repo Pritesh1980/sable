@@ -25,7 +25,7 @@ describe('useArtistStorage owner seeding + sync', () => {
   })
 
   it('seeds DEFAULT_ARTISTS into the owner remote when it is empty', async () => {
-    seedSession('me@pritesh.net')
+    seedSession('owner@example.com')
     const { result } = renderSynced()
     await waitFor(() => expect(result.current.auth.user).toBeTruthy())
 
@@ -52,7 +52,7 @@ describe('useArtistStorage owner seeding + sync', () => {
       'tattoo_artists_meta',
       JSON.stringify([{ ...DEFAULT_ARTISTS[0], notes: 'my private note' }])
     )
-    seedSession('me@pritesh.net')
+    seedSession('owner@example.com')
 
     const { result } = renderSynced()
     await waitFor(() => expect(result.current.auth.user).toBeTruthy())

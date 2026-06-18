@@ -1,0 +1,12 @@
+Copyright (c) 2026 Pritesh. All rights reserved.
+
+This source code is published for reference and portfolio purposes only.
+No licence is granted to use, copy, modify, distribute, or create derivative
+works from this code without the author's prior written permission.
+
+Third-party content notice
+---------------------------
+The artist reference images this app displays (under public/images/artists/)
+are the copyrighted work of the respective tattoo artists. They are NOT part of
+this repository and are NOT redistributed here. The application degrades
+gracefully to placeholder tiles when those images are absent.

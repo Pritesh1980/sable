@@ -5,7 +5,7 @@ import App from '../App'
 import { AuthProvider } from '../context/AuthContext'
 import { ThemeProvider } from '../context/ThemeContext'
 
-function seedSession(email = 'me@pritesh.net') {
+function seedSession(email = 'owner@example.com') {
   localStorage.setItem(
     'tattoo_local_session',
     JSON.stringify({ user: { id: `local-${email}`, email } })
