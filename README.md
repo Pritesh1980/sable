@@ -1,6 +1,6 @@
-# Tattoo
+# Sable
 
-Tattoo is a local-first Progressive Web App for planning a personal tattoo journey. It keeps a curated artist collection, ranks favourites, links artists to tattoo ideas, groups ideas into mood boards, generates AI concept prompts/results, exports relief STL files from concept images, and tracks useful studio and convention context.
+Sable is a local-first Progressive Web App for planning a personal tattoo journey. It keeps a curated artist collection, ranks favourites, links artists to tattoo ideas, groups ideas into mood boards, generates AI concept prompts/results, exports relief STL files from concept images, and tracks useful studio and convention context.
 
 The app is built for Pritesh's own workflow. It runs locally today, with S3 + CloudFront deployment intentionally left for later.
 

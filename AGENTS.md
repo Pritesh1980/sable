@@ -1,4 +1,4 @@
-# Tattoo — Agent Context
+# Sable — Agent Context
 
 **Canonical project context lives in [`CLAUDE.md`](CLAUDE.md). Read that file first.**
 

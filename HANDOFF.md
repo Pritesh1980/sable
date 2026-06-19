@@ -5,7 +5,7 @@ Paste this (filled in) into a new ChatGPT / Gemini / fresh Claude session when s
 ---
 
 ## Project
-Tattoo — personal PWA for mapping tattoo themes against favourite artists. React + Tailwind, localStorage, no backend yet. Full context in `CLAUDE.md` (paste that too if the new tool has no prior exposure).
+Sable — personal PWA for mapping tattoo themes against favourite artists. React + Tailwind, localStorage, no backend yet. Full context in `CLAUDE.md` (paste that too if the new tool has no prior exposure).
 
 ## Current task
 <!-- One sentence. What are you trying to accomplish right now? -->

@@ -31,7 +31,7 @@ export default function HowItWorksStrip() {
       >
         ✕
       </button>
-      <p className="font-mono text-[0.625rem] text-cream-muted tracking-widest uppercase mb-3">How Tattoo works</p>
+      <p className="font-mono text-[0.625rem] text-cream-muted tracking-widest uppercase mb-3">How Sable works</p>
       <div className="flex gap-3">
         {STEPS.map(({ n, label, to }) => (
           <Link key={n} to={to} className="flex-1 group">

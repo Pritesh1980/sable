@@ -16,7 +16,7 @@ const MORE_LINKS = [
   { to: '/conventions', label: 'Radar', icon: '◎', description: 'Conventions near you' },
   { to: '/studios', label: 'Studios', icon: '⌂', description: 'Where your artists work' },
   { to: '/settings', label: 'Settings', icon: '⚙', description: 'Backup, account & sign out' },
-  { to: '/help', label: 'Help', icon: '?', description: 'How to use Tattoo' },
+  { to: '/help', label: 'Help', icon: '?', description: 'How to use Sable' },
 ]
 
 function MoreMenu({ onClose }) {

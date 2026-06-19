@@ -14,7 +14,7 @@ const SECTIONS = [
       'The bottom bar mirrors the workflow: Home (what’s next), Artists (curate & rank), Ideas (capture & match), AI (generate concepts). Tap More (⋯) for Radar, Studios, Settings and this Help page.',
       'Home leads with your Top 5 — followed by the shortlist pipeline (Researching → Shortlisted → Contact next), idea stats, contact-next cards and idea→artist matches. Contacted and parked (Maybe/Pass) artists show only as counts under the strip.',
       'The Top 5 is the hero of Home: a 3D coverflow of your five highest-ranked current artists. Drag sideways or tap a card to bring it to the front, then tap "Drop ↓" to move that artist out, or tap a name under "waiting in the wings" to pull one in — ranks reshuffle automatically. Devices without 3D, or with reduced motion set, get a flat artwork gallery with the same controls.',
-      'The "How Tattoo works" strip on Home links each step of the loop; dismiss it with ✕ once you don’t need it (it stays dismissed on that device).',
+      'The "How Sable works" strip on Home links each step of the loop; dismiss it with ✕ once you don’t need it (it stays dismissed on that device).',
       'Top-right: tap A+/A− to change text size, ◑/◐ to switch dark/light theme, and ⏻ to sign out (this clears your data from the current device).',
       'Your artists, studios and conventions come pre-loaded. Ideas, boards and concepts start empty — you build those.',
     ],
@@ -78,7 +78,7 @@ const SECTIONS = [
     image: 'concepts.png',
     steps: [
       'Open AI. In Prompt Pack, start from free text or select a Brief idea to pull in placement, tags, linked artists and reference notes.',
-      'Tap Generate Prompt Pack, switch between ChatGPT, Adobe Firefly, Gemini and Claude prompts, then Save Pack before leaving Tattoo.',
+      'Tap Generate Prompt Pack, switch between ChatGPT, Adobe Firefly, Gemini and Claude prompts, then Save Pack before leaving Sable.',
       'Copy the provider prompt you want to use. Bring results back to the saved card with Paste image or Paste text.',
       'Save multiple AI outputs as result variants on a concept. Each variant can hold an image, generated text, notes and a rating.',
       'For result variants with images, open the result and use Make STL to export a printable relief-style heightmap file.',
@@ -156,7 +156,7 @@ export default function Help() {
     <div className="min-h-screen bg-ink-black max-w-3xl mx-auto px-4 md:px-8 pt-safe-top pb-24">
       <div className="pt-12 pb-6">
         <Logo size={24} className="mb-2" />
-        <h1 className="font-display text-3xl text-cream">How to use Tattoo</h1>
+        <h1 className="font-display text-3xl text-cream">How to use Sable</h1>
         <p className="font-body text-cream-muted/80 text-sm mt-2 leading-relaxed max-w-prose">
           A quick guide to every part of the app. Tap a section to expand it. The full
           illustrated documentation lives in the <span className="font-mono text-cream-muted">/docs</span> folder.

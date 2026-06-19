@@ -8,7 +8,7 @@
 
 **AI** is a sketchpad and prompt workbench for concepts. You can turn a short idea
 or an existing Brief idea into provider-specific prompts for ChatGPT, Adobe Firefly,
-Gemini and Claude, then bring the generated results back into Tattoo.
+Gemini and Claude, then bring the generated results back into Sable.
 
 ![The AI Concepts page](../public/guide/concepts.png)
 
@@ -28,10 +28,10 @@ Tap **Generate Prompt Pack** to create tailored prompts for:
 - **Gemini** — visual critique, placement and tattooability risks.
 - **Claude** — artist-facing language, consultation brief and DM wording.
 
-Switch between providers, then tap **Save Pack** before leaving Tattoo so the full
+Switch between providers, then tap **Save Pack** before leaving Sable so the full
 prompt pack is kept as a concept card. Copy the active prompt, run it in the AI tool,
 then use **Paste image** or **Paste text** on the saved card to bring generated output
-back into Tattoo.
+back into Sable.
 
 ## Quick concept prompt
 
@@ -77,7 +77,7 @@ or upload a result. Below that:
 
 ## Export a relief STL
 
-When a saved AI result has an image, open the result and choose **Make STL**. Tattoo turns
+When a saved AI result has an image, open the result and choose **Make STL**. Sable turns
 the image into a relief-style heightmap where brighter areas become raised surface detail.
 
 Start with the defaults:

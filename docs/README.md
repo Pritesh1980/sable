@@ -1,6 +1,6 @@
-# Tattoo — User Guide
+# Sable — User Guide
 
-**Tattoo** is a personal, visual-first app for planning a tattoo journey: collecting
+**Sable** is a personal, visual-first app for planning a tattoo journey: collecting
 favourite artists, capturing ideas, matching the two together, and keeping an eye on
 conventions and studios. It runs in your browser and installs to your phone's home
 screen like a native app. Sign in with your account and your data syncs across devices,
@@ -66,7 +66,7 @@ The pieces are designed to feed each other:
 
 ## Installing on your iPhone
 
-Tattoo is a Progressive Web App, so it installs without an app store:
+Sable is a Progressive Web App, so it installs without an app store:
 
 1. Open the app's URL in **Safari**.
 2. Tap the **Share** button, then **Add to Home Screen**.

@@ -23,7 +23,7 @@ export function LogoMark({ size = 32, className = '' }) {
 export function Wordmark({ className = '' }) {
   return (
     <span className={`font-display tracking-[0.35em] text-sm uppercase ${className}`}>
-      Tattoo
+      Sable
     </span>
   )
 }

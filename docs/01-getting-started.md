@@ -13,7 +13,7 @@ you do next?*
 
 ![Home led by the Top 5 coverflow](../public/guide/dashboard.png)
 
-- **How Tattoo works** — a dismissible three-step strip of the core loop: curate your
+- **How Sable works** — a dismissible three-step strip of the core loop: curate your
   artists → rank & shortlist → match ideas & contact. Tap ✕ once you know your way around
   (it stays dismissed on that device).
 - **Top 5** — the hero of Home: your five highest-ranked *current* artists (contacted and

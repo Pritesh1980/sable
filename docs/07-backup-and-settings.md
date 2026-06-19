@@ -6,7 +6,7 @@
 
 ---
 
-Tattoo has no server — everything you create (artists, photos, ideas, boards, concepts,
+Sable has no server — everything you create (artists, photos, ideas, boards, concepts,
 ranks, tags, notes) is stored in your browser on this device. The **Backup** panel in
 **More → Settings** is how you protect and move it — it also shows your account and sign-out.
 

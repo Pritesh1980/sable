@@ -1,8 +1,8 @@
-# Tattoo — Project Context for Claude Code
+# Sable — Project Context for Claude Code
 
 ## What We're Building
 
-A personal Progressive Web App (PWA) called **Tattoo** — a visual-first artist discovery and prioritisation tool. The core purpose is to map tattoo themes and style preferences against a curated list of favourite artists, helping plan a tattoo journey.
+A personal Progressive Web App (PWA) called **Sable** — a visual-first artist discovery and prioritisation tool. The core purpose is to map tattoo themes and style preferences against a curated list of favourite artists, helping plan a tattoo journey.
 
 This is a personal app for one user (Pritesh) + occasional sharing with his tattoo artist via a read-only link.
 

@@ -9,7 +9,7 @@ describe('PWA manifest', () => {
   it('points to installable icon files that exist', () => {
     const manifest = JSON.parse(readFileSync(join(root, 'public/manifest.json'), 'utf8'))
 
-    expect(manifest.name).toBe('Tattoo')
+    expect(manifest.name).toBe('Sable')
     expect(manifest.display).toBe('standalone')
     expect(manifest.icons.length).toBeGreaterThanOrEqual(2)
 
