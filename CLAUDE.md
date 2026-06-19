@@ -78,7 +78,7 @@ A personal mood board / brief section.
 - List of upcoming tattoo conventions
 - Distance from **Milton Keynes** shown for each
 - Cross-reference: which saved artists are attending each convention (surfaced on the dashboard, artist detail, and idea editor)
-- Curated in `src/data/conventions.js`; date-aware ordering (upcoming first)
+- Curated in `src/data/conventions.js`; ordered by distance (local show as hero, then nearest first)
 
 ### 4. AI Concept Generator (Concepts page)
 - Text prompt → copy a structured prompt into ChatGPT/Claude/Gemini and paste the result back, **or** generate an image directly with a user-supplied OpenAI or Gemini key

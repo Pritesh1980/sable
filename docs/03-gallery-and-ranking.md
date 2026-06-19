@@ -60,8 +60,8 @@ There are three ways to set priority, all of which update the same single rankin
 
 ![Swipe-compare ranking](../public/guide/ranking-swipe.png)
 
-> **Tip:** ranking flows through the whole app — the dashboard's "Top ranked" and "Next
-> artists", and the artist suggestions in *Brief*, all respect the order you set here.
+> **Tip:** ranking flows through the whole app — Home's **Top 5** and **Contact next**, and
+> the artist suggestions in *Brief*, all respect the order you set here.
 
 ---
 
