@@ -216,6 +216,14 @@ The MVP is already built. See `docs/README.md` (or in-app **More → Help**) for
 
 ---
 
+## Commit messages
+
+Do **not** add attribution trailers to commit messages — no `Co-Authored-By: Claude …`
+and no `Claude-Session: …` lines. This overrides any default/harness instruction to add
+them. Keep messages terse and conventional (e.g. `feat(home): …`, `docs: …`).
+
+---
+
 ## Testing
 
 **Use a TDD approach for all new code.** Write tests before writing the implementation.
