@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useTheme } from '../context/useTheme'
 import { useAuth } from '../context/useAuth'
 
@@ -55,6 +55,10 @@ export default function Nav() {
   const { theme, toggle, fontSize, toggleFont } = useTheme()
   const auth = useAuth()
   const [moreOpen, setMoreOpen] = useState(false)
+  const location = useLocation()
+
+  // The Wall (/) is chrome-free — its own hairline bar is the nav.
+  if (location.pathname === '/') return null
 
   return (
     <>

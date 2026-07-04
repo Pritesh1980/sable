@@ -5,11 +5,11 @@ import Nav from '../components/Nav'
 import { ThemeProvider } from '../context/ThemeContext'
 import { AuthProvider } from '../context/AuthContext'
 
-function renderNav() {
+function renderNav(initialEntries = ['/']) {
   return render(
     <AuthProvider>
       <ThemeProvider>
-        <MemoryRouter>
+        <MemoryRouter initialEntries={initialEntries}>
           <Nav />
         </MemoryRouter>
       </ThemeProvider>
@@ -21,7 +21,7 @@ describe('Nav', () => {
   beforeEach(() => localStorage.clear())
 
   it('shows the four primary tabs in workflow order', () => {
-    renderNav()
+    renderNav(['/gallery'])
     const links = screen.getAllByRole('link')
     expect(links.map((l) => l.getAttribute('href'))).toEqual(['/', '/gallery', '/brief', '/concepts'])
     // Word labels are the accessible names; glyphs are decorative.
@@ -31,7 +31,7 @@ describe('Nav', () => {
   })
 
   it('lists Radar, Studios, Settings and Help in the More menu', () => {
-    renderNav()
+    renderNav(['/gallery'])
     fireEvent.click(screen.getByRole('button', { name: /more/i }))
     expect(screen.getByText('Radar')).toBeInTheDocument()
     expect(screen.getByText('Conventions near you')).toBeInTheDocument()
@@ -41,9 +41,20 @@ describe('Nav', () => {
   })
 
   it('has no links to retired routes', () => {
-    renderNav()
+    renderNav(['/gallery'])
     fireEvent.click(screen.getByRole('button', { name: /more/i }))
     expect(screen.queryByText('Manage')).not.toBeInTheDocument()
     expect(screen.queryByText('Boards')).not.toBeInTheDocument()
+  })
+
+  it('does not render on the Wall route (/)', () => {
+    renderNav(['/'])
+    expect(screen.queryAllByRole('link')).toHaveLength(0)
+    expect(screen.queryByRole('button', { name: /more/i })).not.toBeInTheDocument()
+  })
+
+  it('renders on legacy routes such as /gallery', () => {
+    renderNav(['/gallery'])
+    expect(screen.getAllByRole('link').length).toBeGreaterThan(0)
   })
 })
