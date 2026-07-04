@@ -3,6 +3,7 @@ import ArtistImage from './ArtistImage'
 import GlCrossfade from './GlCrossfade'
 import useWallKeyboard from '../hooks/useWallKeyboard'
 import useIdleFade from '../hooks/useIdleFade'
+import useDialogFocus from '../hooks/useDialogFocus'
 import { resolveTransitionMode } from '../lib/gl'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
 
@@ -98,6 +99,7 @@ export default function WallViewer({
   })
 
   const idle = useIdleFade(2000)
+  const dialogRef = useDialogFocus(open)
 
   // Paste (⌘V) with the viewer open adds the pasted image to the artist
   // currently in view.
@@ -129,7 +131,14 @@ export default function WallViewer({
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-v2-ink overflow-hidden">
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${current.artistName} — image ${positionInArtist + 1} of ${artistImageCount}`}
+      tabIndex={-1}
+      className="fixed inset-0 z-50 bg-v2-ink overflow-hidden focus:outline-none"
+    >
       {/* t9: WebGL crossfade/ripple transition layer. Chosen once per open via
           resolveTransitionMode(); 'css' keeps the plain <img> path untouched. */}
       {transitionMode === 'webgl' ? (

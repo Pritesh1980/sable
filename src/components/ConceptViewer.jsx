@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import useIdleFade from '../hooks/useIdleFade'
+import useDialogFocus from '../hooks/useDialogFocus'
 import ConceptVariantLab from './ConceptVariantLab'
 import GlCrossfade from './GlCrossfade'
 import SavedPromptPack from './SavedPromptPack'
@@ -107,6 +108,7 @@ export default function ConceptViewer({
   // Resolve the transition renderer once per viewer open (not per keypress).
   const [transitionMode] = useState(resolveTransitionMode)
   const idle = useIdleFade(2000)
+  const dialogRef = useDialogFocus(open)
 
   useEffect(() => {
     setIndex(initialIndex)
@@ -147,7 +149,14 @@ export default function ConceptViewer({
   const current = items[index]
 
   return (
-    <div className="fixed inset-0 z-50 bg-v2-ink overflow-hidden">
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Concept: ${current.title || current.prompt || 'untitled'}`}
+      tabIndex={-1}
+      className="fixed inset-0 z-50 bg-v2-ink overflow-hidden focus:outline-none"
+    >
       {/* t9: WebGL crossfade/ripple chosen once per open; 'css' keeps <img>. */}
       {transitionMode === 'webgl' ? (
         <div className="absolute inset-0">

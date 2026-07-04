@@ -28,6 +28,14 @@ function addedAtOf(image) {
   return typeof image === 'string' ? undefined : image?.addedAt
 }
 
+// Resolves either image shape (plain string, or { url, addedAt } / { key }
+// refs) to a displayable <img src> string. Keyed refs that haven't been
+// resolved to a URL yet come back as '' so consumers fall back gracefully.
+export function imageSrc(image) {
+  if (typeof image === 'string') return image
+  return image?.url || ''
+}
+
 // Flattens artists into one entry per image, preserving artist order then
 // image order (stable — no shuffling).
 export function buildWallItems(artists = [], { now = new Date() } = {}) {
@@ -41,7 +49,7 @@ export function buildWallItems(artists = [], { now = new Date() } = {}) {
         artistName: artist.name || artist.handle,
         handle: artist.handle,
         styles: artist.tags || [],
-        image,
+        image: imageSrc(image),
         imageIndex,
         addedAt,
         isRecent: isRecent(addedAt, now),

@@ -16,29 +16,13 @@ import {
 import { buildConceptWallItems } from '../data/concepts'
 import { clearComposerDraft, loadComposerDraft, saveComposerDraft } from '../data/composerDraft'
 import { generateImageWithGemini } from '../data/geminiImage'
-
-const TEXT_SYSTEM_PROMPT = `You are a creative tattoo concept consultant with deep knowledge of tattoo styles, placement, and aesthetics. When given a concept prompt, provide:
-1. A vivid visual description of the tattoo concept (2-3 sentences)
-2. Recommended style (from: dark-illustrative, fine-line, blackwork, surrealism, dark-fantasy, realism)
-3. Suggested placement
-4. Mood/aesthetic notes (1-2 sentences)
-5. Which type of artist would suit this best (brief)
-
-Be specific, evocative, and editorial in tone. Format as plain text with labelled sections.`
-
-function buildTextPrompt(userPrompt) {
-  return `${TEXT_SYSTEM_PROMPT}\n\nA client wants a tattoo based on this prompt: "${userPrompt}"`
-}
-
-function buildImagePrompt(userPrompt) {
-  return `Professional tattoo concept art: ${userPrompt}. Black ink tattoo design on white background, fine line illustration, high contrast, clean lines, suitable for tattooing, tattoo flash art style, no text, no watermarks`
-}
+import { buildImagePrompt, buildTextPrompt } from '../data/conceptPrompts'
 
 function conceptActionLabel(concept) {
   return String(concept?.prompt || concept?.id || 'this concept').trim() || 'this concept'
 }
 
-async function generateWithDallE(apiKey, prompt) {
+async function generateWithDallE(apiKey, fullPrompt) {
   const res = await fetch('https://api.openai.com/v1/images/generations', {
     method: 'POST',
     headers: {
@@ -47,7 +31,7 @@ async function generateWithDallE(apiKey, prompt) {
     },
     body: JSON.stringify({
       model: 'dall-e-3',
-      prompt: buildImagePrompt(prompt),
+      prompt: fullPrompt,
       n: 1,
       size: '1024x1024',
       response_format: 'b64_json',
@@ -177,7 +161,11 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
             styleDescriptor: steerArtist?.styleDescriptor || '',
             tags: steerArtist?.tags || [],
           })
-        : await generateWithDallE(openaiKey, idea)
+        : await generateWithDallE(openaiKey, buildImagePrompt(idea, {
+            styleDescriptor: steerArtist?.styleDescriptor || '',
+            tags: steerArtist?.tags || [],
+            placement,
+          }))
       const concept = {
         id: Date.now().toString(),
         prompt: idea,
@@ -200,7 +188,12 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
 
   async function copyPrompt() {
     if (!idea.trim()) return
-    const full = buildTextPrompt(idea)
+    const steerArtist = artists.find((a) => a.id === steerArtistId)
+    const full = buildTextPrompt(idea, {
+      styleDescriptor: steerArtist?.styleDescriptor || '',
+      tags: steerArtist?.tags || [],
+      placement,
+    })
     await navigator.clipboard.writeText(full)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)

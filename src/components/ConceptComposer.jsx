@@ -216,12 +216,17 @@ export default function ConceptComposer({
       <div className="mt-6 pt-5 border-t border-v2-hairline">
         <p className="font-v2-ui text-[0.68rem] tracking-[0.14em] uppercase text-v2-muted mb-2">Paste a result back</p>
         <div
-          className={`border-2 border-dashed rounded-sm px-4 py-6 text-center transition-colors ${
+          role="button"
+          tabIndex={0}
+          aria-label="Paste or drop a result image here"
+          className={`border-2 border-dashed rounded-sm px-4 py-6 text-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-v2-accent ${
             dragOver ? 'border-v2-accent bg-v2-accent/5' : 'border-v2-hairline'
           }`}
           onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
           onDragLeave={() => setDragOver(false)}
           onDrop={handleDrop}
+          onPaste={handlePaste}
+          onClick={(e) => e.currentTarget.focus()}
         >
           <p className="font-v2-ui text-v2-muted text-xs mb-1">Drop an image here, or paste it (⌘V)</p>
           <label className="cursor-pointer">

@@ -113,10 +113,13 @@ describe('buildWallItems', () => {
     expect(item.isRecent).toBe(false)
   })
 
-  it('preserves object blob-key image refs untouched', () => {
+  it('normalises unresolved blob-key refs to an empty string src', () => {
+    // item.image is always a displayable string (see imageSrc); keyed refs
+    // that haven't been resolved to a URL yet come back as '' so consumers
+    // fall back to the monogram instead of rendering "[object Object]".
     const items = buildWallItems(artists, { now: NOW })
     const item = items.find((i) => i.artistId === 'zoia.ink' && i.imageIndex === 1)
-    expect(item.image).toEqual({ key: 'user/1/artists/zoia.ink/2.jpg' })
+    expect(item.image).toBe('')
     expect(item.addedAt).toBeUndefined()
     expect(item.isRecent).toBe(false)
   })
