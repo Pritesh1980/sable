@@ -1,21 +1,21 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import ConceptComposer from '../components/ConceptComposer'
+import ConceptPiece from '../components/ConceptPiece'
 import ConceptVariantLab from '../components/ConceptVariantLab'
-import Logo from '../components/Logo'
+import ConceptViewer from '../components/ConceptViewer'
 import PromptPackComposer from '../components/PromptPackComposer'
 import ReliefStlDrawer from '../components/ReliefStlDrawer'
-import TagPill from '../components/TagPill'
-import ArtistImage from '../components/ArtistImage'
-import { STYLE_TAGS } from '../data/artists'
+import SavedPromptPack from '../components/SavedPromptPack'
 import {
   addConceptVariant,
   markBestVariant,
   removeConceptVariant,
   updateVariantRating,
 } from '../data/conceptVariants'
+import { buildConceptWallItems } from '../data/concepts'
+import { clearComposerDraft, loadComposerDraft, saveComposerDraft } from '../data/composerDraft'
 import { generateImageWithGemini } from '../data/geminiImage'
-import { matchArtistsForIdea } from '../data/planning'
-import { getPromptPackFields } from '../data/promptPacks'
 
 const TEXT_SYSTEM_PROMPT = `You are a creative tattoo concept consultant with deep knowledge of tattoo styles, placement, and aesthetics. When given a concept prompt, provide:
 1. A vivid visual description of the tattoo concept (2-3 sentences)
@@ -61,172 +61,16 @@ async function generateWithDallE(apiKey, prompt) {
   return `data:image/png;base64,${data.data[0].b64_json}`
 }
 
-const DESTINATIONS = [
-  { id: 'chatgpt', label: 'ChatGPT', url: 'https://chatgpt.com' },
-  { id: 'claude', label: 'Claude.ai', url: 'https://claude.ai' },
-  { id: 'gemini', label: 'Gemini', url: 'https://gemini.google.com' },
-  { id: 'aistudio', label: 'AI Studio', url: 'https://aistudio.google.com' },
-]
-
-function PasteZone({ conceptId, onImage, onText, onDiscard }) {
-  const [mode, setMode] = useState('image')
-  const [dragOver, setDragOver] = useState(false)
-
-  function handleFile(file) {
-    if (!file?.type.startsWith('image/')) return
-    const reader = new FileReader()
-    reader.onload = (e) => onImage(conceptId, e.target.result)
-    reader.readAsDataURL(file)
-  }
-
-  function handleDrop(e) {
-    e.preventDefault()
-    setDragOver(false)
-    const file = e.dataTransfer.files?.[0]
-    if (file) { handleFile(file); return }
-    const url = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain')
-    if (url?.startsWith('http')) onImage(conceptId, url)
-  }
-
-  return (
-    <div className="p-4 pb-0">
-      <div className="flex gap-1 mb-3">
-        {['image', 'text'].map((m) => (
-          <button
-            key={m}
-            onClick={() => setMode(m)}
-            className={`px-3 py-1 rounded-sm font-mono text-[0.625rem] tracking-widest uppercase transition-colors border ${
-              mode === m
-                ? 'border-accent/50 text-accent bg-accent/5'
-                : 'border-ink-border text-cream-muted/50 hover:text-cream-muted'
-            }`}
-          >
-            {m === 'image' ? 'Paste image' : 'Paste text'}
-          </button>
-        ))}
-      </div>
-
-      {mode === 'image' ? (
-        <div
-          className={`border-2 border-dashed rounded-sm p-8 text-center transition-colors ${
-            dragOver ? 'border-accent bg-accent/5' : 'border-ink-muted'
-          }`}
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={handleDrop}
-        >
-          <p className="text-cream-muted/60 text-xs font-mono mb-1">Drop image here</p>
-          <p className="text-cream-muted/30 text-[0.625rem] font-mono mb-3">or</p>
-          <label className="cursor-pointer">
-            <span className="text-xs font-mono text-accent hover:text-accent-hover transition-colors tracking-widest uppercase">
-              Choose file
-            </span>
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => handleFile(e.target.files?.[0])}
-            />
-          </label>
-        </div>
-      ) : (
-        <textarea
-          autoFocus
-          className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-body placeholder-cream-muted/60 resize-none"
-          rows={7}
-          placeholder="Paste the AI response here…"
-          id={`paste-text-${conceptId}`}
-        />
-      )}
-
-      <div className="flex justify-end gap-3 mt-3 mb-4">
-        <button
-          onClick={onDiscard}
-          className="text-[0.625rem] font-mono text-cream-muted/60 hover:text-cream-muted transition-colors tracking-widest uppercase"
-        >
-          Discard
-        </button>
-        {mode === 'text' && (
-          <button
-            onClick={() => {
-              const val = document.getElementById(`paste-text-${conceptId}`)?.value
-              if (val) onText(conceptId, val)
-            }}
-            className="text-[0.625rem] font-mono text-accent hover:text-accent-hover transition-colors tracking-widest uppercase"
-          >
-            Save
-          </button>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function SavedPromptPack({ promptPack }) {
-  const [activeField, setActiveField] = useState('')
-  const [copied, setCopied] = useState('')
-  const [copyError, setCopyError] = useState('')
-  const fields = getPromptPackFields(promptPack)
-  if (!fields.length) return null
-
-  const active = fields.find((field) => field.field === activeField) || fields[0]
-
-  async function copySavedPrompt() {
-    try {
-      await navigator.clipboard.writeText(active.value)
-      setCopied(active.field)
-      setCopyError('')
-      setTimeout(() => setCopied(''), 1600)
-    } catch {
-      setCopyError('Could not copy. Select the prompt text and copy manually.')
-    }
-  }
-
-  return (
-    <div className="mt-3 pt-3 border-t border-ink-border/40">
-      <p className="text-[0.625rem] font-mono text-accent/70 tracking-widest uppercase mb-2">Saved prompt pack</p>
-      <div className="flex flex-wrap gap-1.5 mb-2">
-        {fields.map((field) => (
-          <button
-            key={field.id}
-            onClick={() => setActiveField(field.field)}
-            className={`px-2 py-1 rounded-sm border text-[0.625rem] font-mono tracking-widest uppercase transition-colors ${
-              active.field === field.field
-                ? 'border-accent/50 text-accent bg-accent/5'
-                : 'border-ink-border text-cream-muted/60 hover:text-cream-muted'
-            }`}
-          >
-            {field.label}
-          </button>
-        ))}
-      </div>
-      <textarea
-        readOnly
-        className="w-full bg-ink-black border border-ink-border rounded-sm px-3 py-2 text-xs text-cream-muted outline-none font-body resize-none"
-        rows={5}
-        value={active.value}
-      />
-      <button
-        onClick={copySavedPrompt}
-        className="mt-2 text-[0.625rem] font-mono text-accent hover:text-accent-hover transition-colors tracking-widest uppercase"
-      >
-        {copied === active.field ? 'Copied' : `Copy ${active.label}`}
-      </button>
-      {copyError && <p className="text-xs font-mono text-accent mt-2">{copyError}</p>}
-    </div>
-  )
-}
-
 function KeyField({ label, help, placeholder, value, onSave, onRemove }) {
   const [draft, setDraft] = useState(value)
   return (
     <div className="mb-4 last:mb-0">
-      <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-1">{label}</p>
-      <p className="text-cream-muted/60 text-xs font-body mb-2 leading-relaxed">{help}</p>
+      <p className="font-v2-ui text-xs tracking-widest uppercase text-v2-cream mb-1">{label}</p>
+      <p className="font-v2-ui text-v2-muted text-xs mb-2 leading-relaxed">{help}</p>
       <div className="flex gap-2">
         <input
           type="password"
-          className="flex-1 bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-mono placeholder-cream-muted/40"
+          className="flex-1 bg-v2-ink border border-v2-hairline rounded-sm px-3 py-2 text-sm text-v2-cream outline-none focus:border-v2-accent font-v2-ui"
           placeholder={placeholder}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -234,7 +78,7 @@ function KeyField({ label, help, placeholder, value, onSave, onRemove }) {
         />
         <button
           onClick={() => onSave(draft)}
-          className="px-4 py-2 bg-accent hover:bg-accent-hover text-cream text-sm font-body rounded-sm transition-colors"
+          className="px-4 py-2 bg-v2-accent text-v2-cream text-sm font-v2-ui rounded-sm transition-colors hover:brightness-110"
         >
           Save
         </button>
@@ -242,7 +86,7 @@ function KeyField({ label, help, placeholder, value, onSave, onRemove }) {
       {value && (
         <button
           onClick={() => { setDraft(''); onRemove() }}
-          className="mt-2 text-[0.625rem] font-mono text-cream-muted/40 hover:text-accent transition-colors tracking-widest uppercase"
+          className="mt-2 font-v2-ui text-[0.625rem] tracking-widest uppercase text-v2-muted hover:text-v2-accent transition-colors"
         >
           Remove key
         </button>
@@ -252,22 +96,55 @@ function KeyField({ label, help, placeholder, value, onSave, onRemove }) {
 }
 
 export default function Concepts({ concepts, setConcepts, artists = [], ideas = [] }) {
-  const [prompt, setPrompt] = useState('')
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+
+  const initialDraft = useMemo(() => loadComposerDraft(), [])
+  const [steerArtistId, setSteerArtistId] = useState(initialDraft.steerArtistId)
+  const [idea, setIdea] = useState(initialDraft.idea)
+  const [placement, setPlacement] = useState(initialDraft.placement)
+  const [composerOpen, setComposerOpen] = useState(false)
+  const [pendingPasteConceptId, setPendingPasteConceptId] = useState(null)
+
   const [openaiKey, setOpenaiKey] = useState(() => localStorage.getItem('openai_api_key') || '')
   const [geminiKey, setGeminiKey] = useState(() => localStorage.getItem('gemini_api_key') || '')
-  const [showKeyConfig, setShowKeyConfig] = useState(false)
+  const [aiSetupOpen, setAiSetupOpen] = useState(false)
+  const [promptPacksOpen, setPromptPacksOpen] = useState(false)
   const [provider, setProvider] = useState('gemini')
-  const [steerArtistId, setSteerArtistId] = useState('')
   const [generating, setGenerating] = useState(false)
   const [genError, setGenError] = useState(null)
   const [copied, setCopied] = useState(false)
-  const [selected, setSelected] = useState(null)
-  const [pasting, setPasting] = useState(null)
+
+  const [viewerIndex, setViewerIndex] = useState(null)
   const [stlSource, setStlSource] = useState(null)
 
   const hasOpenai = Boolean(openaiKey)
   const hasGemini = Boolean(geminiKey)
   const hasApiKey = hasOpenai || hasGemini
+
+  // t7: a steer=<artistId> query param (from the Wall viewer's "G" flow) opens
+  // the composer pre-steered on mount. Artist ids may contain dots (zoia.ink).
+  useEffect(() => {
+    const steerParam = searchParams.get('steer')
+    if (steerParam) {
+      setSteerArtistId(steerParam)
+      setComposerOpen(true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Device-local draft persistence — same class of data as tattoo_theme, NOT
+  // synced. Restored on mount above; cleared explicitly on successful save.
+  useEffect(() => {
+    saveComposerDraft({ steerArtistId, idea, placement })
+  }, [steerArtistId, idea, placement])
+
+  useEffect(() => {
+    if (viewerIndex === null) return undefined
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = previousOverflow }
+  }, [viewerIndex])
 
   function persistKey(which, value) {
     const v = value.trim()
@@ -278,8 +155,17 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
     else localStorage.removeItem(storageKey)
   }
 
+  function finishComposer() {
+    setSteerArtistId('')
+    setIdea('')
+    setPlacement('')
+    setPendingPasteConceptId(null)
+    setComposerOpen(false)
+    clearComposerDraft()
+  }
+
   async function generate() {
-    if (!prompt.trim() || generating) return
+    if (!idea.trim() || generating) return
     const useGemini = hasGemini && (provider === 'gemini' || !hasOpenai)
     setGenError(null)
     setGenerating(true)
@@ -287,22 +173,24 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
       const steerArtist = artists.find((a) => a.id === steerArtistId)
       const dataUrl = useGemini
         ? await generateImageWithGemini(geminiKey, {
-            prompt,
+            prompt: idea,
             styleDescriptor: steerArtist?.styleDescriptor || '',
             tags: steerArtist?.tags || [],
           })
-        : await generateWithDallE(openaiKey, prompt)
+        : await generateWithDallE(openaiKey, idea)
       const concept = {
         id: Date.now().toString(),
-        prompt,
+        prompt: idea,
         imageUrl: dataUrl,
         response: '',
         tags: steerArtist?.tags || [],
+        steerArtistId: steerArtistId || undefined,
+        placement: placement || undefined,
         provider: useGemini ? 'gemini' : 'dalle',
         createdAt: new Date().toISOString(),
       }
       setConcepts((prev) => [concept, ...prev])
-      setPrompt('')
+      finishComposer()
     } catch (err) {
       setGenError(err.message)
     } finally {
@@ -311,22 +199,10 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
   }
 
   async function copyPrompt() {
-    if (!prompt.trim()) return
-    const full = buildTextPrompt(prompt)
+    if (!idea.trim()) return
+    const full = buildTextPrompt(idea)
     await navigator.clipboard.writeText(full)
     setCopied(true)
-    const concept = {
-      id: Date.now().toString(),
-      prompt,
-      fullPrompt: full,
-      imageUrl: '',
-      response: '',
-      tags: [],
-      createdAt: new Date().toISOString(),
-    }
-    setConcepts((prev) => [concept, ...prev])
-    setPasting(concept.id)
-    setPrompt('')
     setTimeout(() => setCopied(false), 2000)
   }
 
@@ -341,17 +217,33 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
       createdAt: pack.createdAt,
     }
     setConcepts((prev) => [concept, ...prev])
-    setPasting(concept.id)
+    setPendingPasteConceptId(concept.id)
   }
 
-  function saveImage(id, dataUrl) {
-    setConcepts((prev) => prev.map((c) => c.id === id ? { ...c, imageUrl: dataUrl } : c))
-    setPasting(null)
-  }
-
-  function saveText(id, response) {
-    setConcepts((prev) => prev.map((c) => c.id === id ? { ...c, response } : c))
-    setPasting(null)
+  // Paste-back path: an image dropped/pasted/chosen inside the composer lands
+  // identically to a generated result — either attached to a pending
+  // prompt-pack concept, or as a brand new concept from the current idea.
+  function handleComposerPaste(dataUrlOrUrl) {
+    if (pendingPasteConceptId) {
+      setConcepts((prev) => prev.map((c) => (
+        c.id === pendingPasteConceptId ? { ...c, imageUrl: dataUrlOrUrl } : c
+      )))
+    } else {
+      const steerArtist = artists.find((a) => a.id === steerArtistId)
+      const concept = {
+        id: Date.now().toString(),
+        prompt: idea,
+        imageUrl: dataUrlOrUrl,
+        response: '',
+        tags: steerArtist?.tags || [],
+        steerArtistId: steerArtistId || undefined,
+        placement: placement || undefined,
+        provider: 'pasted',
+        createdAt: new Date().toISOString(),
+      }
+      setConcepts((prev) => [concept, ...prev])
+    }
+    finishComposer()
   }
 
   function saveTags(id, tags) {
@@ -360,7 +252,6 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
 
   function discard(id) {
     setConcepts((prev) => prev.filter((c) => c.id !== id))
-    setPasting(null)
   }
 
   function addVariant(conceptId, input) {
@@ -395,177 +286,101 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
     })
   }
 
-  return (
-    <div className="min-h-screen bg-ink-black max-w-5xl mx-auto px-4 md:px-8 pt-safe-top pb-24">
+  const wallItems = useMemo(() => buildConceptWallItems(concepts, artists), [concepts, artists])
+  // Concepts without a saved image can't live on an image wall — a pasted-back
+  // result (or a prompt pack awaiting one) stays here until it has one.
+  const draftConcepts = useMemo(() => concepts.filter((c) => !c.imageUrl), [concepts])
+  const viewerOpen = viewerIndex !== null
 
-      <div className="pt-12 pb-6 flex items-end justify-between">
-        <div>
-          <Logo size={24} className="mb-2" />
-          <h1 className="font-display text-3xl text-cream">AI Concepts</h1>
-        </div>
-        <button
-          onClick={() => setShowKeyConfig((v) => !v)}
-          className="flex items-center gap-1.5 font-mono text-cream-muted/50 hover:text-cream-muted text-[0.625rem] tracking-widest uppercase transition-colors"
-        >
-          ⚙ {hasApiKey ? 'Key set' : 'Configure AI'}
-        </button>
-      </div>
+  function openViewer(item) {
+    setViewerIndex(wallItems.indexOf(item))
+  }
 
-      {showKeyConfig && (
-        <div className="mb-6 p-4 bg-ink-card border border-ink-border rounded-sm animate-slide-up">
-          <KeyField
-            label="Gemini API key"
-            help="Direct image generation via the Gemini API — paid, billing required (~$0.04/image). For free, skip this and use Copy Prompt → paste into Gemini or AI Studio below. Stored locally on your device only."
-            placeholder="AIza…"
-            value={geminiKey}
-            onSave={(v) => persistKey('gemini', v)}
-            onRemove={() => persistKey('gemini', '')}
-          />
-          <KeyField
-            label="OpenAI API key"
-            help="Image generation via DALL·E 3 (paid). Stored locally on your device only."
-            placeholder="sk-…"
-            value={openaiKey}
-            onSave={(v) => persistKey('openai', v)}
-            onRemove={() => persistKey('openai', '')}
-          />
-        </div>
-      )}
+  function handleDeleteFromViewer(id) {
+    discard(id)
+    setViewerIndex(null)
+  }
 
-      <PromptPackComposer
-        ideas={ideas}
-        artists={artists}
-        onSavePromptPack={savePromptPack}
+  const aiSetupPanel = (
+    <div className="p-4 bg-v2-ink border border-v2-hairline rounded-sm">
+      <KeyField
+        label="Gemini API key"
+        help="Direct image generation via the Gemini API — paid, billing required (~$0.04/image). For free, skip this and use Copy Prompt below. Stored locally on your device only."
+        placeholder="AIza…"
+        value={geminiKey}
+        onSave={(v) => persistKey('gemini', v)}
+        onRemove={() => persistKey('gemini', '')}
       />
+      <KeyField
+        label="OpenAI API key"
+        help="Image generation via DALL·E 3 (paid). Stored locally on your device only."
+        placeholder="sk-…"
+        value={openaiKey}
+        onSave={(v) => persistKey('openai', v)}
+        onRemove={() => persistKey('openai', '')}
+      />
+    </div>
+  )
 
-      <div className="mb-8">
-        <textarea
-          className="w-full bg-ink-card border border-ink-border rounded-sm px-4 py-3 text-sm text-cream outline-none focus:border-cream-muted/40 font-body placeholder-cream-muted/60 resize-none transition-colors"
-          rows={3}
-          placeholder="Describe a tattoo concept… e.g. 'A moth emerging from a skull wreathed in dark botanicals'"
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter' && e.metaKey) hasApiKey ? generate() : copyPrompt() }}
-        />
+  const promptPackPanel = (
+    <PromptPackComposer ideas={ideas} artists={artists} onSavePromptPack={savePromptPack} />
+  )
 
-        {genError && (
-          <p className="text-accent text-xs font-mono mt-2 leading-relaxed">{genError}</p>
-        )}
-
-        {hasApiKey ? (
-          <div className="mt-3 space-y-3">
-            {hasOpenai && hasGemini && (
-              <div className="flex gap-1">
-                {[{ id: 'gemini', label: 'Gemini' }, { id: 'dalle', label: 'DALL·E' }].map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => setProvider(p.id)}
-                    className={`px-3 py-1 rounded-sm font-mono text-[0.625rem] tracking-widest uppercase transition-colors border ${
-                      provider === p.id ? 'border-accent/50 text-accent bg-accent/5' : 'border-ink-border text-cream-muted/50 hover:text-cream-muted'
-                    }`}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-            )}
-            {artists.length > 0 && (
-              <select
-                value={steerArtistId}
-                onChange={(e) => setSteerArtistId(e.target.value)}
-                className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-body"
-              >
-                <option value="">No style steering</option>
-                {artists.map((a) => (
-                  <option key={a.id} value={a.id}>Steer by {a.name || `@${a.handle}`}</option>
-                ))}
-              </select>
-            )}
-            <button
-              onClick={generate}
-              disabled={!prompt.trim() || generating}
-              className="w-full py-2.5 bg-accent hover:bg-accent-hover disabled:opacity-30 disabled:cursor-not-allowed text-cream text-sm font-body rounded-sm transition-colors flex items-center justify-center gap-2"
-            >
-              {generating && <span className="w-3.5 h-3.5 rounded-full border-2 border-cream/30 border-t-cream animate-spin" />}
-              {generating ? 'Generating…' : 'Generate image'}
-            </button>
-          </div>
-        ) : (
-          <div className="mt-3 space-y-3">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {DESTINATIONS.map(({ id, label, url }) => (
-                <a
-                  key={id}
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-center py-2 border border-ink-border rounded-sm font-mono text-cream-muted hover:text-cream hover:border-cream-muted/50 transition-colors text-[0.6875rem] tracking-widest uppercase"
-                >
-                  {label} ↗
-                </a>
-              ))}
-            </div>
-            <button
-              onClick={copyPrompt}
-              disabled={!prompt.trim()}
-              className="w-full py-2.5 bg-accent hover:bg-accent-hover disabled:opacity-30 disabled:cursor-not-allowed text-cream text-sm font-body rounded-sm transition-colors"
-            >
-              {copied ? 'Prompt Copied ✓' : 'Copy Prompt'}
-            </button>
-            <p className="text-cream-muted/40 text-[0.625rem] font-mono text-center">
-              ⌘ Enter to copy · paste into any AI · bring the result back here
-            </p>
-          </div>
-        )}
-      </div>
-
-      {concepts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <span className="text-5xl mb-4 opacity-10">✦</span>
-          <p className="text-cream-muted/90 font-body text-sm">No concepts yet.</p>
-          <p className="text-cream-muted/60 font-body text-xs mt-1">
-            {hasApiKey
-              ? 'Describe an idea above and tap Generate Image.'
-              : 'Describe an idea, copy the prompt, paste into your AI of choice, then bring the result back.'}
-          </p>
-          <Link
-            to="/brief"
-            className="text-accent hover:text-accent-hover font-body text-xs mt-2 underline underline-offset-4"
+  return (
+    <div className="min-h-screen bg-v2-ink">
+      <header className="sticky top-0 z-10 flex items-center gap-8 px-8 py-3.5 bg-v2-ink/[.88] backdrop-blur-md border-b border-v2-hairline">
+        <div className="font-v2-display text-[1.35rem] tracking-[0.28em] uppercase text-v2-cream">
+          Sable<span className="text-v2-accent">.</span>
+        </div>
+        <nav className="flex items-center gap-6 flex-1">
+          <button
+            onClick={() => navigate('/')}
+            className="font-v2-ui text-sm tracking-wide uppercase pb-1 border-b-2 border-transparent text-v2-muted hover:text-v2-cream"
           >
-            Or seed one from a Brief idea
-          </Link>
+            Artists
+          </button>
+          <button className="font-v2-ui text-sm tracking-wide uppercase pb-1 border-b-2 border-v2-accent text-v2-cream">
+            Concepts
+          </button>
+        </nav>
+        <button
+          onClick={() => setComposerOpen(true)}
+          className="font-v2-ui text-sm text-v2-ink bg-v2-cream rounded-sm px-4 py-1.5 font-semibold hover:brightness-95 transition-[filter]"
+        >
+          + New concept
+        </button>
+      </header>
+
+      {wallItems.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-4 py-32 text-center px-6">
+          <p className="font-v2-display text-v2-cream text-xl tracking-wide">
+            No concepts yet — describe an idea to start the wall.
+          </p>
+          <button
+            onClick={() => setComposerOpen(true)}
+            className="font-v2-ui text-sm text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-sm px-5 py-2 transition-colors"
+          >
+            + New concept
+          </button>
         </div>
       ) : (
-        <div className="space-y-4">
-          {concepts.map((c) => (
-            <div key={c.id} className="bg-ink-card border border-ink-border rounded-sm overflow-hidden animate-slide-up">
+        <main className="columns-[280px] gap-[6px] p-[6px]">
+          {wallItems.map((item) => (
+            <ConceptPiece key={item.id} item={item} onOpen={openViewer} />
+          ))}
+        </main>
+      )}
 
-              {c.imageUrl ? (
-                <div className="relative aspect-square bg-ink-muted">
-                  <img src={c.imageUrl} alt={c.prompt} className="w-full h-full object-cover" />
-                  <a
-                    href="https://firefly.adobe.com/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Open in Adobe Firefly to take this concept further"
-                    className="absolute bottom-3 right-3 flex items-center gap-1.5 bg-ink-black/80 hover:bg-ink-black text-cream-muted hover:text-cream text-[0.625rem] font-mono tracking-widest uppercase px-2.5 py-1.5 rounded-sm backdrop-blur-sm transition-colors"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    Open in Firefly ↗
-                  </a>
-                </div>
-              ) : pasting === c.id && (
-                <PasteZone
-                  conceptId={c.id}
-                  onImage={saveImage}
-                  onText={saveText}
-                  onDiscard={() => discard(c.id)}
-                />
-              )}
-
-              <div className="p-4">
-                <p className="text-cream-muted/50 text-[0.625rem] font-mono tracking-widest uppercase mb-1">Concept</p>
-                <p className="text-cream font-body text-sm italic mb-3">"{c.prompt}"</p>
+      {draftConcepts.length > 0 && (
+        <section className="max-w-3xl mx-auto px-4 md:px-8 py-10">
+          <p className="font-v2-ui text-xs tracking-widest uppercase text-v2-muted mb-4">
+            Drafts — awaiting an image
+          </p>
+          <div className="space-y-4">
+            {draftConcepts.map((c) => (
+              <div key={c.id} className="bg-v2-surface border border-v2-hairline rounded-sm p-4">
+                <p className="font-v2-ui text-[0.625rem] tracking-widest uppercase text-v2-muted mb-1">Concept</p>
+                <p className="font-v2-display text-v2-cream text-sm italic mb-3">"{c.prompt}"</p>
                 <SavedPromptPack promptPack={c.promptPack} />
                 <ConceptVariantLab
                   concept={c}
@@ -575,94 +390,65 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
                   onRateVariant={rateVariant}
                   onMakeStl={makeStlFromVariant}
                 />
-
-                {c.response ? (
-                  <div
-                    className="cursor-pointer"
-                    onClick={() => setSelected(selected?.id === c.id ? null : c)}
-                  >
-                    {selected?.id === c.id ? (
-                      <div className="pt-3 border-t border-ink-border">
-                        <p className="text-cream-muted text-sm font-body leading-relaxed whitespace-pre-wrap">{c.response}</p>
-                      </div>
-                    ) : (
-                      <p className="text-cream-muted/50 text-[0.625rem] font-mono tracking-widest">
-                        AI response saved · tap to expand
-                      </p>
-                    )}
-                  </div>
-                ) : !c.imageUrl && pasting !== c.id && (
-                  <button
-                    onClick={() => setPasting(c.id)}
-                    className="text-[0.625rem] font-mono text-accent hover:text-accent-hover transition-colors tracking-widest uppercase"
-                  >
-                    + Add image or response
-                  </button>
-                )}
-
-                {/* Style tag picker + artist matching */}
-                <div className="mt-3 pt-3 border-t border-ink-border/40">
-                  <p className="text-[0.625rem] font-mono text-cream-muted/40 tracking-widest uppercase mb-2">Match to style</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {STYLE_TAGS.map((tag) => (
-                      <TagPill
-                        key={tag}
-                        tag={tag}
-                        active={(c.tags || []).includes(tag)}
-                        onClick={() => saveTags(c.id,
-                          (c.tags || []).includes(tag)
-                            ? (c.tags || []).filter((t) => t !== tag)
-                            : [...(c.tags || []), tag]
-                        )}
-                        small
-                      />
-                    ))}
-                  </div>
-
-                  {(c.tags || []).length > 0 && artists.length > 0 && (() => {
-                    const matched = matchArtistsForIdea({ tags: c.tags }, artists).slice(0, 3)
-                    if (!matched.length) return null
-                    return (
-                      <div className="mt-3">
-                        <p className="text-[0.625rem] font-mono text-accent/70 tracking-widest uppercase mb-2">Top artist matches</p>
-                        <div className="grid grid-cols-3 gap-2">
-                          {matched.map(({ artist }) => (
-                            <a
-                              key={artist.id}
-                              href={`https://instagram.com/${artist.handle}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="group"
-                            >
-                              <div className="aspect-square rounded-sm overflow-hidden bg-ink-muted mb-1">
-                                <ArtistImage src={artist.images?.[0]} label={artist.name || `@${artist.handle}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" monogramClassName="text-xl" />
-                              </div>
-                              <p className="font-display text-cream text-xs leading-tight truncate">{artist.name || `@${artist.handle}`}</p>
-                              <p className="font-mono text-cream-muted/40 text-[0.5rem] tracking-widest">#{artist.rank}</p>
-                            </a>
-                          ))}
-                        </div>
-                      </div>
-                    )
-                  })()}
-                </div>
-
-                <div className="flex justify-between items-center mt-4 pt-3 border-t border-ink-border/40">
-                  <p className="text-[0.625rem] font-mono text-cream-muted/30">
-                    {new Date(c.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </p>
+                <div className="flex justify-end mt-4 pt-3 border-t border-v2-hairline">
                   <button
                     aria-label={`Delete concept ${conceptActionLabel(c)}`}
-                    onClick={() => setConcepts((prev) => prev.filter((x) => x.id !== c.id))}
-                    className="text-[0.625rem] font-mono text-cream-muted/30 hover:text-accent transition-colors tracking-widest uppercase"
+                    onClick={() => discard(c.id)}
+                    className="font-v2-ui text-[0.625rem] tracking-widest uppercase text-v2-muted hover:text-v2-accent transition-colors"
                   >
                     Delete
                   </button>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <ConceptComposer
+        open={composerOpen}
+        onClose={() => setComposerOpen(false)}
+        artists={artists}
+        steerArtistId={steerArtistId}
+        onSteerArtist={setSteerArtistId}
+        idea={idea}
+        onIdeaChange={setIdea}
+        placement={placement}
+        onPlacementChange={setPlacement}
+        hasApiKey={hasApiKey}
+        hasOpenai={hasOpenai}
+        hasGemini={hasGemini}
+        provider={provider}
+        setProvider={setProvider}
+        generating={generating}
+        genError={genError}
+        onGenerate={generate}
+        onCopyPrompt={copyPrompt}
+        copied={copied}
+        onPasteImage={handleComposerPaste}
+        aiSetupOpen={aiSetupOpen}
+        onToggleAiSetup={setAiSetupOpen}
+        aiSetupPanel={aiSetupPanel}
+        promptPacksOpen={promptPacksOpen}
+        onTogglePromptPacks={setPromptPacksOpen}
+        promptPackPanel={promptPackPanel}
+      />
+
+      {viewerOpen && (
+        <ConceptViewer
+          items={wallItems}
+          initialIndex={viewerIndex}
+          artists={artists}
+          open={viewerOpen}
+          onClose={() => setViewerIndex(null)}
+          onDelete={handleDeleteFromViewer}
+          onSaveTags={saveTags}
+          onAddVariant={addVariant}
+          onMarkBest={markBest}
+          onDeleteVariant={deleteVariant}
+          onRateVariant={rateVariant}
+          onMakeStl={makeStlFromVariant}
+        />
       )}
 
       <ReliefStlDrawer
