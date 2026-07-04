@@ -20,11 +20,21 @@ export default {
           hover: '#e74c3c',
           gold: '#b8860b',
         },
+        // v2 redesign tokens — additive alongside the legacy tokens above
+        'v2-ink': '#131110',
+        'v2-surface': '#1d1a17',
+        'v2-cream': '#efe9dc',
+        'v2-muted': '#a8a294',
+        'v2-accent': '#c0392b',
+        'v2-hairline': '#35312b',
       },
       fontFamily: {
         display: ['"Playfair Display"', 'Georgia', 'serif'],
         body: ['"DM Sans"', 'system-ui', 'sans-serif'],
         mono: ['"DM Mono"', 'monospace'],
+        // v2 redesign fonts — namespaced so the legacy `display`/`body` keys are untouched
+        'v2-display': ['Marcellus', 'serif'],
+        'v2-ui': ['Archivo', 'sans-serif'],
       },
       animation: {
         'fade-in': 'fadeIn 0.4s ease forwards',
