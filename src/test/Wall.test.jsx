@@ -1,7 +1,11 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import Wall from '../pages/Wall'
+
+vi.mock('../hooks/useImageUpload', () => ({
+  uploadImages: vi.fn(async (files) => files.map((_, i) => `data:image/jpeg;base64,DROPPED${i}`)),
+}))
 
 const baseArtists = [
   {
@@ -25,8 +29,8 @@ function renderWall(props = {}, { initialEntries = ['/'] } = {}) {
     <MemoryRouter initialEntries={initialEntries}>
       <Wall
         artists={baseArtists}
+        setArtists={vi.fn()}
         onOpenArtist={vi.fn()}
-        onAddArtist={vi.fn()}
         onOpenDrawer={vi.fn()}
         onSwitchView={vi.fn()}
         activeView="artists"
@@ -65,15 +69,11 @@ describe('Wall page', () => {
   })
 
   it('renders the hairline bar with wordmark, view switch, add-artist and drawer controls', () => {
-    const onAddArtist = vi.fn()
     const onOpenDrawer = vi.fn()
     const onSwitchView = vi.fn()
-    renderWall({ onAddArtist, onOpenDrawer, onSwitchView })
+    renderWall({ onOpenDrawer, onSwitchView })
 
     expect(screen.getByText('Sable')).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: /\+ add artist/i }))
-    expect(onAddArtist).toHaveBeenCalledTimes(1)
 
     fireEvent.click(screen.getByRole('button', { name: /⋯/ }))
     expect(onOpenDrawer).toHaveBeenCalledTimes(1)
@@ -82,12 +82,57 @@ describe('Wall page', () => {
     expect(onSwitchView).toHaveBeenCalledWith('concepts')
   })
 
-  it('renders an empty state with an add-artist CTA when there are no artists', () => {
-    const onAddArtist = vi.fn()
-    renderWall({ artists: [], onAddArtist })
+  it('opens the quick-add modal from the bar\'s + Add artist button', () => {
+    renderWall()
+    fireEvent.click(screen.getByRole('button', { name: /\+ add artist/i }))
+    expect(screen.getByText('Add an artist')).toBeInTheDocument()
+  })
+
+  it('renders an empty state with an add-artist CTA that opens the quick-add modal', () => {
+    renderWall({ artists: [] })
     expect(screen.queryAllByRole('img')).toHaveLength(0)
     const ctas = screen.getAllByRole('button', { name: /add artist/i })
     fireEvent.click(ctas[ctas.length - 1])
-    expect(onAddArtist).toHaveBeenCalled()
+    expect(screen.getByText('Add an artist')).toBeInTheDocument()
+  })
+
+  describe('quick-add end to end', () => {
+    beforeEach(() => vi.clearAllMocks())
+
+    it('adds a new artist in exactly two clicks: + Add artist, then Save', async () => {
+      const setArtists = vi.fn()
+      renderWall({ setArtists })
+
+      // Click 1
+      fireEvent.click(screen.getByRole('button', { name: /\+ add artist/i }))
+      fireEvent.change(screen.getByPlaceholderText(/handle or instagram url/i), {
+        target: { value: '@new_artist' },
+      })
+      // Click 2
+      fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
+
+      await waitFor(() => expect(setArtists).toHaveBeenCalled())
+      const next = setArtists.mock.calls[0][0](baseArtists)
+      expect(next.some((a) => a.handle === 'new_artist')).toBe(true)
+    })
+  })
+
+  describe('drop-zone and paste wiring', () => {
+    beforeEach(() => vi.clearAllMocks())
+
+    it('dropping a file on a wall piece adds a stamped image to that artist', async () => {
+      const setArtists = vi.fn()
+      renderWall({ setArtists })
+      const figure = screen.getAllByRole('img')[0].closest('figure')
+      const file = new File(['x'], 'ref.jpg', { type: 'image/jpeg' })
+
+      fireEvent.drop(figure, { dataTransfer: { files: [file] } })
+
+      await waitFor(() => expect(setArtists).toHaveBeenCalled())
+      const next = setArtists.mock.calls[0][0](baseArtists)
+      const zoia = next.find((a) => a.id === 'zoia.ink')
+      expect(zoia.images.at(-1)).toMatchObject({ url: 'data:image/jpeg;base64,DROPPED0' })
+      expect(zoia.images.at(-1).addedAt).toBeTruthy()
+    })
   })
 })

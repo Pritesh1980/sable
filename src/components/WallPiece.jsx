@@ -1,15 +1,41 @@
+import { useState } from 'react'
 import ArtistImage from './ArtistImage'
 
 // A single image on the Wall — full-bleed, no chrome. The caption is an
 // engraved plate that only appears on hover; it never intercepts the click
-// (pointer-events: none) so the whole piece stays clickable.
-export default function WallPiece({ item, onOpen }) {
+// (pointer-events: none) so the whole piece stays clickable. Also a drop
+// target: dragging an image file over a piece adds it to that piece's artist.
+export default function WallPiece({ item, onOpen, onDropImage }) {
+  const [dragOver, setDragOver] = useState(false)
   const src = typeof item.image === 'string' ? item.image : item.image?.url || ''
+
+  function handleDragOver(e) {
+    if (!onDropImage) return
+    e.preventDefault()
+    setDragOver(true)
+  }
+
+  function handleDragLeave() {
+    setDragOver(false)
+  }
+
+  function handleDrop(e) {
+    if (!onDropImage) return
+    e.preventDefault()
+    setDragOver(false)
+    const file = e.dataTransfer.files?.[0]
+    if (file) onDropImage(item.artistId, file)
+  }
 
   return (
     <figure
-      className="relative mb-[6px] break-inside-avoid overflow-hidden cursor-zoom-in group"
+      className={`relative mb-[6px] break-inside-avoid overflow-hidden cursor-zoom-in group ${
+        dragOver ? 'ring-2 ring-v2-accent ring-inset' : ''
+      }`}
       onClick={() => onOpen(item)}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
     >
       <ArtistImage
         src={src}

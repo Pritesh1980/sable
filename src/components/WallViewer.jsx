@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import ArtistImage from './ArtistImage'
 import useWallKeyboard from '../hooks/useWallKeyboard'
 import useIdleFade from '../hooks/useIdleFade'
@@ -72,6 +72,7 @@ export default function WallViewer({
   open = true,
   onClose,
   onGenerate,
+  onPasteImage,
 }) {
   const [showInfo, setShowInfo] = useState(false)
 
@@ -93,6 +94,18 @@ export default function WallViewer({
   })
 
   const idle = useIdleFade(2000)
+
+  // Paste (⌘V) with the viewer open adds the pasted image to the artist
+  // currently in view.
+  useEffect(() => {
+    if (!open || !onPasteImage || !current) return undefined
+    function handlePaste(e) {
+      const file = Array.from(e.clipboardData?.files || [])[0]
+      if (file) onPasteImage(current.artistId, file)
+    }
+    window.addEventListener('paste', handlePaste)
+    return () => window.removeEventListener('paste', handlePaste)
+  }, [open, onPasteImage, current])
 
   const artistItems = useMemo(
     () => items.filter((i) => i.artistId === current?.artistId),

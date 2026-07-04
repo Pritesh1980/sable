@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { buildWallItems } from '../data/wall'
+import { buildWallItems, stampAddedAt } from '../data/wall'
 import WallPiece from '../components/WallPiece'
 import WallViewer from '../components/WallViewer'
+import AddArtistModal from '../components/AddArtistModal'
+import { uploadImages } from '../hooks/useImageUpload'
+import { useAuth } from '../context/useAuth'
 
 // The Wall — image-first home surface. Full-bleed masonry of every artist
 // reference image; the hairline bar above it is the only chrome. Routing is
@@ -52,10 +55,12 @@ function Bar({ activeView, onSwitchView, onAddArtist, onOpenDrawer }) {
   )
 }
 
-export default function Wall({ artists = [], ideas = [], onOpenArtist, onAddArtist, onOpenDrawer, onSwitchView, activeView = 'artists' }) {
+export default function Wall({ artists = [], ideas = [], setArtists = () => {}, onOpenArtist, onOpenDrawer, onSwitchView, activeView = 'artists' }) {
   const items = buildWallItems(artists)
   const [viewerIndex, setViewerIndex] = useState(null)
+  const [addArtistOpen, setAddArtistOpen] = useState(false)
   const navigate = useNavigate()
+  const { user } = useAuth() || {}
 
   const viewerOpen = viewerIndex !== null
 
@@ -83,13 +88,25 @@ export default function Wall({ artists = [], ideas = [], onOpenArtist, onAddArti
     navigate(`/concepts?steer=${item.artistId}`)
   }
 
+  // Shared by both drop targets — the wall-piece drop zone (#1) and the
+  // viewer's paste-in-place (#2). Reuses the same upload path as the rest of
+  // the app and stamps addedAt so the recent dot lights up immediately.
+  async function addImageToArtist(artistId, file) {
+    const [uploaded] = await uploadImages([file], { userId: user?.id, scope: 'artists', id: artistId })
+    if (!uploaded) return
+    const stamped = stampAddedAt(uploaded)
+    setArtists((prev) =>
+      prev.map((a) => (a.id === artistId ? { ...a, images: [...(a.images || []), stamped] } : a))
+    )
+  }
+
   return (
     <div className="min-h-screen bg-v2-ink">
       {!viewerOpen && (
         <Bar
           activeView={activeView}
           onSwitchView={onSwitchView}
-          onAddArtist={onAddArtist}
+          onAddArtist={() => setAddArtistOpen(true)}
           onOpenDrawer={onOpenDrawer}
         />
       )}
@@ -100,7 +117,7 @@ export default function Wall({ artists = [], ideas = [], onOpenArtist, onAddArti
             The wall is bare — add an artist to start building it.
           </p>
           <button
-            onClick={onAddArtist}
+            onClick={() => setAddArtistOpen(true)}
             className="font-v2-ui text-sm text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-sm px-5 py-2 transition-colors"
           >
             + Add artist
@@ -109,7 +126,12 @@ export default function Wall({ artists = [], ideas = [], onOpenArtist, onAddArti
       ) : (
         <main className="columns-[300px] gap-[6px] p-[6px]">
           {items.map((item) => (
-            <WallPiece key={`${item.artistId}-${item.imageIndex}`} item={item} onOpen={handleOpen} />
+            <WallPiece
+              key={`${item.artistId}-${item.imageIndex}`}
+              item={item}
+              onOpen={handleOpen}
+              onDropImage={addImageToArtist}
+            />
           ))}
         </main>
       )}
@@ -122,7 +144,18 @@ export default function Wall({ artists = [], ideas = [], onOpenArtist, onAddArti
           ideas={ideas}
           open={viewerOpen}
           onClose={() => setViewerIndex(null)}
+          onPasteImage={addImageToArtist}
           onGenerate={handleGenerate}
+        />
+      )}
+
+      {addArtistOpen && (
+        <AddArtistModal
+          artists={artists}
+          setArtists={setArtists}
+          userId={user?.id}
+          onClose={() => setAddArtistOpen(false)}
+          onManage={() => setAddArtistOpen(false)}
         />
       )}
     </div>

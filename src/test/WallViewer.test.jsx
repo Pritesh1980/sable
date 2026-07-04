@@ -120,4 +120,39 @@ describe('WallViewer', () => {
     const { container } = renderViewer()
     expect(container.innerHTML).not.toMatch(/cream-muted\/30|cream-muted\/40/)
   })
+
+  describe('paste-to-current-artist', () => {
+    function pasteFile(file) {
+      const event = new Event('paste', { bubbles: true, cancelable: true })
+      Object.defineProperty(event, 'clipboardData', { value: { files: file ? [file] : [] } })
+      window.dispatchEvent(event)
+    }
+
+    it('adds a pasted image to the artist currently in view', () => {
+      const onPasteImage = vi.fn()
+      renderViewer({ onPasteImage })
+      const file = new File(['x'], 'ref.jpg', { type: 'image/jpeg' })
+
+      pasteFile(file)
+
+      expect(onPasteImage).toHaveBeenCalledWith('victorportugal', file)
+    })
+
+    it('targets whichever artist is current after navigating within the viewer', () => {
+      const onPasteImage = vi.fn()
+      renderViewer({ onPasteImage, initialIndex: 2 }) // zoia.ink
+      const file = new File(['x'], 'ref.jpg', { type: 'image/jpeg' })
+
+      pasteFile(file)
+
+      expect(onPasteImage).toHaveBeenCalledWith('zoia.ink', file)
+    })
+
+    it('ignores a paste with no file', () => {
+      const onPasteImage = vi.fn()
+      renderViewer({ onPasteImage })
+      pasteFile(null)
+      expect(onPasteImage).not.toHaveBeenCalled()
+    })
+  })
 })
