@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Sable v2 — Design mockups</title>
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Archivo:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0c0b0a; color: #efe9dc; font-family: 'Archivo', sans-serif; height: 100vh; display: flex; flex-direction: column; }
+  header {
+    display: flex; align-items: stretch; gap: 0.8rem;
+    padding: 0.9rem 1.2rem;
+    border-bottom: 2px solid #c0392b;
+    background: #161311;
+  }
+  .title { font-family: 'Marcellus', serif; letter-spacing: 0.24em; text-transform: uppercase; font-size: 1rem; align-self: center; margin-right: 0.6rem; white-space: nowrap; }
+  .title span { color: #c0392b; }
+  .title small { display: block; font-family: 'Archivo', sans-serif; font-size: 0.62rem; letter-spacing: 0.12em; color: #a8a294; margin-top: 0.2rem; }
+  .cards { display: flex; gap: 0.8rem; flex: 1; }
+  .card {
+    flex: 1; text-align: left; cursor: pointer;
+    background: #1d1a17; color: #efe9dc;
+    border: 1px solid #35312b; border-radius: 4px;
+    padding: 0.7rem 1rem;
+    font-family: 'Archivo', sans-serif;
+    transition: border-color .15s, background .15s;
+  }
+  .card .num {
+    display: inline-block;
+    font-family: 'Marcellus', serif; font-size: 1.1rem;
+    color: #a8a294; margin-right: 0.5rem;
+  }
+  .card b { font-size: 0.88rem; font-weight: 600; letter-spacing: 0.04em; }
+  .card p { font-size: 0.72rem; color: #a8a294; margin-top: 0.3rem; line-height: 1.35; }
+  .card:hover { border-color: #a8a294; }
+  .card.active {
+    border-color: #c0392b; background: #241d1a;
+    box-shadow: inset 0 -3px 0 #c0392b;
+  }
+  .card.active .num { color: #c0392b; }
+  .hint { align-self: center; font-size: 0.68rem; color: #a8a294; white-space: nowrap; }
+  .hint kbd { border: 1px solid #35312b; border-radius: 3px; padding: 0.08rem 0.35rem; color: #efe9dc; font-size: 0.66rem; }
+  iframe { flex: 1; border: none; width: 100%; }
+</style>
+</head>
+<body>
+<header>
+  <div class="title">Sable<span>.</span> v2<small>3 mockups</small></div>
+  <div class="cards">
+    <button class="card active" data-src="01-wall.html">
+      <span class="num">1</span><b>The Wall — home</b>
+      <p>Edge-to-edge masonry of your artists' work. Hover an image for the engraved caption.</p>
+    </button>
+    <button class="card" data-src="02-fullscreen.html">
+      <span class="num">2</span><b>Full-screen viewer</b>
+      <p>One click from the wall. Arrows to browse, G to generate in this artist's style.</p>
+    </button>
+    <button class="card" data-src="03-concepts.html">
+      <span class="num">3</span><b>Concepts + composer</b>
+      <p>Your generated images on the same wall, with the slide-in generate panel open.</p>
+    </button>
+  </div>
+  <div class="hint">switch: click or <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></div>
+</header>
+<iframe src="01-wall.html"></iframe>
+<script>
+  const frame = document.querySelector('iframe');
+  const cards = [...document.querySelectorAll('.card')];
+  function show(i) {
+    cards.forEach(c => c.classList.remove('active'));
+    cards[i].classList.add('active');
+    frame.src = cards[i].dataset.src;
+  }
+  cards.forEach((c, i) => c.addEventListener('click', () => show(i)));
+  addEventListener('keydown', e => {
+    const i = ['1','2','3'].indexOf(e.key);
+    if (i !== -1) show(i);
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sable — Concepts + slide-in composer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Archivo:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #131110;
+    --surface: #1d1a17;
+    --cream: #efe9dc;
+    --muted: #a8a294;
+    --accent: #c0392b;
+    --hairline: #35312b;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--ink); color: var(--cream);
+    font-family: 'Archivo', sans-serif;
+    height: 100vh; overflow: hidden;
+  }
+  .bar {
+    display: flex; align-items: center; gap: 2rem;
+    padding: 0.9rem 2rem;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .wordmark {
+    font-family: 'Marcellus', serif;
+    font-size: 1.35rem; letter-spacing: 0.28em; text-transform: uppercase;
+  }
+  .wordmark span { color: var(--accent); }
+  .tabs { display: flex; gap: 1.6rem; flex: 1; }
+  .tab {
+    background: none; border: none; cursor: pointer;
+    font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--muted); padding: 0.4rem 0;
+    border-bottom: 1px solid transparent;
+  }
+  .tab.active { color: var(--cream); border-bottom-color: var(--accent); }
+  .new-btn {
+    font-size: 0.78rem; letter-spacing: 0.06em; cursor: pointer;
+    color: var(--ink); background: var(--cream);
+    border: none; border-radius: 2px; padding: 0.5rem 1.1rem; font-weight: 600;
+  }
+
+  /* concepts wall — same language as the artist wall */
+  .wall {
+    columns: 3 280px; column-gap: 6px;
+    padding: 6px; height: calc(100vh - 57px);
+    overflow-y: auto; width: calc(100% - 420px);
+  }
+  .piece { position: relative; break-inside: avoid; margin-bottom: 6px; cursor: zoom-in; overflow: hidden; }
+  .piece img { width: 100%; display: block; }
+  .caption {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 0.55rem 0.8rem;
+    font-family: 'Marcellus', serif;
+    font-size: 0.78rem; letter-spacing: 0.18em; text-transform: uppercase;
+    background: linear-gradient(transparent, rgba(19,17,16,0.82));
+    opacity: 0; transition: opacity .2s;
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .caption small { font-family: 'Archivo', sans-serif; font-size: 0.62rem; letter-spacing: 0.1em; color: var(--muted); }
+  .piece:hover .caption { opacity: 1; }
+  .variants-badge {
+    position: absolute; top: 10px; left: 10px;
+    font-size: 0.62rem; letter-spacing: 0.08em; color: var(--cream);
+    background: rgba(19,17,16,0.72); border: 1px solid var(--hairline);
+    border-radius: 999px; padding: 0.15rem 0.55rem;
+  }
+
+  /* ── slide-in composer: pre-steered, one column, no page of forms ── */
+  .composer {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 420px;
+    background: var(--surface); border-left: 1px solid var(--hairline);
+    padding: 1.6rem 1.8rem; overflow-y: auto;
+    box-shadow: -30px 0 60px rgba(0,0,0,0.4);
+  }
+  .composer h2 {
+    font-family: 'Marcellus', serif; font-weight: 400;
+    font-size: 1.1rem; letter-spacing: 0.2em; text-transform: uppercase;
+    margin-bottom: 0.4rem;
+  }
+  .composer .sub { font-size: 0.75rem; color: var(--muted); margin-bottom: 1.4rem; }
+  .steer {
+    display: flex; align-items: center; gap: 0.8rem;
+    background: var(--ink); border: 1px solid var(--hairline); border-radius: 2px;
+    padding: 0.7rem 0.9rem; margin-bottom: 1rem;
+  }
+  .steer img { width: 44px; height: 44px; object-fit: cover; border-radius: 2px; }
+  .steer .who { flex: 1; }
+  .steer .who b { display: block; font-family: 'Marcellus', serif; font-weight: 400; letter-spacing: 0.12em; font-size: 0.85rem; text-transform: uppercase; }
+  .steer .who span { font-size: 0.68rem; color: var(--muted); letter-spacing: 0.08em; }
+  .steer button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.7rem; }
+  .steer button:hover { color: var(--cream); }
+  label { display: block; font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 1.1rem 0 0.4rem; }
+  textarea, select {
+    width: 100%; background: var(--ink); color: var(--cream);
+    border: 1px solid var(--hairline); border-radius: 2px;
+    padding: 0.7rem 0.8rem; font-family: 'Archivo', sans-serif; font-size: 0.85rem;
+    resize: vertical;
+  }
+  textarea:focus, select:focus { outline: 1px solid var(--accent); outline-offset: 0; }
+  .placement-row { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .pchip {
+    font-size: 0.7rem; letter-spacing: 0.06em; color: var(--muted);
+    background: none; border: 1px solid var(--hairline); border-radius: 999px;
+    padding: 0.3rem 0.75rem; cursor: pointer;
+  }
+  .pchip.active { color: var(--cream); border-color: var(--accent); }
+  .actions { display: flex; gap: 0.6rem; margin-top: 1.5rem; }
+  .primary {
+    flex: 1; background: var(--accent); color: var(--cream);
+    border: none; border-radius: 2px; padding: 0.8rem;
+    font-size: 0.82rem; font-weight: 600; letter-spacing: 0.04em; cursor: pointer;
+  }
+  .secondary {
+    flex: 1; background: none; color: var(--cream);
+    border: 1px solid var(--hairline); border-radius: 2px; padding: 0.8rem;
+    font-size: 0.82rem; cursor: pointer;
+  }
+  .secondary:hover, .primary:hover { filter: brightness(1.1); }
+  .footnote { margin-top: 0.9rem; font-size: 0.7rem; color: var(--muted); line-height: 1.5; }
+  .footnote a { color: var(--cream); }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wordmark">Sable<span>.</span></div>
+  <nav class="tabs">
+    <button class="tab">Artists</button>
+    <button class="tab active">Concepts</button>
+  </nav>
+  <button class="new-btn">+ New concept</button>
+</header>
+
+<main class="wall">
+  <figure class="piece"><img src="https://picsum.photos/id/1035/520/700?grayscale" alt=""><span class="variants-badge">4 variants</span><figcaption class="caption">Raven & clockwork<small>steered · zoia.ink</small></figcaption></figure>
+  <figure class="piece"><img src="https://picsum.photos/id/1043/520/620?grayscale" alt=""><figcaption class="caption">Serpent mandala<small>steered · victorportugal</small></figcaption></figure>
+  <figure class="piece"><img src="https://picsum.photos/id/1050/520/760?grayscale" alt=""><span class="variants-badge">2 variants · STL ✓</span><figcaption class="caption">Moth study<small>dark-illustrative</small></figcaption></figure>
+  <figure class="piece"><img src="https://picsum.photos/id/1041/520/580?grayscale" alt=""><figcaption class="caption">Wolf geometry<small>fine-line</small></figcaption></figure>
+  <figure class="piece"><img src="https://picsum.photos/id/1039/520/720?grayscale" alt=""><figcaption class="caption">Tidal sleeve<small>surrealism</small></figcaption></figure>
+  <figure class="piece"><img src="https://picsum.photos/id/1044/520/660?grayscale" alt=""><figcaption class="caption">Falling cathedral<small>dark-fantasy</small></figcaption></figure>
+</main>
+
+<aside class="composer">
+  <h2>New concept</h2>
+  <div class="sub">Opened from Victor Portugal's wall — steering is pre-set.</div>
+
+  <div class="steer">
+    <img src="https://picsum.photos/id/1069/88/88?grayscale" alt="">
+    <div class="who">
+      <b>Victor Portugal</b>
+      <span>dark-illustrative · blackwork</span>
+    </div>
+    <button>change</button>
+  </div>
+
+  <label for="idea">Your idea</label>
+  <textarea id="idea" rows="4">A raven perched on a broken pocket watch, feathers dissolving into smoke, heavy black shading</textarea>
+
+  <label for="placement">Placement</label>
+  <div class="placement-row">
+    <button class="pchip">Forearm</button>
+    <button class="pchip active">Upper arm</button>
+    <button class="pchip">Chest</button>
+    <button class="pchip">Back</button>
+    <button class="pchip">Calf</button>
+  </div>
+
+  <div class="actions">
+    <button class="primary">Generate image</button>
+    <button class="secondary">Copy prompt instead</button>
+  </div>
+  <div class="footnote">
+    Generates with your saved Gemini key. Results land on this wall —
+    open one full-screen for variants and <a href="#">relief STL export</a>.
+    No key? "Copy prompt" builds the same structured prompt for ChatGPT / Claude / Gemini.
+  </div>
+</aside>
+
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sable — The Wall (home)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Archivo:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #131110;
+    --surface: #1d1a17;
+    --cream: #efe9dc;
+    --muted: #a8a294;      /* 4.6:1 on ink — the new floor */
+    --accent: #c0392b;
+    --hairline: #35312b;   /* visible, unlike the old 1.1:1 borders */
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--ink);
+    color: var(--cream);
+    font-family: 'Archivo', sans-serif;
+    min-height: 100vh;
+  }
+  /* ── The only chrome: one hairline bar ─────────────────── */
+  .bar {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 2rem;
+    padding: 0.9rem 2rem;
+    background: color-mix(in srgb, var(--ink) 88%, transparent);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--hairline);
+  }
+  .wordmark {
+    font-family: 'Marcellus', serif;
+    font-size: 1.35rem; letter-spacing: 0.28em; text-transform: uppercase;
+  }
+  .wordmark span { color: var(--accent); }
+  .filters { display: flex; gap: 0.4rem; flex: 1; }
+  .chip {
+    font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted); background: none;
+    border: 1px solid transparent; border-radius: 999px;
+    padding: 0.35rem 0.85rem; cursor: pointer;
+    transition: color .15s, border-color .15s;
+  }
+  .chip:hover { color: var(--cream); }
+  .chip.active { color: var(--cream); border-color: var(--hairline); }
+  .add {
+    font-size: 0.78rem; letter-spacing: 0.06em;
+    color: var(--cream); background: none; cursor: pointer;
+    border: 1px solid var(--hairline); border-radius: 2px;
+    padding: 0.45rem 1rem;
+    transition: border-color .15s;
+  }
+  .add:hover { border-color: var(--accent); }
+  .drawer-btn {
+    color: var(--muted); background: none; border: none;
+    font-size: 1.1rem; cursor: pointer; padding: 0.3rem 0.5rem;
+  }
+  .drawer-btn:hover { color: var(--cream); }
+
+  /* ── The Wall: images ARE the interface ─────────────────── */
+  .wall {
+    columns: 4 300px;
+    column-gap: 6px;
+    padding: 6px;
+  }
+  .piece {
+    position: relative;
+    break-inside: avoid;
+    margin-bottom: 6px;
+    cursor: zoom-in;
+    overflow: hidden;
+  }
+  .piece img {
+    width: 100%; display: block;
+    filter: grayscale(0.15);         /* NO dark overlay — images carry the light */
+    transition: filter .3s;
+  }
+  .piece:hover img { filter: grayscale(0); }
+  /* Signature: engraved plate caption, appears on hover */
+  .caption {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 0.55rem 0.8rem;
+    font-family: 'Marcellus', serif;
+    font-size: 0.82rem; letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--cream);
+    background: linear-gradient(transparent, rgba(19,17,16,0.82));
+    opacity: 0;
+    transition: opacity .18s;
+    pointer-events: none;            /* caption never steals the hover */
+  }
+  .caption small {
+    font-family: 'Archivo', sans-serif;
+    font-size: 0.62rem; letter-spacing: 0.14em; color: var(--muted);
+  }
+  .piece:hover .caption { opacity: 1; }
+
+  /* Recent shelf marker — the "freshness" slot */
+  .recent-dot {
+    position: absolute; top: 10px; right: 10px;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px rgba(19,17,16,0.6);
+  }
+  .keyhint {
+    position: fixed; bottom: 1rem; right: 1.4rem; z-index: 10;
+    font-size: 0.68rem; letter-spacing: 0.1em; color: var(--muted);
+  }
+  .keyhint kbd {
+    font-family: 'Archivo', sans-serif;
+    border: 1px solid var(--hairline); border-radius: 3px;
+    padding: 0.1rem 0.35rem; margin: 0 0.15rem;
+    color: var(--cream); font-size: 0.66rem;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .piece img, .caption { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wordmark">Sable<span>.</span></div>
+  <div style="flex:1"></div>
+  <button class="add">+ Add artist</button>
+  <button class="drawer-btn" title="Everything else — ideas, ranking, conventions, studios, settings">⋯</button>
+</header>
+
+<main class="wall">
+  <figure class="piece"><img src="https://picsum.photos/id/1069/560/780?grayscale" alt=""><span class="recent-dot" title="New since your last visit"></span><figcaption class="caption">Victor Portugal<small>dark-illustrative</small></figcaption></figure>
+  <figure class="piece"><img src="https://picsum.photos/id/1025/560/620?grayscale" alt=""><figcaption class="caption">Zoia<small>blackwork</small></figcaption></figure>
+  <figure class="piece"><img src="https://picsum.photos/id/1084/560/840?grayscale" alt=""><figcaption class="caption">Oscar Akermo<small>fine-line</small></figcaption></figure>
+  <figure class="piece"><img src="https://picsum.photos/id/1080/560/560?grayscale" alt=""><figcaption class="caption">Kerem<small>surrealism</small></figcaption></figure>
+  <figure class="piece"><img src="https://picsum.photos/id/110/560/750?grayscale" alt=""><span class="recent-dot"></span><figcaption class="caption">Carlos Valera<small>realism</small></figcaption></figure>
+  <figure class="piece"><img src="https://picsum.photos/id/143/560/680?grayscale" alt=""><figcaption class="caption">Yuki Zerkjad<small>dark-fantasy</small></figcaption></figure>
+  <figure class="piece"><img src="https://picsum.photos/id/167/560/800?grayscale" alt=""><figcaption class="caption">Leo Albuquerque<small>blackwork</small></figcaption></figure>
+  <figure class="piece"><img src="https://picsum.photos/id/177/560/600?grayscale" alt=""><figcaption class="caption">Leon del Cabo<small>dark-illustrative</small></figcaption></figure>
+  <figure class="piece"><img src="https://picsum.photos/id/193/560/730?grayscale" alt=""><figcaption class="caption">Berk Bosveren<small>surrealism</small></figcaption></figure>
+  <figure class="piece"><img src="https://picsum.photos/id/219/560/660?grayscale" alt=""><figcaption class="caption">Gody<small>blackwork</small></figcaption></figure>
+  <figure class="piece"><img src="https://picsum.photos/id/230/560/810?grayscale" alt=""><figcaption class="caption">Inkfluid Joy<small>fine-line</small></figcaption></figure>
+  <figure class="piece"><img src="https://picsum.photos/id/250/560/580?grayscale" alt=""><figcaption class="caption">Saad<small>dark-fantasy</small></figcaption></figure>
+  <figure class="piece"><img src="https://picsum.photos/id/265/560/760?grayscale" alt=""><figcaption class="caption">Patrick Shanty<small>dark-illustrative</small></figcaption></figure>
+  <figure class="piece"><img src="https://picsum.photos/id/281/560/700?grayscale" alt=""><figcaption class="caption">Cagri Esk<small>realism</small></figcaption></figure>
+  <figure class="piece"><img src="https://picsum.photos/id/311/560/640?grayscale" alt=""><figcaption class="caption">Sena<small>blackwork</small></figcaption></figure>
+  <figure class="piece"><img src="https://picsum.photos/id/338/560/790?grayscale" alt=""><figcaption class="caption">Sink<small>surrealism</small></figcaption></figure>
+</main>
+
+<div class="keyhint">click any image → full screen · <kbd>/</kbd> filter · <kbd>A</kbd> add artist</div>
+
+</body>
+</html>
