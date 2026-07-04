@@ -45,10 +45,10 @@ function AppShell() {
           element={(
             <Wall
               artists={artists}
+              ideas={ideas}
               activeView="artists"
               onSwitchView={(view) => view === 'concepts' && navigate('/concepts')}
               onAddArtist={() => navigate('/gallery?mode=manage')} // t8: replace with a quick-add modal
-              onOpenArtist={() => {}} // t6b: full-screen viewer
               onOpenDrawer={() => setDrawerOpen(true)}
             />
           )}

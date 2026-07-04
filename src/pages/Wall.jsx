@@ -1,5 +1,8 @@
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { buildWallItems } from '../data/wall'
 import WallPiece from '../components/WallPiece'
+import WallViewer from '../components/WallViewer'
 
 // The Wall — image-first home surface. Full-bleed masonry of every artist
 // reference image; the hairline bar above it is the only chrome. Routing is
@@ -49,17 +52,47 @@ function Bar({ activeView, onSwitchView, onAddArtist, onOpenDrawer }) {
   )
 }
 
-export default function Wall({ artists = [], onOpenArtist, onAddArtist, onOpenDrawer, onSwitchView, activeView = 'artists' }) {
+export default function Wall({ artists = [], ideas = [], onOpenArtist, onAddArtist, onOpenDrawer, onSwitchView, activeView = 'artists' }) {
   const items = buildWallItems(artists)
+  const [viewerIndex, setViewerIndex] = useState(null)
+  const navigate = useNavigate()
+
+  const viewerOpen = viewerIndex !== null
+
+  // Overlay owns the screen while it's open — lock page scroll so the wall
+  // behind it can't move, then hand scroll back when it closes.
+  useEffect(() => {
+    if (!viewerOpen) return undefined
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [viewerOpen])
+
+  function handleOpen(item) {
+    onOpenArtist?.(item)
+    setViewerIndex(items.indexOf(item))
+  }
+
+  function handleGenerate(item) {
+    // Viewer closes first so back-nav from Concepts returns to the wall, not
+    // to the viewer.
+    setViewerIndex(null)
+    // t7: Concepts composer reads `steer` to pre-select this artist's style.
+    navigate(`/concepts?steer=${item.artistId}`)
+  }
 
   return (
     <div className="min-h-screen bg-v2-ink">
-      <Bar
-        activeView={activeView}
-        onSwitchView={onSwitchView}
-        onAddArtist={onAddArtist}
-        onOpenDrawer={onOpenDrawer}
-      />
+      {!viewerOpen && (
+        <Bar
+          activeView={activeView}
+          onSwitchView={onSwitchView}
+          onAddArtist={onAddArtist}
+          onOpenDrawer={onOpenDrawer}
+        />
+      )}
 
       {items.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-4 py-32 text-center px-6">
@@ -76,9 +109,21 @@ export default function Wall({ artists = [], onOpenArtist, onAddArtist, onOpenDr
       ) : (
         <main className="columns-[300px] gap-[6px] p-[6px]">
           {items.map((item) => (
-            <WallPiece key={`${item.artistId}-${item.imageIndex}`} item={item} onOpen={onOpenArtist} />
+            <WallPiece key={`${item.artistId}-${item.imageIndex}`} item={item} onOpen={handleOpen} />
           ))}
         </main>
+      )}
+
+      {viewerOpen && (
+        <WallViewer
+          items={items}
+          initialIndex={viewerIndex}
+          artists={artists}
+          ideas={ideas}
+          open={viewerOpen}
+          onClose={() => setViewerIndex(null)}
+          onGenerate={handleGenerate}
+        />
       )}
     </div>
   )

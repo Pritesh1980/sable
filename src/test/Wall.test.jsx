@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import Wall from '../pages/Wall'
 
 const baseArtists = [
@@ -19,17 +20,19 @@ const baseArtists = [
   },
 ]
 
-function renderWall(props = {}) {
+function renderWall(props = {}, { initialEntries = ['/'] } = {}) {
   return render(
-    <Wall
-      artists={baseArtists}
-      onOpenArtist={vi.fn()}
-      onAddArtist={vi.fn()}
-      onOpenDrawer={vi.fn()}
-      onSwitchView={vi.fn()}
-      activeView="artists"
-      {...props}
-    />
+    <MemoryRouter initialEntries={initialEntries}>
+      <Wall
+        artists={baseArtists}
+        onOpenArtist={vi.fn()}
+        onAddArtist={vi.fn()}
+        onOpenDrawer={vi.fn()}
+        onSwitchView={vi.fn()}
+        activeView="artists"
+        {...props}
+      />
+    </MemoryRouter>
   )
 }
 
