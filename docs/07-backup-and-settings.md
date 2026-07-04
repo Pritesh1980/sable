@@ -8,7 +8,7 @@
 
 Everything you create (artists, photos, ideas, boards, concepts, ranks, tags, notes) is
 kept as a local copy in your browser **and** synced to your account, so it follows you
-across devices and still works offline. The **Backup** panel in **More → Settings** lets
+across devices and still works offline. The **Backup** panel in **⋯ → Settings** lets
 you export a full snapshot you control — and it's where your account and sign-out live.
 
 ![The Settings page with the backup panel](../public/guide/settings.png)

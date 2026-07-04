@@ -49,16 +49,20 @@ not `fullPage` — the fixed bottom nav floats to the middle on full-page captur
 
    | Route | Files |
    |---|---|
-   | `/` | `dashboard.png`, `dashboard-desktop.png` |
+   | `/` | `wall.png` (desktop), `wall-viewer.png` (desktop, viewer open with HUD visible), `drawer.png` (desktop, ⋯ open) |
+   | `/pipeline` | `dashboard.png`, `dashboard-desktop.png` |
    | `/gallery` | `gallery-filmstrip.png`, `gallery-grid.png`, `gallery-grid-desktop.png`, `gallery-compare.png`, `gallery-stylewall.png`, `artist-detail.png`, `ranking-swipe.png` |
    | `/gallery?mode=manage` | `manage-list.png`, `manage-artist-expanded.png` |
    | `/brief` | `brief-list.png`, `brief-idea-editor.png` |
    | `/brief?tab=boards` | `boards-list.png`, `board-editor.png` |
    | `/conventions` | `conventions.png` |
    | `/studios` | `studios.png` |
-   | `/concepts` | `concepts.png`, `concept-card.png` |
+   | `/concepts` | `concepts.png` (desktop, composer open), `concept-card.png` (desktop, concept full-screen with `I` panel open) |
    | `/settings` | `settings.png` |
    | `/help` | `help-overview.png` |
+
+   The v2 surfaces (`wall*`, `drawer`, `concepts*`) are laptop-first — capture those at
+   `1280 × 900`; the classic pages keep the phone viewport.
 
    (Doing this with the Playwright MCP: resize → navigate → `browser_evaluate` to seed → reload →
    wait ~1.5s for images → `browser_take_screenshot` per state, clicking view toggles / opening

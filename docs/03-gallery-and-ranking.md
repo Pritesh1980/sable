@@ -6,9 +6,10 @@
 
 ---
 
-**Artists** is the heart of the app. A sticky bar at the top holds the **style filter**
-(tap a tag to show only artists with it; tap **All** to clear) and a **view toggle** on
-the right with four modes.
+The **Classic gallery** (**⋯ → Classic gallery**) is where ranking and structured browsing
+live — the Wall is for looking, this page is for organising. A sticky bar at the top holds
+the **style filter** (tap a tag to show only artists with it; tap **All** to clear) and a
+**view toggle** on the right with four modes.
 
 ## The four views
 

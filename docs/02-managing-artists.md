@@ -6,27 +6,43 @@
 
 ---
 
-Everything to do with the artist list itself lives on the **Artists** page — tap the
+## Add an artist — the quick way
+
+Tap **+ Add artist** in the Wall's top bar (the empty Wall offers the same button). One
+small form does the whole onboarding:
+
+1. Paste the **Instagram handle or the full Instagram URL** — the handle is extracted
+   automatically.
+2. Optionally add a **display name** (e.g. *Carlos Valera* for `@carl245tattoo`).
+3. Toggle their **style tags**.
+4. **Drop or paste a few screenshots** right in the form if you have them handy.
+5. Save — their photos join the Wall immediately, each wearing a red *new* dot.
+
+If the handle already exists, Sable offers to **add the images to that artist** instead of
+creating a duplicate. The **Full manage view** link in the form's footer jumps to the
+heavy-duty editor below.
+
+## Add photos as you find them
+
+You don't need a form to grow a portfolio:
+
+- **Drag an image file onto an artist's photo on the Wall** — the tile highlights, and the
+  drop adds the image to that artist.
+- **Paste (`⌘V`) while viewing an artist full-screen** — the screenshot is added to
+  whichever artist is on screen.
+
+Either way the new photo is stamped as recent and wears a red dot for two weeks.
+
+## The manage table
+
+Deeper upkeep lives on the classic Artists page — **⋯ → Classic gallery**, then the
 **Manage** button in the header (or deep-link to `/gallery?mode=manage`). A count of
 artists and photos sits at the top.
 
 ![Manage mode on the Artists page](../public/guide/manage-list.png)
 
-## Add an artist — the quick way
-
-Tap **+ Add** in the Artists header (visible in every view). One small form does the
-whole onboarding:
-
-1. Paste the **Instagram handle or the full Instagram URL** — the handle is extracted
-   automatically.
-2. Optionally add a **display name** (e.g. *Carlos Valera* for `@carl245tattoo`).
-3. Toggle their **style tags** and pick a **shortlist status** right there.
-4. Tap **Add Artist** — they land at the bottom of your ranking, fully tagged.
-
-Duplicate handles are rejected with a message, so you can't add the same artist twice.
-The **Add New Artist** panel inside Manage mode still works too (and also accepts URLs).
-
-## The artist table
+The **Add New Artist** panel inside Manage mode still works too (and also accepts URLs,
+plus a shortlist status).
 
 Below the add-artist panel is a searchable table of every artist with their Instagram
 link, status and photo count. Type in the **search** box to filter by name or handle.
