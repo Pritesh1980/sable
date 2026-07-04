@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import useIdleFade from '../hooks/useIdleFade'
 import ConceptVariantLab from './ConceptVariantLab'
+import GlCrossfade from './GlCrossfade'
 import SavedPromptPack from './SavedPromptPack'
 import TagPill from './TagPill'
 import { STYLE_TAGS } from '../data/artists'
 import { matchArtistsForIdea } from '../data/planning'
+import { resolveTransitionMode } from '../lib/gl'
 
 function isFormFieldFocused() {
   const el = typeof document !== 'undefined' ? document.activeElement : null
@@ -102,6 +104,8 @@ export default function ConceptViewer({
 }) {
   const [index, setIndex] = useState(initialIndex)
   const [showInfo, setShowInfo] = useState(false)
+  // Resolve the transition renderer once per viewer open (not per keypress).
+  const [transitionMode] = useState(resolveTransitionMode)
   const idle = useIdleFade(2000)
 
   useEffect(() => {
@@ -144,14 +148,26 @@ export default function ConceptViewer({
 
   return (
     <div className="fixed inset-0 z-50 bg-v2-ink overflow-hidden">
-      <div className="absolute inset-0 flex items-center justify-center">
-        <img
-          key={current.id}
-          src={current.imageUrl}
-          alt={current.title}
-          className="max-w-[100vw] max-h-[100vh] object-contain animate-fade-in"
-        />
-      </div>
+      {/* t9: WebGL crossfade/ripple chosen once per open; 'css' keeps <img>. */}
+      {transitionMode === 'webgl' ? (
+        <div className="absolute inset-0">
+          <GlCrossfade
+            src={current.imageUrl}
+            label={current.title}
+            className="w-full h-full block"
+            fallbackImageClassName="max-w-[100vw] max-h-[100vh] object-contain animate-fade-in"
+          />
+        </div>
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <img
+            key={current.id}
+            src={current.imageUrl}
+            alt={current.title}
+            className="max-w-[100vw] max-h-[100vh] object-contain animate-fade-in"
+          />
+        </div>
+      )}
 
       <div
         className={`absolute inset-0 pointer-events-none transition-opacity duration-500 motion-reduce:transition-none ${

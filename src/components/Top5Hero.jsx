@@ -1,7 +1,7 @@
 import { lazy, Suspense, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
-import { resolveRenderMode } from '../data/renderMode'
+import { resolveTransitionMode } from '../lib/gl'
 
 // three.js lives in this lazily-imported chunk only — never in the initial bundle.
 const Top5Coverflow = lazy(() => import('./Top5Coverflow'))
@@ -63,7 +63,9 @@ function StaticGallery({ items, activeIndex, onSelect }) {
 
 export default function Top5Hero({ artists = [], bench = [], onDropOut, onPullIn }) {
   // Client-only SPA — safe to probe WebGL/reduced-motion in the initializer.
-  const [mode] = useState(resolveRenderMode)
+  // Shares the single gl gate (src/lib/gl.js) with the viewer transition layer:
+  // 'webgl' → three.js coverflow, anything else → the static fallback.
+  const [mode] = useState(() => (resolveTransitionMode() === 'webgl' ? 'webgl' : 'static'))
   const [activeIndex, setActiveIndex] = useState(0)
 
   const items = useMemo(

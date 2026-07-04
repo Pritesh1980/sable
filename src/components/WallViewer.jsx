@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import ArtistImage from './ArtistImage'
+import GlCrossfade from './GlCrossfade'
 import useWallKeyboard from '../hooks/useWallKeyboard'
 import useIdleFade from '../hooks/useIdleFade'
+import { resolveTransitionMode } from '../lib/gl'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
 
 function getItemSrc(item) {
@@ -75,6 +77,8 @@ export default function WallViewer({
   onPasteImage,
 }) {
   const [showInfo, setShowInfo] = useState(false)
+  // Resolve the transition renderer once per viewer open (not per keypress).
+  const [transitionMode] = useState(resolveTransitionMode)
 
   const {
     index,
@@ -126,17 +130,29 @@ export default function WallViewer({
 
   return (
     <div className="fixed inset-0 z-50 bg-v2-ink overflow-hidden">
-      {/* t9: WebGL crossfade/ripple transition layer plugs in here, replacing
-          the plain <img> below via resolveTransitionMode */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <ArtistImage
-          key={`${current.artistId}-${current.imageIndex}`}
-          src={getItemSrc(current)}
-          label={`${current.artistName} — ${current.styles.join(', ')}`}
-          className="max-w-[100vw] max-h-[100vh] object-contain animate-fade-in"
-          monogramClassName="text-8xl"
-        />
-      </div>
+      {/* t9: WebGL crossfade/ripple transition layer. Chosen once per open via
+          resolveTransitionMode(); 'css' keeps the plain <img> path untouched. */}
+      {transitionMode === 'webgl' ? (
+        <div className="absolute inset-0">
+          <GlCrossfade
+            src={getItemSrc(current)}
+            label={`${current.artistName} — ${current.styles.join(', ')}`}
+            className="w-full h-full block"
+            fallbackImageClassName="max-w-[100vw] max-h-[100vh] object-contain animate-fade-in"
+            monogramClassName="text-8xl"
+          />
+        </div>
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <ArtistImage
+            key={`${current.artistId}-${current.imageIndex}`}
+            src={getItemSrc(current)}
+            label={`${current.artistName} — ${current.styles.join(', ')}`}
+            className="max-w-[100vw] max-h-[100vh] object-contain animate-fade-in"
+            monogramClassName="text-8xl"
+          />
+        </div>
+      )}
 
       <div
         className={`absolute inset-0 pointer-events-none transition-opacity duration-500 motion-reduce:transition-none ${
