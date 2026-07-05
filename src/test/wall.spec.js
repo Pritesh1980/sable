@@ -67,6 +67,7 @@ describe('buildWallItems', () => {
       handle: 'carl245tattoo',
       name: 'Carlos Valera',
       tags: ['realism'],
+      studio: 'no-regrets-london',
       images: [{ key: 'blob-key', addedAt: NOW.toISOString() }],
     },
     {
@@ -129,6 +130,18 @@ describe('buildWallItems', () => {
     const item = items.find((i) => i.artistId === 'carlosvalera')
     expect(item.addedAt).toBe(NOW.toISOString())
     expect(item.isRecent).toBe(true)
+  })
+
+  it('resolves the artist studio id to a display name', () => {
+    const items = buildWallItems(artists, { now: NOW })
+    const carlos = items.find((i) => i.artistId === 'carlosvalera')
+    expect(carlos.studioName).toBe('No Regrets London')
+  })
+
+  it('leaves studioName undefined when the artist has no (or an unknown) studio', () => {
+    const items = buildWallItems(artists, { now: NOW })
+    const zoia = items.find((i) => i.artistId === 'zoia.ink' && i.imageIndex === 0)
+    expect(zoia.studioName).toBeUndefined()
   })
 
   it('handles an artist with no images (contributes zero entries)', () => {

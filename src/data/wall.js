@@ -1,6 +1,8 @@
 // Wall data schema + selector — flattens artist images into a single visual
 // stream for the (future) Wall view. Pure data layer; no UI.
 
+import { DEFAULT_STUDIOS } from './artists'
+
 const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000
 
 // True iff `addedAt` is an ISO timestamp within the last 14 days of `now`.
@@ -36,12 +38,17 @@ export function imageSrc(image) {
   return image?.url || ''
 }
 
+function studioNameOf(studioId) {
+  return DEFAULT_STUDIOS.find((s) => s.id === studioId)?.name
+}
+
 // Flattens artists into one entry per image, preserving artist order then
 // image order (stable — no shuffling).
 export function buildWallItems(artists = [], { now = new Date() } = {}) {
   const items = []
   for (const artist of artists) {
     const images = artist.images || []
+    const studioName = studioNameOf(artist.studio)
     images.forEach((image, imageIndex) => {
       const addedAt = addedAtOf(image)
       items.push({
@@ -49,6 +56,7 @@ export function buildWallItems(artists = [], { now = new Date() } = {}) {
         artistName: artist.name || artist.handle,
         handle: artist.handle,
         styles: artist.tags || [],
+        studioName,
         image: imageSrc(image),
         imageIndex,
         addedAt,

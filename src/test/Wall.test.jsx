@@ -20,6 +20,7 @@ const baseArtists = [
     handle: 'carl245tattoo',
     name: 'Carlos Valera',
     tags: ['realism'],
+    studio: 'no-regrets-london',
     images: [{ key: 'blob-key', url: '/images/artists/carlosvalera/1.jpg', addedAt: new Date().toISOString() }],
   },
 ]
@@ -46,12 +47,19 @@ describe('Wall page', () => {
     expect(screen.getAllByRole('img')).toHaveLength(3)
   })
 
-  it('renders the artist name and style tags as caption text, hidden until hover', () => {
+  it('captions with a prominent artist name and their studio — no style tags', () => {
     renderWall()
     const caption = screen.getByText('Carlos Valera').closest('figcaption')
-    expect(caption).toHaveTextContent('realism')
+    expect(caption).toHaveTextContent('No Regrets London')
+    expect(caption).not.toHaveTextContent('realism')
     expect(caption.className).toMatch(/opacity-0/)
     expect(caption.className).toMatch(/group-hover:opacity-100/)
+  })
+
+  it('omits the studio line when the artist has none', () => {
+    renderWall()
+    const caption = screen.getAllByText('zoia.ink').find((el) => el.closest('figcaption')).closest('figcaption')
+    expect(caption).not.toHaveTextContent('No Regrets')
   })
 
   it('shows a recent dot only for recent items', () => {
