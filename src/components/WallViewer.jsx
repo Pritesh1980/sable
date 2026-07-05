@@ -137,7 +137,7 @@ export default function WallViewer({
       aria-modal="true"
       aria-label={`${current.artistName} — image ${positionInArtist + 1} of ${artistImageCount}`}
       tabIndex={-1}
-      className="fixed inset-0 z-50 bg-v2-ink overflow-hidden focus:outline-none"
+      className="fixed inset-0 z-[60] bg-v2-ink overflow-hidden focus:outline-none"
     >
       {/* t9: WebGL crossfade/ripple transition layer. Chosen once per open via
           resolveTransitionMode(); 'css' keeps the plain <img> path untouched. */}

@@ -62,8 +62,8 @@ Everything else lives in the **Drawer** — tap **⋯** at the top-right of the 
 - **Radar** — upcoming conventions. · **Studios** — where your artists work.
 - **Settings** — backup, account & sign out. · **Help** — this guide, in the app.
 
-On the classic pages the familiar bottom bar is still there, along with the **A+ / A−**
-text size and **◑ / ◐** theme controls in the header.
+On the classic pages the familiar bottom bar is still there — with the **A+ / A−**
+text size, **◑ / ◐** theme and **⏻** sign-out controls at its right end.
 
 ## The Pipeline page
 

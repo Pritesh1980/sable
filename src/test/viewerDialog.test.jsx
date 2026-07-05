@@ -11,6 +11,13 @@ const items = [
 const artist = { id: 'a1', name: 'Zoia', handle: 'zoia.ink', tags: ['blackwork'] }
 
 describe('WallViewer dialog semantics', () => {
+  it('stacks above app chrome (nav bars are z-50; dialogs must exceed them)', () => {
+    render(
+      <WallViewer items={items} initialIndex={0} artist={artist} open onClose={() => {}} onGenerate={() => {}} />
+    )
+    expect(screen.getByRole('dialog').className).toMatch(/z-\[60\]/)
+  })
+
   it('renders as an aria-modal dialog and takes focus on open', () => {
     render(
       <WallViewer items={items} initialIndex={0} artist={artist} open onClose={() => {}} onGenerate={() => {}} />

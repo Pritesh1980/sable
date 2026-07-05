@@ -155,7 +155,7 @@ export default function ConceptViewer({
       aria-modal="true"
       aria-label={`Concept: ${current.title || current.prompt || 'untitled'}`}
       tabIndex={-1}
-      className="fixed inset-0 z-50 bg-v2-ink overflow-hidden focus:outline-none"
+      className="fixed inset-0 z-[60] bg-v2-ink overflow-hidden focus:outline-none"
     >
       {/* t9: WebGL crossfade/ripple chosen once per open; 'css' keeps <img>. */}
       {transitionMode === 'webgl' ? (

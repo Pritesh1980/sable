@@ -15,7 +15,7 @@ const SECTIONS = [
       'Click any photo and it fills the screen. Arrow keys drive it: ←/→ moves through this artist’s work, ↑/↓ jumps between artists, G generates a concept in this artist’s style, I opens their info & notes, Esc returns to the Wall.',
       'Leave the mouse still and the viewer’s controls fade away, leaving just the image; move it and they return. The @handle link opens the artist’s Instagram in a new tab.',
       'The bar at the top switches between Artists and Concepts, adds an artist, and opens the ⋯ Drawer — home of the Classic gallery, Ideas, Pipeline, Radar, Studios, Settings and this Help page.',
-      'The old Home dashboard lives at Drawer → Pipeline, unchanged: Top 5 coverflow, shortlist pipeline, idea stats and matches. On the classic pages the familiar bottom bar, A+/A− text size and ◑/◐ theme controls are all still there.',
+      'The old Home dashboard lives at Drawer → Pipeline, unchanged: Top 5 coverflow, shortlist pipeline, idea stats and matches. On the classic pages the familiar bottom bar is still there, with the A+/A− text size, ◑/◐ theme and ⏻ sign-out controls at its right end.',
       'Your artists, studios and conventions come pre-loaded. Ideas, boards and concepts start empty — you build those.',
     ],
   },

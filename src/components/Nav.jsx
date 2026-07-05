@@ -62,33 +62,6 @@ export default function Nav() {
 
   return (
     <>
-      {/* Accessibility + theme controls — fixed top-right */}
-      <div className="fixed top-4 right-4 z-50 flex items-center gap-1.5">
-        {auth?.user && (
-          <button
-            onClick={() => auth.signOut()}
-            title={`Sign out (${auth.user.email})`}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-ink-card border border-ink-border text-cream-muted hover:text-accent transition-colors duration-200 text-sm"
-          >
-            ⏻
-          </button>
-        )}
-        <button
-          onClick={toggleFont}
-          title={fontSize === 'large' ? 'Reduce font size' : 'Increase font size'}
-          className="w-8 h-8 flex items-center justify-center rounded-full bg-ink-card border border-ink-border text-cream-muted hover:text-cream transition-colors duration-200 font-mono text-xs font-bold leading-none"
-        >
-          {fontSize === 'large' ? 'A−' : 'A+'}
-        </button>
-        <button
-          onClick={toggle}
-          title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
-          className="w-8 h-8 flex items-center justify-center rounded-full bg-ink-card border border-ink-border text-cream-muted hover:text-cream transition-colors duration-200 text-sm"
-        >
-          {theme === 'dark' ? '◑' : '◐'}
-        </button>
-      </div>
-
       {moreOpen && <MoreMenu onClose={() => setMoreOpen(false)} />}
 
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-ink-dark border-t border-ink-border safe-bottom">
@@ -118,6 +91,34 @@ export default function Nav() {
             <span aria-hidden="true" className="text-base leading-none">⋯</span>
             <span className="tracking-widest uppercase text-xs">More</span>
           </button>
+
+          {/* Accessibility + theme controls — chrome lives in chrome, so these
+              can never float over page content (they used to be fixed top-right). */}
+          <div className="flex items-center gap-1.5 pl-3 pr-2 border-l border-ink-border">
+            <button
+              onClick={toggleFont}
+              title={fontSize === 'large' ? 'Reduce font size' : 'Increase font size'}
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-ink-card border border-ink-border text-cream-muted hover:text-cream transition-colors duration-200 font-mono text-xs font-bold leading-none"
+            >
+              {fontSize === 'large' ? 'A−' : 'A+'}
+            </button>
+            <button
+              onClick={toggle}
+              title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-ink-card border border-ink-border text-cream-muted hover:text-cream transition-colors duration-200 text-sm"
+            >
+              {theme === 'dark' ? '◑' : '◐'}
+            </button>
+            {auth?.user && (
+              <button
+                onClick={() => auth.signOut()}
+                title={`Sign out (${auth.user.email})`}
+                className="w-8 h-8 flex items-center justify-center rounded-full bg-ink-card border border-ink-border text-cream-muted hover:text-accent transition-colors duration-200 text-sm"
+              >
+                ⏻
+              </button>
+            )}
+          </div>
         </div>
       </nav>
     </>

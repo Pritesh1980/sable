@@ -57,4 +57,20 @@ describe('Nav', () => {
     renderNav(['/gallery'])
     expect(screen.getAllByRole('link').length).toBeGreaterThan(0)
   })
+
+  it('keeps the text-size/theme controls inside the nav bar, never floating over content', () => {
+    renderNav(['/gallery'])
+    const fontBtn = screen.getByTitle(/font size/i)
+    const themeBtn = screen.getByTitle(/switch to/i)
+    // Both live inside the <nav> chrome…
+    expect(fontBtn.closest('nav')).not.toBeNull()
+    expect(themeBtn.closest('nav')).not.toBeNull()
+    // …and no ancestor between them and the nav is position:fixed (the old
+    // top-right cluster overlapped page headers and sticky bars).
+    let el = fontBtn.parentElement
+    while (el && el.tagName !== 'NAV') {
+      expect(el.className).not.toMatch(/fixed/)
+      el = el.parentElement
+    }
+  })
 })
