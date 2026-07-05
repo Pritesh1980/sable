@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sable — Full-screen viewer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Archivo:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #131110;
+    --cream: #efe9dc;
+    --muted: #a8a294;
+    --accent: #c0392b;
+    --hairline: #35312b;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--ink); color: var(--cream);
+    font-family: 'Archivo', sans-serif;
+    height: 100vh; overflow: hidden;
+  }
+
+  /* ── The image owns the screen ───────────────────────────── */
+  .stage {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .stage img {
+    max-width: 100vw; max-height: 100vh;
+    /* hybrid layer: in the real build, a WebGL plane crossfades/ripples
+       between images here; the <img> is the instant-loading fallback */
+  }
+
+  /* ── HUD: fades away after 2s of stillness ───────────────── */
+  .hud { position: absolute; inset: 0; pointer-events: none; }
+  .hud > * { pointer-events: auto; }
+
+  .artist-plate {
+    position: absolute; left: 2rem; bottom: 1.8rem;
+  }
+  .artist-plate h1 {
+    font-family: 'Marcellus', serif;
+    font-size: 1.6rem; font-weight: 400;
+    letter-spacing: 0.24em; text-transform: uppercase;
+    text-shadow: 0 1px 12px rgba(19,17,16,0.8);
+  }
+  .artist-plate a {
+    font-size: 0.75rem; letter-spacing: 0.12em;
+    color: var(--muted); text-decoration: none;
+  }
+  .artist-plate a:hover { color: var(--cream); }
+  .artist-plate .styles {
+    margin-top: 0.3rem; font-size: 0.68rem; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--muted);
+  }
+
+  .index {
+    position: absolute; right: 2rem; top: 1.6rem;
+    font-family: 'Marcellus', serif;
+    font-size: 0.85rem; letter-spacing: 0.2em; color: var(--muted);
+  }
+  .index b { color: var(--cream); font-weight: 400; }
+
+  /* Generate affordance — the bridge from looking to making */
+  .generate {
+    position: absolute; right: 2rem; bottom: 1.8rem;
+    display: flex; align-items: center; gap: 0.7rem;
+    background: rgba(19,17,16,0.72); backdrop-filter: blur(8px);
+    border: 1px solid var(--hairline); border-radius: 2px;
+    padding: 0.7rem 1.1rem; cursor: pointer;
+    color: var(--cream); font-size: 0.8rem; letter-spacing: 0.06em;
+    transition: border-color .15s;
+  }
+  .generate:hover { border-color: var(--accent); }
+  .generate kbd {
+    font-size: 0.7rem; color: var(--accent);
+    border: 1px solid var(--accent); border-radius: 3px;
+    padding: 0.1rem 0.4rem;
+  }
+
+  .arrow {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: var(--muted);
+    font-size: 2rem; cursor: pointer; padding: 2rem 1rem;
+    transition: color .15s;
+  }
+  .arrow:hover { color: var(--cream); }
+  .arrow.prev { left: 0.5rem; }
+  .arrow.next { right: 0.5rem; }
+
+  .keys {
+    position: absolute; bottom: 1.2rem; left: 50%; transform: translateX(-50%);
+    font-size: 0.68rem; letter-spacing: 0.1em; color: var(--muted);
+    display: flex; gap: 1.2rem;
+  }
+  .keys kbd {
+    border: 1px solid var(--hairline); border-radius: 3px;
+    padding: 0.1rem 0.35rem; margin-right: 0.3rem;
+    color: var(--cream); font-size: 0.66rem;
+  }
+
+  /* film-strip of THIS artist's other work, appears on mouse-move to bottom */
+  .strip {
+    position: absolute; bottom: 4.6rem; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 4px;
+  }
+  .strip img {
+    height: 56px; width: 42px; object-fit: cover;
+    opacity: 0.45; cursor: pointer; border-radius: 1px;
+    transition: opacity .15s;
+  }
+  .strip img:hover, .strip img.current { opacity: 1; }
+  .strip img.current { outline: 1px solid var(--accent); outline-offset: 1px; }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <img src="https://picsum.photos/id/1069/1400/1000?grayscale" alt="Victor Portugal — dark-illustrative piece">
+</div>
+
+<div class="hud">
+  <div class="index"><b>04</b> / 18 · artist 15 of 26</div>
+
+  <button class="arrow prev" title="Previous image (←)">‹</button>
+  <button class="arrow next" title="Next image (→)">›</button>
+
+  <div class="artist-plate">
+    <h1>Victor Portugal</h1>
+    <a href="#">@victorportugal ↗</a>
+    <div class="styles">dark-illustrative · blackwork · Kraków</div>
+  </div>
+
+  <div class="strip">
+    <img src="https://picsum.photos/id/1060/84/112?grayscale" alt="">
+    <img src="https://picsum.photos/id/1062/84/112?grayscale" alt="">
+    <img src="https://picsum.photos/id/1067/84/112?grayscale" alt="">
+    <img class="current" src="https://picsum.photos/id/1069/84/112?grayscale" alt="">
+    <img src="https://picsum.photos/id/1070/84/112?grayscale" alt="">
+    <img src="https://picsum.photos/id/1074/84/112?grayscale" alt="">
+    <img src="https://picsum.photos/id/1079/84/112?grayscale" alt="">
+  </div>
+
+  <button class="generate">Generate a concept in this style <kbd>G</kbd></button>
+
+  <div class="keys">
+    <span><kbd>←</kbd><kbd>→</kbd>this artist</span>
+    <span><kbd>↑</kbd><kbd>↓</kbd>next artist</span>
+    <span><kbd>G</kbd>generate</span>
+    <span><kbd>I</kbd>info & notes</span>
+    <span><kbd>Esc</kbd>back to wall</span>
+  </div>
+</div>
+
+</body>
+</html>

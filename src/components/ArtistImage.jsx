@@ -15,8 +15,10 @@ export default function ArtistImage({
   const [failed, setFailed] = useState(false)
   const trimmed = label.startsWith('@') ? label.slice(1) : label
   const initial = (trimmed.trim()[0] || '?').toUpperCase()
+  // Accept both image shapes: plain string, or { url, addedAt } refs.
+  const resolved = typeof src === 'string' ? src : src?.url || ''
 
-  if (!src || failed) {
+  if (!resolved || failed) {
     return (
       <div
         className={`w-full h-full flex items-center justify-center bg-ink-muted ${className} ${fallbackClassName}`}
@@ -31,7 +33,7 @@ export default function ArtistImage({
 
   return (
     <img
-      src={src}
+      src={resolved}
       alt={label}
       className={className}
       onError={() => setFailed(true)}

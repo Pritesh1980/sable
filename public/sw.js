@@ -1,10 +1,17 @@
 // Bump on ANY caching-behaviour change so the old cache is dropped on activate.
 // v1 was cache-first for navigations, which served stale builds (and once a stale
 // pre-auth bundle that skipped the login gate) after a deploy. v2 is network-first
-// for navigations. Routing logic mirrors src/sw/swStrategy.js (guarded by a test).
-const CACHE_NAME = 'tattoo-v2'
+// for navigations. v3 additionally runtime-caches Google Fonts so the app renders
+// with its real typography offline. Routing logic mirrors src/sw/swStrategy.js
+// (guarded by src/test/swStrategy.test.js).
+const CACHE_NAME = 'tattoo-v3'
 const APP_SHELL = '/index.html'
 const PRECACHE = ['/', APP_SHELL]
+
+// The one cross-origin exception we cache: Google Fonts CSS + woff2 files.
+// Immutable/versioned and safe to serve stale; caching them makes fonts work
+// offline after the first load.
+const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com']
 
 self.addEventListener('install', (event) => {
   // Activate as soon as installed so a new deploy isn't stuck behind old tabs.
@@ -26,9 +33,11 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return
 
   const url = new URL(request.url)
+  const isFont = FONT_HOSTS.includes(url.hostname)
   // Cross-origin (auth backend, per-user document store, signed image URLs) must
-  // never be cached — bypass entirely.
-  if (url.origin !== self.location.origin) return
+  // never be cached — bypass entirely. Google Fonts are the sole exception and
+  // fall through to the cache-first block below.
+  if (!isFont && url.origin !== self.location.origin) return
 
   const isNavigation = request.mode === 'navigate' || request.destination === 'document'
 
@@ -49,8 +58,9 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Static assets (hashed JS/CSS, icons, bundled images): cache-first with a
-  // background refresh so they stay fast but self-heal.
+  // Static assets (hashed JS/CSS incl. the lazily split three.js chunk, icons,
+  // bundled images) and Google Fonts (CSS + woff2): cache-first with a
+  // background refresh so they stay fast, self-heal, and work offline.
   event.respondWith(
     caches.match(request).then((cached) => {
       const network = fetch(request)

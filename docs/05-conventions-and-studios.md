@@ -8,7 +8,7 @@
 
 ## Convention Radar
 
-**More → Radar** lists notable UK tattoo conventions, **nearest to Milton Keynes first**. The
+**⋯ → Radar** lists notable UK tattoo conventions, **nearest to Milton Keynes first**. The
 closest show is highlighted as a hero card at the top.
 
 ![Convention Radar](../public/guide/conventions.png)
@@ -18,7 +18,7 @@ to the event's site. Popular shows are marked with a ★.
 
 **Mark who's going.** Each card has a *Your artists attending* line — tap **Edit** to toggle
 which of your saved artists are appearing at that show. Those names then surface on the
-artist's detail card, on Home, and next to the artist in idea matches. (Automatic look-up is
+artist's detail card, on the Pipeline page, and next to the artist in idea matches. (Automatic look-up is
 on the backlog; for now you set this yourself.)
 
 > Conventions recur annually — the dates shown are for the latest known edition, so follow
@@ -28,7 +28,7 @@ on the backlog; for now you set this yourself.)
 
 ## Studios
 
-**Studios** (More → Studios) groups your saved artists by the studio they work at, **sorted
+**Studios** (⋯ → Studios) groups your saved artists by the studio they work at, **sorted
 by distance**, so you can see which are realistically reachable and who you could see where.
 
 ![The Studios page](../public/guide/studios.png)

@@ -78,15 +78,28 @@ export function applyDefaults(artists) {
   return merged
 }
 
-// Turn in-memory display images (URL strings) into canonical, syncable refs:
-// blob-backed URLs → { key } (small), static paths / external URLs → string.
-// Un-migrated data-URLs (no key yet) are dropped from the synced/cached metadata
-// so base64 never lands in localStorage or the remote store — they remain in
-// IndexedDB for local display until the one-time migration uploads them.
-function canonicalizeImages(images = []) {
+// Turn in-memory display images (URL strings, or { url/key, addedAt } refs from
+// the quick-add/drop-zone flows) into canonical, syncable refs: blob-backed
+// URLs → { key } (small), static paths / external URLs → string — carrying
+// `addedAt` through wherever it's present. Un-migrated data-URLs (no key yet)
+// are dropped from the synced/cached metadata so base64 never lands in
+// localStorage or the remote store — they remain in IndexedDB for local
+// display until the one-time migration uploads them.
+export function canonicalizeImages(images = []) {
   const out = []
   for (const img of images) {
-    if (img && typeof img === 'object') { out.push(img); continue }
+    if (img && typeof img === 'object') {
+      if (img.key) { out.push(img); continue }
+      if (typeof img.url === 'string') {
+        const key = keyForUrl(img.url)
+        if (key) { out.push(img.addedAt ? { key, addedAt: img.addedAt } : { key }); continue }
+        if (img.url.startsWith('data:')) continue
+        out.push(img.addedAt ? { url: img.url, addedAt: img.addedAt } : img.url)
+        continue
+      }
+      out.push(img)
+      continue
+    }
     if (typeof img !== 'string') continue
     const key = keyForUrl(img)
     if (key) out.push({ key })
@@ -108,17 +121,20 @@ function saveMeta(artists) {
   }
 }
 
-// Resolve canonical refs to displayable URL strings (awaiting blob keys).
-async function displayFromCanonical(refs = []) {
-  const urls = await Promise.all(
+// Resolve canonical refs to displayable URL strings (awaiting blob keys),
+// carrying `addedAt` through as { url, addedAt } wherever the ref has one.
+export async function displayFromCanonical(refs = []) {
+  const items = await Promise.all(
     refs.map(async (ref) => {
       if (typeof ref === 'string') return ref
-      if (ref?.key) return (await resolveBlobKey(ref.key)) || ''
-      if (ref?.url) return ref.url
-      return ''
+      let url = ''
+      if (ref?.key) url = (await resolveBlobKey(ref.key)) || ''
+      else if (ref?.url) url = ref.url
+      if (!url) return ''
+      return ref.addedAt ? { url, addedAt: ref.addedAt } : url
     })
   )
-  return urls.filter(Boolean)
+  return items.filter(Boolean)
 }
 
 // Build display-ready artists from metadata + the IndexedDB image map. Prefer the

@@ -44,3 +44,20 @@ describe('legacy route redirects', () => {
     expect(screen.getByText(/boards group them/i)).toBeInTheDocument()
   })
 })
+
+describe('root and pipeline routes', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    seedSession()
+  })
+
+  it('renders the Wall at /', async () => {
+    renderAt('/')
+    await waitFor(() => expect(screen.getByText('Sable')).toBeInTheDocument())
+  })
+
+  it('renders the old Dashboard content at /pipeline', async () => {
+    renderAt('/pipeline')
+    await waitFor(() => expect(screen.getByText(/how sable works/i)).toBeInTheDocument())
+  })
+})

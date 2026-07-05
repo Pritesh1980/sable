@@ -1,5 +1,8 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { useState } from 'react'
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import Nav from './components/Nav'
+import Drawer from './components/Drawer'
+import Wall from './pages/Wall'
 import Dashboard from './pages/Dashboard'
 import Gallery from './pages/Gallery'
 import Brief from './pages/Brief'
@@ -31,11 +34,26 @@ function AppShell() {
   const [boards, setBoards] = useStorage('tattoo_boards', [])
   const [conventionOverrides, setConventionOverrides] = useStorage('tattoo_convention_attending', {})
   const mergedConventions = mergeConventionOverrides(conventionOverrides)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const navigate = useNavigate()
 
   return (
     <div className="bg-ink-black min-h-screen pb-20">
       <Routes>
-        <Route path="/" element={<Dashboard artists={artists} setArtists={setArtists} ideas={ideas} boards={boards} mergedConventions={mergedConventions} />} />
+        <Route
+          path="/"
+          element={(
+            <Wall
+              artists={artists}
+              setArtists={setArtists}
+              ideas={ideas}
+              activeView="artists"
+              onSwitchView={(view) => view === 'concepts' && navigate('/concepts')}
+              onOpenDrawer={() => setDrawerOpen(true)}
+            />
+          )}
+        />
+        <Route path="/pipeline" element={<Dashboard artists={artists} setArtists={setArtists} ideas={ideas} boards={boards} mergedConventions={mergedConventions} />} />
         <Route path="/gallery" element={<Gallery artists={artists} setArtists={setArtists} mergedConventions={mergedConventions} />} />
         <Route path="/brief" element={<Brief ideas={ideas} setIdeas={setIdeas} artists={artists} mergedConventions={mergedConventions} boards={boards} setBoards={setBoards} />} />
         <Route path="/conventions" element={<Conventions artists={artists} conventionOverrides={conventionOverrides} setConventionOverrides={setConventionOverrides} />} />
@@ -63,6 +81,7 @@ function AppShell() {
         {/* Legacy deep links (old PWA home screens, bookmarks) */}
         <Route path="/manage" element={<Navigate to="/gallery?mode=manage" replace />} />
       </Routes>
+      {drawerOpen && <Drawer onClose={() => setDrawerOpen(false)} />}
       <Nav />
     </div>
   )

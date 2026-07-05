@@ -1,59 +1,82 @@
 # Getting started
 
-*The Home pipeline, how to move around, and the controls that are always within reach.*
+*The Wall, the full-screen viewer, and how to move around.*
 
 ← [Back to contents](README.md)
 
 ---
 
-## Home — what's next
+## The Wall — your artists, edge to edge
 
-**Home** answers one question: *where is each artist in your shortlist, and what should
-you do next?*
+Open Sable and you're on **the Wall**: every photo from every artist in your collection,
+tiled edge to edge. No panels, no stats — the work itself is the interface.
 
-![Home led by the Top 5 coverflow](../public/guide/dashboard.png)
+![The Wall](../public/guide/wall.png)
 
-- **How Sable works** — a dismissible three-step strip of the core loop: curate your
-  artists → rank & shortlist → match ideas & contact. Tap ✕ once you know your way around
-  (it stays dismissed on that device).
-- **Top 5** — the hero of Home: your five highest-ranked *current* artists (contacted and
-  parked drop out), shown as a 3D coverflow of their artwork. Drag sideways or tap a card
-  to bring it to the front; the focused artist's name, rank and status sit below it. Tap
-  **Drop ↓** to move the focused artist out, or tap a name in *waiting in the wings* to
-  pull them in — ranks reshuffle automatically. On devices without 3D (or with *reduced
-  motion* set) it falls back to a flat artwork gallery with the same controls.
-- **Shortlist pipeline** — three stage cards in workflow order: *Researching →
-  Shortlisted → Contact next*, each with its count and top-ranked artists.
-  *Contact next* is highlighted — that's your action stage. Artists you've already
-  contacted, and ones parked as *Maybe* / *Pass*, show only as small counts under
-  the strip — out of the way, but never silently gone.
-- **Idea stats** — active ideas, briefs ready to share, and live boards, each linking
-  into the Ideas page.
-- **Contact next** — the artists you've marked *Contact next*, in rank order, with thumbnails.
-- **Idea matches** — each idea paired with the artists whose styles overlap it, with a
-  one-line rationale.
+- **Hover a photo** to see whose it is — the artist's name and styles fade in along the
+  bottom edge.
+- A **red dot** on a photo means it's new — added within the last 14 days.
+- The thin bar at the top holds everything else: the **Artists / Concepts** switch,
+  **+ Add artist**, and the **⋯** menu (the Drawer).
 
-On a wide screen the same page spreads into a multi-column layout:
+## The full-screen viewer — one click in
 
-![Home on desktop](../public/guide/dashboard-desktop.png)
+**Click any photo** and it fills the screen. This is the heart of the app: flick through
+an artist's work, soak in the style, and jump straight to generating a concept in it.
 
----
+![The full-screen viewer](../public/guide/wall-viewer.png)
+
+The keyboard does the driving:
+
+| Key | Does |
+|---|---|
+| `←` `→` | previous / next photo by **this artist** |
+| `↑` `↓` | jump to the **previous / next artist** |
+| `G` | **generate a concept** in this artist's style |
+| `I` | open the artist's **info & notes** (status, notes, linked ideas) |
+| `Esc` | back to the Wall |
+
+A filmstrip of the artist's other photos sits along the bottom — click one to jump. The
+artist's `@handle ↗` opens their Instagram in a new tab. Leave the mouse still for a couple
+of seconds and the controls fade away, leaving just the image; move it and they return.
+
+You can also **paste a screenshot** (`⌘V`) while viewing an artist — it's added to that
+artist's photos and gets a red *new* dot on the Wall.
 
 ## Moving around
 
-The bar pinned to the bottom of the screen mirrors the workflow:
+Sable has two primary spaces, switched from the bar on the Wall:
 
-- **Home** — what's next · **Artists** — curate & rank · **Ideas** — capture & match ·
-  **AI** — generate concepts.
-- **More (⋯)** opens a menu with **Radar** (conventions), **Studios**, **Settings** and **Help**.
+- **Artists** — the Wall and viewer, above.
+- **Concepts** — your generated images, on the same kind of wall
+  (see [AI concepts](06-concepts.md)).
 
-## Text size & theme
+Everything else lives in the **Drawer** — tap **⋯** at the top-right of the Wall:
 
-Two controls sit at the top-right of every screen:
+![The Drawer](../public/guide/drawer.png)
 
-- **A+ / A−** — increase or decrease text size.
-- **◑ / ◐** — switch between dark and light themes.
-- **⏻** — sign out (clears this device's copy; everything syncs back on sign-in).
+- **Classic gallery** — the previous Artists page: filmstrip, compare, grid and style-wall
+  views, ranking, and Manage mode.
+- **Ideas** — tattoo ideas, with Boards as a tab.
+- **Pipeline** — the shortlist dashboard (below).
+- **Radar** — upcoming conventions. · **Studios** — where your artists work.
+- **Settings** — backup, account & sign out. · **Help** — this guide, in the app.
+
+On the classic pages the familiar bottom bar is still there, along with the **A+ / A−**
+text size and **◑ / ◐** theme controls in the header.
+
+## The Pipeline page
+
+The old Home dashboard lives on at **Drawer → Pipeline**, unchanged: the Top 5 coverflow,
+the shortlist pipeline (researching → shortlisted → contact next), idea stats and matches.
+The viewer's `I` panel shows each artist's status in place, so you'll mostly need Pipeline
+when planning outreach.
+
+![The Pipeline page](../public/guide/dashboard.png)
+
+On a wide screen it spreads into a multi-column layout:
+
+![Pipeline on desktop](../public/guide/dashboard-desktop.png)
 
 ---
 
@@ -64,7 +87,7 @@ You don't start from a blank app:
 - **Artists**, **Studios** and **Conventions** are pre-loaded so you can explore immediately.
 - **Ideas**, **Boards** and **AI concepts** start empty — those are yours to build.
 
-> **Tip:** your data syncs to your account, and **More → Settings → Export Backup** gives
+> **Tip:** your data syncs to your account, and **Drawer → Settings → Export Backup** gives
 > you a restore point you control (see [Settings, backup & restore](07-backup-and-settings.md)).
 
 ---

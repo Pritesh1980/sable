@@ -1,84 +1,72 @@
 # AI concepts
 
-*Turn rough tattoo ideas into prompt packs, saved AI results, and artist matches.*
+*Generate tattoo concepts in your artists' styles, keep the results on their own wall, and export relief STLs.*
 
 ← [Back to contents](README.md)
 
 ---
 
-**AI** is a sketchpad and prompt workbench for concepts. You can turn a short idea
-or an existing Brief idea into provider-specific prompts for ChatGPT, Adobe Firefly,
-Gemini and Claude, then bring the generated results back into Sable.
+**Concepts** is the second of Sable's two primary spaces — switch to it from the bar, or
+arrive by pressing **`G`** while viewing an artist full-screen. Your saved concepts tile
+the page just like the artists' Wall; the **composer** slides in from the right when
+you're making something new.
 
-![The AI Concepts page](../public/guide/concepts.png)
+![The Concepts wall with the composer open](../public/guide/concepts.png)
 
-## Build a prompt pack
+## The composer
 
-The **Prompt Pack** workbench is the recommended starting point. Choose a source:
+Tap **+ New concept** (or press `G` in the viewer — the composer opens with that artist
+already set). One panel, top to bottom:
 
-- **Free text** — type a loose concept, such as *"A raven breaking apart into dark
-  botanicals for a chest tattoo."*
-- **Brief idea** — select an idea from **Brief** to pull in its title, description,
-  placement, style tags, linked artists and reference-image notes.
+- **Steer card** — the artist whose style shapes the image. Tap **change** to pick a
+  different one, or clear it for an unsteered concept.
+- **Your idea** — describe it plainly, e.g. *"A raven perched on a broken pocket watch,
+  feathers dissolving into smoke, heavy black shading."*
+- **Placement** — forearm, upper arm, chest, back, calf…
+- **Generate image** — creates the image in-app (needs an API key, below).
+- **Copy prompt instead** — copies a richly-structured prompt for ChatGPT, Claude, Gemini
+  or AI Studio. Run it there, then **drop or paste the result** into the composer's
+  drop zone — it saves to the wall exactly like a generated image.
 
-Tap **Generate Prompt Pack** to create tailored prompts for:
+Your draft (steer, idea, placement) is kept on this device, so hopping out to another AI
+tab and back never loses it. It clears when the concept saves.
 
-- **ChatGPT** — visual image generation.
-- **Adobe Firefly** — polished tattoo-reference composition and refinement.
-- **Gemini** — visual critique, placement and tattooability risks.
-- **Claude** — artist-facing language, consultation brief and DM wording.
+### AI setup — keys and providers
 
-Switch between providers, then tap **Save Pack** before leaving Sable so the full
-prompt pack is kept as a concept card. Copy the active prompt, run it in the AI tool,
-then use **Paste image** or **Paste text** on the saved card to bring generated output
-back into Sable.
+Open **AI setup** in the composer to add an **OpenAI key** (DALL·E 3) or a **Gemini key**,
+each stored only on your device. Both are **paid APIs that need billing enabled**
+(≈$0.04/image); a Google AI Pro subscription does **not** cover Gemini *API* usage — to
+stay free, use **Copy prompt** and paste the result back instead. With both keys set, a
+provider toggle appears.
 
-## Quick concept prompt
+### Prompt packs
 
-Type a description in the prompt box, e.g. *"A moth emerging from a skull wreathed in dark
-botanicals."* This older quick path still works:
-
-### Without an API key (default)
-
-1. Tap **Copy Prompt** — a richly-structured prompt is copied to your clipboard, and a new
-   concept card is started.
-2. Use the **ChatGPT / Claude.ai / Gemini / AI Studio** buttons to open your AI of choice,
-   paste, and run it. This route is free — and especially good with a **Google AI Pro**
-   subscription, which gives generous image quotas in the Gemini app and AI Studio.
-3. Bring the result back: on the concept card use **Paste image** (drop or choose a file) or
-   **Paste text** to save the written response.
-
-### With a paid API key (optional)
-
-Tap **⚙ Configure AI** to add an **OpenAI key** (DALL·E 3) or a **Gemini key**, each stored
-only on your device. The prompt box then gains a **Generate image** button — press
-**⌘ + Enter** to create an image in-app. Both are **paid APIs that need billing enabled**
-(≈$0.04/image); a Google AI Pro subscription does **not** cover Gemini *API* usage. If both
-keys are set, a **Gemini / DALL·E** toggle lets you pick the provider, and **Steer by [artist]**
-shapes the image toward a favourite artist's style. To stay free, use the Copy Prompt →
-paste route above instead.
+**+ Prompt packs** in the composer opens the multi-provider workbench: turn free text or
+a Brief idea into tailored prompts for ChatGPT (generation), Adobe Firefly (composition),
+Gemini (critique & placement) and Claude (artist-facing language). **Save Pack** keeps the
+whole set on a concept. Pack concepts without an image yet wait in a **Drafts — awaiting
+an image** strip under the wall until you paste a result in.
 
 ## Work with a concept
 
-Each concept card holds the original prompt, any saved prompt pack, and any saved image
-or AI response (tap to expand). Prompt-pack cards can start image-less until you paste
-or upload a result. Below that:
+**Click a concept on the wall** and it fills the screen — same viewer as the artists'
+Wall, same keys (`←` `→`, `Esc`; the controls fade when your mouse is still). Press **`I`**
+(or the on-screen button) for everything attached to it:
 
-![A saved concept card with prompt pack and style matching](../public/guide/concept-card.png)
+![A concept full-screen with its details open](../public/guide/concept-card.png)
 
-- **Match to style** — tag the concept with styles. The moment you do, its **top artist
-  matches** appear; tap one to open their Instagram.
-- **Saved prompt pack** — switch between provider prompts and copy them again later.
-- **AI Results** — add ChatGPT, Firefly, Gemini, Claude, or other outputs as curated
-  variants. Each result can hold an image, generated text, personal notes, and a rating.
-- **Best result** — mark one variant as Best to keep the strongest direction visible first.
-- **Open in Firefly** — appears once the concept has an image, so you can take it further.
+- **Prompt & response** — the original prompt, any saved pack (switch providers and copy
+  again), and any AI text that came back.
+- **Match to style** — tag the concept with styles and its **top artist matches** appear;
+  tap one to open their Instagram.
+- **AI results** — keep multiple outputs as curated variants, each with an image, text,
+  notes and a rating. Mark one **Best** to keep the strongest direction first.
 - **Delete** removes the concept.
 
 ## Export a relief STL
 
-When a saved AI result has an image, open the result and choose **Make STL**. Sable turns
-the image into a relief-style heightmap where brighter areas become raised surface detail.
+When a result has an image, choose **Make STL**. Sable turns the image into a relief-style
+heightmap where brighter areas become raised surface detail.
 
 Start with the defaults:
 

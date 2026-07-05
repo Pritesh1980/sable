@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import Concepts from '../pages/Concepts'
 import { buildPromptPackFromFreeText } from '../data/promptPacks'
 
@@ -51,12 +52,14 @@ function ConceptsHarness() {
   const [concepts, setConcepts] = useState(initialConcepts)
 
   return (
-    <Concepts
-      concepts={concepts}
-      setConcepts={setConcepts}
-      artists={[]}
-      ideas={[]}
-    />
+    <MemoryRouter>
+      <Concepts
+        concepts={concepts}
+        setConcepts={setConcepts}
+        artists={[]}
+        ideas={[]}
+      />
+    </MemoryRouter>
   )
 }
 
@@ -64,12 +67,14 @@ function DuplicateVariantHarness() {
   const [concepts, setConcepts] = useState(duplicateVariantConcepts)
 
   return (
-    <Concepts
-      concepts={concepts}
-      setConcepts={setConcepts}
-      artists={[]}
-      ideas={[]}
-    />
+    <MemoryRouter>
+      <Concepts
+        concepts={concepts}
+        setConcepts={setConcepts}
+        artists={[]}
+        ideas={[]}
+      />
+    </MemoryRouter>
   )
 }
 
@@ -180,12 +185,14 @@ describe('Concepts variant integration', () => {
     }]
 
     render(
-      <Concepts
-        concepts={concepts}
-        setConcepts={() => {}}
-        artists={[]}
-        ideas={[]}
-      />
+      <MemoryRouter>
+        <Concepts
+          concepts={concepts}
+          setConcepts={() => {}}
+          artists={[]}
+          ideas={[]}
+        />
+      </MemoryRouter>
     )
 
     fireEvent.click(screen.getByRole('button', {

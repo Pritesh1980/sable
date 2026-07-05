@@ -5,6 +5,7 @@ import { STYLE_TAGS, DEFAULT_STUDIOS } from '../data/artists'
 import { uploadImages } from '../hooks/useImageUpload'
 import { useAuth } from '../context/useAuth'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
+import { imageSrc } from '../data/wall'
 
 export default function ArtistDetail({ artist, onClose, onSave, attendingConventions = [] }) {
   const [images, setImages] = useState(artist.images || [])
@@ -346,7 +347,7 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
           onClick={() => setLightbox(null)}
         >
           <ArtistImage
-            src={images[lightbox]}
+            src={imageSrc(images[lightbox])}
             label={artist.name || `@${artist.handle}`}
             className="max-w-full max-h-full object-contain"
             monogramClassName="text-8xl"

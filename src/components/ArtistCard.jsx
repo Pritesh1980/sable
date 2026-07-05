@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { uploadImages } from '../hooks/useImageUpload'
 import { useAuth } from '../context/useAuth'
 import { DEFAULT_STUDIOS } from '../data/artists'
+import { imageSrc } from '../data/wall'
 
 export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandleProps, isDragging, featured, index = 0 }) {
   const displayName = artist.name || `@${artist.handle}`
@@ -38,7 +39,7 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
       <div className={`${featured ? 'aspect-[3/4]' : 'aspect-[4/5]'} bg-ink-muted relative overflow-hidden`}>
         {hasImages && !imgError ? (
           <img
-            src={artist.images[0]}
+            src={imageSrc(artist.images[0])}
             alt={displayName}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
             onError={() => setImgError(true)}
