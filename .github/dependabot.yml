@@ -1,0 +1,18 @@
+version: 2
+updates:
+  # npm: security updates arrive immediately; routine updates arrive as one
+  # grouped PR per month to keep noise down for a solo project.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+    open-pull-requests-limit: 3
+
+  # Keep the CI actions themselves current (quarterly is plenty).
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: quarterly
