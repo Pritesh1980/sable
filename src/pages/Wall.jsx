@@ -119,31 +119,6 @@ export default function Wall({ artists = [], ideas = [], setArtists = () => {}, 
         />
       )}
 
-      {items.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-4 py-32 text-center px-6">
-          <p className="font-v2-display text-v2-cream text-xl tracking-wide">
-            The wall is bare — add an artist to start building it.
-          </p>
-          <button
-            onClick={() => setAddArtistOpen(true)}
-            className="font-v2-ui text-sm text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-sm px-5 py-2 transition-colors"
-          >
-            + Add artist
-          </button>
-        </div>
-      ) : (
-        <main className="columns-[300px] gap-[6px] p-[6px]">
-          {items.map((item) => (
-            <WallPiece
-              key={`${item.artistId}-${item.imageIndex}`}
-              item={item}
-              onOpen={handleOpen}
-              onDropImage={addImageToArtist}
-            />
-          ))}
-        </main>
-      )}
-
       {items.length > 0 && (
         <ConsiderShelf
           artists={artists}
@@ -169,6 +144,31 @@ export default function Wall({ artists = [], ideas = [], setArtists = () => {}, 
             }}
           />
         </ConsiderShelf>
+      )}
+
+      {items.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-4 py-32 text-center px-6">
+          <p className="font-v2-display text-v2-cream text-xl tracking-wide">
+            The wall is bare — add an artist to start building it.
+          </p>
+          <button
+            onClick={() => setAddArtistOpen(true)}
+            className="font-v2-ui text-sm text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-sm px-5 py-2 transition-colors"
+          >
+            + Add artist
+          </button>
+        </div>
+      ) : (
+        <main className="columns-[300px] gap-[6px] p-[6px]">
+          {items.map((item) => (
+            <WallPiece
+              key={`${item.artistId}-${item.imageIndex}`}
+              item={item}
+              onOpen={handleOpen}
+              onDropImage={addImageToArtist}
+            />
+          ))}
+        </main>
       )}
 
       {viewerOpen && (

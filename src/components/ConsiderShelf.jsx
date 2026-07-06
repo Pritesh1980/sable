@@ -1,5 +1,7 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { buildSuggestions } from '../data/suggestions'
+
+const COLLAPSE_KEY = 'tattoo_consider_collapsed' // device-local UI preference, like tattoo_theme
 
 // The Wall's "Consider" shelf — a quiet strip of suggested artists matched to
 // the collection's style profile. Renders nothing when there's nothing to
@@ -7,6 +9,7 @@ import { buildSuggestions } from '../data/suggestions'
 // research-sourced, so the handle links out to Instagram for a look before
 // adding (verify-before-add).
 export default function ConsiderShelf({ artists, pool, dismissed = [], onDismiss, onAdd, children }) {
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === '1')
   const suggestions = useMemo(
     () => buildSuggestions(artists, { pool, dismissed }),
     [artists, pool, dismissed]
@@ -14,15 +17,32 @@ export default function ConsiderShelf({ artists, pool, dismissed = [], onDismiss
 
   if (suggestions.length === 0 && !children) return null
 
-  return (
-    <section aria-label="Artists to consider" className="px-[6px] pt-10 pb-16">
-      <div className="flex items-baseline gap-3 px-3 mb-4">
-        <h2 className="font-v2-display text-v2-cream text-sm uppercase tracking-[0.28em]">Consider</h2>
-        <p className="font-v2-ui text-v2-muted text-xs">
-          matched to the styles you already collect — open the profile before adding
-        </p>
-      </div>
+  function toggle() {
+    setCollapsed((c) => {
+      localStorage.setItem(COLLAPSE_KEY, c ? '0' : '1')
+      return !c
+    })
+  }
 
+  return (
+    <section aria-label="Artists to consider" className="px-[6px] pt-4 pb-2 border-b border-v2-hairline">
+      <button
+        onClick={toggle}
+        aria-expanded={!collapsed}
+        className="w-full flex items-baseline gap-3 px-3 mb-1 text-left group/toggle"
+      >
+        <h2 className="font-v2-display text-v2-cream text-sm uppercase tracking-[0.28em]">Consider</h2>
+        <span className="font-v2-ui text-v2-muted text-xs">
+          {collapsed
+            ? `${suggestions.length} suggested artist${suggestions.length === 1 ? '' : 's'} — tap to open`
+            : 'matched to the styles you already collect — open the profile before adding'}
+        </span>
+        <span aria-hidden="true" className="ml-auto font-v2-ui text-v2-muted group-hover/toggle:text-v2-cream text-xs transition-colors">
+          {collapsed ? '▸' : '▾'}
+        </span>
+      </button>
+
+      {!collapsed && (
       <div className="flex gap-[6px] overflow-x-auto pb-2">
         {suggestions.map((s) => (
           <article
@@ -70,6 +90,7 @@ export default function ConsiderShelf({ artists, pool, dismissed = [], onDismiss
         ))}
         {children}
       </div>
+      )}
     </section>
   )
 }

@@ -23,7 +23,7 @@ describe('ConsiderShelf', () => {
   it('fires onAdd with the suggestion', () => {
     const onAdd = vi.fn()
     render(<ConsiderShelf artists={artists} pool={pool} dismissed={[]} onDismiss={vi.fn()} onAdd={onAdd} />)
-    fireEvent.click(screen.getByRole('button', { name: /add/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^\+ add$/i }))
     expect(onAdd).toHaveBeenCalledWith(expect.objectContaining({ handle: 'kamilczapiga' }))
   })
 
@@ -37,6 +37,28 @@ describe('ConsiderShelf', () => {
   it('respects the dismissed list', () => {
     render(<ConsiderShelf artists={artists} pool={pool} dismissed={['kamilczapiga']} onDismiss={vi.fn()} onAdd={vi.fn()} />)
     expect(screen.queryByText('Kamil Czapiga')).toBeNull()
+  })
+
+  it('collapses to a slim header row and persists the preference on this device', () => {
+    localStorage.removeItem('tattoo_consider_collapsed')
+    render(<ConsiderShelf artists={artists} pool={pool} dismissed={[]} onDismiss={vi.fn()} onAdd={vi.fn()} />)
+    expect(screen.getByText('Kamil Czapiga')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /consider/i }))
+    expect(screen.queryByText('Kamil Czapiga')).toBeNull()
+    expect(screen.getByText(/1 suggested artist/)).toBeInTheDocument()
+    expect(localStorage.getItem('tattoo_consider_collapsed')).toBe('1')
+
+    fireEvent.click(screen.getByRole('button', { name: /consider/i }))
+    expect(screen.getByText('Kamil Czapiga')).toBeInTheDocument()
+    expect(localStorage.getItem('tattoo_consider_collapsed')).toBe('0')
+  })
+
+  it('starts collapsed when the device preference says so', () => {
+    localStorage.setItem('tattoo_consider_collapsed', '1')
+    render(<ConsiderShelf artists={artists} pool={pool} dismissed={[]} onDismiss={vi.fn()} onAdd={vi.fn()} />)
+    expect(screen.queryByText('Kamil Czapiga')).toBeNull()
+    localStorage.removeItem('tattoo_consider_collapsed')
   })
 
   it('renders nothing at all when there are no matches', () => {
