@@ -9,7 +9,9 @@ const COLLAPSE_KEY = 'tattoo_consider_collapsed' // device-local UI preference, 
 // research-sourced, so the handle links out to Instagram for a look before
 // adding (verify-before-add).
 export default function ConsiderShelf({ artists, pool, dismissed = [], onDismiss, onAdd, children }) {
-  const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) === '1')
+  // Collapsed by default — the shelf announces itself in one quiet line and
+  // only expands when asked. '0' (explicitly expanded) is the only opt-out.
+  const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) !== '0')
   const suggestions = useMemo(
     () => buildSuggestions(artists, { pool, dismissed }),
     [artists, pool, dismissed]

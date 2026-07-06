@@ -1,6 +1,10 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import ConsiderShelf from '../components/ConsiderShelf'
+
+// Card-level tests run against an expanded shelf; the collapse-default tests
+// below clear this explicitly.
+beforeEach(() => localStorage.setItem('tattoo_consider_collapsed', '0'))
 
 const artists = [
   { id: 'a1', handle: 'a1', tags: ['blackwork', 'dark-illustrative'] },
@@ -39,25 +43,30 @@ describe('ConsiderShelf', () => {
     expect(screen.queryByText('Kamil Czapiga')).toBeNull()
   })
 
-  it('collapses to a slim header row and persists the preference on this device', () => {
+  it('starts collapsed by default, showing just the slim header line', () => {
     localStorage.removeItem('tattoo_consider_collapsed')
     render(<ConsiderShelf artists={artists} pool={pool} dismissed={[]} onDismiss={vi.fn()} onAdd={vi.fn()} />)
-    expect(screen.getByText('Kamil Czapiga')).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: /consider/i }))
     expect(screen.queryByText('Kamil Czapiga')).toBeNull()
     expect(screen.getByText(/1 suggested artist/)).toBeInTheDocument()
-    expect(localStorage.getItem('tattoo_consider_collapsed')).toBe('1')
+  })
+
+  it('expands on toggle and persists the preference on this device', () => {
+    localStorage.removeItem('tattoo_consider_collapsed')
+    render(<ConsiderShelf artists={artists} pool={pool} dismissed={[]} onDismiss={vi.fn()} onAdd={vi.fn()} />)
 
     fireEvent.click(screen.getByRole('button', { name: /consider/i }))
     expect(screen.getByText('Kamil Czapiga')).toBeInTheDocument()
     expect(localStorage.getItem('tattoo_consider_collapsed')).toBe('0')
+
+    fireEvent.click(screen.getByRole('button', { name: /consider/i }))
+    expect(screen.queryByText('Kamil Czapiga')).toBeNull()
+    expect(localStorage.getItem('tattoo_consider_collapsed')).toBe('1')
   })
 
-  it('starts collapsed when the device preference says so', () => {
-    localStorage.setItem('tattoo_consider_collapsed', '1')
+  it('stays expanded when the device preference says so', () => {
+    localStorage.setItem('tattoo_consider_collapsed', '0')
     render(<ConsiderShelf artists={artists} pool={pool} dismissed={[]} onDismiss={vi.fn()} onAdd={vi.fn()} />)
-    expect(screen.queryByText('Kamil Czapiga')).toBeNull()
+    expect(screen.getByText('Kamil Czapiga')).toBeInTheDocument()
     localStorage.removeItem('tattoo_consider_collapsed')
   })
 
