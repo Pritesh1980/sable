@@ -4,8 +4,12 @@ import { buildWallItems, stampAddedAt } from '../data/wall'
 import WallPiece from '../components/WallPiece'
 import WallViewer from '../components/WallViewer'
 import AddArtistModal from '../components/AddArtistModal'
+import ConsiderShelf from '../components/ConsiderShelf'
+import DiscoverMore from '../components/DiscoverMore'
+import { SUGGESTED_ARTISTS } from '../data/suggestions'
 import { uploadImages } from '../hooks/useImageUpload'
 import { useAuth } from '../context/useAuth'
+import { useStorage } from '../hooks/useStorage'
 
 // The Wall — image-first home surface. Full-bleed masonry of every artist
 // reference image; the hairline bar above it is the only chrome. Routing is
@@ -59,6 +63,10 @@ export default function Wall({ artists = [], ideas = [], setArtists = () => {}, 
   const items = buildWallItems(artists)
   const [viewerIndex, setViewerIndex] = useState(null)
   const [addArtistOpen, setAddArtistOpen] = useState(false)
+  const [addArtistInitial, setAddArtistInitial] = useState(null)
+  const [dismissedSuggestions, setDismissedSuggestions] = useStorage('tattoo_dismissed_suggestions', [])
+  const [aiSuggestions, setAiSuggestions] = useStorage('tattoo_ai_suggestions', [])
+  const suggestionPool = [...SUGGESTED_ARTISTS, ...aiSuggestions]
   const navigate = useNavigate()
   const { user } = useAuth() || {}
 
@@ -136,6 +144,33 @@ export default function Wall({ artists = [], ideas = [], setArtists = () => {}, 
         </main>
       )}
 
+      {items.length > 0 && (
+        <ConsiderShelf
+          artists={artists}
+          pool={suggestionPool}
+          dismissed={dismissedSuggestions}
+          onDismiss={(handle) => setDismissedSuggestions([...dismissedSuggestions, handle])}
+          onAdd={(s) => {
+            setAddArtistInitial({ handle: s.handle, name: s.name, tags: s.tags })
+            setAddArtistOpen(true)
+          }}
+        >
+          <DiscoverMore
+            artists={artists}
+            exclude={[
+              ...artists.map((a) => a.handle),
+              ...suggestionPool.map((s) => s.handle),
+              ...dismissedSuggestions,
+            ]}
+            onResults={(results) => {
+              const known = new Set(suggestionPool.map((s) => s.handle.toLowerCase()))
+              const fresh = results.filter((r) => !known.has(r.handle.toLowerCase()))
+              if (fresh.length) setAiSuggestions([...aiSuggestions, ...fresh])
+            }}
+          />
+        </ConsiderShelf>
+      )}
+
       {viewerOpen && (
         <WallViewer
           items={items}
@@ -151,11 +186,13 @@ export default function Wall({ artists = [], ideas = [], setArtists = () => {}, 
 
       {addArtistOpen && (
         <AddArtistModal
+          key={addArtistInitial?.handle || 'blank'}
           artists={artists}
           setArtists={setArtists}
           userId={user?.id}
-          onClose={() => setAddArtistOpen(false)}
-          onManage={() => setAddArtistOpen(false)}
+          initial={addArtistInitial || undefined}
+          onClose={() => { setAddArtistOpen(false); setAddArtistInitial(null) }}
+          onManage={() => { setAddArtistOpen(false); setAddArtistInitial(null) }}
         />
       )}
     </div>
