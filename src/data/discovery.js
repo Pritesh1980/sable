@@ -6,7 +6,9 @@
 
 import { STYLE_TAGS } from './artists'
 
-export const GEMINI_TEXT_MODEL = 'gemini-2.5-flash'
+// gemini-2.5-flash was retired for new keys (July 2026); gemini-3.5-flash is
+// Google's named replacement. See https://ai.google.dev/gemini-api/docs/deprecations
+export const GEMINI_TEXT_MODEL = 'gemini-3.5-flash'
 
 export function buildDiscoveryPrompt(artists = [], { exclude = [], count = 8 } = {}) {
   const tagCounts = new Map()
