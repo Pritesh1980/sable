@@ -1,8 +1,6 @@
 import { useMemo, useState } from 'react'
 import { buildSuggestions } from '../data/suggestions'
 
-const COLLAPSE_KEY = 'tattoo_consider_collapsed' // device-local UI preference, like tattoo_theme
-
 // The Wall's "Consider" shelf — a quiet strip of suggested artists matched to
 // the collection's style profile. Renders nothing when there's nothing to
 // suggest; never competes with the collection above it. Suggestions are
@@ -19,9 +17,10 @@ export default function ConsiderShelf({
   refreshError = '',
   children,
 }) {
-  // Collapsed by default — the shelf announces itself in one quiet line and
-  // only expands when asked. '0' (explicitly expanded) is the only opt-out.
-  const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) !== '0')
+  // Always minimised on load — the shelf announces itself in one quiet line
+  // and only opens when asked. The open/closed state is session-only and
+  // never persisted, so every visit starts collapsed.
+  const [collapsed, setCollapsed] = useState(true)
   const suggestions = useMemo(
     () => buildSuggestions(artists, { pool, dismissed }),
     [artists, pool, dismissed]
@@ -30,10 +29,7 @@ export default function ConsiderShelf({
   if (suggestions.length === 0 && !children) return null
 
   function toggle() {
-    setCollapsed((c) => {
-      localStorage.setItem(COLLAPSE_KEY, c ? '0' : '1')
-      return !c
-    })
+    setCollapsed((c) => !c)
   }
 
   return (
@@ -56,8 +52,9 @@ export default function ConsiderShelf({
         </button>
 
         {/* Re-run AI discovery for a fresh batch. Only wired (by the Wall) when
-            a Gemini key is present; the shelf itself stays vendor-agnostic. */}
-        {onRefresh && (
+            a Gemini key is present; the shelf itself stays vendor-agnostic.
+            Kept out of the collapsed one-line header — shown only when open. */}
+        {!collapsed && onRefresh && (
           <button
             onClick={onRefresh}
             disabled={refreshing}
@@ -70,7 +67,7 @@ export default function ConsiderShelf({
         )}
       </div>
 
-      {refreshError && (
+      {!collapsed && refreshError && (
         <p className="px-3 mb-1 font-v2-ui text-v2-accent text-xs">{refreshError}</p>
       )}
 
