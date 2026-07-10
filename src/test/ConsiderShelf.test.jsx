@@ -77,3 +77,46 @@ describe('ConsiderShelf', () => {
     expect(container.firstChild).toBeNull()
   })
 })
+
+describe('ConsiderShelf — Refresh', () => {
+  it('shows no refresh control when onRefresh is not provided', () => {
+    render(<ConsiderShelf artists={artists} pool={pool} dismissed={[]} onDismiss={vi.fn()} onAdd={vi.fn()} />)
+    expect(screen.queryByRole('button', { name: /refresh/i })).toBeNull()
+  })
+
+  it('renders a refresh control when onRefresh is provided', () => {
+    render(<ConsiderShelf artists={artists} pool={pool} dismissed={[]} onDismiss={vi.fn()} onAdd={vi.fn()} onRefresh={vi.fn()} />)
+    expect(screen.getByRole('button', { name: /refresh/i })).toBeInTheDocument()
+  })
+
+  it('fires onRefresh when the refresh control is clicked', () => {
+    const onRefresh = vi.fn()
+    render(<ConsiderShelf artists={artists} pool={pool} dismissed={[]} onDismiss={vi.fn()} onAdd={vi.fn()} onRefresh={onRefresh} />)
+    fireEvent.click(screen.getByRole('button', { name: /refresh/i }))
+    expect(onRefresh).toHaveBeenCalledTimes(1)
+  })
+
+  it('disables the refresh control and signals progress while refreshing', () => {
+    const onRefresh = vi.fn()
+    render(<ConsiderShelf artists={artists} pool={pool} dismissed={[]} onDismiss={vi.fn()} onAdd={vi.fn()} onRefresh={onRefresh} refreshing />)
+    const btn = screen.getByRole('button', { name: /refreshing/i })
+    expect(btn).toBeDisabled()
+    fireEvent.click(btn)
+    expect(onRefresh).not.toHaveBeenCalled()
+  })
+
+  it('surfaces a refresh error message', () => {
+    render(
+      <ConsiderShelf
+        artists={artists}
+        pool={pool}
+        dismissed={[]}
+        onDismiss={vi.fn()}
+        onAdd={vi.fn()}
+        onRefresh={vi.fn()}
+        refreshError="Gemini error 429"
+      />
+    )
+    expect(screen.getByText('Gemini error 429')).toBeInTheDocument()
+  })
+})

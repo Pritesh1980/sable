@@ -27,7 +27,7 @@ const SECTIONS = [
     steps: [
       'Tap + Add artist on the Wall to onboard an artist in one step: paste their handle or Instagram URL, toggle style tags, and drop in a few screenshots if you have them. If the handle already exists, Sable offers to add the images to that artist instead.',
       'Grow a portfolio as you find things: drag an image file onto an artist’s photo on the Wall, or paste (⌘V) while viewing them full-screen. New photos wear a red dot for two weeks.',
-      'The Consider shelf at the bottom of the Wall suggests artists matched to your styles. Open the profile to judge, then + Add (pre-filled) or Not for me. Find more like this asks AI for a fresh batch — unverified until you’ve looked.',
+      'The Consider shelf at the bottom of the Wall suggests artists matched to your styles. Open the profile to judge, then + Add (pre-filled) or Not for me. Find more like this asks AI for a fresh batch — unverified until you’ve looked. With a Gemini key saved, the ↻ Refresh control in the shelf header re-runs AI discovery in one tap, skipping artists you already have or dismissed.',
       'For bulk upkeep, open Drawer → Classic gallery and tap Manage (top right): a searchable table of every artist.',
       'Tap a row to expand it. Set Style Tags, Shortlist Status, Studio, and free-text Notes (notes save on blur or Enter).',
       'Use + Photos to upload screenshots — they are compressed, stored in your account, and synced to your other devices.',

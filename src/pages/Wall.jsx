@@ -7,6 +7,7 @@ import AddArtistModal from '../components/AddArtistModal'
 import ConsiderShelf from '../components/ConsiderShelf'
 import DiscoverMore from '../components/DiscoverMore'
 import { SUGGESTED_ARTISTS } from '../data/suggestions'
+import { discoverArtistsWithGemini } from '../data/discovery'
 import { uploadImages } from '../hooks/useImageUpload'
 import { useAuth } from '../context/useAuth'
 import { useStorage } from '../hooks/useStorage'
@@ -67,6 +68,35 @@ export default function Wall({ artists = [], ideas = [], setArtists = () => {}, 
   const [dismissedSuggestions, setDismissedSuggestions] = useStorage('tattoo_dismissed_suggestions', [])
   const [aiSuggestions, setAiSuggestions] = useStorage('tattoo_ai_suggestions', [])
   const suggestionPool = [...SUGGESTED_ARTISTS, ...aiSuggestions]
+  const [refreshing, setRefreshing] = useState(false)
+  const [refreshError, setRefreshError] = useState('')
+  const geminiKey = localStorage.getItem('gemini_api_key') || ''
+
+  // One-tap "Refresh" for the Consider shelf: re-run AI discovery for a fresh
+  // batch, excluding everyone already owned / pooled / dismissed so each tap
+  // surfaces genuinely new faces. Only wired when a Gemini key exists; without
+  // one, DiscoverMore's copy-prompt/paste flow is the path.
+  async function refreshSuggestions() {
+    setRefreshing(true)
+    setRefreshError('')
+    try {
+      const exclude = [
+        ...artists.map((a) => a.handle),
+        ...suggestionPool.map((s) => s.handle),
+        ...dismissedSuggestions,
+      ]
+      const results = await discoverArtistsWithGemini(geminiKey, artists, { exclude })
+      const known = new Set(suggestionPool.map((s) => s.handle.toLowerCase()))
+      const fresh = results.filter((r) => !known.has(r.handle.toLowerCase()))
+      if (fresh.length === 0) throw new Error('No fresh artists came back — try again')
+      setAiSuggestions([...aiSuggestions, ...fresh])
+    } catch (err) {
+      setRefreshError(err.message)
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
   const navigate = useNavigate()
   const { user } = useAuth() || {}
 
@@ -124,6 +154,9 @@ export default function Wall({ artists = [], ideas = [], setArtists = () => {}, 
           artists={artists}
           pool={suggestionPool}
           dismissed={dismissedSuggestions}
+          onRefresh={geminiKey ? refreshSuggestions : undefined}
+          refreshing={refreshing}
+          refreshError={refreshError}
           onDismiss={(handle) => setDismissedSuggestions([...dismissedSuggestions, handle])}
           onAdd={(s) => {
             setAddArtistInitial({ handle: s.handle, name: s.name, tags: s.tags })

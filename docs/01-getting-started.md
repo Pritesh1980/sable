@@ -22,7 +22,9 @@ tiled edge to edge. No panels, no stats — the work itself is the interface.
   to the styles you already collect. Open the Instagram profile to judge for yourself,
   then **+ Add** (the form comes pre-filled) or **Not for me** (never suggested again).
   **Find more like this** asks AI for a fresh batch — those arrive marked *unverified*
-  until you've looked at the profile.
+  until you've looked at the profile. With a Gemini key saved, a **↻ Refresh** control
+  in the shelf header re-runs AI discovery in one tap, skipping everyone you already
+  have or have dismissed.
 
 ## The full-screen viewer — one click in
 

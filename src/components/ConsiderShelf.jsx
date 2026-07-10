@@ -8,7 +8,17 @@ const COLLAPSE_KEY = 'tattoo_consider_collapsed' // device-local UI preference, 
 // suggest; never competes with the collection above it. Suggestions are
 // research-sourced, so the handle links out to Instagram for a look before
 // adding (verify-before-add).
-export default function ConsiderShelf({ artists, pool, dismissed = [], onDismiss, onAdd, children }) {
+export default function ConsiderShelf({
+  artists,
+  pool,
+  dismissed = [],
+  onDismiss,
+  onAdd,
+  onRefresh,
+  refreshing = false,
+  refreshError = '',
+  children,
+}) {
   // Collapsed by default — the shelf announces itself in one quiet line and
   // only expands when asked. '0' (explicitly expanded) is the only opt-out.
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSE_KEY) !== '0')
@@ -28,21 +38,41 @@ export default function ConsiderShelf({ artists, pool, dismissed = [], onDismiss
 
   return (
     <section aria-label="Artists to consider" className="px-[6px] pt-4 pb-2 border-b border-v2-hairline">
-      <button
-        onClick={toggle}
-        aria-expanded={!collapsed}
-        className="w-full flex items-baseline gap-3 px-3 mb-1 text-left group/toggle"
-      >
-        <h2 className="font-v2-display text-v2-cream text-sm uppercase tracking-[0.28em]">Consider</h2>
-        <span className="font-v2-ui text-v2-muted text-xs">
-          {collapsed
-            ? `${suggestions.length} suggested artist${suggestions.length === 1 ? '' : 's'} — tap to open`
-            : 'matched to the styles you already collect — open the profile before adding'}
-        </span>
-        <span aria-hidden="true" className="ml-auto font-v2-ui text-v2-muted group-hover/toggle:text-v2-cream text-xs transition-colors">
-          {collapsed ? '▸' : '▾'}
-        </span>
-      </button>
+      <div className="flex items-baseline gap-3 px-3 mb-1">
+        <button
+          onClick={toggle}
+          aria-expanded={!collapsed}
+          className="flex-1 min-w-0 flex items-baseline gap-3 text-left group/toggle"
+        >
+          <h2 className="font-v2-display text-v2-cream text-sm uppercase tracking-[0.28em]">Consider</h2>
+          <span className="font-v2-ui text-v2-muted text-xs truncate">
+            {collapsed
+              ? `${suggestions.length} suggested artist${suggestions.length === 1 ? '' : 's'} — tap to open`
+              : 'matched to the styles you already collect — open the profile before adding'}
+          </span>
+          <span aria-hidden="true" className="font-v2-ui text-v2-muted group-hover/toggle:text-v2-cream text-xs transition-colors">
+            {collapsed ? '▸' : '▾'}
+          </span>
+        </button>
+
+        {/* Re-run AI discovery for a fresh batch. Only wired (by the Wall) when
+            a Gemini key is present; the shelf itself stays vendor-agnostic. */}
+        {onRefresh && (
+          <button
+            onClick={onRefresh}
+            disabled={refreshing}
+            aria-label={refreshing ? 'Refreshing suggestions' : 'Refresh suggestions'}
+            className="shrink-0 ml-auto flex items-center gap-1.5 font-v2-ui text-v2-muted hover:text-v2-cream text-xs transition-colors disabled:opacity-50 disabled:cursor-default"
+          >
+            <span aria-hidden="true" className={refreshing ? 'inline-block animate-spin' : 'inline-block'}>↻</span>
+            {refreshing ? 'Refreshing…' : 'Refresh'}
+          </button>
+        )}
+      </div>
+
+      {refreshError && (
+        <p className="px-3 mb-1 font-v2-ui text-v2-accent text-xs">{refreshError}</p>
+      )}
 
       {!collapsed && (
       <div className="flex gap-[6px] overflow-x-auto pb-2">
