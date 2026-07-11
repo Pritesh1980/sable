@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest'
-import { computeSwipeRanking, moveIntoTop5, moveOutOfTop5 } from '../data/ranking'
+import {
+  computeSwipeRanking,
+  moveIntoTop5,
+  moveOutOfTop5,
+  moveUp,
+  moveDown,
+  moveToTop,
+  moveByDelta,
+  moveToRank,
+} from '../data/ranking'
 
 const ARTISTS = [
   { id: 'a', rank: 1, images: ['img1.jpg'] },
@@ -125,5 +134,76 @@ describe('moveIntoTop5 / moveOutOfTop5', () => {
   it('handles lists shorter than five', () => {
     const next = moveIntoTop5(list(3), 'a3')
     expect(order(next)).toEqual(['a1', 'a2', 'a3'])
+  })
+})
+
+describe('rank move helpers', () => {
+  // Original array order is intentionally NOT rank order, to prove helpers
+  // preserve array order (Wall masonry stability) while fixing ranks.
+  const A = [
+    { id: 'c', rank: 3 },
+    { id: 'a', rank: 1 },
+    { id: 'e', rank: 5 },
+    { id: 'b', rank: 2 },
+    { id: 'd', rank: 4 },
+  ]
+  const rankOf = (list, id) => list.find((x) => x.id === id).rank
+
+  it('moveUp swaps an artist with the one above and re-ranks 1..N', () => {
+    const r = moveUp(A, 'b') // rank 2 -> 1
+    expect(rankOf(r, 'b')).toBe(1)
+    expect(rankOf(r, 'a')).toBe(2)
+    expect(r.map((x) => x.rank).sort((m, n) => m - n)).toEqual([1, 2, 3, 4, 5])
+  })
+
+  it('moveUp on rank 1 is a no-op', () => {
+    const r = moveUp(A, 'a')
+    expect(rankOf(r, 'a')).toBe(1)
+  })
+
+  it('moveDown on the last rank is a no-op', () => {
+    const r = moveDown(A, 'e') // already rank 5
+    expect(rankOf(r, 'e')).toBe(5)
+  })
+
+  it('moveDown moves an artist down one slot', () => {
+    const r = moveDown(A, 'a') // rank 1 -> 2
+    expect(rankOf(r, 'a')).toBe(2)
+    expect(rankOf(r, 'b')).toBe(1)
+  })
+
+  it('moveToTop makes the artist rank 1', () => {
+    const r = moveToTop(A, 'd') // rank 4 -> 1
+    expect(rankOf(r, 'd')).toBe(1)
+    expect(rankOf(r, 'a')).toBe(2)
+  })
+
+  it('preserves the original array order (only rank changes)', () => {
+    const r = moveToTop(A, 'e')
+    expect(r.map((x) => x.id)).toEqual(['c', 'a', 'e', 'b', 'd'])
+  })
+
+  it('unknown id returns input unchanged', () => {
+    expect(moveUp(A, 'zzz')).toBe(A)
+  })
+
+  it('normalizes duplicate/missing ranks to contiguous 1..N on any move', () => {
+    const messy = [
+      { id: 'x', rank: 2 },
+      { id: 'y', rank: 2 }, // duplicate
+      { id: 'z' },          // missing rank -> sorts last
+    ]
+    const r = moveUp(messy, 'z')
+    expect(r.map((a) => a.rank).sort((m, n) => m - n)).toEqual([1, 2, 3])
+  })
+
+  it('moveToRank clamps out-of-range ranks', () => {
+    expect(rankOf(moveToRank(A, 'a', 99), 'a')).toBe(5)
+    expect(rankOf(moveToRank(A, 'e', -3), 'e')).toBe(1)
+  })
+
+  it('moveByDelta is a no-op at the ends', () => {
+    expect(rankOf(moveByDelta(A, 'a', -1), 'a')).toBe(1)
+    expect(rankOf(moveByDelta(A, 'e', +1), 'e')).toBe(5)
   })
 })
