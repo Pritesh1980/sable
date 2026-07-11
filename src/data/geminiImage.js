@@ -2,7 +2,9 @@
 // Pure helpers (buildGeminiImagePrompt, parseGeminiImage) are unit-tested;
 // generateImageWithGemini is a thin network wrapper around them.
 
-export const GEMINI_IMAGE_MODEL = 'gemini-2.5-flash-image'
+// gemini-2.5-flash-image (shutdown 2026-10-02) → gemini-3.1-flash-image-preview,
+// Google's named replacement. See https://ai.google.dev/gemini-api/docs/deprecations
+export const GEMINI_IMAGE_MODEL = 'gemini-3.1-flash-image-preview'
 
 const BASE_FRAMING =
   'Professional tattoo concept art. Black ink, high contrast, clean tattooable linework, flash-reference style — concept art, not a finished tattoo copied from any living artist.'

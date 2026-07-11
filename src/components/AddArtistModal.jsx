@@ -9,10 +9,10 @@ import { stampAddedAt } from '../data/wall'
 // drop/paste zone. Heavy editing (studio, notes, provenance) stays in the
 // full manage view, linked from the footer. Saved images are stamped with
 // stampAddedAt so the wall's recent dots light up immediately.
-export default function AddArtistModal({ artists = [], setArtists, userId, onClose, onManage }) {
-  const [handle, setHandle] = useState('')
-  const [name, setName] = useState('')
-  const [tags, setTags] = useState([])
+export default function AddArtistModal({ artists = [], setArtists, userId, onClose, onManage, initial }) {
+  const [handle, setHandle] = useState(initial?.handle || '')
+  const [name, setName] = useState(initial?.name || '')
+  const [tags, setTags] = useState(initial?.tags || [])
   const [staged, setStaged] = useState([])
   const [dragOver, setDragOver] = useState(false)
   const [error, setError] = useState('')

@@ -18,6 +18,13 @@ tiled edge to edge. No panels, no stats — the work itself is the interface.
 - A **red dot** on a photo means it's new — added within the last 14 days.
 - The thin bar at the top holds everything else: the **Artists / Concepts** switch,
   **+ Add artist**, and the **⋯** menu (the Drawer).
+- At the very bottom of the Wall, a quiet **Consider** shelf suggests artists matched
+  to the styles you already collect. Open the Instagram profile to judge for yourself,
+  then **+ Add** (the form comes pre-filled) or **Not for me** (never suggested again).
+  **Find more like this** asks AI for a fresh batch — those arrive marked *unverified*
+  until you've looked at the profile. With a Gemini key saved, a **↻ Refresh** control
+  in the shelf header re-runs AI discovery in one tap, skipping everyone you already
+  have or have dismissed.
 
 ## The full-screen viewer — one click in
 
