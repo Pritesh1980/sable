@@ -183,39 +183,6 @@ Each artist in `src/data/artists.js` already carries style tags; they drive matc
 
 ---
 
-## Project Structure (actual)
-
-```
-src/
-├── pages/        Dashboard (Home), Gallery (Artists + manage mode), Brief (Ideas + Boards tab),
-│                 Conventions, Studios, Concepts, Settings, Help, Login
-├── components/   Nav, ArtistCard, ArtistDetail, ArtistBrowse, CompareView, FilmstripView,
-│                 RankingMode, SortableArtistCard, StyleWall, TagPill, Logo
-├── data/         artists.js (DEFAULT_ARTISTS, DEFAULT_STUDIOS, STYLE_TAGS, PLACEMENTS),
-│                 conventions.js, brief.js, boards.js, planning.js (matching), export.js, ranking.js
-├── hooks/        useArtistStorage.js (localStorage meta + IndexedDB images), useStorage.js, useImageUpload.js
-├── context/      ThemeContext (dark/light theme + font size)
-├── test/         Vitest specs (data integrity, hooks, transforms)
-├── App.jsx       routes  ·  main.jsx  ·  index.css
-docs/             User guide (Markdown) — see "Documentation" below
-public/guide/     Documentation screenshots (regenerated via Playwright)
-```
-
----
-
-## Running the app
-
-```bash
-npm install
-npm run dev      # http://localhost:5173
-npm test         # Vitest (npm run test:watch during dev)
-npm run build
-```
-
-The MVP is already built. See `docs/README.md` (or in-app **More → Help**) for the user guide.
-
----
-
 ## Commit messages
 
 Do **not** add attribution trailers to commit messages — no `Co-Authored-By: Claude …`
@@ -256,18 +223,9 @@ them. Keep messages terse and conventional (e.g. `feat(home): …`, `docs: …`)
 
 ---
 
-## Documentation — keep it in sync
+## Documentation
 
-User docs live in two mirrored places, both driven by the same screenshots in `public/guide/`:
-- **`docs/`** — Markdown guide (`README.md` index + `01`–`07` workflow files). Image links use `../public/guide/*.png`.
-- **In-app Help** — `src/pages/Help.jsx`, route `/help`, reached via **More → Help**; references `/guide/*.png`.
-
-**When you change UI (anything under `src/pages/` or `src/components/`), update the docs in the same change:**
-1. Edit the relevant `docs/NN-*.md` **and** the matching `SECTIONS` entry in `src/pages/Help.jsx`.
-2. Re-capture any affected screenshots — exact Playwright + sample-data steps are in **`docs/MAINTAINING.md`**.
-3. Keep the image set tight: every file in `public/guide/` should be referenced, and every reference should resolve (the cross-check command is in `docs/MAINTAINING.md`).
-
-A **Stop hook** (`scripts/docs-drift-check.sh`, wired in `.claude/settings.json`) prints a reminder when UI files changed but `docs/` / `public/guide/` didn't.
+Keeping user docs (`docs/` + in-app Help) in sync when you change UI lives in `.claude/rules/docs-sync.md` (loads automatically when you work under `src/pages/`, `src/components/`, `docs/`, or `public/guide/`).
 
 <!-- IJFW-MEMORY-START (managed -- do not edit manually) -->
 <ijfw-memory>
@@ -277,8 +235,8 @@ Recent decisions:
 **Why:** This keeps the first result-comparison slice close to the existing Concepts workflow while making external AI outputs comparable and reusable.
 **How to apply:** When implementing AI result comparison, extend concept records with optional variants. Preserve legacy concepts. Render the best variant first inside the concept card, with compact expandable cards for the rest. Do not add a separate Result Lab page yet.
 
-Last handoff: Handoff: 2026-06-04T19:15:00Z
-====================
+Last handoff: # Handoff: 2026-07-05
+## Shipped: Sable v2 (merged to main, 7b8622d)
 </ijfw-memory>
 
 <ijfw-routing>
