@@ -28,6 +28,7 @@ This is a personal app for one user (Pritesh) + occasional sharing with his tatt
 - **Styling**: Tailwind CSS
 - **Hosting**: AWS S3 + CloudFront (planned — not yet set up; see `BACKLOG.md`)
 - **AI (Concepts page)**: copy-prompt → paste into ChatGPT/Claude/Gemini and bring the result back, **or** optional OpenAI DALL·E 3 / Gemini image generation with user-supplied keys (stored locally). Saved image results can export browser-generated relief STL files. Artist ↔ idea/concept matching is local tag-overlap (`src/data/planning.js`) — no API.
+- **Gemini model IDs are pinned and go stale**: `GEMINI_TEXT_MODEL` (`src/data/discovery.js`, artist discovery/refresh) and `GEMINI_IMAGE_MODEL` (`src/data/geminiImage.js`, concept images). Google retires these (`gemini-2.5-*` → `gemini-3.x` mid-2026); on a "model no longer available" error, bump both against https://ai.google.dev/gemini-api/docs/deprecations. No test pins the IDs.
 - **Accounts & sync**: email/password login, per-user data, cross-device sync. All
   vendor SDK access is quarantined behind a thin adapter boundary (`src/backend/`,
   selected by `VITE_BACKEND` = `local` | `supabase` | `aws`, default `local`) so the
@@ -201,6 +202,8 @@ them. Keep messages terse and conventional (e.g. `feat(home): …`, `docs: …`)
 - Use `@testing-library/react` for hooks and components
 - `npm test` is pinned to the **local** backend via `vite.config.js` (`test.env`), so a `VITE_BACKEND=supabase` in your `.env.local` won't leak in and fail the sync/owner specs.
 - Non-bundled files (e.g. `public/sw.js`) can't be imported: put the logic in a pure `src/` module with unit tests, plus a "contract test" that reads the file and asserts key invariants.
+- **Flaky under the full parallel run**: the `useArtistStorage` image-migration spec can fail once in `npm test` (fake-indexeddb cross-test timing) yet pass 12/12 in isolation (`npx vitest run src/test/useArtistStorage.test.js`). A lone failure there is usually flake, not your change — rerun or run it isolated before debugging.
+- `.claude/` is gitignored in this repo: rules/settings placed there load locally but aren't version-controlled — put anything you want shared/checked-in into `CLAUDE.md` itself.
 
 ### What to test
 - **Pure functions** (data transforms, rank logic, defaults merging) — test these directly
