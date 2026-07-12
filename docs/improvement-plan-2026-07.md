@@ -92,8 +92,8 @@ with real offline support" is a strong portfolio line.
 
 ## Workstream 5 — Small UX debts (Sonnet; opportunistic)
 
-- `index.html`: add the non-prefixed `mobile-web-app-capable` meta (console
-  deprecation warning on every load).
+- ~~`index.html`: add the non-prefixed `mobile-web-app-capable` meta~~ — already
+  landed on main in `50b4dfd` (2026-06-13); this item was stale.
 - One-time real-iPhone tap test on idea cards (open from June — Pritesh-only,
   5 minutes once WS1 gives a URL).
 - Decide curated-handle resurrection before sharing an account with the
