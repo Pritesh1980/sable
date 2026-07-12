@@ -6,10 +6,11 @@
 
 ---
 
-The **Classic gallery** (**⋯ → Classic gallery**) is where ranking and structured browsing
-live — the Wall is for looking, this page is for organising. A sticky bar at the top holds
-the **style filter** (tap a tag to show only artists with it; tap **All** to clear) and a
-**view toggle** on the right with four modes.
+The **Classic gallery** (**⋯ → Classic gallery**) is where structured browsing lives — the
+Wall is for looking, this page is for organising. A sticky bar at the top holds the
+**style filter** (tap a tag to show only artists with it; tap **All** to clear) and a
+**view toggle** on the right with four modes. (Everyday ranking now lives on the Home
+Wall — see [Ranking your favourites](#ranking-your-favourites) below.)
 
 ## The four views
 
@@ -52,7 +53,15 @@ studio, notes, and any conventions they're attending. Tap **Edit details** to ch
 
 ## Ranking your favourites
 
-There are three ways to set priority, all of which update the same single ranking:
+Everything below sets the **same single ranking** — one ordered list of every artist.
+
+The quickest place to rank is the **Home Wall**. Your **Top 5** is pinned at the top:
+nudge any of the five up or down with **▲ / ▼**, or tap **Rank ⤢** to open the full
+**ranking board** — your Top 5 pinned up top, everyone else below, with **▲ / ▼** on
+every row, **Drop ↓** to push an artist out of the Top 5, and **↑ To top 5** to pull one
+in. Close it (or press **Esc**) to return to the Wall.
+
+The Classic gallery keeps its own ranking tools for when you're already there organising:
 
 1. **Drag** in Grid view.
 2. **Nudge** the rank number up/down in Filmstrip view.
@@ -61,8 +70,8 @@ There are three ways to set priority, all of which update the same single rankin
 
 ![Swipe-compare ranking](../public/guide/ranking-swipe.png)
 
-> **Tip:** ranking flows through the whole app — Home's **Top 5** and **Contact next**, and
-> the artist suggestions in *Brief*, all respect the order you set here.
+> **Tip:** ranking flows through the whole app — the Home **Top 5** and **Contact next**,
+> and the artist suggestions in *Brief*, all respect the order you set here.
 
 ---
 

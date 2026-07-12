@@ -16,6 +16,9 @@ tiled edge to edge. No panels, no stats — the work itself is the interface.
 - **Hover a photo** to see whose it is — the artist's name (and their studio, when one
   is set) fades in along the bottom edge.
 - A **red dot** on a photo means it's new — added within the last 14 days.
+- Pinned just under the bar is your **Top 5** — the five artists you've ranked highest,
+  as a slim strip. Nudge any of them up or down with **▲ / ▼**, or tap **Rank ⤢** to
+  open the full ranking board (see [Gallery & ranking](03-gallery-and-ranking.md)).
 - The thin bar at the top holds everything else: the **Artists / Concepts** switch,
   **+ Add artist**, and the **⋯** menu (the Drawer).
 - At the very bottom of the Wall, a quiet **Consider** shelf suggests artists matched
