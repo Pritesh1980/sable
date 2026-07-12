@@ -6,6 +6,8 @@ import WallViewer from '../components/WallViewer'
 import AddArtistModal from '../components/AddArtistModal'
 import ConsiderShelf from '../components/ConsiderShelf'
 import DiscoverMore from '../components/DiscoverMore'
+import RankRail from '../components/RankRail'
+import RankBoard from '../components/RankBoard'
 import { SUGGESTED_ARTISTS } from '../data/suggestions'
 import { discoverArtistsWithGemini } from '../data/discovery'
 import { uploadImages } from '../hooks/useImageUpload'
@@ -65,6 +67,7 @@ export default function Wall({ artists = [], ideas = [], setArtists = () => {}, 
   const [viewerIndex, setViewerIndex] = useState(null)
   const [addArtistOpen, setAddArtistOpen] = useState(false)
   const [addArtistInitial, setAddArtistInitial] = useState(null)
+  const [rankBoardOpen, setRankBoardOpen] = useState(false)
   const [dismissedSuggestions, setDismissedSuggestions] = useStorage('tattoo_dismissed_suggestions', [])
   const [aiSuggestions, setAiSuggestions] = useStorage('tattoo_ai_suggestions', [])
   const suggestionPool = [...SUGGESTED_ARTISTS, ...aiSuggestions]
@@ -149,6 +152,14 @@ export default function Wall({ artists = [], ideas = [], setArtists = () => {}, 
         />
       )}
 
+      {!viewerOpen && (
+        <RankRail
+          artists={artists}
+          setArtists={setArtists}
+          onOpenBoard={() => setRankBoardOpen(true)}
+        />
+      )}
+
       {items.length > 0 && (
         <ConsiderShelf
           artists={artists}
@@ -226,6 +237,14 @@ export default function Wall({ artists = [], ideas = [], setArtists = () => {}, 
           initial={addArtistInitial || undefined}
           onClose={() => { setAddArtistOpen(false); setAddArtistInitial(null) }}
           onManage={() => { setAddArtistOpen(false); setAddArtistInitial(null) }}
+        />
+      )}
+
+      {rankBoardOpen && (
+        <RankBoard
+          artists={artists}
+          setArtists={setArtists}
+          onClose={() => setRankBoardOpen(false)}
         />
       )}
     </div>

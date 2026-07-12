@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import Wall from '../pages/Wall'
 
@@ -41,15 +41,24 @@ function renderWall(props = {}, { initialEntries = ['/'] } = {}) {
   )
 }
 
+// The RankRail Top-5 dock also renders artist names + thumbnails above the
+// masonry, so masonry-targeting queries scope to <main> to stay unambiguous.
+const main = () => within(screen.getByRole('main'))
+
 describe('Wall page', () => {
   it('renders one piece per image across all artists', () => {
     renderWall()
-    expect(screen.getAllByRole('img')).toHaveLength(3)
+    expect(main().getAllByRole('img')).toHaveLength(3)
+  })
+
+  it('surfaces the Top-5 dock on the wall', () => {
+    renderWall()
+    expect(screen.getByRole('region', { name: /your top five/i })).toBeInTheDocument()
   })
 
   it('captions with a prominent artist name and their studio — no style tags', () => {
     renderWall()
-    const caption = screen.getByText('Carlos Valera').closest('figcaption')
+    const caption = main().getByText('Carlos Valera').closest('figcaption')
     expect(caption).toHaveTextContent('No Regrets London')
     expect(caption).not.toHaveTextContent('realism')
     expect(caption.className).toMatch(/opacity-0/)
@@ -71,7 +80,7 @@ describe('Wall page', () => {
   it('calls onOpen with the right item when a piece is clicked', () => {
     const onOpenArtist = vi.fn()
     renderWall({ onOpenArtist })
-    fireEvent.click(screen.getByText('Carlos Valera').closest('figure'))
+    fireEvent.click(main().getByText('Carlos Valera').closest('figure'))
     expect(onOpenArtist).toHaveBeenCalledTimes(1)
     expect(onOpenArtist.mock.calls[0][0]).toMatchObject({ artistId: 'carlosvalera' })
   })
@@ -99,6 +108,7 @@ describe('Wall page', () => {
   it('renders an empty state with an add-artist CTA that opens the quick-add modal', () => {
     renderWall({ artists: [] })
     expect(screen.queryAllByRole('img')).toHaveLength(0)
+    expect(screen.queryByRole('region', { name: /your top five/i })).toBeNull()
     const ctas = screen.getAllByRole('button', { name: /add artist/i })
     fireEvent.click(ctas[ctas.length - 1])
     expect(screen.getByText('Add an artist')).toBeInTheDocument()
@@ -131,7 +141,7 @@ describe('Wall page', () => {
     it('dropping a file on a wall piece adds a stamped image to that artist', async () => {
       const setArtists = vi.fn()
       renderWall({ setArtists })
-      const figure = screen.getAllByRole('img')[0].closest('figure')
+      const figure = main().getAllByRole('img')[0].closest('figure')
       const file = new File(['x'], 'ref.jpg', { type: 'image/jpeg' })
 
       fireEvent.drop(figure, { dataTransfer: { files: [file] } })

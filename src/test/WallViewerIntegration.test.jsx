@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import Wall from '../pages/Wall'
 
@@ -49,7 +49,9 @@ function renderApp(props = {}) {
 }
 
 function clickPiece(artistName) {
-  fireEvent.click(screen.getAllByText(artistName)[0].closest('figure'))
+  // Scope to the masonry <main> so the RankRail dock (which also renders artist
+  // names) can't shadow the wall-piece <figure> we mean to click.
+  fireEvent.click(within(screen.getByRole('main')).getAllByText(artistName)[0].closest('figure'))
 }
 
 describe('Wall → WallViewer integration', () => {

@@ -12,6 +12,7 @@ const SECTIONS = [
     steps: [
       'Sign in with your email and password to open the app. Your artists, ideas, boards and concepts are tied to your account and follow you across devices — add something on your Mac and it appears on your iPhone.',
       'You open on the Wall: every photo from every artist in your collection, edge to edge. Hover a photo to see whose it is; a red dot means it was added in the last 14 days.',
+      'Pinned just under the bar is your Top 5 — the five artists you’ve ranked highest. Nudge any of them up or down with ▲ / ▼, or tap Rank ⤢ to open the full ranking board.',
       'Click any photo and it fills the screen. Arrow keys drive it: ←/→ moves through this artist’s work, ↑/↓ jumps between artists, G generates a concept in this artist’s style, I opens their info & notes, Esc returns to the Wall.',
       'Leave the mouse still and the viewer’s controls fade away, leaving just the image; move it and they return. The @handle link opens the artist’s Instagram in a new tab.',
       'The bar at the top switches between Artists and Concepts, adds an artist, and opens the ⋯ Drawer — home of the Classic gallery, Ideas, Pipeline, Radar, Studios, Settings and this Help page.',
@@ -38,12 +39,13 @@ const SECTIONS = [
   {
     id: 'gallery-ranking',
     label: 'Gallery & ranking',
-    blurb: 'Browse your collection four ways, filter by style, and rank your favourites.',
+    blurb: 'Rank from the Home Top 5, browse four ways, and filter by style.',
     image: 'gallery-grid.png',
     steps: [
-      'Open Drawer → Classic gallery. Switch views with the toggle: ☰ Filmstrip, ⊟ Compare, ⊞ Grid, ▦ Style Wall.',
+      'The quickest place to rank is the Home Wall: your Top 5 is pinned at the top. Nudge any of the five up or down with ▲ / ▼, or tap Rank ⤢ to open the full ranking board — Top 5 pinned, everyone else below, with ▲ / ▼ on every row, Drop ↓ to push an artist out of the Top 5, and ↑ To top 5 to pull one in. Esc returns to the Wall.',
+      'Open Drawer → Classic gallery for structured browsing. Switch views with the toggle: ☰ Filmstrip, ⊟ Compare, ⊞ Grid, ▦ Style Wall.',
       'Tap a style tag in the filter bar to show only artists with that tag; tap All to clear it.',
-      'In Grid view, drag a card to reorder rank. In Filmstrip, nudge the rank directly.',
+      'The Classic gallery also ranks: drag a card in Grid view, or nudge the rank number in Filmstrip. Every method feeds the same single ranking.',
       'Tap Rank to enter swipe-compare: pick the better of two artists repeatedly to build an order. Undo reverses your last choice.',
       'Tap any card to open the full artist detail — photos, tags, status, studio, notes and conventions they are attending.',
     ],
