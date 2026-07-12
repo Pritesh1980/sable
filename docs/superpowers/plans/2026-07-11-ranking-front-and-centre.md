@@ -281,7 +281,7 @@ it('renders even when no artist has images', () => {
 it('opens the board', () => {
   const onOpenBoard = vi.fn()
   render(<RankRail artists={artists} setArtists={vi.fn()} onOpenBoard={onOpenBoard} />)
-  fireEvent.click(screen.getByRole('button', { name: /^rank$/i }))
+  fireEvent.click(screen.getByRole('button', { name: /rank ⤢/i }))
   expect(onOpenBoard).toHaveBeenCalled()
 })
 ```
@@ -393,9 +393,13 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import RankBoard from '../components/RankBoard'
 
+// 7 artists so the top-5 (ranks 1..5) and "everyone else" (ranks 6..7)
+// sections are both non-empty — with only 5 artists all land in the top 5.
 const artists = [
   { id: 'a', handle: 'a', name: 'Aaa', rank: 1, images: ['a.jpg'] },
   { id: 'b', handle: 'b', name: 'Bbb', rank: 2, images: [] },
+  { id: 'c', handle: 'c', name: 'Ccc', rank: 3, images: [] },
+  { id: 'd', handle: 'd', name: 'Ddd', rank: 4, images: [] },
   { id: 'e', handle: 'e', name: 'Eee', rank: 5, images: [] },
   { id: 'f', handle: 'f', name: 'Fff', rank: 6, images: [] },
   { id: 'g', handle: 'g', name: 'Ggg', rank: 7, images: [] },
