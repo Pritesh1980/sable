@@ -35,14 +35,14 @@ export default function RankRail({ artists = [], setArtists = () => {}, onOpenBo
               <button
                 aria-label={`Move ${label(a)} up`}
                 onClick={() => setArtists((prev) => moveUp(prev, a.id))}
-                className="text-v2-muted hover:text-v2-cream text-[0.6875rem] leading-none px-1"
+                className="text-v2-muted hover:text-v2-cream text-[0.6875rem] leading-none px-2.5 py-1.5"
               >
                 ▲
               </button>
               <button
                 aria-label={`Move ${label(a)} down`}
                 onClick={() => setArtists((prev) => moveDown(prev, a.id))}
-                className="text-v2-muted hover:text-v2-cream text-[0.6875rem] leading-none px-1"
+                className="text-v2-muted hover:text-v2-cream text-[0.6875rem] leading-none px-2.5 py-1.5"
               >
                 ▼
               </button>

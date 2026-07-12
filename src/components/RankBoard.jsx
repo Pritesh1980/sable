@@ -18,14 +18,14 @@ function NudgeButtons({ artist, setArtists }) {
       <button
         aria-label={`Move ${label(artist)} up`}
         onClick={() => setArtists((prev) => moveUp(prev, artist.id))}
-        className="text-v2-muted hover:text-v2-cream text-xs leading-none px-2 py-0.5"
+        className="text-v2-muted hover:text-v2-cream text-xs leading-none px-3 py-2.5"
       >
         ▲
       </button>
       <button
         aria-label={`Move ${label(artist)} down`}
         onClick={() => setArtists((prev) => moveDown(prev, artist.id))}
-        className="text-v2-muted hover:text-v2-cream text-xs leading-none px-2 py-0.5"
+        className="text-v2-muted hover:text-v2-cream text-xs leading-none px-3 py-2.5"
       >
         ▼
       </button>
