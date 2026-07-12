@@ -1,8 +1,9 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import precachePlugin from './scripts/precachePlugin.js'
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), precachePlugin()],
   server: {
     // Dev-only: allow Cloudflare quick tunnels (`cloudflared tunnel --url ...`)
     // so the dev server can be previewed from a phone. No production impact.
