@@ -73,7 +73,10 @@ export function parseInstagramHandle(input = '') {
 
 // Build a new user-added artist record, or null if the handle is already taken
 // (case-insensitive). Rank goes to the back of the queue.
-export function createArtist({ handle, name, tags = [], status = 'researching' }, existingArtists = []) {
+export function createArtist(
+  { handle, name, tags = [], status = 'researching', styleNote = '', images = [] },
+  existingArtists = []
+) {
   const duplicate = existingArtists.some(
     (a) => a.handle.toLowerCase() === handle.toLowerCase()
   )
@@ -85,9 +88,10 @@ export function createArtist({ handle, name, tags = [], status = 'researching' }
     handle,
     name,
     tags,
-    images: [],
+    images,
     rank: maxRank + 1,
     status,
+    ...(styleNote ? { styleNote } : {}),
     notes: '',
     studio: null,
   }

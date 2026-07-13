@@ -27,6 +27,7 @@ const SECTIONS = [
     image: 'manage-artist-expanded.png',
     steps: [
       'Tap + Add artist on the Wall to onboard an artist in one step: paste their handle or Instagram URL, toggle style tags, and drop in a few screenshots if you have them. If the handle already exists, Sable offers to add the images to that artist instead.',
+      'The + Add button on the Artists page can auto-fill from an Instagram screenshot: with a Gemini key set (Concepts → AI setup), choosing or pasting a screenshot reads the handle, suggests tags from the artwork and drafts a style note — and if the style index is built, scores the screenshot against your taste before you add.',
       'Grow a portfolio as you find things: drag an image file onto an artist’s photo on the Wall, or paste (⌘V) while viewing them full-screen. New photos wear a red dot for two weeks.',
       'The Consider shelf at the bottom of the Wall suggests artists matched to your styles. Open the profile to judge, then + Add (pre-filled) or Not for me. Find more like this asks AI for a fresh batch — unverified until you’ve looked. With a Gemini key saved, the ↻ Refresh control in the shelf header re-runs AI discovery in one tap, skipping artists you already have or dismissed.',
       'For bulk upkeep, open Drawer → Classic gallery and tap Manage (top right): a searchable table of every artist.',
@@ -59,6 +60,7 @@ const SECTIONS = [
     image: 'brief-idea-editor.png',
     steps: [
       'Open Ideas and tap + to create an idea. Add a title, description, style tags, body placement and reference images.',
+      'With a Gemini key set and a reference image uploaded, Fill idea from image drafts the title, description, tags and placement from the image — only fields you left empty are filled.',
       'As you add style tags, matching artists appear ranked by overlap, status and rank — tap to link them to the idea.',
       'Use Copy brief to put a shareable, formatted summary on your clipboard.',
       'Switch to the Boards tab on the same page to group related ideas into a themed board, reorder them, and copy a board-level brief.',

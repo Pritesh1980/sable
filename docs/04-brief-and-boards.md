@@ -24,6 +24,9 @@ Tap **+** to add an idea (or tap a card to edit one). The editor gives you:
 - **Status** — Idea, Booked or Done.
 - **Style tags** — the same six styles used across the app.
 - **Body placement** — chest, forearm, sleeve, etc.
+- **Fill idea from image** — with a Gemini key set and at least one uploaded reference
+  image, this button drafts the title, description, style tags and placement from the
+  image itself; only fields you haven't filled are touched.
 - **Reference images** — paste an image URL or upload photos, each with a note on *what to
   borrow from it*.
 

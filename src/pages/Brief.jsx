@@ -8,6 +8,7 @@ import { STYLE_TAGS, PLACEMENTS } from '../data/artists'
 import { IDEA_STATUSES, matchArtistsToIdea } from '../data/brief'
 import { buildIdeaBrief } from '../data/export'
 import { compressImages } from '../hooks/useImageUpload'
+import { analyzeIdeaImageWithGemini } from '../data/screenshotIntake'
 import {
   ARTIST_STATUSES,
   buildMatchRationale,
@@ -60,8 +61,42 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
   const [newImage, setNewImage] = useState('')
   const [copied, setCopied] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [analyzing, setAnalyzing] = useState(false)
+  const [analyzeNote, setAnalyzeNote] = useState('')
   const fileRef = useRef()
   const isNew = !idea.id
+
+  // Fill-from-image (issue #20): a Gemini vision call drafts title,
+  // description, tags and placement from the first uploaded reference image
+  // (data URLs only — pasted http URLs can't be inlined). Only empty fields
+  // are filled; nothing the user typed is overwritten.
+  const geminiKey = localStorage.getItem('gemini_api_key') || ''
+  const analyzableImage = normalizeReferenceImages(draft.images)
+    .map((image) => getImageUrl(image))
+    .find((url) => url.startsWith('data:'))
+
+  async function analyzeImage() {
+    setAnalyzing(true)
+    setAnalyzeNote('')
+    try {
+      const result = await analyzeIdeaImageWithGemini(geminiKey, analyzableImage)
+      if (!result) {
+        setAnalyzeNote("Couldn't draft an idea from this image.")
+      } else {
+        setDraft((d) => ({
+          ...d,
+          title: d.title || result.title,
+          description: d.description || result.description,
+          tags: [...new Set([...(d.tags || []), ...result.tags])],
+          placement: d.placement || result.placement,
+        }))
+      }
+    } catch (e) {
+      console.error('[tattoo] idea image intake failed:', e)
+      setAnalyzeNote('Analysis failed — check your Gemini key/connection.')
+    }
+    setAnalyzing(false)
+  }
 
   const matches = matchArtistsForIdea(draft, artists)
   const suggested = matchArtistsToIdea(draft, artists).filter(
@@ -221,7 +256,20 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
         </div>
 
         <div>
-          <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-3">Reference Images</p>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-mono text-cream-muted tracking-widest uppercase">Reference Images</p>
+            {geminiKey && analyzableImage && (
+              <button
+                type="button"
+                onClick={analyzeImage}
+                disabled={analyzing}
+                className="font-mono text-xs text-accent hover:text-accent-hover disabled:opacity-50"
+              >
+                {analyzing ? 'Drafting…' : 'Fill idea from image'}
+              </button>
+            )}
+          </div>
+          {analyzeNote && <p className="font-body text-xs text-cream-muted/70 mb-2">{analyzeNote}</p>}
           {draft.images?.length > 0 && (
             <div className="grid grid-cols-2 gap-2 mb-3">
               {normalizeReferenceImages(draft.images).map((image) => {
