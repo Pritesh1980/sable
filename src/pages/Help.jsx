@@ -48,6 +48,7 @@ const SECTIONS = [
       'The Classic gallery also ranks: drag a card in Grid view, or nudge the rank number in Filmstrip. Every method feeds the same single ranking.',
       'Tap Rank to enter swipe-compare: pick the better of two artists repeatedly to build an order. Undo reverses your last choice.',
       'Tap any card to open the full artist detail — photos, tags, status, studio, notes and conventions they are attending.',
+      'In the artist detail, Similar ink shows the three closest artists by how their work actually looks. Tap Build style index once — a small vision model downloads and all matching then runs on your device; your images never leave the browser.',
     ],
   },
   {

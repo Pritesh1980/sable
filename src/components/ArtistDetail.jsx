@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
 import TagPill from './TagPill'
 import ArtistImage from './ArtistImage'
+import SimilarArtists from './SimilarArtists'
 import { STYLE_TAGS, DEFAULT_STUDIOS } from '../data/artists'
 import { uploadImages } from '../hooks/useImageUpload'
 import { useAuth } from '../context/useAuth'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
 import { imageSrc } from '../data/wall'
 
-export default function ArtistDetail({ artist, onClose, onSave, attendingConventions = [] }) {
+export default function ArtistDetail({ artist, onClose, onSave, attendingConventions = [], allArtists = [], onSelectArtist }) {
   const [images, setImages] = useState(artist.images || [])
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState({ ...artist })
@@ -258,6 +259,12 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
             </div>
             {!editing && <p className="text-cream-muted/90 text-xs font-mono mt-2">Tap tags to tune matching.</p>}
           </div>
+
+          {/* Similar ink — on-device visual matches (only outside edit mode, and
+              only when the collection is big enough for neighbours to mean much) */}
+          {!editing && allArtists.length > 1 && (
+            <SimilarArtists artists={allArtists} artist={artist} onSelectArtist={onSelectArtist} />
+          )}
 
           {/* Studio (edit mode) */}
           {editing && (

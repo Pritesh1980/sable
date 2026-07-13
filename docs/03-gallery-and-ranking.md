@@ -49,6 +49,16 @@ studio, notes, and any conventions they're attending. Tap **Edit details** to ch
 
 ![Artist detail](../public/guide/artist-detail.png)
 
+### Similar ink
+
+Below the style tags, the detail view can show the three artists in your collection
+whose work looks most alike — matched on the images themselves, not just tags. The
+first time, tap **Build style index**: a small vision model is downloaded once and
+every comparison then runs entirely on your device (your images never leave the
+browser). Indexing the whole collection takes a minute or two; after that it only
+processes newly added photos, and each device keeps its own index. Tap a match to
+jump to that artist.
+
 ---
 
 ## Ranking your favourites

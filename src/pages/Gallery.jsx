@@ -292,6 +292,8 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
           onClose={() => setSelected(null)}
           onSave={saveArtist}
           attendingConventions={mergedConventions.filter((c) => c.attendingArtistIds.includes(selected.id))}
+          allArtists={artists}
+          onSelectArtist={setSelected}
         />
       )}
 

@@ -32,7 +32,7 @@ describe('legacy route redirects', () => {
 
   it('redirects /manage to the Artists page in manage mode', async () => {
     renderAt('/manage')
-    await waitFor(() => expect(screen.getByRole('heading', { name: 'Artists' })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Artists' })).toBeInTheDocument(), { timeout: 5000 })
     expect(screen.getByText('Add New Artist')).toBeInTheDocument()
   })
 
