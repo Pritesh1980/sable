@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import useIdleFade from '../hooks/useIdleFade'
 import useDialogFocus from '../hooks/useDialogFocus'
 import ConceptVariantLab from './ConceptVariantLab'
+import ConceptVisualMatches from './ConceptVisualMatches'
 import GlCrossfade from './GlCrossfade'
 import SavedPromptPack from './SavedPromptPack'
 import TagPill from './TagPill'
@@ -72,6 +73,8 @@ function InfoPanel({ item, artists, onClose, onSaveTags, onAddVariant, onMarkBes
           </ul>
         )}
       </div>
+
+      <ConceptVisualMatches artists={artists} concept={concept} />
 
       <ConceptVariantLab
         concept={concept}

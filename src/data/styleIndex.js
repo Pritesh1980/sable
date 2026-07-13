@@ -106,6 +106,26 @@ export async function buildStyleIndex(artists, { onProgress } = {}) {
   return existing
 }
 
+// One-off embedding with a stable cache key, for images that aren't part of
+// the artist library — e.g. a concept image, whose display URL may be a
+// short-lived object URL that changes every session while the concept id does
+// not. Returns null (rather than throwing) when the image can't be embedded,
+// so callers can render a soft failure state.
+export async function vectorFor(src, cacheKey) {
+  const key = `${EMBEDDING_MODEL_ID}:${cacheKey}`
+  const cached = await dbGetMany([key])
+  if (cached.has(key)) return cached.get(key)
+  try {
+    const embed = await getEmbedder()
+    const vec = await embed(src)
+    await dbPut(key, vec)
+    return vec
+  } catch (e) {
+    console.error('[tattoo] one-off embed failed:', cacheKey, e)
+    return null
+  }
+}
+
 // Test/reset helper: drops the whole index database (closing our own
 // connection first so the delete isn't blocked by it).
 export async function clearStyleIndex() {

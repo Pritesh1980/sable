@@ -7,7 +7,7 @@ vi.mock('../data/embedder', () => ({
   getEmbedder: vi.fn(async () => async (src) => (src.includes('a') ? [1, 0] : [0, 1])),
 }))
 
-import { buildStyleIndex, loadVectors, clearStyleIndex } from '../data/styleIndex'
+import { buildStyleIndex, loadVectors, vectorFor, clearStyleIndex } from '../data/styleIndex'
 import { getEmbedder } from '../data/embedder'
 
 const artists = [
@@ -51,6 +51,27 @@ describe('styleIndex', () => {
     const vectors = await loadVectors(artists)
     expect(vectors.size).toBe(2)
     expect(vectors.has('/img/a2.jpg')).toBe(false)
+  })
+})
+
+describe('vectorFor (one-off embeddings, e.g. concept images)', () => {
+  it('embeds once and serves the cached vector by stable key afterwards', async () => {
+    const first = await vectorFor('/img/a-concept.png', 'concept:c1')
+    expect(first).toEqual([1, 0])
+    // Same key, different (e.g. re-resolved object) URL: must hit the cache,
+    // not the embedder.
+    getEmbedder.mockImplementationOnce(async () => {
+      throw new Error('should not re-embed a cached key')
+    })
+    const second = await vectorFor('blob:whatever', 'concept:c1')
+    expect(second).toEqual([1, 0])
+  })
+
+  it('returns null instead of throwing when the image cannot be embedded', async () => {
+    getEmbedder.mockResolvedValueOnce(async () => {
+      throw new Error('decode failed')
+    })
+    expect(await vectorFor('/img/broken.png', 'concept:bad')).toBeNull()
   })
 })
 

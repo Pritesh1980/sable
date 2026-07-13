@@ -4,6 +4,7 @@ import {
   meanVector,
   artistCentroids,
   similarArtists,
+  rankArtistsByVector,
   indexCoverage,
 } from '../data/embeddings'
 
@@ -81,6 +82,20 @@ describe('similarArtists', () => {
 
   it('returns [] when the target artist has no embeddings yet', () => {
     expect(similarArtists(artists, 'd', getVec)).toEqual([])
+  })
+})
+
+describe('rankArtistsByVector', () => {
+  it('ranks all embeddable artists against an arbitrary vector (e.g. a concept image)', () => {
+    // [1, 0.1, 0] is exactly b's direction; a is close, c is orthogonal.
+    const out = rankArtistsByVector(artists, [1, 0.1, 0], getVec)
+    expect(out.map((r) => r.artist.id)).toEqual(['b', 'a', 'c'])
+    expect(out[0].similarity).toBeGreaterThan(out[2].similarity)
+  })
+
+  it('respects the limit and returns [] for a null vector', () => {
+    expect(rankArtistsByVector(artists, [1, 0, 0], getVec, { limit: 1 })).toHaveLength(1)
+    expect(rankArtistsByVector(artists, null, getVec)).toEqual([])
   })
 })
 

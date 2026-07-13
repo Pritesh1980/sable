@@ -90,6 +90,7 @@ const SECTIONS = [
       'Click a saved concept and it fills the screen like the artists’ Wall. Press I for its prompt, response, style matching and AI results — save multiple outputs as variants, each with an image, text, notes and a rating; mark the strongest as Best.',
       'For results with images, use Make STL to export a printable relief-style heightmap file.',
       'Tag each concept with styles to reveal its top artist matches; tap a match to open their Instagram.',
+      'With the style index built (Artists → Similar ink), the info panel also shows Visual matches — the concept image compared against each artist’s actual work, on-device, to rank who could execute it.',
     ],
   },
   {

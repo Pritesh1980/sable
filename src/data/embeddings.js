@@ -47,17 +47,23 @@ export function artistCentroids(artists, getVec) {
   return centroids
 }
 
-// The artists visually closest to `artistId`, best first. Artists without any
-// embedded images can't be placed in the space and are omitted entirely.
-export function similarArtists(artists, artistId, getVec, { limit = 3 } = {}) {
+// Rank artists against an arbitrary vector (a concept image, an inspiration
+// upload…), best first. Artists without any embedded images can't be placed
+// in the space and are omitted entirely.
+export function rankArtistsByVector(artists, vec, getVec, { limit = 3, excludeId } = {}) {
+  if (!vec) return []
   const centroids = artistCentroids(artists, getVec)
-  const target = centroids.get(artistId)
-  if (!target) return []
   return artists
-    .filter((a) => a.id !== artistId && centroids.has(a.id))
-    .map((artist) => ({ artist, similarity: cosineSimilarity(target, centroids.get(artist.id)) }))
+    .filter((a) => a.id !== excludeId && centroids.has(a.id))
+    .map((artist) => ({ artist, similarity: cosineSimilarity(vec, centroids.get(artist.id)) }))
     .sort((x, y) => y.similarity - x.similarity)
     .slice(0, limit)
+}
+
+// The artists visually closest to `artistId`, best first.
+export function similarArtists(artists, artistId, getVec, { limit = 3 } = {}) {
+  const target = artistCentroids(artists, getVec).get(artistId)
+  return rankArtistsByVector(artists, target, getVec, { limit, excludeId: artistId })
 }
 
 export function indexCoverage(artists, getVec) {

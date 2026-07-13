@@ -59,6 +59,10 @@ Wall, same keys (`←` `→`, `Esc`; the controls fade when your mouse is still)
   again), and any AI text that came back.
 - **Match to style** — tag the concept with styles and its **top artist matches** appear;
   tap one to open their Instagram.
+- **Visual matches** — once the style index is built (Artists → any artist →
+  [Similar ink](03-gallery-and-ranking.md#similar-ink)), the concept **image itself** is
+  compared against every artist's work on-device, ranking who in your collection could
+  actually execute the piece — no tags involved.
 - **AI results** — keep multiple outputs as curated variants, each with an image, text,
   notes and a rating. Mark one **Best** to keep the strongest direction first.
 - **Delete** removes the concept.
