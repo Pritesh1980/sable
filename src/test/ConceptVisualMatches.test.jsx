@@ -39,6 +39,8 @@ describe('ConceptVisualMatches', () => {
     const names = await screen.findAllByTestId('visual-match-name')
     expect(names[0]).toHaveTextContent('Kerem')
     expect(vectorFor).toHaveBeenCalledWith('/concepts/c1.png', 'concept:c1')
+    // Taste fit: how strongly this image matches the user's overall taste.
+    expect(screen.getByText(/taste fit \d+%/i)).toBeInTheDocument()
   })
 
   it('renders nothing when the concept has no image', () => {

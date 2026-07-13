@@ -62,7 +62,9 @@ Wall, same keys (`←` `→`, `Esc`; the controls fade when your mouse is still)
 - **Visual matches** — once the style index is built (Artists → any artist →
   [Similar ink](03-gallery-and-ranking.md#similar-ink)), the concept **image itself** is
   compared against every artist's work on-device, ranking who in your collection could
-  actually execute the piece — no tags involved.
+  actually execute the piece — no tags involved. A **taste fit** percentage also shows
+  how strongly the image matches your collection's overall taste (learned from your
+  ranking and shortlist statuses).
 - **AI results** — keep multiple outputs as curated variants, each with an image, text,
   notes and a rating. Mark one **Best** to keep the strongest direction first.
 - **Delete** removes the concept.

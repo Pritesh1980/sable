@@ -52,6 +52,14 @@ describe('SimilarArtists', () => {
     expect(screen.queryByRole('button', { name: /build style index/i })).not.toBeInTheDocument()
   })
 
+  it('shows the taste-model line (fit + predicted placement) once the index exists', async () => {
+    loadVectors.mockResolvedValue(builtVectors)
+    render(<SimilarArtists artists={artists} artist={artists[0]} />)
+    const line = await screen.findByTestId('taste-line')
+    expect(line).toHaveTextContent(/taste fit \d+%/i)
+    expect(line).toHaveTextContent(/#\d of 3/i)
+  })
+
   it('clicking a similar artist invokes onSelectArtist with that artist', async () => {
     loadVectors.mockResolvedValue(builtVectors)
     const onSelectArtist = vi.fn()

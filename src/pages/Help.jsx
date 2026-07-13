@@ -49,6 +49,7 @@ const SECTIONS = [
       'Tap Rank to enter swipe-compare: pick the better of two artists repeatedly to build an order. Undo reverses your last choice.',
       'Tap any card to open the full artist detail — photos, tags, status, studio, notes and conventions they are attending.',
       'In the artist detail, Similar ink shows the three closest artists by how their work actually looks. Tap Build style index once — a small vision model downloads and all matching then runs on your device; your images never leave the browser.',
+      'Similar ink also shows a taste line: how well the artist fits the taste learned from your ranking and statuses, and where the model would place them on images alone.',
     ],
   },
   {
@@ -90,7 +91,7 @@ const SECTIONS = [
       'Click a saved concept and it fills the screen like the artists’ Wall. Press I for its prompt, response, style matching and AI results — save multiple outputs as variants, each with an image, text, notes and a rating; mark the strongest as Best.',
       'For results with images, use Make STL to export a printable relief-style heightmap file.',
       'Tag each concept with styles to reveal its top artist matches; tap a match to open their Instagram.',
-      'With the style index built (Artists → Similar ink), the info panel also shows Visual matches — the concept image compared against each artist’s actual work, on-device, to rank who could execute it.',
+      'With the style index built (Artists → Similar ink), the info panel also shows Visual matches — the concept image compared against each artist’s actual work, on-device, to rank who could execute it — plus a taste-fit score for how strongly the image matches your overall taste.',
     ],
   },
   {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { rankArtistsByVector } from '../data/embeddings'
+import { rankArtistsByVector, cosineSimilarity } from '../data/embeddings'
+import { buildTasteVector } from '../data/taste'
 import { loadVectors, vectorFor } from '../data/styleIndex'
 
 // Taste Engine phase 2 (issue #19): rank the collection against the concept
@@ -27,8 +28,11 @@ export default function ConceptVisualMatches({ artists, concept }) {
           setState({ status: 'failed' })
           return
         }
-        const matches = rankArtistsByVector(artists, vec, (s) => vectors.get(s) || null)
-        setState({ status: 'ready', matches })
+        const getVec = (s) => vectors.get(s) || null
+        const matches = rankArtistsByVector(artists, vec, getVec)
+        const taste = buildTasteVector(artists, getVec)
+        const tasteFit = taste ? cosineSimilarity(taste, vec) : null
+        setState({ status: 'ready', matches, tasteFit })
       } catch {
         if (alive) setState({ status: 'failed' })
       }
@@ -74,6 +78,10 @@ export default function ConceptVisualMatches({ artists, concept }) {
       {state.status === 'ready' && (
         <p className="font-v2-ui text-xs text-v2-muted/70 mt-2">
           Matched on the image itself, not tags.
+          {state.tasteFit !== null && (
+            <> Taste fit {Math.round(state.tasteFit * 100)}% — how strongly it matches your
+            collection's overall taste.</>
+          )}
         </p>
       )}
     </div>

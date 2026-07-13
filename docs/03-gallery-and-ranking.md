@@ -59,6 +59,11 @@ browser). Indexing the whole collection takes a minute or two; after that it onl
 processes newly added photos, and each device keeps its own index. Tap a match to
 jump to that artist.
 
+Beneath the matches, a **taste line** shows what the model has learned from your own
+behaviour: how strongly this artist's work fits the taste implied by your ranking and
+shortlist statuses, and where the model would place them on images alone — a useful
+nudge when it disagrees with where you've actually ranked them.
+
 ---
 
 ## Ranking your favourites

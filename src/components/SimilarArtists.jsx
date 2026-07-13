@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import ArtistImage from './ArtistImage'
-import { similarArtists, indexCoverage } from '../data/embeddings'
+import { similarArtists, indexCoverage, artistCentroids, cosineSimilarity } from '../data/embeddings'
+import { buildTasteVector, predictedRank } from '../data/taste'
 import { loadVectors, buildStyleIndex } from '../data/styleIndex'
 
 // "Similar ink" — the first Taste Engine surface (issue #19). Ranks the rest
@@ -41,6 +42,14 @@ export default function SimilarArtists({ artists, artist, onSelectArtist }) {
   const getVec = (src) => vectors.get(src) || null
   const coverage = indexCoverage(artists, getVec)
   const matches = similarArtists(artists, artist.id, getVec)
+
+  // Taste model: how strongly this artist's work matches the taste learned
+  // from rank + status across the collection, and where the model alone
+  // would place them.
+  const taste = buildTasteVector(artists, getVec)
+  const centroid = artistCentroids(artists, getVec).get(artist.id)
+  const tasteFit = taste && centroid ? cosineSimilarity(taste, centroid) : null
+  const predicted = predictedRank(artists, artist.id, getVec, taste)
 
   return (
     <div className="mb-8">
@@ -103,6 +112,13 @@ export default function SimilarArtists({ artists, artist, onSelectArtist }) {
             </button>
           ))}
         </div>
+      )}
+
+      {!progress && tasteFit !== null && predicted && (
+        <p data-testid="taste-line" className="font-mono text-xs text-cream-muted/60 mt-3">
+          Taste fit {Math.round(tasteFit * 100)}% — on images alone, your taste model would
+          place them #{predicted.position} of {predicted.of}
+        </p>
       )}
 
       {!progress && coverage.embedded > 0 && coverage.embedded < coverage.total && (
