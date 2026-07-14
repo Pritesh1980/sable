@@ -88,6 +88,25 @@ describe('QuickAddArtist screenshot intake', () => {
     )
   })
 
+  it('discards a superseded analysis: the fields always match the attached screenshot', async () => {
+    localStorage.setItem('gemini_api_key', 'test-key')
+    let resolveA
+    analyzeScreenshotWithGemini
+      .mockImplementationOnce(() => new Promise((res) => { resolveA = res })) // shot A, slow
+      .mockResolvedValueOnce({ handle: 'shot_b', name: '', tags: [], styleNote: '' }) // shot B, fast
+    renderModal()
+    chooseScreenshot()
+    await waitFor(() => expect(analyzeScreenshotWithGemini).toHaveBeenCalledTimes(1))
+    chooseScreenshot()
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText(/handle or instagram url/i)).toHaveValue('shot_b'))
+    // A's late result must not clobber B's prefill.
+    resolveA({ handle: 'shot_a', name: 'Stale A', tags: [], styleNote: 'stale note' })
+    await new Promise((r) => setTimeout(r, 20))
+    expect(screen.getByPlaceholderText(/handle or instagram url/i)).toHaveValue('shot_b')
+    expect(screen.queryByDisplayValue('stale note')).not.toBeInTheDocument()
+  })
+
   it('keeps user-typed values: analysis never overwrites a non-empty handle', async () => {
     localStorage.setItem('gemini_api_key', 'test-key')
     analyzeScreenshotWithGemini.mockResolvedValue({ handle: 'ai_guess', name: '', tags: [], styleNote: 'x' })

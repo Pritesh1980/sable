@@ -95,7 +95,19 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
   }
 
   function removeStaged(i) {
-    setStaged((prev) => prev.filter((_, idx) => idx !== i))
+    setStaged((prev) => {
+      const next = prev.filter((_, idx) => idx !== i)
+      // All images gone: forget the analysis so the next staged image is
+      // analysed fresh instead of inheriting the removed screenshot's
+      // extracted identity (codex review finding).
+      if (next.length === 0) {
+        analyzedRef.current = false
+        setStyleNote('')
+        setIntakeNote('')
+        setTasteFit(null)
+      }
+      return next
+    })
   }
 
   function handleDrop(e) {

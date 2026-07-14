@@ -30,6 +30,10 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose }) {
   const [intakeNote, setIntakeNote] = useState('')
   const [tasteFit, setTasteFit] = useState(null)
   const fileRef = useRef(null)
+  // Monotonic id per screenshot: a superseded analysis/taste result (user
+  // pasted another image while the first was in flight) is discarded instead
+  // of prefilling fields that no longer match the attached shot.
+  const shotSeq = useRef(0)
 
   function toggleTag(tag) {
     setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]))
@@ -37,14 +41,16 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose }) {
 
   async function handleScreenshot(file) {
     if (!file || !file.type?.startsWith('image/')) return
+    const seq = ++shotSeq.current
     const [dataUrl] = await compressImages([file])
+    if (seq !== shotSeq.current) return
     setShot(dataUrl)
     setIntakeNote('')
-    analyze(dataUrl)
-    scoreTaste(dataUrl)
+    analyze(dataUrl, seq)
+    scoreTaste(dataUrl, seq)
   }
 
-  async function analyze(dataUrl) {
+  async function analyze(dataUrl, seq) {
     const apiKey = localStorage.getItem('gemini_api_key') || ''
     if (!apiKey) {
       setIntakeNote('Screenshot attached. Add a Gemini key (Concepts → AI setup) to auto-fill from screenshots.')
@@ -53,6 +59,7 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose }) {
     setAnalyzing(true)
     try {
       const result = await analyzeScreenshotWithGemini(apiKey, dataUrl)
+      if (seq !== shotSeq.current) return
       if (!result) {
         setIntakeNote("Couldn't read artist details from this screenshot — fill them in below.")
       } else {
@@ -64,21 +71,22 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose }) {
       }
     } catch (e) {
       console.error('[tattoo] screenshot intake failed:', e)
-      setIntakeNote('Analysis failed — check your Gemini key/connection, or fill in below.')
+      if (seq === shotSeq.current) setIntakeNote('Analysis failed — check your Gemini key/connection, or fill in below.')
     }
     setAnalyzing(false)
   }
 
   // Taste-model score for the screenshot itself — only when a style index
   // already exists on this device, so we never surprise-download the model.
-  async function scoreTaste(dataUrl) {
+  async function scoreTaste(dataUrl, seq) {
     try {
       const vectors = await loadVectors(artists)
       if (vectors.size === 0) return
       const taste = buildTasteVector(artists, (s) => vectors.get(s) || null)
       if (!taste) return
       const embed = await getEmbedder()
-      setTasteFit(cosineSimilarity(taste, await embed(dataUrl)))
+      const fit = cosineSimilarity(taste, await embed(dataUrl))
+      if (seq === shotSeq.current) setTasteFit(fit)
     } catch (e) {
       console.error('[tattoo] screenshot taste score failed:', e)
     }

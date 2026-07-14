@@ -96,6 +96,20 @@ describe('AddArtistModal screenshot analysis', () => {
     expect(screen.getByPlaceholderText(/handle or instagram url/i)).toHaveValue('typed_first')
   })
 
+  it('removing the only staged image re-arms analysis for the next one', async () => {
+    localStorage.setItem('gemini_api_key', 'test-key')
+    analyzeScreenshotWithGemini.mockResolvedValue({ handle: '', name: '', tags: [], styleNote: 'note A' })
+    renderModal()
+    stageImage()
+    await waitFor(() => expect(analyzeScreenshotWithGemini).toHaveBeenCalledTimes(1))
+    fireEvent.click(await screen.findByLabelText(/remove staged image 1/i))
+    // The removed screenshot's extracted note is forgotten…
+    expect(screen.queryByDisplayValue('note A')).not.toBeInTheDocument()
+    // …and a newly staged image is analysed fresh.
+    stageImage()
+    await waitFor(() => expect(analyzeScreenshotWithGemini).toHaveBeenCalledTimes(2))
+  })
+
   it('only analyses once — staging more images does not re-fire the API', async () => {
     localStorage.setItem('gemini_api_key', 'test-key')
     analyzeScreenshotWithGemini.mockResolvedValue(null)

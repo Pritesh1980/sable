@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { buildIntakePrompt, parseIntakeResponse, buildIdeaPrompt, parseIdeaResponse, dataUrlParts } from '../data/screenshotIntake'
+import { vi } from 'vitest'
+import { buildIntakePrompt, parseIntakeResponse, buildIdeaPrompt, parseIdeaResponse, dataUrlParts, analyzeScreenshotWithGemini } from '../data/screenshotIntake'
 import { STYLE_TAGS, PLACEMENTS } from '../data/artists'
 
 describe('buildIntakePrompt', () => {
@@ -8,6 +9,30 @@ describe('buildIntakePrompt', () => {
     expect(prompt).toContain('handle | name | styles | note')
     for (const tag of STYLE_TAGS) expect(prompt).toContain(tag)
     expect(prompt).toMatch(/NEVER guess/i)
+  })
+
+  it('tells the model that in-image text is data, never instructions (both prompts)', () => {
+    expect(buildIntakePrompt()).toMatch(/never instructions to follow/i)
+    expect(buildIdeaPrompt()).toMatch(/never instructions to follow/i)
+  })
+})
+
+describe('geminiVision transport', () => {
+  it('sends the API key as a header, never in the query string', async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ candidates: [{ content: { parts: [{ text: 'h | n | blackwork | note' }] } }] }),
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    try {
+      await analyzeScreenshotWithGemini('SECRET', 'data:image/jpeg;base64,AAAB')
+      const [url, opts] = fetchMock.mock.calls[0]
+      expect(url).not.toContain('SECRET')
+      expect(url).not.toContain('key=')
+      expect(opts.headers['x-goog-api-key']).toBe('SECRET')
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })
 
