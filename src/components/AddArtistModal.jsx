@@ -1,14 +1,24 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { STYLE_TAGS, parseInstagramHandle, createArtist } from '../data/artists'
-import { uploadImages } from '../hooks/useImageUpload'
+import { uploadImages, compressImages } from '../hooks/useImageUpload'
 import { stampAddedAt } from '../data/wall'
+import { analyzeScreenshotWithGemini } from '../data/screenshotIntake'
+import { cosineSimilarity } from '../data/embeddings'
+import { buildTasteVector } from '../data/taste'
+import { loadVectors } from '../data/styleIndex'
+import { getEmbedder } from '../data/embedder'
 
 // Quick-add modal for the Wall bar's "+ Add artist" — one compact v2-styled
 // form: handle, optional name, style tags, and an optional immediate image
 // drop/paste zone. Heavy editing (studio, notes, provenance) stays in the
 // full manage view, linked from the footer. Saved images are stamped with
 // stampAddedAt so the wall's recent dots light up immediately.
+//
+// Screenshot analysis (issue #21, same intake as QuickAddArtist/#20): the
+// first staged image is read by a Gemini vision call to prefill handle, name,
+// tags and a draft style note — never overwriting anything already typed —
+// and, when the on-device style index exists, scored against the taste model.
 export default function AddArtistModal({ artists = [], setArtists, userId, onClose, onManage, initial }) {
   const [handle, setHandle] = useState(initial?.handle || '')
   const [name, setName] = useState(initial?.name || '')
@@ -17,6 +27,11 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
   const [dragOver, setDragOver] = useState(false)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [styleNote, setStyleNote] = useState('')
+  const [analyzing, setAnalyzing] = useState(false)
+  const [intakeNote, setIntakeNote] = useState('')
+  const [tasteFit, setTasteFit] = useState(null)
+  const analyzedRef = useRef(false)
 
   const cleanHandle = parseInstagramHandle(handle)
   const duplicate = cleanHandle
@@ -29,7 +44,54 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
 
   function addFiles(files) {
     const images = Array.from(files || []).filter((f) => f.type?.startsWith('image/'))
-    if (images.length) setStaged((prev) => [...prev, ...images])
+    if (!images.length) return
+    setStaged((prev) => [...prev, ...images])
+    if (!analyzedRef.current) {
+      analyzedRef.current = true
+      analyzeFirst(images[0])
+    }
+  }
+
+  async function analyzeFirst(file) {
+    const [dataUrl] = await compressImages([file])
+    scoreTaste(dataUrl)
+    const apiKey = localStorage.getItem('gemini_api_key') || ''
+    if (!apiKey) {
+      setIntakeNote('Add a Gemini key (Concepts → AI setup) to auto-fill from screenshots.')
+      return
+    }
+    setAnalyzing(true)
+    try {
+      const result = await analyzeScreenshotWithGemini(apiKey, dataUrl)
+      if (!result) {
+        setIntakeNote("Couldn't read artist details from this screenshot.")
+      } else {
+        if (result.handle) setHandle((v) => v || result.handle)
+        if (result.name) setName((v) => v || result.name)
+        if (result.tags.length) setTags((prev) => [...new Set([...prev, ...result.tags])])
+        if (result.styleNote) setStyleNote(result.styleNote)
+        setIntakeNote(result.handle ? '' : 'Handle not visible in the screenshot — type it above.')
+      }
+    } catch (e) {
+      console.error('[tattoo] screenshot intake failed:', e)
+      setIntakeNote('Analysis failed — check your Gemini key/connection.')
+    }
+    setAnalyzing(false)
+  }
+
+  // Taste-model score for the screenshot — only when a style index already
+  // exists on this device, so we never surprise-download the model.
+  async function scoreTaste(dataUrl) {
+    try {
+      const vectors = await loadVectors(artists)
+      if (vectors.size === 0) return
+      const taste = buildTasteVector(artists, (s) => vectors.get(s) || null)
+      if (!taste) return
+      const embed = await getEmbedder()
+      setTasteFit(cosineSimilarity(taste, await embed(dataUrl)))
+    } catch (e) {
+      console.error('[tattoo] screenshot taste score failed:', e)
+    }
   }
 
   function removeStaged(i) {
@@ -59,7 +121,10 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
     setSaving(true)
     try {
       const images = await stampedUploads(cleanHandle)
-      const artist = createArtist({ handle: cleanHandle, name: name.trim(), tags }, artists)
+      const artist = createArtist(
+        { handle: cleanHandle, name: name.trim(), tags, styleNote: styleNote.trim() },
+        artists
+      )
       if (!artist) { setError(`@${cleanHandle} is already in your collection`); return }
       artist.images = images
       setArtists((prev) => [...prev, artist])
@@ -121,6 +186,21 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
           onChange={(e) => setName(e.target.value)}
         />
 
+        {styleNote && (
+          <>
+            <label htmlFor="quick-add-stylenote" className="block font-v2-ui text-[0.68rem] tracking-[0.14em] uppercase text-v2-muted mb-1.5">
+              Style note (AI draft)
+            </label>
+            <textarea
+              id="quick-add-stylenote"
+              rows={2}
+              className="w-full bg-v2-ink border border-v2-hairline rounded-sm px-3 py-2 text-sm text-v2-cream font-v2-ui outline-none focus:border-v2-accent placeholder-v2-muted mb-4 resize-none"
+              value={styleNote}
+              onChange={(e) => setStyleNote(e.target.value)}
+            />
+          </>
+        )}
+
         <p className="font-v2-ui text-[0.68rem] tracking-[0.14em] uppercase text-v2-muted mb-2">Style tags</p>
         <div className="flex flex-wrap gap-1.5 mb-4">
           {STYLE_TAGS.map((tag) => (
@@ -180,6 +260,20 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
                 </button>
               </div>
             ))}
+          </div>
+        )}
+
+        {(analyzing || tasteFit !== null || intakeNote) && (
+          <div className="mt-3">
+            {analyzing && (
+              <p className="font-v2-ui text-xs text-v2-muted" role="status">Reading screenshot…</p>
+            )}
+            {tasteFit !== null && (
+              <p data-testid="intake-taste" className="font-v2-ui text-xs text-v2-accent">
+                Taste fit {Math.round(tasteFit * 100)}%
+              </p>
+            )}
+            {intakeNote && <p className="font-v2-ui text-xs text-v2-muted/80">{intakeNote}</p>}
           </div>
         )}
 
