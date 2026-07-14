@@ -30,7 +30,11 @@ export function parseIntakeResponse(text = '') {
     if (parts.length < 4) continue
     if (parts[0].toLowerCase() === 'handle') continue // format header echoed back
     const clean = (s) => (s === '-' ? '' : s)
-    const handle = clean(parts[0]).replace(/^@/, '').toLowerCase()
+    // Instagram handles are strictly [a-z0-9._] — anything else coming back
+    // from the model (adversarial text in a screenshot, hallucinated URLs)
+    // is dropped rather than prefilled.
+    const rawHandle = clean(parts[0]).replace(/^@/, '').toLowerCase()
+    const handle = /^[a-z0-9._]{1,30}$/.test(rawHandle) ? rawHandle : ''
     const tags = clean(parts[2])
       .split(',')
       .map((t) => t.trim().toLowerCase())

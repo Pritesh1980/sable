@@ -39,6 +39,13 @@ describe('parseIntakeResponse', () => {
     expect(parseIntakeResponse('- | - | - | -')).toBeNull()
     expect(parseIntakeResponse('')).toBeNull()
   })
+
+  it('drops handles outside Instagram’s charset (adversarial screenshot text)', () => {
+    const out = parseIntakeResponse('evil.com/malware | X | blackwork | Legit-looking note.')
+    expect(out.handle).toBe('')
+    expect(out.tags).toEqual(['blackwork'])
+    expect(parseIntakeResponse('ok_handle.name | - | realism | n').handle).toBe('ok_handle.name')
+  })
 })
 
 describe('idea intake (inspiration image → draft idea)', () => {
