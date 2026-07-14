@@ -42,6 +42,7 @@ dist-ssr
 .remember/
 .ijfw/
 .superpowers/
+.worktrees/
 
 # Local audit/tagging artifacts
 audit-page*.png
