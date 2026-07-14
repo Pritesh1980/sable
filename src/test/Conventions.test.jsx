@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import Conventions from '../pages/Conventions'
 import { CONVENTIONS } from '../data/conventions'
 
@@ -15,10 +16,23 @@ function heroCard() {
   return screen.getByRole('heading', { name: localConv.name }).closest('div.animate-slide-up')
 }
 
+function renderConventions(props = {}) {
+  return render(
+    <MemoryRouter>
+      <Conventions
+        artists={artists}
+        conventionOverrides={{}}
+        setConventionOverrides={vi.fn()}
+        {...props}
+      />
+    </MemoryRouter>
+  )
+}
+
 describe('Conventions attendance editor', () => {
   it('records an artist as attending via the per-convention editor', () => {
     const setConventionOverrides = vi.fn()
-    render(<Conventions artists={artists} conventionOverrides={{}} setConventionOverrides={setConventionOverrides} />)
+    renderConventions({ setConventionOverrides })
 
     const card = within(heroCard())
     fireEvent.click(card.getByRole('button', { name: 'Edit' }))
@@ -30,20 +44,14 @@ describe('Conventions attendance editor', () => {
   })
 
   it('summarises currently-attending artists without entering edit mode', () => {
-    render(
-      <Conventions
-        artists={artists}
-        conventionOverrides={{ [localConv.id]: ['zoia.ink'] }}
-        setConventionOverrides={vi.fn()}
-      />
-    )
+    renderConventions({ conventionOverrides: { [localConv.id]: ['zoia.ink'] } })
     const card = within(heroCard())
     expect(card.getByText(/1 of your artists attending/i)).toBeInTheDocument()
     expect(card.getByText('@zoia.ink')).toBeInTheDocument()
   })
 
   it('still links out to the convention website', () => {
-    render(<Conventions artists={artists} conventionOverrides={{}} setConventionOverrides={vi.fn()} />)
+    renderConventions()
     const card = within(heroCard())
     expect(card.getByRole('link', { name: /more info/i })).toHaveAttribute('href', localConv.url)
   })

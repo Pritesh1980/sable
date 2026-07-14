@@ -73,7 +73,8 @@ Everything else lives in the **Drawer** — tap **⋯** at the top-right of the 
 - **Settings** — backup, account & sign out. · **Help** — this guide, in the app.
 
 On the classic pages the familiar bottom bar is still there — with the **A+ / A−**
-text size, **◑ / ◐** theme and **⏻** sign-out controls at its right end.
+text size, **◑ / ◐** theme and **⏻** sign-out controls at its right end. Tap the
+**Sable logo** at the top-left of any classic page to return to the Home Wall.
 
 ## The Pipeline page
 

@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 // Inline SVG koru mark — inherits colour via currentColor.
 export function LogoMark({ size = 32, className = '' }) {
   return (
@@ -28,12 +30,15 @@ export function Wordmark({ className = '' }) {
   )
 }
 
-// Full lockup: mark + wordmark, used in page headers.
+// Full lockup: mark + wordmark, used in page headers and linked to Home.
 export default function Logo({ size = 28, className = '' }) {
   return (
-    <div className={`inline-flex items-center gap-2 text-cream ${className}`}>
+    <Link
+      to="/"
+      className={`inline-flex items-center gap-2 rounded-sm text-cream focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-ink-black ${className}`}
+    >
       <LogoMark size={size} />
       <Wordmark />
-    </div>
+    </Link>
   )
 }

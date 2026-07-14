@@ -1,24 +1,27 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import Settings from '../pages/Settings'
 
 const noop = () => {}
 
 function renderSettings(props = {}) {
   return render(
-    <Settings
-      artists={[]}
-      setArtists={noop}
-      ideas={[]}
-      setIdeas={noop}
-      boards={[]}
-      setBoards={noop}
-      concepts={[]}
-      setConcepts={noop}
-      conventionOverrides={{}}
-      setConventionOverrides={noop}
-      {...props}
-    />
+    <MemoryRouter>
+      <Settings
+        artists={[]}
+        setArtists={noop}
+        ideas={[]}
+        setIdeas={noop}
+        boards={[]}
+        setBoards={noop}
+        concepts={[]}
+        setConcepts={noop}
+        conventionOverrides={{}}
+        setConventionOverrides={noop}
+        {...props}
+      />
+    </MemoryRouter>
   )
 }
 
