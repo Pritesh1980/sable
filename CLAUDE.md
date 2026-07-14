@@ -27,7 +27,7 @@ This is a personal app for one user (Pritesh) + occasional sharing with his tatt
 - **Routing**: React Router (`react-router-dom` v7) — 8 deep-linkable routes (Home, Artists `/gallery`, Ideas `/brief`, Radar `/conventions`, Studios, AI `/concepts`, Settings, Help); legacy `/manage` → `/gallery?mode=manage` and `/boards` → `/brief?tab=boards` redirect
 - **Styling**: Tailwind CSS
 - **Hosting**: AWS S3 + CloudFront (planned — not yet set up; see `BACKLOG.md`)
-- **AI (Concepts page)**: copy-prompt → paste into ChatGPT/Claude/Gemini and bring the result back, **or** optional OpenAI DALL·E 3 / Gemini image generation with user-supplied keys (stored locally). Saved image results can export browser-generated relief STL files. Artist ↔ idea/concept matching is local tag-overlap (`src/data/planning.js`) — no API.
+- **AI (Concepts page)**: copy-prompt → paste into ChatGPT/Claude/Gemini and bring the result back, **or** optional OpenAI DALL·E 3 / Gemini image generation with user-supplied keys (stored locally). Saved image results can export browser-generated relief STL files. Artist ↔ idea/concept matching is tag-overlap (`src/data/planning.js`) **plus** the on-device Taste Engine (July 2026): CLIP embeddings via `@huggingface/transformers` — dynamic-import only, enforced by a contract test — power Similar-ink artist matching, concept→artist visual matching and a taste model over rank/status history (`src/data/embeddings.js`, `taste.js`, `styleIndex.js`, `embedder.js`). Screenshot intake (`src/data/screenshotIntake.js`) prefills both add-artist forms and Brief ideas from images via Gemini vision; its parsers are strict (pipe format, tag/handle allowlists, in-image text treated as data not instructions, key sent via `x-goog-api-key` header).
 - **Gemini model IDs are pinned and go stale**: `GEMINI_TEXT_MODEL` (`src/data/discovery.js`, artist discovery/refresh) and `GEMINI_IMAGE_MODEL` (`src/data/geminiImage.js`, concept images). Google retires these (`gemini-2.5-*` → `gemini-3.x` mid-2026); on a "model no longer available" error, bump both against https://ai.google.dev/gemini-api/docs/deprecations. No test pins the IDs.
 - **Accounts & sync**: email/password login, per-user data, cross-device sync. All
   vendor SDK access is quarantined behind a thin adapter boundary (`src/backend/`,
@@ -47,7 +47,9 @@ This is a personal app for one user (Pritesh) + occasional sharing with his tatt
   (`src/data/imageCodec.js`) wired into `useStorage` — the in-memory value stays a
   displayable URL (so consumers like STL export are unchanged) while only `{ key }`
   is persisted/synced. Device-local and NOT synced: `tattoo_theme`, `tattoo_font`,
-  `openai_api_key`, `gemini_api_key`. JSON export/import backup still available.
+  `openai_api_key`, `gemini_api_key`, and the Taste Engine's embedding index
+  (IndexedDB `tattoo-style-index-v1` — derivable from images, keyed by model id,
+  rebuilt per device). JSON export/import backup still available.
 
 ### PWA Requirements
 - `manifest.json` with app name, icons, dark background colour
@@ -202,7 +204,16 @@ them. Keep messages terse and conventional (e.g. `feat(home): …`, `docs: …`)
 - Use `@testing-library/react` for hooks and components
 - `npm test` is pinned to the **local** backend via `vite.config.js` (`test.env`), so a `VITE_BACKEND=supabase` in your `.env.local` won't leak in and fail the sync/owner specs.
 - Non-bundled files (e.g. `public/sw.js`) can't be imported: put the logic in a pure `src/` module with unit tests, plus a "contract test" that reads the file and asserts key invariants.
-- **Flaky under the full parallel run**: the `useArtistStorage` image-migration spec can fail once in `npm test` (fake-indexeddb cross-test timing) yet pass 12/12 in isolation (`npx vitest run src/test/useArtistStorage.test.js`). A lone failure there is usually flake, not your change — rerun or run it isolated before debugging.
+- **Flaky under the full parallel run**: two specs fail intermittently on a loaded
+  machine yet always pass isolated and on CI — `useArtistStorage` (image migration)
+  and `ConceptsVariants` (tracked in issue #23). Both are fake-indexeddb cross-test
+  timing. Protocol: rerun the failing spec isolated; if green there and CI is green,
+  it's environment, not your change. CI is the arbiter.
+- **Worktrees double the suite**: agent worktrees live *inside* the repo
+  (`.claude/worktrees/`, `.worktrees/`) and vitest globs their copies from the repo
+  root — a full run with a worktree present reports ~2× files/tests. Run the suite
+  from inside the worktree while it exists, or remove worktrees before a root run.
+  Other agents' worktrees may be present concurrently — never remove or touch those.
 - `.claude/` is gitignored in this repo: rules/settings placed there load locally but aren't version-controlled — put anything you want shared/checked-in into `CLAUDE.md` itself.
 
 ### What to test
@@ -223,8 +234,33 @@ them. Keep messages terse and conventional (e.g. `feat(home): …`, `docs: …`)
 - The PWA service worker can serve a **stale build** during local verification. Before/after checking a change, unregister SWs + clear caches, then reload (`navigator.serviceWorker.getRegistrations()` → unregister; `caches.keys()` → delete).
 - Verify against a **local-backend** dev server with a seeded fake session, never the real Supabase origin, so test data can't sync to a real account: `VITE_BACKEND=local npm run dev -- --port <p>` then set `tattoo_local_session` in localStorage.
 - Playwright MCP **real mouse clicks are flaky** on some cards/modals; if one doesn't register, drive it with a DOM-level `.click()` via `browser_evaluate`.
+- **Verify which code the port serves before trusting any E2E result.** Stale dev
+  servers from earlier runs (or a server started from the wrong directory — shell
+  cwd does not reliably persist between tool calls) silently serve the *wrong
+  checkout*, and every assertion fails mysteriously. Start servers with an explicit
+  root — `npm --prefix <worktree> run dev -- --port <p>` — then curl a file you
+  changed and grep for your change (e.g. `curl -s :PORT/src/x.jsx | grep -c newFn`)
+  before running the E2E script. Kill anything already on the port first.
+- For third-party CLIs used as reviewers (codex/agy), redirect output to a file and
+  tail it — piping through `tail` buffers everything and makes a slow run look hung.
 
 ---
+
+## Cross-model reviews
+
+Pritesh wants other LLMs used as critics (2026-07-14). Before merging medium+
+branches, on plans, and on high-cost decisions, run both in parallel, read-only:
+
+- `codex exec --sandbox read-only "<prompt>"` — correctness/security/edge cases.
+  Installed via Homebrew cask; if it rejects its own model id, `brew upgrade --cask codex`.
+- `agy --print "<prompt>"` — design/UX/strategy (replaces the defunct `gemini` CLI).
+
+Scope prompts to the change, demand file:line + concrete failure scenarios, cap
+findings (≤5), end with "do NOT modify files". **Verify every finding against the
+code before acting** — calibration from July 2026: both produce excellent findings
+(codex caught two real state bugs; agy caught an embedding-quality issue) but ~1 in
+5 findings is confidently wrong. Triage as fix-now / GitHub issue / rejected-with-
+reason, and say which in the issue/commit.
 
 ## Documentation
 

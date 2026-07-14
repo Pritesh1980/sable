@@ -159,10 +159,12 @@ learned it." Screenshot intake is the biggest pure ease-of-use win and can ship
 independently any time. On-skin preview is the demo-reel piece. Start 1 with a
 throwaway eval script before committing to any UI.
 
-**Status (2026-07-13):** 1, 3 and 4 shipped (issue #19 — Similar ink, concept
-visual matches, taste model with fit/predicted-placement lines). One scoping
-correction from the build: **discovery/Consider-shelf visual rescoring is not
-possible yet** — pool and AI-discovered candidates are handle+tags only, with
-no images to embed. It becomes feasible the moment candidates carry images,
-which is exactly what screenshot intake (issue #20) introduces; folded into
-that scope.
+**Status (2026-07-14):** Flagships 1 AND 2 fully shipped. Taste Engine (#19):
+Similar ink, concept visual matches, taste model with fit/predicted-placement
+lines. Screenshot intake (#20/#21): both add-artist forms + Brief
+fill-idea-from-image, with taste-fit scoring on intake — which delivered the
+deferred discovery-rescoring, since candidates finally carry images. Hardened
+after cross-model review (#24 tracks remaining refinements: bounding-box crop
+before embedding, batch inbox). Still open: on-skin preview (flagship 3,
+parked), copilot (flagship 4, to be co-designed with Pritesh), Web Share
+Target (#22, post-deploy).
