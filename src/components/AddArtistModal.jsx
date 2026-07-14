@@ -69,7 +69,7 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
         if (result.handle) setHandle((v) => v || result.handle)
         if (result.name) setName((v) => v || result.name)
         if (result.tags.length) setTags((prev) => [...new Set([...prev, ...result.tags])])
-        if (result.styleNote) setStyleNote(result.styleNote)
+        if (result.styleNote) setStyleNote((v) => v || result.styleNote)
         setIntakeNote(result.handle ? '' : 'Handle not visible in the screenshot — type it above.')
       }
     } catch (e) {
