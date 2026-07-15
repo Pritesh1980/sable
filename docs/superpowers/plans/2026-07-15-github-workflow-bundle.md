@@ -641,9 +641,9 @@ gh project item-edit --id "$ITEM_ID" --project-id "$PROJECT_ID" --field-id "$HOR
 
 Expected: issue `#23` has `Horizon: Next`. If it is closed by execution time, leave `Next` empty rather than assigning a different issue without owner input.
 
-- [ ] **Step 9: Configure the project as a board grouped by Horizon**
+- [ ] **Step 9: Configure the project as a board using Horizon columns**
 
-Open the project in GitHub using the authenticated in-app browser. Change the primary view layout to **Board**, set **Group by** to **Horizon**, and retain all four visible options. Do not add automation rules or change issue labels.
+Open the project in GitHub using an authenticated browser. Change the primary view layout to **Board**, set the board's **Column field** to **Horizon**, and retain all four visible options. Do not add a secondary grouping, automation rules, or issue-label changes.
 
 - [ ] **Step 10: Verify project completeness and classification**
 

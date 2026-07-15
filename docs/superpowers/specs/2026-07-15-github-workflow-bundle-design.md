@@ -88,7 +88,7 @@ Initial classification follows issue evidence rather than guessing priorities:
 - all other open issues start in **Later**;
 - **Now** starts empty so the board does not invent a current commitment for the owner.
 
-If GitHub's default Status field cannot be configured with these exact options through the available API, create a single-select field named **Horizon** with these options and group the project board by that field. Do not silently fall back to GitHub's generic Todo/In Progress/Done workflow.
+If GitHub's default Status field cannot be configured with these exact options through the available API, create a single-select field named **Horizon** with these options and use it as the project board's column field. Do not silently fall back to GitHub's generic Todo/In Progress/Done workflow.
 
 Creating or editing the Project requires the GitHub CLI token to have project scopes. If authentication lacks those scopes, pause only the Project portion, provide the exact authorization command, and continue the repository and Dependabot portions.
 
