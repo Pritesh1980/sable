@@ -18,33 +18,25 @@ Screenshots are captured against the dev server with Playwright at a phone viewp
 (`430 × 920`), plus a couple at desktop width (`1280 × 900`). Capture **viewport** shots,
 not `fullPage` — the fixed bottom nav floats to the middle on full-page captures.
 
-1. Start a dev server pinned to the offline backend so seeded sample data can't sync to a
+1. Start a dev server pinned to the offline backend so seeded data can't sync to a
    real account: `VITE_BACKEND=local npm run dev -- --port 5174` (then capture against
-   http://localhost:5174). Seed a local session first:
-   `localStorage.setItem('tattoo_local_session', JSON.stringify({ user: { id: 'local-owner@example.com', email: 'owner@example.com' } }))`.
-2. Seed sample data **in the capture browser only** so empty pages (Brief, Boards, Concepts)
-   have content. Run this in the browser console / Playwright `evaluate` against the
-   localhost origin, then reload. Object shapes must match the app (`src/data/brief.js`,
-   `boards.js`, and how `Concepts.jsx` stores concepts):
+   http://localhost:5174).
+2. **Seed with the demo dataset, never real artist imagery.** These screenshots are
+   committed and published — the curated images under `public/images/artists/` are
+   third-party portfolio work that must never appear in them (this bit us once:
+   pre-July-2026 captures shipped real artists' photos). Visit `/?demo=1` — it seeds
+   a fictional session, 7 artists with committed SVG artwork, and 3 ideas
+   (`src/data/demoSeed.js`). Boards and Concepts aren't in the seed; inject them via
+   Playwright `evaluate` using `/images/demo/<artist>/<n>.svg` paths, writing BOTH
+   the `tattoo_*` and `tattoo_remote_*` localStorage keys so sync keeps them, then
+   reload:
 
    ```js
-   // Artist statuses (partial records; applyDefaults() backfills the rest)
-   localStorage.setItem('tattoo_artists_meta', JSON.stringify([
-     { id: 'zoia.ink', status: 'contact-next' },
-     { id: 'keremtattz', status: 'contact-next' },
-     { id: 'oscarakermo', status: 'shortlisted' },
-   ]))
-   // Ideas — { id, title, description, tags[], placement, images:[{url,note}], linkedArtists[], status }
-   localStorage.setItem('tattoo_ideas', JSON.stringify([/* see git history of this file's first commit */]))
-   // Boards — { id, name, description, ideaIds[], cover }
-   localStorage.setItem('tattoo_boards', JSON.stringify([{ id:'board-sleeve', name:'Sleeve concepts', description:'…', ideaIds:['idea-moth','idea-serpent'], cover:'' }]))
-   // Concepts — { id, prompt, imageUrl, response, tags[], createdAt }
-   localStorage.setItem('tattoo_concepts', JSON.stringify([{ id:'concept-moth', prompt:'…', imageUrl:'/images/artists/zoia.ink/5.jpg', response:'…', tags:['dark-illustrative','surrealism'], createdAt:'2026-05-20T10:00:00.000Z' }]))
+   // Boards — { id, name, description, ideaIds[], cover } (demo idea ids:
+   // demo-idea-forest, demo-idea-eclipse, demo-idea-geometry)
+   // Concepts — { id, prompt, imageUrl, response, tags[], createdAt, updatedAt }
+   // See the capture script pattern in git history (guide-recapture, July 2026).
    ```
-
-   Use real artist IDs from `DEFAULT_ARTISTS` and real image paths (`/images/artists/<id>/<n>.jpg`)
-   so thumbnails and matches render. **This never touches your real browser's data** — it's the
-   capture browser's localStorage.
 3. Navigate each route and save into `public/guide/` with the existing filenames:
 
    | Route | Files |
