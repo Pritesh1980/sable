@@ -55,7 +55,7 @@ describe('GitHub repository configuration', () => {
   it('runs CI manually and cancels obsolete branch runs', () => {
     const workflow = readRepoFile('.github/workflows/ci.yml')
 
-    expect(workflow).toMatch(/\n  workflow_dispatch:\s*\n/)
+    expect(workflow).toMatch(/\n {2}workflow_dispatch:\s*\n/)
     expect(workflow).toContain('permissions:')
     expect(workflow).toContain('contents: read')
     expect(workflow).toContain('concurrency:')
