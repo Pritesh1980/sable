@@ -1,6 +1,9 @@
 # Sable
 
 [![CI](https://github.com/Pritesh1980/sable/actions/workflows/ci.yml/badge.svg)](https://github.com/Pritesh1980/sable/actions/workflows/ci.yml)
+[![Demo deployment](https://github.com/Pritesh1980/sable/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/Pritesh1980/sable/actions/workflows/deploy-pages.yml)
+[![Release](https://img.shields.io/github/v/release/Pritesh1980/sable)](https://github.com/Pritesh1980/sable/releases/latest)
+[![Live demo](https://img.shields.io/badge/demo-open%20Sable-8b5cf6)](https://pritesh1980.github.io/sable/?demo=1)
 
 Sable is a local-first Progressive Web App for planning a personal tattoo journey. It keeps a curated artist collection, ranks favourites, links artists to tattoo ideas, groups ideas into mood boards, generates AI concept prompts/results, exports relief STL files from concept images, and tracks useful studio and convention context.
 
