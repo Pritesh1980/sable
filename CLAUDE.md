@@ -26,7 +26,7 @@ This is a personal app for one user (the owner) + occasional sharing with their 
 - **Framework**: React (PWA-configured)
 - **Routing**: React Router (`react-router-dom` v7) — 8 deep-linkable routes (Home, Artists `/gallery`, Ideas `/brief`, Radar `/conventions`, Studios, AI `/concepts`, Settings, Help); legacy `/manage` → `/gallery?mode=manage` and `/boards` → `/brief?tab=boards` redirect
 - **Styling**: Tailwind CSS
-- **Hosting**: AWS S3 + CloudFront (planned — not yet set up; see `BACKLOG.md`)
+- **Hosting**: a live, backend-free demo runs on **GitHub Pages** (`.github/workflows/deploy-pages.yml`, published from `main` at https://pritesh1980.github.io/sable/ under base `/sable/`; it's the `?demo=1` experience, local backend, no secrets). A real accounts + sync deployment (S3 + CloudFront) is still planned. The build is **base-aware** — `VITE_BASE` threads through the router `basename`, the SW (derives its base from `self.location`), and the precache manifest — so the same code serves at `/` or a sub-path.
 - **AI (Concepts page)**: copy-prompt → paste into ChatGPT/Claude/Gemini and bring the result back, **or** optional OpenAI DALL·E 3 / Gemini image generation with user-supplied keys (stored locally). Saved image results can export browser-generated relief STL files. Artist ↔ idea/concept matching is tag-overlap (`src/data/planning.js`) **plus** the on-device Taste Engine (July 2026): CLIP embeddings via `@huggingface/transformers` — dynamic-import only, enforced by a contract test — power Similar-ink artist matching, concept→artist visual matching and a taste model over rank/status history (`src/data/embeddings.js`, `taste.js`, `styleIndex.js`, `embedder.js`). Screenshot intake (`src/data/screenshotIntake.js`) prefills both add-artist forms and Brief ideas from images via Gemini vision; its parsers are strict (pipe format, tag/handle allowlists, in-image text treated as data not instructions, key sent via `x-goog-api-key` header).
 - **Gemini model IDs are pinned and go stale**: `GEMINI_TEXT_MODEL` (`src/data/discovery.js`, artist discovery/refresh) and `GEMINI_IMAGE_MODEL` (`src/data/geminiImage.js`, concept images). Google retires these (`gemini-2.5-*` → `gemini-3.x` mid-2026); on a "model no longer available" error, bump both against https://ai.google.dev/gemini-api/docs/deprecations. No test pins the IDs.
 - **Accounts & sync**: email/password login, per-user data, cross-device sync. All
@@ -139,10 +139,13 @@ unseeded — ideas are the user's own.
 - Status tracking (idea → booked → done; per-artist shortlist statuses)
 - Home pipeline (shortlist stages), Studios, Settings and Help pages; four gallery views + swipe-ranking; Manage merged into Artists
 
-**Still to do (see `BACKLOG.md`, blocked on deployment):**
-- Deploy to AWS S3 + CloudFront
-- Read-only shareable link for the tattoo artist
+**Still to do (see `BACKLOG.md` / GitHub Issues):**
+- AWS S3 + CloudFront deploy — now only needed for real accounts + custom domain
+  (the public demo is already live on GitHub Pages)
+- Read-only shareable link for the tattoo artist (#7)
 - Convention artist attendance auto-lookup
+- Web Share Target (#22) — was blocked on "a deployment"; the Pages PWA is now a
+  live installable HTTPS app, so this is likely unblocked
 
 ---
 
