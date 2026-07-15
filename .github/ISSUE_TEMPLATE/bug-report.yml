@@ -1,0 +1,81 @@
+name: Bug report
+description: Report something in Sable that is broken or behaving unexpectedly.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for helping make Sable more reliable. Do not include API keys, login details, or private tattoo data.
+  - type: input
+    id: affected-area
+    attributes:
+      label: Affected route or feature
+      description: Include the route when possible, for example /gallery or /brief.
+      placeholder: /gallery — swipe ranking
+    validations:
+      required: true
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device
+      options:
+        - iPhone or iPad
+        - Mac
+        - Other mobile device
+        - Other desktop device
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+      placeholder: Safari 20
+    validations:
+      required: true
+  - type: dropdown
+    id: backend
+    attributes:
+      label: Backend mode
+      options:
+        - Local
+        - Supabase
+        - AWS
+        - Not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: demo-mode
+    attributes:
+      label: Demo mode
+      options:
+        - "No"
+        - "Yes"
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open …
+        2. Tap …
+        3. Observe …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshots or logs
+      description: Drag in relevant files after removing private data and secrets.
