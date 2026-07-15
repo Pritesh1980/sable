@@ -4,7 +4,7 @@
 
 A personal Progressive Web App (PWA) called **Sable** — a visual-first artist discovery and prioritisation tool. The core purpose is to map tattoo themes and style preferences against a curated list of favourite artists, helping plan a tattoo journey.
 
-This is a personal app for one user (Pritesh) + occasional sharing with his tattoo artist via a read-only link.
+This is a personal app for one user (the owner) + occasional sharing with their tattoo artist via a read-only link.
 
 **Philosophy: Start simple, build over time. MVP first.**
 
@@ -90,54 +90,13 @@ A personal mood board / brief section.
 
 ---
 
-## Artist Data (Pre-load this)
+## Artist Data
 
-### Favourite Artists (20)
-All are Instagram handles unless otherwise noted.
-
-| Handle | Notes |
-|---|---|
-| zoia.ink | |
-| tolgatemirlenk.ink | |
-| keremtattz | |
-| yuki_zerkjad | |
-| carl245tattoo | Known as Carlos Valera |
-| oscarakermo | Known as Oscar Akermo |
-| leoalbuquerque.tattoo | |
-| leon_del_cabo | |
-| berkbosveren | |
-| gody_tattoo | |
-| inkfluid.joy | |
-| saadtattoo | |
-| m3.inkd | |
-| picciott_ink | |
-| victorportugal | Known as Victor Portugal |
-| patrick_shanty | |
-| cagriesk | |
-| senatatts | |
-| sink_tattoo | |
-| adamblakeytattoos | |
-
-### Also Like (6)
-
-| Handle | Notes |
-|---|---|
-| milanboros_tatts | |
-| tattoo__amir | Double underscore |
-| silas_balaio | |
-| suenanki.tattoo | |
-| nate_lights | |
-| johndarktattoo_ | |
-
-### Retained (not in current favourites — 4 artists)
-Kept in the data but not in Pritesh's current list of favourites. Do not remove.
-
-| Handle | Notes |
-|---|---|
-| danny_romano1 | Danny Romano (No Regrets Cheltenham) |
-| bacanubogdan | Bogdan Bacanu (No Regrets Cheltenham) |
-| tattooluckyone | Tyler Payne (No Regrets Cheltenham) |
-| androprimo_ | Andro (No Regrets Birmingham) |
+The canonical artist list lives in `src/data/artists.js` (`DEFAULT_ARTISTS`) — a
+data test guards its integrity, so change it there, never by re-seeding. The
+curated handles, ranks, statuses and style notes are the owner's personal taste;
+treat them as content, not fixtures. The original pre-load tables moved to the
+untracked `CLAUDE.local.md` (see the note for readers at the end of this file).
 
 ### Studios
 
@@ -163,11 +122,12 @@ Each artist in `src/data/artists.js` already carries style tags; they drive matc
 
 ## User Context
 
-- **User**: Pritesh, based in **Milton Keynes**
-- **Device**: iPhone (primary), Mac (development)
-- **AWS**: Active account, comfortable using S3 + CloudFront
-- **Instagram**: Primary source for artist discovery
-- **Tattoo themes**: To be added by user — leave My Brief empty for now
+Personal details live in the untracked `CLAUDE.local.md` (Claude Code loads it
+automatically alongside this file). What matters operationally: single user,
+**iPhone-first** with development on a Mac, artist discovery happens on
+**Instagram** (which is why screenshot intake exists), and all distances in the
+data (conventions, studios) are measured from **Milton Keynes**. Leave My Brief
+unseeded — ideas are the user's own.
 
 ---
 
@@ -248,8 +208,8 @@ them. Keep messages terse and conventional (e.g. `feat(home): …`, `docs: …`)
 
 ## Cross-model reviews
 
-Pritesh wants other LLMs used as critics (2026-07-14). Before merging medium+
-branches, on plans, and on high-cost decisions, run both in parallel, read-only:
+The owner asked for other LLMs to be used as critics (2026-07-14). Before merging
+medium+ branches, on plans, and on high-cost decisions, run both in parallel, read-only:
 
 - `codex exec --sandbox read-only "<prompt>"` — correctness/security/edge cases.
   Installed via Homebrew cask; if it rejects its own model id, `brew upgrade --cask codex`.
@@ -265,6 +225,28 @@ reason, and say which in the issue/commit.
 ## Documentation
 
 Keeping user docs (`docs/` + in-app Help) in sync when you change UI lives in `.claude/rules/docs-sync.md` (loads automatically when you work under `src/pages/`, `src/components/`, `docs/`, or `public/guide/`).
+
+---
+
+## A note for readers of this repo
+
+This file is the **agent-facing operations doc** — the shared context that Claude
+Code, codex, agy and other AI sessions read before working here. It accumulates
+hard-won conventions (the flake protocol, worktree rules, cross-model review
+calibration) the way a team wiki would, and it's kept in the repo deliberately so
+you can see how an AI-assisted solo project is actually run.
+
+Before the repo went public (July 2026), three things were intentionally kept out:
+
+- **Curated artist images** (`public/images/artists/`) — third-party portfolio
+  work, gitignored from day one; the UI falls back to monograms without them.
+- **Guide screenshots were recaptured** from the fictional `?demo=1` dataset so no
+  real artist's work appears in `public/guide/`.
+- **Personal context** (the owner's details and original artist pre-load tables)
+  moved from this file to an untracked `CLAUDE.local.md`, which Claude Code loads
+  automatically for local sessions. Earlier revisions of this file remain in git
+  history — the owner considered that and was fine with it; the split is about
+  keeping the visible doc focused, not scrubbing the past.
 
 <!-- IJFW-MEMORY-START (managed -- do not edit manually) -->
 <ijfw-memory>

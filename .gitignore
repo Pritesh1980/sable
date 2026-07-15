@@ -52,3 +52,6 @@ tags-batch*.jpeg
 # never redistributed in the public repo. The app falls back to monogram
 # placeholders (see src/components/ArtistImage.jsx) when these are absent.
 public/images/artists/
+
+# Personal agent context — public repo ships CLAUDE.md only
+CLAUDE.local.md
