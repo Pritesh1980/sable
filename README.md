@@ -6,11 +6,13 @@ Sable is a local-first Progressive Web App for planning a personal tattoo journe
 
 ![The Wall — Sable's home screen with the Top-5 dock and artist masonry](docs/images/wall.png)
 
-The app is built for Pritesh's own workflow. It runs locally today, with S3 + CloudFront deployment intentionally left for later.
+The app is built for Pritesh's own workflow. A live, backend-free demo runs on GitHub Pages; a real accounts + sync deployment (S3 + CloudFront) is left for later.
 
 ## Try the demo
 
-The curated artist reference images are third-party portfolio work and are not in the repo, so a fresh clone would normally show monogram placeholders. Demo mode seeds a fully fictional dataset — invented artists with generated, committed artwork — so the app looks alive out of the box:
+**▶ [Live demo](https://pritesh1980.github.io/sable/?demo=1)** — no install, nothing to sign up for. It's the fully fictional dataset below, running entirely in your browser (local-first: nothing you do syncs anywhere).
+
+The curated artist reference images are third-party portfolio work and are not in the repo, so a fresh clone would normally show monogram placeholders. Demo mode seeds a fully fictional dataset — invented artists with generated, committed artwork — so the app looks alive out of the box. To run it locally instead:
 
 ```bash
 npm install

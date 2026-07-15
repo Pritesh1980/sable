@@ -48,6 +48,13 @@ describe('selectPrecacheAssets', () => {
     const urls = selectPrecacheAssets([...distFiles, 'manifest.json'])
     expect(urls).toEqual([...new Set(urls)].sort())
   })
+
+  it('prefixes every URL with the deploy base so a sub-path (GitHub Pages) resolves', () => {
+    const urls = selectPrecacheAssets(distFiles, '/sable/')
+    expect(urls).toContain('/sable/assets/index-CvExn1iI.js')
+    expect(urls).toContain('/sable/manifest.json')
+    expect(urls.every((u) => u.startsWith('/sable/'))).toBe(true)
+  })
 })
 
 describe('isObsoleteAsset', () => {
@@ -66,6 +73,14 @@ describe('isObsoleteAsset', () => {
     expect(isObsoleteAsset('/index.html', manifest)).toBe(false)
     expect(isObsoleteAsset('/', manifest)).toBe(false)
     expect(isObsoleteAsset('/icons/icon-192.png', manifest)).toBe(false)
+  })
+
+  it('is base-aware: only sweeps assets under the given deploy base', () => {
+    const m = ['/sable/assets/index-NEW.js']
+    expect(isObsoleteAsset('/sable/assets/index-OLD.js', m, '/sable/')).toBe(true)
+    expect(isObsoleteAsset('/sable/assets/index-NEW.js', m, '/sable/')).toBe(false)
+    // A root-path asset is not ours to sweep when deployed under a sub-path.
+    expect(isObsoleteAsset('/assets/index-OLD.js', m, '/sable/')).toBe(false)
   })
 })
 
@@ -108,9 +123,15 @@ describe('public/sw.js precache contract', () => {
     expect(sw).toMatch(/caches\.match\(request, \{ ignoreVary: true \}\)/)
   })
 
-  it('cleans obsolete /assets/ entries on activate instead of hoarding old builds', () => {
-    expect(sw).toMatch(/\/assets\//)
+  it('cleans obsolete asset entries on activate instead of hoarding old builds', () => {
+    expect(sw).toMatch(/BASE \+ 'assets\/'/)
     expect(sw).toMatch(/activate/)
+  })
+
+  it('derives its base from where it is served, so it works under any deploy path', () => {
+    // '/sw.js' → '/', '/sable/sw.js' → '/sable/' — no build-time rewrite needed.
+    expect(sw).toMatch(/const BASE = self\.location\.pathname\.replace\(\/sw\\\.js\$\/, ''\)/)
+    expect(sw).toContain('const APP_SHELL = BASE +')
   })
 })
 

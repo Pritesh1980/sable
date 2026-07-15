@@ -3,6 +3,10 @@ import react from '@vitejs/plugin-react'
 import precachePlugin from './scripts/precachePlugin.js'
 
 export default defineConfig({
+  // Root ('/') for local dev, tests, and a future root host; the GitHub Pages
+  // workflow builds with VITE_BASE=/sable/ so assets resolve under the project
+  // sub-path. Threads through the router basename and the SW precache manifest.
+  base: process.env.VITE_BASE || '/',
   plugins: [react(), precachePlugin()],
   server: {
     // Dev-only: allow Cloudflare quick tunnels (`cloudflared tunnel --url ...`)

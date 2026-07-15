@@ -25,14 +25,16 @@ function walk(dir, root = dir) {
 
 export default function precachePlugin() {
   let outDir = 'dist'
+  let base = '/'
   return {
     name: 'sable-precache-manifest',
     apply: 'build',
     configResolved(config) {
       outDir = join(config.root, config.build.outDir)
+      base = config.base // '/' or e.g. '/sable/' — prefixed onto every cached URL
     },
     closeBundle() {
-      const assets = selectPrecacheAssets(walk(outDir))
+      const assets = selectPrecacheAssets(walk(outDir), base)
       const swPath = join(outDir, 'sw.js')
       writeFileSync(swPath, injectManifest(readFileSync(swPath, 'utf8'), assets))
       console.log(`[precache] injected ${assets.length} assets into sw.js`)

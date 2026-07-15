@@ -23,15 +23,22 @@ if ('serviceWorker' in navigator) {
     window.location.reload()
   })
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {})
+    // BASE_URL is the deploy base ('/' or '/sable/'); the SW lives beside
+    // index.html and its scope must match, so register it under the base.
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {})
   })
 }
+
+// Match the router to the deploy base so deep links resolve under a sub-path
+// (e.g. /sable/gallery on GitHub Pages). BASE_URL carries a trailing slash;
+// react-router wants a leading slash and no trailing one.
+const basename = import.meta.env.BASE_URL.replace(/\/$/, '') || '/'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <AuthProvider>
       <ThemeProvider>
-        <BrowserRouter>
+        <BrowserRouter basename={basename}>
           <App />
         </BrowserRouter>
       </ThemeProvider>

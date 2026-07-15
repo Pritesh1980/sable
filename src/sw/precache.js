@@ -13,16 +13,19 @@
 //   guide/**          — doc screenshots; runtime-cached on demand
 const INCLUDE = [/^assets\/.+\.(js|css)$/, /^icons\/.+/, /^(manifest\.json|favicon\.svg|icons\.svg)$/]
 
-export function selectPrecacheAssets(files) {
+// `base` is the deploy path ('/' at a root host, '/sable/' on GitHub Pages) —
+// the same value Vite prepends to built asset URLs, so cached keys match what
+// the browser actually requests.
+export function selectPrecacheAssets(files, base = '/') {
   const urls = files
     .filter((f) => INCLUDE.some((re) => re.test(f)))
-    .map((f) => `/${f}`)
+    .map((f) => `${base}${f}`)
   return [...new Set(urls)].sort()
 }
 
-// Only hashed build output under /assets/ is safe to sweep: anything from an
-// older build is unreachable (filenames are content-hashed). Everything else
+// Only hashed build output under `<base>assets/` is safe to sweep: anything from
+// an older build is unreachable (filenames are content-hashed). Everything else
 // in the cache (shell, fonts, runtime-cached icons/images) stays.
-export function isObsoleteAsset(pathname, manifest) {
-  return pathname.startsWith('/assets/') && !manifest.includes(pathname)
+export function isObsoleteAsset(pathname, manifest, base = '/') {
+  return pathname.startsWith(`${base}assets/`) && !manifest.includes(pathname)
 }

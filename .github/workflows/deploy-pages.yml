@@ -1,0 +1,50 @@
+name: Deploy demo to GitHub Pages
+
+# Publishes a live, backend-free demo of Sable to GitHub Pages on every push to
+# main. The build runs on the default local backend (no secrets), so the site
+# is the ?demo=1 experience — nothing syncs anywhere. Served under /sable/, so
+# it builds with VITE_BASE set to match.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never run two deploys at once; let an in-progress one finish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          VITE_BASE: /sable/
+      # SPA deep-link fallback: GitHub Pages serves 404.html for unknown paths;
+      # a copy of index.html lets React Router resolve the route client-side.
+      - run: cp dist/index.html dist/404.html
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

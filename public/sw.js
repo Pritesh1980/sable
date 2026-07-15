@@ -7,9 +7,17 @@
 // visit. Routing logic mirrors src/sw/swStrategy.js (guarded by
 // src/test/swStrategy.test.js); precache logic mirrors src/sw/precache.js
 // (guarded by src/test/precache.test.js).
-const CACHE_NAME = 'tattoo-v4'
-const APP_SHELL = '/index.html'
-const PRECACHE = ['/', APP_SHELL]
+// v5 makes every cache key base-relative so the app works when served from a
+// sub-path (GitHub Pages, /sable/) as well as from a root host.
+const CACHE_NAME = 'tattoo-v5'
+
+// The path this SW is served from is the deploy base: '/sw.js' → '/',
+// '/sable/sw.js' → '/sable/'. Deriving it here keeps this file correct at any
+// base with no build-time rewrite; the precache plugin prefixes the injected
+// manifest URLs with the same base.
+const BASE = self.location.pathname.replace(/sw\.js$/, '')
+const APP_SHELL = BASE + 'index.html'
+const PRECACHE = [BASE, APP_SHELL]
 
 // Filled by scripts/precachePlugin.js during `vite build`; empty in dev, where
 // there is no hashed build output to precache.
@@ -50,7 +58,7 @@ self.addEventListener('activate', (event) => {
               requests
                 .filter((req) => {
                   const path = new URL(req.url).pathname
-                  return path.startsWith('/assets/') && !BUILD_MANIFEST.includes(path)
+                  return path.startsWith(BASE + 'assets/') && !BUILD_MANIFEST.includes(path)
                 })
                 .map((req) => cache.delete(req))
             )
@@ -89,7 +97,7 @@ self.addEventListener('fetch', (event) => {
         .catch(() =>
           caches
             .match(APP_SHELL, { ignoreVary: true })
-            .then((cached) => cached || caches.match('/', { ignoreVary: true }))
+            .then((cached) => cached || caches.match(BASE, { ignoreVary: true }))
         )
     )
     return

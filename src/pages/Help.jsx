@@ -137,7 +137,7 @@ function Section({ section, open, onToggle }) {
           </ol>
           <div className="rounded-sm overflow-hidden border border-ink-border bg-ink-muted">
             <img
-              src={`/guide/${section.image}`}
+              src={`${import.meta.env.BASE_URL}guide/${section.image}`}
               alt={`${section.label} screenshot`}
               loading="lazy"
               className="w-full block"

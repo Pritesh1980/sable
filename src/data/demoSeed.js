@@ -18,8 +18,12 @@ export const DEMO_SESSION = {
   user: { id: 'local-demo@example.com', email: 'demo@example.com' },
 }
 
+// BASE_URL is '/' locally and '/sable/' on GitHub Pages — prefix demo asset
+// paths so the seeded artwork resolves under a sub-path deploy (otherwise every
+// image 404s and the demo shows monograms).
+const B = import.meta.env.BASE_URL
 const demoImages = (id, count = 5) =>
-  Array.from({ length: count }, (_, i) => `/images/demo/${id}/${i + 1}.svg`)
+  Array.from({ length: count }, (_, i) => `${B}images/demo/${id}/${i + 1}.svg`)
 
 // Fictional artists only — invented names and handles, no resemblance to the
 // real artists in src/data/artists.js. Tags come from the canonical STYLE_TAGS.
@@ -40,7 +44,7 @@ export const DEMO_IDEAS = [
     description: 'Branching botanicals fading into a dark, starlit canopy. Fine line up top, denser black toward the elbow.',
     tags: ['dark-illustrative', 'fine-line'],
     placement: 'forearm',
-    images: [{ url: '/images/demo/mora.blackfern/2.svg', note: 'Line density reference' }],
+    images: [{ url: `${B}images/demo/mora.blackfern/2.svg`, note: 'Line density reference' }],
     linkedArtists: ['mora.blackfern', 'palefox.ink'],
     status: 'idea',
   },
@@ -50,7 +54,7 @@ export const DEMO_IDEAS = [
     description: 'A near-total eclipse with thin drifting cloud lines below — quiet, heavy, mostly negative space.',
     tags: ['dark-fantasy', 'surrealism'],
     placement: 'upper arm',
-    images: [{ url: '/images/demo/vesper_noctis/1.svg', note: 'Mood reference' }],
+    images: [{ url: `${B}images/demo/vesper_noctis/1.svg`, note: 'Mood reference' }],
     linkedArtists: ['vesper_noctis'],
     status: 'booked',
   },
