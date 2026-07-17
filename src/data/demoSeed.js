@@ -1,8 +1,10 @@
 // Demo seed — a fully fictional dataset so a fresh clone (or a public demo
 // visit) sees the Wall, Top-5 dock and gallery looking alive instead of
 // monogram placeholders. The curated real-artist images are third-party work
-// and gitignored; these artists are invented and their artwork is generated
-// SVG committed under public/images/demo/ (see scripts/generate-demo-art.js).
+// and gitignored; these artists are invented and their artwork is original,
+// hand-authored SVG committed under public/images/demo/ (deliberate tattoo
+// designs — botanical, celestial, sacred geometry, blackwork, architectural,
+// dotwork, single-line — one coherent style per artist).
 //
 // Entry point: visit any route with `?demo=1` on the local backend
 // (VITE_BACKEND=local, the default). Seeding writes the same localStorage keys
@@ -22,7 +24,7 @@ export const DEMO_SESSION = {
 // paths so the seeded artwork resolves under a sub-path deploy (otherwise every
 // image 404s and the demo shows monograms).
 const B = import.meta.env.BASE_URL
-const demoImages = (id, count = 5) =>
+const demoImages = (id, count = 3) =>
   Array.from({ length: count }, (_, i) => `${B}images/demo/${id}/${i + 1}.svg`)
 
 // Fictional artists only — invented names and handles, no resemblance to the
@@ -33,8 +35,9 @@ export const DEMO_ARTISTS = [
   { id: 'hexen_atlas', handle: 'hexen_atlas', name: '', tags: ['blackwork', 'surrealism'], styleNote: 'Sacred geometry — concentric circles, polygons and radial spokes with a single red mark.', images: demoImages('hexen_atlas'), rank: 3, status: 'shortlisted', notes: '', studio: null },
   { id: 'ferrum_line', handle: 'ferrum_line', name: '', tags: ['blackwork'], styleNote: 'Bold brush blackwork — thick gestural swipes with dry-brush texture and heavy saturation.', images: demoImages('ferrum_line'), rank: 4, status: 'researching', notes: '', studio: null },
   { id: 'quietruin.ink', handle: 'quietruin.ink', name: 'Juno Marek', tags: ['dark-illustrative', 'fine-line'], styleNote: 'Architectural sketch — fractured facades and fine hatching, drawn-on-skin immediacy.', images: demoImages('quietruin.ink'), rank: 5, status: 'contacted', notes: '', studio: null },
-  { id: 'ashgrove.tattoo', handle: 'ashgrove.tattoo', name: '', tags: ['realism', 'dark-illustrative'], styleNote: 'Soft-shaded figurative abstraction — layered smoke-like forms with a red thread through each piece.', images: demoImages('ashgrove.tattoo'), rank: 6, status: 'researching', notes: '', studio: null },
-  { id: 'palefox.ink', handle: 'palefox.ink', name: 'Sable Wren', tags: ['fine-line', 'realism'], styleNote: 'Delicate contour bundles — flowing parallel lines that read like wind over skin.', images: demoImages('palefox.ink'), rank: 7, status: 'maybe', notes: '', studio: null },
+  { id: 'ashgrove.tattoo', handle: 'ashgrove.tattoo', name: '', tags: ['realism', 'dark-illustrative'], styleNote: 'Dotwork realism — depth built from thousands of fine stippled points; soft, smoky, patient.', images: demoImages('ashgrove.tattoo'), rank: 6, status: 'researching', notes: '', studio: null },
+  { id: 'palefox.ink', handle: 'palefox.ink', name: 'Sable Wren', tags: ['fine-line', 'realism'], styleNote: 'Single-line minimalism — a whole subject caught in one unbroken, flowing line.', images: demoImages('palefox.ink'), rank: 7, status: 'maybe', notes: '', studio: null },
+  { id: 'lekhani.ink', handle: 'lekhani.ink', name: 'Asha Lekhani', tags: ['fine-line', 'blackwork'], styleNote: 'Script & letterforms — names carried across writing systems: katakana, hanzi, Gujarati, each set like lettering, not type.', images: demoImages('lekhani.ink'), rank: 8, status: 'researching', notes: '', studio: null },
 ]
 
 export const DEMO_IDEAS = [
