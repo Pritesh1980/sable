@@ -21,7 +21,7 @@ npm run dev
 #   http://localhost:5173/?demo=1
 ```
 
-`?demo=1` (on the default local backend) signs in a demo session and seeds seven fictional artists, ranked and statused, plus a few linked tattoo ideas. It never runs over an existing session, and edits you make in the demo persist across reloads. To reset, clear the site's storage (or use a fresh private window). The demo artwork itself is generated SVG — regenerate it with `node scripts/generate-demo-art.js`.
+`?demo=1` (on the default local backend) signs in a demo session and seeds eight fictional artists, ranked and statused, plus a few linked tattoo ideas. It never runs over an existing session, and edits you make in the demo persist across reloads. To reset, clear the site's storage (or use a fresh private window). The demo artwork is original, hand-authored SVG — one coherent tattoo style per artist (botanical, celestial, sacred geometry, blackwork, architectural, dotwork, single-line, and script lettering across katakana, hanzi and Gujarati).
 
 | Artists gallery | Brief (ideas) |
 | --- | --- |
@@ -102,7 +102,7 @@ Seed data lives in `src/data/`, with the artist list in `src/data/artists.js` an
 > are third-party portfolio work and are **not** included in this repository.
 > When they are absent (e.g. a fresh clone), the UI falls back to monogram
 > placeholders via `src/components/ArtistImage.jsx`. The demo artwork under
-> `public/images/demo/` is original generated SVG and **is** committed.
+> `public/images/demo/` is original hand-authored SVG and **is** committed.
 
 Runtime edits are stored locally in the browser and mirrored to the selected backend:
 
