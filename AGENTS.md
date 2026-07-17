@@ -9,6 +9,8 @@ out of date).
 
 ## Quick orientation
 
+- **Looking for more work:** check `BACKLOG.md`, then the open GitHub issues labelled
+  `backlog` before proposing or starting new work.
 - **User guide:** [`docs/`](docs/README.md), also available in-app under **More → Help**.
 - **Keeping docs in sync:** when you change UI under `src/pages/` or `src/components/`,
   update the matching `docs/NN-*.md` and the `SECTIONS` array in `src/pages/Help.jsx`, then
