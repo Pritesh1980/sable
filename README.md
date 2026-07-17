@@ -125,6 +125,8 @@ Static deployment has not been configured yet. Before hosting on S3 + CloudFront
 
 Follow the project convention in `AGENTS.md`: use TDD for new behavior, keep changes local-first unless deployment infrastructure exists, and do not build public sharing features until hosting is ready. Full workflow documentation lives in [`docs/`](docs/README.md).
 
+For a reusable walkthrough of the repository's personal GitHub Projects workflow, see the [GitHub Backlog Setup Guide](docs/github-backlog-setup-guide.docx).
+
 ## Licence
 
 All rights reserved — see [`LICENSE`](LICENSE). The code is published for
