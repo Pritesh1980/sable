@@ -16,9 +16,18 @@
 import { backend } from '../backend'
 import { nowStamp } from '../backend/sync'
 
+// `demo: true` is the ownership proof: localAuth.signIn writes only { user },
+// so no login — even with this exact email — can produce a marked session.
 export const DEMO_SESSION = {
+  demo: true,
   user: { id: 'local-demo@example.com', email: 'demo@example.com' },
 }
+
+// Bump whenever the demo dataset changes shape (artists, image counts, art
+// replaced). A returning visitor whose DEMO session carries an older version
+// is re-seeded, so the public demo never shows a stale mix of old data and
+// current files. Real (non-demo) sessions are never touched.
+export const DEMO_SEED_VERSION = 2
 
 // BASE_URL is '/' locally and '/sable/' on GitHub Pages — prefix demo asset
 // paths so the seeded artwork resolves under a sub-path deploy (otherwise every
@@ -34,10 +43,8 @@ export const DEMO_ARTISTS = [
   { id: 'vesper_noctis', handle: 'vesper_noctis', name: 'Vesper Ash', tags: ['dark-fantasy', 'surrealism'], styleNote: 'Nocturnal surrealism — eclipsed moons, drifting wisps and star fields in moody black-and-grey.', images: demoImages('vesper_noctis'), rank: 2, status: 'contact-next', notes: '', studio: null },
   { id: 'hexen_atlas', handle: 'hexen_atlas', name: '', tags: ['blackwork', 'surrealism'], styleNote: 'Sacred geometry — concentric circles, polygons and radial spokes with a single red mark.', images: demoImages('hexen_atlas'), rank: 3, status: 'shortlisted', notes: '', studio: null },
   { id: 'ferrum_line', handle: 'ferrum_line', name: '', tags: ['blackwork'], styleNote: 'Bold brush blackwork — thick gestural swipes with dry-brush texture and heavy saturation.', images: demoImages('ferrum_line'), rank: 4, status: 'researching', notes: '', studio: null },
-  { id: 'quietruin.ink', handle: 'quietruin.ink', name: 'Juno Marek', tags: ['dark-illustrative', 'fine-line'], styleNote: 'Architectural sketch — fractured facades and fine hatching, drawn-on-skin immediacy.', images: demoImages('quietruin.ink'), rank: 5, status: 'contacted', notes: '', studio: null },
-  { id: 'ashgrove.tattoo', handle: 'ashgrove.tattoo', name: '', tags: ['realism', 'dark-illustrative'], styleNote: 'Dotwork realism — depth built from thousands of fine stippled points; soft, smoky, patient.', images: demoImages('ashgrove.tattoo'), rank: 6, status: 'researching', notes: '', studio: null },
-  { id: 'palefox.ink', handle: 'palefox.ink', name: 'Sable Wren', tags: ['fine-line', 'realism'], styleNote: 'Single-line minimalism — a whole subject caught in one unbroken, flowing line.', images: demoImages('palefox.ink'), rank: 7, status: 'maybe', notes: '', studio: null },
-  { id: 'lekhani.ink', handle: 'lekhani.ink', name: 'Asha Lekhani', tags: ['fine-line', 'blackwork'], styleNote: 'Script & letterforms — names carried across writing systems: katakana, hanzi, Gujarati, each set like lettering, not type.', images: demoImages('lekhani.ink'), rank: 8, status: 'researching', notes: '', studio: null },
+  { id: 'ashgrove.tattoo', handle: 'ashgrove.tattoo', name: '', tags: ['realism', 'dark-illustrative'], styleNote: 'Dotwork realism — depth built from thousands of fine stippled points; soft, smoky, patient.', images: demoImages('ashgrove.tattoo'), rank: 5, status: 'researching', notes: '', studio: null },
+  { id: 'lekhani.ink', handle: 'lekhani.ink', name: 'Asha Lekhani', tags: ['fine-line', 'blackwork'], styleNote: 'Script & letterforms — names carried across writing systems: katakana, hanzi, Gujarati, each set like lettering, not type.', images: demoImages('lekhani.ink'), rank: 6, status: 'shortlisted', notes: '', studio: null },
 ]
 
 export const DEMO_IDEAS = [
@@ -48,7 +55,7 @@ export const DEMO_IDEAS = [
     tags: ['dark-illustrative', 'fine-line'],
     placement: 'forearm',
     images: [{ url: `${B}images/demo/mora.blackfern/2.svg`, note: 'Line density reference' }],
-    linkedArtists: ['mora.blackfern', 'palefox.ink'],
+    linkedArtists: ['mora.blackfern'],
     status: 'idea',
   },
   {
@@ -88,17 +95,48 @@ export function seedDemoData(storage = localStorage) {
   write(storage, 'tattoo_remote_ideas', DEMO_IDEAS.map((i) => ({ ...i, updatedAt: at })))
   // Demo images are static paths — nothing to migrate to blob storage.
   storage.setItem('tattoo_img_migrated_v1', '1')
+  storage.setItem('tattoo_demo_seed_version', String(DEMO_SEED_VERSION))
 }
 
-// Boot-time hook (called from main.jsx before render). Seeds only when:
-// `?demo=1` is present, the backend is the offline local adapter, and there is
-// no existing session (a signed-in user — including a previous demo visit,
-// whose edits we keep — is never overwritten). Returns true if it seeded.
+// Two decisions, kept separate: first prove the session is the demo's own,
+// then compare dataset versions. The version key is global and mutable, so it
+// never participates in the ownership proof.
+function isStaleDemoSession(raw) {
+  try {
+    const session = JSON.parse(raw)
+    const version = Number(localStorage.getItem('tattoo_demo_seed_version'))
+    // A missing or garbage version key on a proven demo session means a
+    // pre-versioning deploy → stale. A version from a NEWER deploy (rollback
+    // in flight) is left alone — never downgrade.
+    const stale = !Number.isSafeInteger(version) || version < DEMO_SEED_VERSION
+    if (session?.demo === true) return stale
+    // Legacy window: v1 sessions predate the marker, so the demo user id plus
+    // pre-v2 evidence is the best proof available. From v2 on every seeded
+    // session is marked, so an unmarked session with a current version key is
+    // a real login (possibly with the demo email) and is never touched.
+    return (
+      session?.user?.id === DEMO_SESSION.user.id &&
+      (!Number.isSafeInteger(version) || version < 2)
+    )
+  } catch {
+    return false // unparseable session → treat as real, leave alone
+  }
+}
+
+// Boot-time hook (called from main.jsx before render). Creating a demo session
+// from nothing requires `?demo=1` and no existing session; but a proven demo
+// session whose stored dataset predates the shipped files re-seeds on ANY boot
+// — an installed PWA launches from start_url '/' without the query. A real
+// user's session is never overwritten. Returns true if it seeded.
 export function maybeSeedDemo(location = window.location, backendKind = backend.kind) {
   if (backendKind !== 'local') return false
-  if (new URLSearchParams(location.search || '').get('demo') !== '1') return false
   try {
-    if (localStorage.getItem('tattoo_local_session')) return false
+    const raw = localStorage.getItem('tattoo_local_session')
+    if (raw) {
+      if (!isStaleDemoSession(raw)) return false
+    } else if (new URLSearchParams(location.search || '').get('demo') !== '1') {
+      return false
+    }
     seedDemoData(localStorage)
     return true
   } catch {
