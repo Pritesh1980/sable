@@ -25,7 +25,7 @@ not `fullPage` — the fixed bottom nav floats to the middle on full-page captur
    committed and published — the curated images under `public/images/artists/` are
    third-party portfolio work that must never appear in them (this bit us once:
    pre-July-2026 captures shipped real artists' photos). Visit `/?demo=1` — it seeds
-   a fictional session, 8 artists with committed hand-authored SVG artwork, and 3 ideas
+   a fictional session, 6 artists with committed hand-authored SVG artwork, and 3 ideas
    (`src/data/demoSeed.js`). Boards and Concepts aren't in the seed; inject them via
    Playwright `evaluate` using `/images/demo/<artist>/<n>.svg` paths, writing BOTH
    the `tattoo_*` and `tattoo_remote_*` localStorage keys so sync keeps them, then

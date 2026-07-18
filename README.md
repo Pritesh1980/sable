@@ -24,7 +24,7 @@ npm run dev
 #   http://localhost:5173/?demo=1
 ```
 
-`?demo=1` (on the default local backend) signs in a demo session and seeds eight fictional artists, ranked and statused, plus a few linked tattoo ideas. It never runs over an existing session, and edits you make in the demo persist across reloads. To reset, clear the site's storage (or use a fresh private window). The demo artwork is original, hand-authored SVG — one coherent tattoo style per artist (botanical, celestial, sacred geometry, blackwork, architectural, dotwork, single-line, and script lettering across katakana, hanzi and Gujarati).
+`?demo=1` (on the default local backend) signs in a demo session and seeds six fictional artists, ranked and statused, plus a few linked tattoo ideas. It never runs over an existing session (though an out-of-date demo session re-seeds itself, so returning visitors always see the current dataset), and edits you make in the demo persist across reloads. To reset, clear the site's storage (or use a fresh private window). The demo artwork is original, hand-authored SVG — one coherent tattoo style per artist (botanical, celestial, sacred geometry, bold blackwork, dotwork, and script lettering across katakana, hanzi and Gujarati).
 
 | Artists gallery | Brief (ideas) |
 | --- | --- |
