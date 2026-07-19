@@ -1,4 +1,5 @@
 import { clearBlobUrls } from '../data/blobUrls'
+import { purgeDirtySidecars } from './dirty'
 
 // Local caches that hold the signed-in user's data. Cleared on sign-out so the
 // next account on a shared device never sees the previous user's content.
@@ -17,6 +18,9 @@ const PURGE_KEYS = [
 export function purgeLocalUserData() {
   try {
     PURGE_KEYS.forEach((k) => localStorage.removeItem(k))
+    // Dirty-state sidecars (tattoo_dirty_*, tattoo_pending_delete_*,
+    // tattoo_stamp_*) describe the signed-out user's unsynced edits.
+    purgeDirtySidecars()
   } catch (e) {
     console.error('[tattoo] purge localStorage failed:', e)
   }

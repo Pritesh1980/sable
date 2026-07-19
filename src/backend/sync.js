@@ -49,11 +49,15 @@ export function reconcileRecords(localRows = [], remoteRows = []) {
 
 // Turn a useStorage value into stamped records ready for upsert.
 // For singleton collections the whole map becomes one record's `data`.
+// Rows keep the updatedAt they were given when the edit happened (see
+// dirty.js/stampChangedRows); `at` only fills rows that never got one —
+// restamping everything at flush time would let a routine flush outrank a
+// genuine concurrent edit from another device.
 export function valueToRecords(collection, value, at = nowStamp()) {
   if (SINGLETON_COLLECTIONS.has(collection)) {
     return [{ id: SINGLETON_ID, updatedAt: at, data: value ?? {} }]
   }
-  return (value || []).map((row) => ({ ...row, updatedAt: at }))
+  return (value || []).map((row) => ({ ...row, updatedAt: row.updatedAt || at }))
 }
 
 // Inverse of valueToRecords: turn stored records back into a useStorage value.

@@ -30,7 +30,11 @@ describe('useStorage sync', () => {
   it('without auth, behaves as a plain localStorage hook (no remote writes)', async () => {
     const { result } = renderHook(() => useStorage('tattoo_ideas', []))
     act(() => result.current[1]([{ id: 'x', title: 'local only' }]))
-    expect(JSON.parse(localStorage.getItem('tattoo_ideas'))).toEqual([{ id: 'x', title: 'local only' }])
+    const stored = JSON.parse(localStorage.getItem('tattoo_ideas'))
+    // The edit is stamped even before sign-in, so it can win reconciliation
+    // against older remote rows if the user signs in later.
+    expect(stored).toMatchObject([{ id: 'x', title: 'local only' }])
+    expect(stored[0].updatedAt).toBeTruthy()
     expect(localStorage.getItem('tattoo_remote_ideas')).toBeNull()
   })
 

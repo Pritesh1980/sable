@@ -4,6 +4,15 @@ import { backend } from '../backend'
 import { useAuth } from '../context/useAuth'
 import { isOwner } from '../backend/owner'
 import { reconcileRecords, nowStamp } from '../backend/sync'
+import {
+  stampChangedRows,
+  setDirty,
+  isDirty,
+  clearDirty,
+  readPendingDeletes,
+  addPendingDeletes,
+  clearPendingDeletes,
+} from '../backend/dirty'
 import { resolveBlobKey, keyForUrl, registerBlobUrl } from '../data/blobUrls'
 
 const META_KEY = 'tattoo_artists_meta'
@@ -208,6 +217,11 @@ export function useArtistStorage() {
   const imageMapRef = useRef({})
   const syncedRef = useRef(null) // last metadata list known in sync with remote
   const pushTimer = useRef(null)
+  const editSeq = useRef(0)
+  // Flushes are chained so two can never be in flight at once — with a real
+  // async backend an older flush completing last would overwrite newer remote
+  // rows and regress the synced baseline.
+  const flushChain = useRef(Promise.resolve())
 
   useEffect(() => { artistsRef.current = artists }, [artists])
 
@@ -260,8 +274,19 @@ export function useArtistStorage() {
           didMigrate = true
         }
 
-        const remote = await backend.store.list(COLLECTION)
+        // Artists deleted locally but not yet remotely must not ride back in
+        // on the pull; the remove is retried after reconcile. A pending delete
+        // for a handle present in the local cache was superseded by a re-add.
+        const cachedIds = new Set((initialRawCache || []).map((a) => a.id))
+        const allPending = readPendingDeletes(META_KEY)
+        const superseded = allPending.filter((id) => cachedIds.has(id))
+        if (superseded.length) clearPendingDeletes(META_KEY, superseded)
+        const pendingDeletes = allPending.filter((id) => !cachedIds.has(id))
+        const remoteAll = await backend.store.list(COLLECTION)
         if (cancelled) return
+        const remote = pendingDeletes.length
+          ? remoteAll.filter((r) => !pendingDeletes.includes(r.id))
+          : remoteAll
         const owner = isOwner(user)
         // Baseline = the user's own raw cache (never the default seed). The owner
         // additionally gets DEFAULT_ARTISTS folded in; non-owners never do.
@@ -278,18 +303,19 @@ export function useArtistStorage() {
           // Remote empty → seed/migrate local data up. Owner seeds the curated
           // defaults (preserving any local edits); a non-owner keeps only their
           // own data.
-          const base = owner
+          nextMeta = owner
             ? (localMeta.length ? applyDefaults(localMeta) : applyDefaults([]))
             : localMeta
-          nextMeta = base
-          syncedRef.current = nextMeta
-          if (base.length) {
-            const at = nowStamp()
-            await backend.store.upsert(
-              COLLECTION,
-              base.map((a) => ({ ...a, updatedAt: a.updatedAt || at }))
-            )
-          }
+        }
+        // Rows that predate edit-time stamping (legacy cache, fresh defaults)
+        // get their stamp exactly once, HERE — and the same stamped rows go to
+        // state, cache, baseline and the seeding push. Stamping throwaway
+        // copies would leave every later flush fallback-restamping untouched
+        // rows, outranking genuine cross-device edits.
+        const seedAt = nowStamp()
+        nextMeta = nextMeta.map((a) => (a.updatedAt ? a : { ...a, updatedAt: seedAt }))
+        if (remote.length === 0 && nextMeta.length) {
+          await backend.store.upsert(COLLECTION, nextMeta)
         }
 
         if (cancelled) return
@@ -299,15 +325,40 @@ export function useArtistStorage() {
         setArtistsRaw(built)
 
         // After migrating legacy images, push the now-keyed metadata so the keys
-        // reach the remote store (and other devices can resolve them).
+        // reach the remote store (and other devices can resolve them). Only
+        // artists whose canonical image refs actually changed get a fresh
+        // stamp — restamping the rest would outrank cross-device edits made
+        // between our pull and this push.
         if (didMigrate) {
           const at = nowStamp()
-          const canonical = built.map(canonicalizeArtist)
-          syncedRef.current = canonical
-          await backend.store.upsert(
-            COLLECTION,
-            canonical.map((a) => ({ ...a, updatedAt: at }))
+          const beforeImages = new Map(
+            nextMeta.map((a) => [a.id, JSON.stringify(canonicalizeImages(a.images || []))])
           )
+          const canonical = built.map(canonicalizeArtist)
+          const rows = canonical.map((a) => {
+            const imagesChanged = JSON.stringify(a.images) !== beforeImages.get(a.id)
+            return imagesChanged || !a.updatedAt ? { ...a, updatedAt: at } : a
+          })
+          await backend.store.upsert(COLLECTION, rows)
+          syncedRef.current = rows
+        }
+
+        if (pendingDeletes.length) {
+          backend.store
+            .remove(COLLECTION, pendingDeletes)
+            .then(() => clearPendingDeletes(META_KEY, pendingDeletes))
+            .catch((e) => console.error('[tattoo] retry artist delete failed:', e))
+        }
+        // A dirty flag means an edit never fully reached the remote (failed
+        // push, killed tab) — push the reconciled state up once it has
+        // committed to artistsRef via the debounce window.
+        if (!cancelled && isDirty(META_KEY)) {
+          clearTimeout(pushTimer.current)
+          pushTimer.current = setTimeout(() => {
+            flushMetaRef.current?.().catch((e) =>
+              console.error('[tattoo] artist meta push failed:', e)
+            )
+          }, 500)
         }
       } catch (e) {
         console.error('[tattoo] artist meta sync failed:', e)
@@ -321,30 +372,68 @@ export function useArtistStorage() {
     saveMeta(artists)
   }, [artists])
 
-  const flushMeta = useCallback(() => {
+  const runFlushMeta = useCallback(async () => {
     if (!user) return
     const meta = artistsRef.current.map(canonicalizeArtist)
     const at = nowStamp()
-    const rows = meta.map((a) => ({ ...a, updatedAt: at }))
+    // Rows keep the stamp set when the edit happened; `at` only fills rows
+    // that never got one (restamping all would outrank other devices' edits).
+    const rows = meta.map((a) => ({ ...a, updatedAt: a.updatedAt || at }))
+    const seq = editSeq.current
+
+    // Record deletions durably BEFORE attempting them, and retry any that a
+    // previous flush failed to land; syncedRef advances only on success, so a
+    // failed write stays visible to the next flush or mount.
     const prev = syncedRef.current
-    syncedRef.current = meta
+    const live = new Set(rows.map((r) => r.id))
+    const removed = Array.isArray(prev)
+      ? prev.map((r) => r.id).filter((id) => !live.has(id))
+      : []
+    const allPending = addPendingDeletes(META_KEY, removed)
+    // A pending delete whose handle is live again was superseded by a re-add —
+    // drop it, or the late remove could destroy the recreated artist.
+    const superseded = allPending.filter((id) => live.has(id))
+    if (superseded.length) clearPendingDeletes(META_KEY, superseded)
+    const pendingDeletes = allPending.filter((id) => !live.has(id))
 
     const tasks = [backend.store.upsert(COLLECTION, rows)]
-    if (Array.isArray(prev)) {
-      const live = new Set(rows.map((r) => r.id))
-      const removed = prev.map((r) => r.id).filter((id) => !live.has(id))
-      if (removed.length) tasks.push(backend.store.remove(COLLECTION, removed))
-    }
-    Promise.all(tasks).catch((e) =>
-      console.error('[tattoo] artist meta push failed:', e)
-    )
+    if (pendingDeletes.length) tasks.push(backend.store.remove(COLLECTION, pendingDeletes))
+    await Promise.all(tasks)
+
+    syncedRef.current = meta
+    clearPendingDeletes(META_KEY, pendingDeletes)
+    // A newer edit may have arrived while the writes were in flight; its own
+    // flush is already scheduled, so only that flush may clear the flag.
+    if (editSeq.current === seq) clearDirty(META_KEY)
   }, [user])
 
+  const flushMeta = useCallback(() => {
+    const p = flushChain.current.then(runFlushMeta, runFlushMeta)
+    flushChain.current = p.then(() => {}, () => {})
+    return p
+  }, [runFlushMeta])
+
+  const flushMetaRef = useRef(null)
+  useEffect(() => { flushMetaRef.current = flushMeta }, [flushMeta])
+
   function setArtists(updater) {
+    const at = nowStamp()
     setArtistsRaw((prev) => {
       const next = typeof updater === 'function' ? updater(prev) : updater
-      // Save any changed image arrays to IndexedDB
-      for (const a of next) {
+      // Stamp what changed at edit time — saveMeta persists the stamp
+      // immediately, so the edit survives a reload and wins last-write-wins
+      // against older remote rows even if no push succeeds.
+      const stamped = stampChangedRows(prev, next, at)
+      // Tombstones become durable at the edit, not at the flush 500ms later —
+      // a tab closed inside the debounce window must not lose the delete.
+      const liveIds = new Set(stamped.map((a) => a?.id))
+      const removed = prev
+        .map((a) => (a && typeof a === 'object' ? a.id : undefined))
+        .filter((id) => id !== undefined && !liveIds.has(id))
+      if (removed.length) addPendingDeletes(META_KEY, removed)
+      // Save any changed image arrays to IndexedDB (the stamping spread keeps
+      // image array references, so this comparison still sees real changes).
+      for (const a of stamped) {
         const prevA = prev.find((p) => p.id === a.id)
         if (!prevA || prevA.images !== a.images) {
           dbPut(a.id, a.images || []).catch((e) =>
@@ -352,11 +441,17 @@ export function useArtistStorage() {
           )
         }
       }
-      return next
+      return stamped
     })
+    editSeq.current += 1
+    setDirty(META_KEY)
     if (user) {
       clearTimeout(pushTimer.current)
-      pushTimer.current = setTimeout(flushMeta, 500)
+      pushTimer.current = setTimeout(() => {
+        flushMetaRef.current?.().catch((e) =>
+          console.error('[tattoo] artist meta push failed:', e)
+        )
+      }, 500)
     }
   }
 
