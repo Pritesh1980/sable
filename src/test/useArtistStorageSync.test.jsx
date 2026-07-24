@@ -91,8 +91,13 @@ describe('useArtistStorage first paint (no flash of curated defaults)', () => {
     localStorage.clear()
   })
 
+  // Mirrors ProtectedRoute exactly: it renders children only when the session has
+  // resolved AND a user is present. Gating on `loading` alone would let the hook
+  // mount with user === null — a state production never renders, in which the
+  // non-owner specs below would pass for the wrong reason.
   function Gate({ children }) {
-    return useAuth().loading ? null : children
+    const { user, loading } = useAuth()
+    return loading || !user ? null : children
   }
   const gatedWrapper = ({ children }) => (
     <AuthProvider>

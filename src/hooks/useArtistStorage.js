@@ -208,11 +208,22 @@ export function useArtistStorage() {
     }
   })
 
-  // First paint must equal what the sync effect below settles on, or the
-  // difference shows as a flash. Only the owner gets DEFAULT_ARTISTS folded in
-  // (same rule as the reconcile), so a non-owner paints their own cache and
-  // nothing else. ProtectedRoute holds the app behind a spinner until the
-  // session resolves, so `user` is already known by the time this runs.
+  // Paint the same baseline the sync effect starts from: the raw cache, with
+  // DEFAULT_ARTISTS folded in only for the owner (the rule the reconcile below
+  // applies). Painting owner defaults for a non-owner put artists on screen that
+  // the reconcile then removed — a flash of someone else's list (#25).
+  //
+  // This is membership parity with the cache, not with the final state: a later
+  // pull can still add remote rows the cache had never seen, and images are
+  // hydrated separately (see the `images: []` below), so both arrive after paint.
+  // Those are hydration, not a flash of the wrong identities.
+  //
+  // Safe to read `user` here because App.jsx mounts AppShell inside
+  // ProtectedRoute, which holds a spinner until the session resolves. A lazy
+  // initializer captures that decision for the life of the mount; sign-out nulls
+  // the user (unmounting AppShell) and purges the cache, so the next sign-in
+  // re-runs this. A direct A→B session swap with no committed null in between
+  // would keep A's decision until the effect re-runs — tracked in #28.
   const [artists, setArtistsRaw] = useState(() => {
     const owner = isOwner(user)
     const meta = initialRawCache

@@ -93,7 +93,12 @@ describe('useArtistStorage', () => {
     )
   })
 
-  const Gate = ({ children }) => (useAuth().loading ? null : children)
+  // Mirrors ProtectedRoute: children render only once the session has resolved
+  // and a user is present.
+  const Gate = ({ children }) => {
+    const { user, loading } = useAuth()
+    return loading || !user ? null : children
+  }
   const wrapper = ({ children }) =>
     createElement(AuthProvider, null, createElement(Gate, null, children))
 
