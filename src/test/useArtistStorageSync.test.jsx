@@ -76,3 +76,86 @@ describe('useArtistStorage owner seeding + sync', () => {
     expect(result.current.store[0][0].id).toBe('custom1')
   })
 })
+
+// The first painted list must already equal what the sync effect will settle on.
+// Any divergence is visible as a flash of the wrong artists (issue #25): on the
+// public demo the curated real handles appeared as monograms with 404ing images
+// before the demo dataset replaced them.
+//
+// These mount the hook the way App.jsx does — behind the ProtectedRoute gate, so
+// the session is resolved before the hook's first render. Mounting it ungated
+// (as the specs above do) would paint with user === null and prove nothing about
+// what the app actually shows.
+describe('useArtistStorage first paint (no flash of curated defaults)', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  function Gate({ children }) {
+    return useAuth().loading ? null : children
+  }
+  const gatedWrapper = ({ children }) => (
+    <AuthProvider>
+      <Gate>{children}</Gate>
+    </AuthProvider>
+  )
+
+  // Returns the hook's FIRST rendered list. A flash exists only transiently, so
+  // sampling `result.current` after a waitFor would read the settled state and
+  // pass even when the flash is present — every render has to be recorded and
+  // the first one asserted on.
+  async function renderFirstPaint() {
+    const paints = []
+    renderHook(
+      () => {
+        const store = useArtistStorage()
+        paints.push(store[0])
+        return store
+      },
+      { wrapper: gatedWrapper }
+    )
+    await waitFor(() => expect(paints.length).toBeGreaterThan(0))
+    return paints[0]
+  }
+
+  const DEMO_CACHE = [
+    { id: 'mora.blackfern', handle: 'mora.blackfern', rank: 1, tags: [], updatedAt: '2026-07-01T00:00:00Z' },
+  ]
+
+  it('paints a demo cache without appending the curated defaults', async () => {
+    localStorage.setItem('tattoo_artists_meta', JSON.stringify(DEMO_CACHE))
+    seedSession('demo@example.com')
+
+    const painted = await renderFirstPaint()
+
+    expect(painted).toHaveLength(1)
+    expect(painted[0].id).toBe('mora.blackfern')
+    const curatedIds = new Set(DEFAULT_ARTISTS.map((a) => a.id))
+    expect(painted.filter((a) => curatedIds.has(a.id))).toHaveLength(0)
+  })
+
+  it('paints nothing for a non-owner with no cache', async () => {
+    seedSession('artist@studio.com')
+
+    expect(await renderFirstPaint()).toHaveLength(0)
+  })
+
+  it('still paints the curated defaults for the owner with no cache', async () => {
+    seedSession('owner@example.com')
+
+    expect(await renderFirstPaint()).toHaveLength(DEFAULT_ARTISTS.length)
+  })
+
+  it('still folds defaults into a partial owner cache on paint', async () => {
+    localStorage.setItem(
+      'tattoo_artists_meta',
+      JSON.stringify([{ ...DEFAULT_ARTISTS[0], notes: 'kept' }])
+    )
+    seedSession('owner@example.com')
+
+    const painted = await renderFirstPaint()
+
+    expect(painted).toHaveLength(DEFAULT_ARTISTS.length)
+    expect(painted.find((a) => a.id === DEFAULT_ARTISTS[0].id).notes).toBe('kept')
+  })
+})

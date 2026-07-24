@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
+import { createElement } from 'react'
 import { applyDefaults, stripImages, useArtistStorage } from '../hooks/useArtistStorage'
+import { AuthProvider } from '../context/AuthContext'
+import { useAuth } from '../context/useAuth'
 import { DEFAULT_ARTISTS } from '../data/artists'
 
 // ── Pure function tests ───────────────────────────────────────────────────────
@@ -78,23 +81,42 @@ describe('applyDefaults', () => {
 
 // ── Hook integration tests ────────────────────────────────────────────────────
 
+// Only the owner account carries DEFAULT_ARTISTS, so these specs sign in as the
+// owner and mount the hook the way App.jsx does — behind the auth gate, after the
+// session resolves. Rendering it bare would leave `user` null and the list empty.
 describe('useArtistStorage', () => {
   beforeEach(() => {
     localStorage.clear()
+    localStorage.setItem(
+      'tattoo_local_session',
+      JSON.stringify({ user: { id: 'local-owner@example.com', email: 'owner@example.com' } })
+    )
   })
 
-  it('initialises with DEFAULT_ARTISTS when storage is empty', () => {
-    const { result } = renderHook(() => useArtistStorage())
+  const Gate = ({ children }) => (useAuth().loading ? null : children)
+  const wrapper = ({ children }) =>
+    createElement(AuthProvider, null, createElement(Gate, null, children))
+
+  async function renderOwned() {
+    const { result } = renderHook(() => useArtistStorage(), { wrapper })
+    await waitFor(() => expect(result.current).toBeTruthy())
+    return result
+  }
+
+  it('initialises with DEFAULT_ARTISTS when storage is empty', async () => {
+    const result = await renderOwned()
     expect(result.current[0]).toHaveLength(DEFAULT_ARTISTS.length)
   })
 
-  it('returned artists have no tier field', () => {
-    const { result } = renderHook(() => useArtistStorage())
+  it('returned artists have no tier field', async () => {
+    const result = await renderOwned()
+    expect(result.current[0].length).toBeGreaterThan(0)
     result.current[0].forEach((a) => expect(a).not.toHaveProperty('tier'))
   })
 
   it('never persists raw base64 image data to localStorage metadata', async () => {
-    const { result } = renderHook(() => useArtistStorage())
+    const result = await renderOwned()
+    expect(result.current[0].length).toBeGreaterThan(0)
 
     // Wait for IndexedDB init
     await act(async () => {})
@@ -114,7 +136,7 @@ describe('useArtistStorage', () => {
   })
 
   it('setArtists with a plain array works as well as a function', async () => {
-    const { result } = renderHook(() => useArtistStorage())
+    const result = await renderOwned()
     await act(async () => {})
 
     const updated = result.current[0].map((a) =>
@@ -135,7 +157,7 @@ describe('useArtistStorage', () => {
     )
     localStorage.setItem('tattoo_artists', JSON.stringify(oldData))
 
-    const { result } = renderHook(() => useArtistStorage())
+    const result = await renderOwned()
 
     // Wait for the async init (IndexedDB) to fully complete
     await waitFor(() => {

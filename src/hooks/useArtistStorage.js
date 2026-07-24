@@ -208,8 +208,16 @@ export function useArtistStorage() {
     }
   })
 
+  // First paint must equal what the sync effect below settles on, or the
+  // difference shows as a flash. Only the owner gets DEFAULT_ARTISTS folded in
+  // (same rule as the reconcile), so a non-owner paints their own cache and
+  // nothing else. ProtectedRoute holds the app behind a spinner until the
+  // session resolves, so `user` is already known by the time this runs.
   const [artists, setArtistsRaw] = useState(() => {
-    const meta = initialRawCache ? applyDefaults(initialRawCache) : DEFAULT_ARTISTS
+    const owner = isOwner(user)
+    const meta = initialRawCache
+      ? (owner ? applyDefaults(initialRawCache) : initialRawCache)
+      : (owner ? DEFAULT_ARTISTS : [])
     return meta.map((a) => ({ ...a, images: [] }))
   })
 
