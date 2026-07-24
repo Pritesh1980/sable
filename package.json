@@ -37,9 +37,15 @@
     "globals": "^17.7.0",
     "jsdom": "^29.1.1",
     "playwright": "^1.61.1",
-    "postcss": "^8.5.16",
+    "postcss": "^8.5.18",
     "tailwindcss": "^3.4.19",
     "vite": "^8.1.3",
     "vitest": "^4.1.9"
+  },
+  "_overridesNote": "Transitive security bumps with no upstream release yet. Drop each entry once its parent ships a fixed range. adm-zip: GHSA memory-exhaustion, reached only via @huggingface/transformers > onnxruntime-node (the Node runtime, never bundled or executed here — the Taste Engine is browser-only). @babel/core: sourceMappingURL arbitrary file read, dev-only via eslint-plugin-react-hooks; pinned to the 7.x patch, not 8.x. brace-expansion: DoS, transitive via eslint tooling, held on the 1.x line.",
+  "overrides": {
+    "adm-zip": "^0.6.0",
+    "@babel/core": "^7.29.6",
+    "brace-expansion": "^1.1.16"
   }
 }
