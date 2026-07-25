@@ -52,40 +52,37 @@ npm run dev
 
 ## Architecture
 
-Two ideas carry the design: a **vendor-SDK adapter boundary** and **local-first sync**.
+Three ideas carry the design:
+
+- **A vendor-SDK boundary.** The app never imports a vendor SDK. Everything leaving it passes through `src/backend/`, where one factory selects an adapter set from `VITE_BACKEND` (`local` | `supabase` | `aws`). Changing provider means writing one new adapter, not editing app code.
+- **Local-first sync.** `localStorage` and IndexedDB are the always-available cache; changes mirror to the backend and reconcile per record by last-write-wins on `updatedAt`. The UI never waits for a network.
+- **On-device AI.** CLIP embeddings for visual artist matching are computed in the browser, so reference images never leave the device.
 
 ```mermaid
 flowchart LR
-    subgraph app["React app"]
-        UI["Pages & components"]
-        HOOKS["useStorage / useArtistStorage"]
-    end
-    subgraph cache["Offline cache (device)"]
-        LS[("localStorage<br/>tattoo_* metadata")]
-        IDB[("IndexedDB<br/>image bytes")]
-    end
-    subgraph backend["src/backend — adapter boundary"]
-        SEAM{{"createBackend()<br/>VITE_BACKEND = local | supabase | aws"}}
-        LOCAL["local adapter<br/>(offline, default)"]
-        SUPA["supabase adapter"]
-        AWS["aws adapter<br/>(reserved)"]
-    end
-    UI --> HOOKS
-    HOOKS --> LS
-    HOOKS --> IDB
-    HOOKS -- "reconcile: last-write-wins<br/>on updatedAt" --> SEAM
+    APP["React app<br/>pages · components · hooks"]
+    SEAM{{"src/backend<br/>createBackend()"}}
+    LOCAL["local<br/>offline default"]
+    SUPA["supabase"]
+    AWS["aws — reserved"]
+    APP --> SEAM
     SEAM --> LOCAL
     SEAM --> SUPA
     SEAM --> AWS
 ```
 
-**Adapter boundary.** The app never imports a vendor SDK directly. Everything goes through `src/backend/` — `createBackend()` selects an adapter set (`auth`, `store`, `blobs`) from `VITE_BACKEND` (`local` | `supabase` | `aws`, default `local`). The Supabase SDK is loaded lazily only when selected, and swapping providers later (e.g. Supabase → AWS) means writing one new adapter, not touching app code. The local adapter is a full offline stand-in: sessions in `localStorage`, a simulated remote document store in its own `tattoo_remote_*` namespace, and blobs in IndexedDB — so the same contract tests run against every adapter.
+Because the local adapter is a complete offline stand-in rather than a stub, the whole
+test suite and the public demo run with **no network and no credentials**.
 
-**Local-first sync.** `localStorage` (`tattoo_*` keys) and IndexedDB act as the always-available offline cache; the hooks in `src/hooks/useStorage.js` / `useArtistStorage.js` mirror changes to the backend document store and reconcile by last-write-wins on each record's `updatedAt` (`src/backend/sync.js`). Images are kept out of the synced documents: records carry small canonical `{ key }` refs while the bytes live in blob storage, with per-collection codecs (`src/data/imageCodec.js`) translating between displayable URLs in memory and canonical refs at the persistence boundary. LWW is a deliberate trade-off documented in `sync.js` — sufficient at this scale, no CRDTs or merge UI.
+📄 **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** has the detailed version: the full
+write path with offline edits and tombstoned deletes, how images are kept out of synced
+documents, the on-device taste model and the contract test that keeps it out of the
+bundle, screenshot intake as a trust boundary, the service-worker strategy — and the
+trade-offs taken deliberately, with the limits that are still open.
 
 ## Testing philosophy
 
-The project is built TDD-first: behaviour is specified in a failing test before implementation, and any change to seed data must keep the data-integrity tests green. The suite is 632 Vitest tests across 81 files (`src/test/`), covering pure data modules directly and hooks/components via Testing Library. Non-bundled files that Vitest can't import — like the hand-rolled service worker — follow a pure-module + contract-test pattern: the logic lives in importable modules (`src/sw/precache.js`, `src/sw/swStrategy.js`) with unit tests, plus contract tests (`src/test/precache.test.js`, `src/test/swStrategy.test.js`) that read `public/sw.js` as text and assert its key invariants. The backend adapters share a contract test (`src/test/backendContract.test.js`) so every adapter honours the same seam, and the whole suite is pinned to the offline local backend so it runs without secrets or network — in CI too.
+The project is built TDD-first: behaviour is specified in a failing test before implementation, and any change to seed data must keep the data-integrity tests green. The suite is 636 Vitest tests across 82 files (`src/test/`), covering pure data modules directly and hooks/components via Testing Library. These two numbers are themselves asserted by a contract test (`src/test/readmeClaims.test.js`), so they cannot quietly go stale. Non-bundled files that Vitest can't import — like the hand-rolled service worker — follow a pure-module + contract-test pattern: the logic lives in importable modules (`src/sw/precache.js`, `src/sw/swStrategy.js`) with unit tests, plus contract tests (`src/test/precache.test.js`, `src/test/swStrategy.test.js`) that read `public/sw.js` as text and assert its key invariants. The backend adapters share a contract test (`src/test/backendContract.test.js`) so every adapter honours the same seam, and the whole suite is pinned to the offline local backend so it runs without secrets or network — in CI too.
 
 ## Useful Commands
 
