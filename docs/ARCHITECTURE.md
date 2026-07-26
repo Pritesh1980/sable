@@ -62,9 +62,10 @@ This view separates three things that are easy to conflate:
 Every persistent auth, document, and blob call passes through `src/backend/`.
 `createBackend()` (`src/backend/index.js`) selects one adapter set — `auth`, `store`,
 `blobs` — from `VITE_BACKEND` (`local` | `supabase` | `aws`, default `local`). The
-Supabase SDK is loaded lazily, only when that adapter is the one selected. Optional AI
-calls use direct HTTP modules under `src/data/`; they do not bypass this persistence
-boundary because they do not own account or synced application data.
+Supabase adapter is statically bundled today, but its client is constructed lazily only
+when that adapter is selected. Optional AI calls use direct HTTP modules under
+`src/data/`; they do not bypass this persistence boundary because they do not own
+account or synced application data.
 
 ```mermaid
 flowchart LR
@@ -79,7 +80,7 @@ flowchart LR
   subgraph BE["src/backend — the only way out"]
     SEAM{{"createBackend()<br/>VITE_BACKEND"}}
     L["local<br/>offline default"]
-    S["supabase<br/>lazy-loaded"]
+    S["supabase<br/>client created on selection"]
     A["aws<br/>reserved"]
   end
   UI --> HOOKS
@@ -96,13 +97,15 @@ not editing pages, hooks or components.
 
 The local adapter (`src/backend/local/`) is a complete offline stand-in rather than a
 stub: sessions in `localStorage`, a simulated remote document store under its own
-`tattoo_remote_*` namespace, blobs in IndexedDB. That is why the entire suite and the
-public demo run with **no network and no credentials** — `npm test` is pinned to the
-local backend in `vite.config.js`, so a `VITE_BACKEND=supabase` in a local `.env`
-cannot leak into a test run.
+`tattoo_remote_*` namespace, blobs in IndexedDB. That is why the entire suite runs with
+**no network and no credentials**, and why the public demo needs no account backend or
+provider credentials — `npm test` is pinned to the local backend in `vite.config.js`,
+so a `VITE_BACKEND=supabase` in a local `.env` cannot leak into a test run.
 
-All adapters share one contract test (`src/test/backendContract.test.js`), so they
-honour the same seam instead of drifting into three subtly different behaviours.
+The local adapter and an in-memory mock run through the same contract test
+(`src/test/backendContract.test.js`), proving that the seam is substitutable without
+requiring provider credentials. The Supabase adapter implements the same documented
+interface but is not exercised by that offline suite; AWS remains reserved.
 
 **Owner gating.** `src/backend/owner.js` defines a single owner account by email
 (`VITE_OWNER_EMAIL`). The owner keeps the curated `DEFAULT_ARTISTS`; every other
