@@ -46,6 +46,15 @@ The same guidance is built into the app under **⋯ → Help**:
 
 ---
 
+## Architecture and workflow maps
+
+- **[Technical architecture](ARCHITECTURE.md)** — runtime boundaries, routes, local-first
+  sync, image persistence, on-device AI, PWA delivery, and deliberate trade-offs.
+- **[Typical user workflows](USER-WORKFLOWS.md)** — visual maps from artist discovery
+  through briefs, concepts, contact planning, offline work, and recovery.
+
+---
+
 ## A typical planning journey
 
 The pieces are designed to feed each other:

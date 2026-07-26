@@ -54,9 +54,9 @@ npm run dev
 
 Three ideas carry the design:
 
-- **A vendor-SDK boundary.** The app never imports a vendor SDK. Everything leaving it passes through `src/backend/`, where one factory selects an adapter set from `VITE_BACKEND` (`local` | `supabase` | `aws`). Changing provider means writing one new adapter, not editing app code.
+- **A vendor-SDK boundary.** The app never imports a persistence vendor SDK. All auth, document and blob access passes through `src/backend/`, where one factory selects an adapter set from `VITE_BACKEND` (`local` | `supabase` | `aws`). Changing provider means writing one new adapter, not editing app code.
 - **Local-first sync.** `localStorage` and IndexedDB are the always-available cache; changes mirror to the backend and reconcile per record by last-write-wins on `updatedAt`. The UI never waits for a network.
-- **On-device AI.** CLIP embeddings for visual artist matching are computed in the browser, so reference images never leave the device.
+- **On-device visual matching.** CLIP embeddings are computed in the browser, so building artist and concept matches never uploads the saved reference library.
 
 ```mermaid
 flowchart LR
@@ -80,9 +80,14 @@ documents, the on-device taste model and the contract test that keeps it out of 
 bundle, screenshot intake as a trust boundary, the service-worker strategy — and the
 trade-offs taken deliberately, with the limits that are still open.
 
+🧭 **[docs/USER-WORKFLOWS.md](docs/USER-WORKFLOWS.md)** maps the typical journeys:
+discovering and ranking an artist, turning an idea into a brief, generating and refining
+concepts, planning contact and travel, and continuing safely through offline work or
+restore.
+
 ## Testing philosophy
 
-The project is built TDD-first: behaviour is specified in a failing test before implementation, and any change to seed data must keep the data-integrity tests green. The suite is 636 Vitest tests across 82 files (`src/test/`), covering pure data modules directly and hooks/components via Testing Library. These two numbers are themselves asserted by a contract test (`src/test/readmeClaims.test.js`), so they cannot quietly go stale. Non-bundled files that Vitest can't import — like the hand-rolled service worker — follow a pure-module + contract-test pattern: the logic lives in importable modules (`src/sw/precache.js`, `src/sw/swStrategy.js`) with unit tests, plus contract tests (`src/test/precache.test.js`, `src/test/swStrategy.test.js`) that read `public/sw.js` as text and assert its key invariants. The backend adapters share a contract test (`src/test/backendContract.test.js`) so every adapter honours the same seam, and the whole suite is pinned to the offline local backend so it runs without secrets or network — in CI too.
+The project is built TDD-first: behaviour is specified in a failing test before implementation, and any change to seed data must keep the data-integrity tests green. The suite is 638 Vitest tests across 82 files (`src/test/`), covering pure data modules directly and hooks/components via Testing Library. These two numbers are themselves asserted by a contract test (`src/test/readmeClaims.test.js`), so they cannot quietly go stale. Non-bundled files that Vitest can't import — like the hand-rolled service worker — follow a pure-module + contract-test pattern: the logic lives in importable modules (`src/sw/precache.js`, `src/sw/swStrategy.js`) with unit tests, plus contract tests (`src/test/precache.test.js`, `src/test/swStrategy.test.js`) that read `public/sw.js` as text and assert its key invariants. The backend adapters share a contract test (`src/test/backendContract.test.js`) so every adapter honours the same seam, and the whole suite is pinned to the offline local backend so it runs without secrets or network — in CI too.
 
 ## Useful Commands
 
@@ -116,7 +121,9 @@ Use **Manage → Export Backup** before clearing browser data, changing machines
 
 The app includes `public/manifest.json`, app icons in `public/icons/`, and a service worker at `public/sw.js` (with build-time asset precaching injected by `scripts/precachePlugin.js`).
 
-Static deployment has not been configured yet. Before hosting on S3 + CloudFront, make sure deep-link routing is handled, otherwise refreshing routes such as `/gallery` may return a static-host 404.
+GitHub Pages publishes the backend-free demo under `/sable/`; the base-aware router,
+assets, and service worker keep deep links and offline caching valid on that sub-path.
+A real accounts-and-sync deployment on S3 + CloudFront remains planned.
 
 ## Development Notes
 

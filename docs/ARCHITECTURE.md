@@ -10,7 +10,8 @@ Three ideas carry the design:
 
 - a **vendor-SDK boundary**, so the backend can be swapped without touching app code
 - **local-first sync**, so the UI never waits for a network
-- **on-device AI**, so reference images never leave the phone
+- **on-device visual matching**, so the saved artist library is not uploaded for
+  embedding
 
 The README has the short version. This document is the detailed one, including the
 trade-offs that were taken deliberately and the limits that are still open.
@@ -280,8 +281,10 @@ Documents stay small enough to sync cheaply; bytes move once.
 ## 4. On-device taste model
 
 Sable matches artists by visual similarity, not only tag overlap. CLIP embeddings are
-computed **in the browser** via `@huggingface/transformers`, so reference images never
-leave the device — the privacy-preserving choice, and the one with no inference bill.
+computed **in the browser** via `@huggingface/transformers`, so building matches never
+uploads the saved reference library — the privacy-preserving choice, and the one with
+no inference bill. This is distinct from screenshot intake (§5), where the user
+explicitly chooses one image to send to Gemini for analysis.
 
 ```mermaid
 flowchart TB

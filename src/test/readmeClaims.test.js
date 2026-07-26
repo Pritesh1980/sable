@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
+import process from 'node:process'
 
 // Contract test for the README's own factual claims — the same pattern used for
 // public/sw.js: read a file that can't be imported and assert its invariants.
@@ -12,6 +13,11 @@ import { join } from 'node:path'
 
 const ROOT = process.cwd()
 const README = readFileSync(join(ROOT, 'README.md'), 'utf8')
+const GUIDE = readFileSync(join(ROOT, 'docs/README.md'), 'utf8')
+const WORKFLOWS_PATH = join(ROOT, 'docs/USER-WORKFLOWS.md')
+const WORKFLOWS = existsSync(WORKFLOWS_PATH)
+  ? readFileSync(WORKFLOWS_PATH, 'utf8')
+  : ''
 
 // Mirrors vitest's default include: any *.test / *.spec module anywhere under src/.
 // Not all of them live in src/test — src/data/geminiImage.test.js sits beside its
@@ -71,5 +77,19 @@ describe('README claims stay true', () => {
   it('points at the detailed architecture doc, and it exists', () => {
     expect(README).toContain('docs/ARCHITECTURE.md')
     expect(existsSync(join(ROOT, 'docs/ARCHITECTURE.md'))).toBe(true)
+  })
+
+  it('links the user-workflow maps from both documentation entry points', () => {
+    expect(README).toContain('docs/USER-WORKFLOWS.md')
+    expect(GUIDE).toContain('USER-WORKFLOWS.md')
+    expect(existsSync(WORKFLOWS_PATH)).toBe(true)
+  })
+
+  it('keeps the five typical workflow maps discoverable', () => {
+    expect(WORKFLOWS).toContain('## 1. Discover an artist and decide where they belong')
+    expect(WORKFLOWS).toContain('## 2. Turn an idea into an artist-ready brief')
+    expect(WORKFLOWS).toContain('## 3. Generate and refine an AI concept')
+    expect(WORKFLOWS).toContain('## 4. Plan contact, travel, and appointments')
+    expect(WORKFLOWS).toContain('## 5. Work offline and recover safely')
   })
 })
