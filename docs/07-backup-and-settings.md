@@ -16,10 +16,10 @@ you export a full snapshot you control — and it's where your account and sign-
 ## Export a backup
 
 Tap **Export Backup**. A single JSON file downloads — named with the date, e.g.
-`tattoo-backup-2026-05-30.json`. It contains everything:
+`tattoo-backup-2026-05-30.json`. It contains the current document snapshot:
 
 - artists, their tags, status, studio, notes and ranks
-- your saved images (embedded in the file)
+- current image values; inline `data:` images are embedded
 - ideas, boards and AI concepts
 - any convention attendance you've recorded
 
@@ -33,12 +33,14 @@ your data into an account that doesn't have it yet.
 
 - **Before clearing your browser data** or its site storage.
 - **Before any big change** you might want to undo.
-- **For an offline or portable copy** — switching devices normally just needs sign-in (your
-  account syncs everything), but a backup is an export you hold yourself.
+- **For a portable document snapshot** — switching devices normally just needs sign-in
+  (your account syncs everything), but a backup is an export you hold yourself.
 - Periodically, just in case — it's one tap.
 
-> **Note:** because images are embedded, a backup with lots of uploaded photos can be a
-> large file. That's expected — it means nothing is left behind.
+> **Image limitation:** export does not fetch backend image blobs. Inline images already
+> held as `data:` values are embedded and can make the file large, but resolved or signed
+> backend URLs may expire. Use account sync to move backend images between devices; do
+> not rely on the JSON as a permanent standalone image archive.
 
 ---
 

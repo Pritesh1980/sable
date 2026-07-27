@@ -88,7 +88,7 @@ restore.
 
 ## Testing philosophy
 
-The project is built TDD-first: behaviour is specified in a failing test before implementation, and any change to seed data must keep the data-integrity tests green. The suite is 638 Vitest tests across 82 files (`src/test/`), covering pure data modules directly and hooks/components via Testing Library. These two numbers are themselves asserted by a contract test (`src/test/readmeClaims.test.js`), so they cannot quietly go stale. Non-bundled files that Vitest can't import — like the hand-rolled service worker — follow a pure-module + contract-test pattern: the logic lives in importable modules (`src/sw/precache.js`, `src/sw/swStrategy.js`) with unit tests, plus contract tests (`src/test/precache.test.js`, `src/test/swStrategy.test.js`) that read `public/sw.js` as text and assert its key invariants. The local adapter and an in-memory mock share a contract test (`src/test/backendContract.test.js`), proving the seam without provider credentials; the suite is pinned to the offline local backend so it runs without secrets or network — in CI too.
+The project is built TDD-first: behaviour is specified in a failing test before implementation, and any change to seed data must keep the data-integrity tests green. The suite is 638 Vitest tests across 82 files (`src/test/`), covering pure data modules directly and hooks/components via Testing Library. A contract test (`src/test/readmeClaims.test.js`) asserts the file count exactly and bounds the claimed test total against the statically visible case declarations, with headroom for generated `it.each` cases. Non-bundled files that Vitest can't import — like the hand-rolled service worker — follow a pure-module + contract-test pattern: the logic lives in importable modules (`src/sw/precache.js`, `src/sw/swStrategy.js`) with unit tests, plus contract tests (`src/test/precache.test.js`, `src/test/swStrategy.test.js`) that read `public/sw.js` as text and assert its key invariants. The local adapter and an in-memory mock share a contract test (`src/test/backendContract.test.js`), proving the seam without provider credentials; the suite is pinned to the offline local backend so it runs without secrets or network — in CI too.
 
 ## Useful Commands
 
@@ -116,7 +116,11 @@ Runtime edits are stored locally in the browser and mirrored to the selected bac
 - IndexedDB: artist image arrays and blob bytes
 - Device-local only (never synced): theme, font size, API keys
 
-Use **Manage → Export Backup** before clearing browser data, changing machines, or doing larger data edits. The backup includes artists, ideas, boards, concepts, notes, ranks, tags, convention overrides, and saved image data.
+Use **Manage → Export Backup** before clearing browser data or doing larger data edits.
+The JSON includes artists, ideas, boards, concepts, notes, ranks, tags, convention
+overrides, and current image values. Inline `data:` images are embedded, but backend
+image blobs are not fetched into the file; use account sync to move those between
+devices.
 
 ## PWA Notes
 

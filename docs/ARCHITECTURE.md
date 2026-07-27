@@ -23,8 +23,8 @@ trade-offs that were taken deliberately and the limits that are still open.
 Sable's main runtime is the browser: React, the offline cache, image processing, and
 the Taste Engine all execute on the device. Static assets arrive from GitHub Pages.
 Persistent account data crosses the backend adapter boundary, while explicitly
-requested generation or screenshot analysis calls the selected AI provider directly
-with a key supplied by the user.
+requested generation, screenshot analysis, or artist discovery calls the selected AI
+provider directly with a key supplied by the user.
 
 ```mermaid
 flowchart LR
@@ -44,7 +44,7 @@ flowchart LR
   SEAM --> LOCAL["Local adapter<br/>default and demo"]
   SEAM -. "optional selected adapter" .-> SUPA["Supabase"]
   SEAM -. "reserved, not implemented" .-> AWS["AWS"]
-  PWA -. "user-initiated generation<br/>or screenshot analysis" .-> AI["OpenAI or Gemini APIs"]
+  PWA -. "user-initiated generation, discovery,<br/>or screenshot analysis" .-> AI["OpenAI or Gemini APIs"]
   PERSON --> PWA
 ```
 
@@ -351,8 +351,8 @@ and asserts its invariants still hold.
 flowchart TB
   REQ(["fetch"]) --> Q1{"navigation or document?"}
   Q1 -- yes --> NF["network-first<br/>a deploy is never masked"]
-  Q1 -- no --> Q2{"same-origin hashed asset?"}
-  Q2 -- yes --> CF["cache-first<br/>name changes with contents"]
+  Q1 -- no --> Q2{"same-origin GET<br/>or Google Font?"}
+  Q2 -- yes --> CF["cache-first<br/>with background refresh"]
   Q2 -- no --> PASS["pass through"]
   NF --> OK([response])
   CF --> OK
@@ -360,10 +360,13 @@ flowchart TB
 ```
 
 The routing rule is deliberately asymmetric. Navigations are network-first, so a
-deploy is never masked by a cached HTML document; hashed static assets are
-cache-first, because their names change when their contents do. A bumped cache name
-purges old entries on activate, and the page reloads once when a new worker takes
-control.
+deploy is never masked by a cached HTML document. Every same-origin non-document GET,
+plus Google Fonts, is currently cache-first with a background refresh; cross-origin
+requests other than those fonts bypass the worker. The intended same-origin traffic is
+static assets, but the predicate is broader than `/assets/`: any future same-origin API
+or private-image route must add an explicit bypass or tighten the predicate before it
+ships. A bumped cache name purges old entries on activate, and the page reloads once
+when a new worker takes control.
 
 The build is **base-aware**: the router `basename`, the worker, and the precache
 manifest all derive their base path from `VITE_BASE`, so the same code serves from a

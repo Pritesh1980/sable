@@ -132,7 +132,7 @@ group and order ideas without owning them, so deleting a board leaves its ideas 
 ## 3. Generate and refine an AI concept
 
 Concept generation has two equally supported routes: direct paid API generation with a
-device-local key, or a copy-and-paste round trip through an external AI tool.
+key stored on the device, or a copy-and-paste round trip through an external AI tool.
 
 ```mermaid
 flowchart TB
@@ -172,9 +172,13 @@ flowchart TB
   REFINE -. "another direction" .-> COMPOSE
 ```
 
-The direct provider keys and composer draft remain on the device. Visual artist matching
-also runs on-device; only an explicitly requested generation or screenshot-analysis call
-goes to an external AI provider.
+Provider keys and the composer draft are stored only on the device, although a direct
+request necessarily supplies its key to the selected provider. Visual artist matching
+runs on-device. Generation, screenshot analysis, and **Ask Gemini** / suggestion
+**Refresh** are the provider-bound paths; discovery sends aggregate style-tag counts, up
+to eight saved style descriptors, and an exclusion list of known or dismissed handles,
+but no saved images. The discovery and image-generation clients currently put the Gemini
+key in the provider request URL; screenshot analysis sends it in a request header.
 
 Relief export creates a printable heightmap-style STL. It is an optional downstream use
 of an image result, not a new concept type.
@@ -238,9 +242,9 @@ flowchart TB
   SYNC["Background sync confirms<br/>documents and image blobs"]
   DIRTY["Keep durable pending state<br/>continue working offline"]
   RETURN{"What happens next?"}
-  RETRY["Reconnect or reopen Sable<br/>reconcile and retry"]
+  RETRY["After reconnect, reopen Sable<br/>or make another edit to retry"]
   DEVICE["Sign in on another device<br/>pull account data and image refs"]
-  BACKUP["Settings → Export Backup<br/>download JSON with embedded images"]
+  BACKUP["Settings → Export Backup<br/>download a JSON document snapshot"]
   LOSS{"Need to recover or replace data?"}
   IMPORT["Settings → Import Backup"]
   REPLACE["Choose backup file<br/>current collections are replaced"]
@@ -249,7 +253,7 @@ flowchart TB
   EDIT --> LOCAL --> ONLINE
   ONLINE -- yes --> SYNC --> RETURN
   ONLINE -- no --> DIRTY --> RETURN
-  RETURN -- "network returns" --> RETRY --> SYNC
+  RETURN -- "later reopen or edit" --> RETRY --> SYNC
   RETURN -- "move devices normally" --> DEVICE --> SYNC
   RETURN -- "create restore point" --> BACKUP --> LOSS
   LOSS -- yes --> IMPORT --> REPLACE --> RESTORED
@@ -259,3 +263,13 @@ flowchart TB
 API keys, theme, font size, and the derived Taste Engine index are device-local and are
 not restored by account sync. The index can be rebuilt from images; provider keys must
 be entered separately on each device.
+
+There is no `online` event listener today: connectivity returning by itself does not
+start a retry. Reopening Sable runs reconciliation, while another edit schedules a new
+flush.
+
+Backup export serialises the values currently in memory. Inline `data:` images remain
+embedded, but backend-resolved or signed image URLs are not fetched and materialised
+into the JSON; those URLs may expire. Treat export as a document restore point, not a
+guaranteed standalone archive of every image byte. Account sync remains the normal path
+for moving backend image blobs between devices.
