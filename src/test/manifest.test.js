@@ -20,4 +20,19 @@ describe('PWA manifest', () => {
       expect(icon.purpose).toContain('maskable')
     }
   })
+
+  // public/ is copied verbatim by Vite — unlike index.html, nothing rewrites
+  // `base` into it. Root-absolute paths therefore resolve against the domain
+  // root and 404 on a sub-path deploy (GitHub Pages serves under /sable/).
+  // Relative URLs resolve against the manifest's own location, so the same
+  // file works at both '/' and '/sable/'.
+  it('uses relative URLs so a sub-path deploy resolves them', () => {
+    const manifest = JSON.parse(readFileSync(join(root, 'public/manifest.json'), 'utf8'))
+
+    for (const icon of manifest.icons) {
+      expect(icon.src.startsWith('/'), `${icon.src} must not be root-absolute`).toBe(false)
+    }
+    expect(manifest.start_url.startsWith('/'), 'start_url must not be root-absolute').toBe(false)
+    expect(manifest.scope.startsWith('/'), 'scope must not be root-absolute').toBe(false)
+  })
 })
