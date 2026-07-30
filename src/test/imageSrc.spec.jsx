@@ -19,6 +19,19 @@ describe('imageSrc', () => {
     expect(imageSrc(null)).toBe('')
     expect(imageSrc({ key: 'k1' })).toBe('')
   })
+
+  // Seed data is base-relative so no build-time base is frozen into synced
+  // records; the base is applied on the way to the <img>.
+  it('applies the deploy base to static paths', () => {
+    expect(imageSrc('images/artists/zoia.ink/1.jpg', '/sable/'))
+      .toBe('/sable/images/artists/zoia.ink/1.jpg')
+    expect(imageSrc('/images/artists/zoia.ink/1.jpg', '/sable/'))
+      .toBe('/sable/images/artists/zoia.ink/1.jpg')
+  })
+
+  it('never rebases blob refs from uploaded images', () => {
+    expect(imageSrc({ url: 'blob:abc' }, '/sable/')).toBe('blob:abc')
+  })
 })
 
 describe('buildWallItems image normalisation', () => {

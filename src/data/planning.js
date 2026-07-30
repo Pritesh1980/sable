@@ -1,4 +1,5 @@
 import { getCachedBlobUrl } from './blobUrls'
+import { resolveAssetPath } from './assetPath'
 
 export const ARTIST_STATUSES = [
   { value: 'researching', label: 'Researching', tone: 'text-cream-muted' },
@@ -15,10 +16,13 @@ export function normalizeArtistStatus(status) {
   return ARTIST_STATUSES.some((s) => s.value === status) ? status : DEFAULT_ARTIST_STATUS
 }
 
-export function getImageUrl(image) {
-  if (typeof image === 'string') return image
-  if (image?.url) return image.url
-  if (image?.key) return getCachedBlobUrl(image.key)
+// Blob-backed refs resolve to a blob:/https: URL and pass through untouched;
+// static paths are stored base-relative and get the deploy base applied here
+// (see src/data/assetPath.js for why the base is never stored).
+export function getImageUrl(image, base) {
+  if (typeof image === 'string') return resolveAssetPath(image, base)
+  if (image?.url) return resolveAssetPath(image.url, base)
+  if (image?.key) return resolveAssetPath(getCachedBlobUrl(image.key), base)
   return ''
 }
 

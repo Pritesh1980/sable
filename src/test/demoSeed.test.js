@@ -56,11 +56,14 @@ describe('DEMO_ARTISTS data integrity', () => {
     }
   })
 
-  it('references committed demo images that exist on disk', () => {
+  // Base-relative, with no leading slash: seedDemoData writes these straight
+  // into localStorage, so a baked-in base would outlive the build that made
+  // it. resolveAssetPath applies the base at display time instead.
+  it('references committed demo images that exist on disk, base-relative', () => {
     for (const a of DEMO_ARTISTS) {
       expect(a.images.length).toBeGreaterThan(0)
       for (const img of a.images) {
-        expect(img).toMatch(/^\/images\/demo\//)
+        expect(img).toMatch(/^images\/demo\//)
         expect(existsSync(join(process.cwd(), 'public', img))).toBe(true)
       }
     }

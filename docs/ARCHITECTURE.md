@@ -370,7 +370,21 @@ when a new worker takes control.
 
 The build is **base-aware**: the router `basename`, the worker, and the precache
 manifest all derive their base path from `VITE_BASE`, so the same code serves from a
-domain root or a project sub-path (the demo runs under `/sable/`).
+domain root or a project sub-path (the demo runs under `/sable/`). The PWA manifest
+gets there differently — `public/` is copied verbatim, so nothing rewrites `base` into
+it and its URLs are relative (`./icons/…`), resolved by the browser against the
+manifest's own location.
+
+Image paths are the one place where the base must *not* be applied early. They are
+persisted and synced — `canonicalizeImages` writes static paths verbatim into
+localStorage, IndexedDB and the remote store — so a build-time base written into a
+record outlives the build that made it, and a later move to a different base would
+strand every stored path on every device. Seed data is therefore base-relative
+(`images/artists/…`), and `resolveAssetPath` (`src/data/assetPath.js`) applies the base
+at display time, inside the two accessors everything renders through: `imageSrc`
+(artists) and `getImageUrl` (ideas/concepts). It passes protocol URLs (`blob:`,
+`data:`, `http(s):`) through untouched and rebases legacy root-absolute or
+already-based paths, so stored records heal on read rather than needing a migration.
 
 ### Build and delivery pipeline
 

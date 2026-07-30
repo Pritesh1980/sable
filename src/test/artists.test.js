@@ -7,6 +7,15 @@ describe('DEFAULT_ARTISTS data integrity', () => {
     expect(withTier).toHaveLength(0)
   })
 
+  // Seed image paths are persisted and synced verbatim, so they must carry no
+  // deploy base — not '/' and not '/sable/'. The base is applied at display
+  // time by resolveAssetPath; a based path stored in a record would break the
+  // moment the app moves to a different base.
+  it('stores image paths base-relative, with no leading slash', () => {
+    const based = DEFAULT_ARTISTS.flatMap((a) => a.images || []).filter((p) => p.startsWith('/'))
+    expect(based).toEqual([])
+  })
+
   it('has unique IDs', () => {
     const ids = DEFAULT_ARTISTS.map((a) => a.id)
     expect(new Set(ids).size).toBe(ids.length)
