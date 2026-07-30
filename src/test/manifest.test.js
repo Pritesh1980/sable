@@ -35,4 +35,15 @@ describe('PWA manifest', () => {
     expect(manifest.start_url.startsWith('/'), 'start_url must not be root-absolute').toBe(false)
     expect(manifest.scope.startsWith('/'), 'scope must not be root-absolute').toBe(false)
   })
+
+  // Without an explicit `id`, a PWA's identity is derived from start_url — so
+  // changing start_url re-keys the app and installed tiles stop updating
+  // (they appear as a second, separate install). Pinning `id` decouples the
+  // two, leaving start_url free to change.
+  it('pins an explicit id so identity survives a start_url change', () => {
+    const manifest = JSON.parse(readFileSync(join(root, 'public/manifest.json'), 'utf8'))
+
+    expect(manifest.id).toBeTruthy()
+    expect(manifest.id.startsWith('/'), 'id must not be root-absolute').toBe(false)
+  })
 })

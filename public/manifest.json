@@ -2,6 +2,7 @@
   "name": "Sable",
   "short_name": "Sable",
   "description": "Artist discovery and tattoo planning",
+  "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

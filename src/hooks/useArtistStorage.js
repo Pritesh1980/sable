@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { DEFAULT_ARTISTS } from '../data/artists'
 import { backend } from '../backend'
 import { useAuth } from '../context/useAuth'
-import { isOwner } from '../backend/owner'
+import { seedsOwnerData } from '../backend/owner'
 import { reconcileRecords, nowStamp } from '../backend/sync'
 import {
   stampChangedRows,
@@ -225,7 +225,7 @@ export function useArtistStorage() {
   // re-runs this. A direct A→B session swap with no committed null in between
   // would keep A's decision until the effect re-runs — tracked in #28.
   const [artists, setArtistsRaw] = useState(() => {
-    const owner = isOwner(user)
+    const owner = seedsOwnerData(user)
     const meta = initialRawCache
       ? (owner ? applyDefaults(initialRawCache) : initialRawCache)
       : (owner ? DEFAULT_ARTISTS : [])
@@ -306,7 +306,7 @@ export function useArtistStorage() {
         const remote = pendingDeletes.length
           ? remoteAll.filter((r) => !pendingDeletes.includes(r.id))
           : remoteAll
-        const owner = isOwner(user)
+        const owner = seedsOwnerData(user)
         // Baseline = the user's own raw cache (never the default seed). The owner
         // additionally gets DEFAULT_ARTISTS folded in; non-owners never do.
         const localMeta = initialRawCache || []

@@ -422,6 +422,13 @@ Two problems make this more than a fixture:
 - **Spoofing.** A real account must never be overwritten, so ownership is proved by a
   `demo: true` marker that only the seeder writes. `localAuth.signIn` writes only
   `{ user }`, so no sign-in — even with the demo's own email — can forge it.
+- **The other seed.** `DEFAULT_ARTISTS` is the owner's curated list, and its images are
+  gitignored third-party work that the public build does not ship. Seeding it there
+  showed anyone signing in as the owner a wall of monograms and hundreds of 404s, and
+  `OWNER_EMAIL`'s fallback is guessable. The deploy therefore builds with
+  `VITE_OWNER_SEED=0` (`src/backend/owner.js`), which is the one behavioural difference
+  between the demo build and a real one: identity (`isOwner`) is unchanged, only
+  whether a session receives the curated seed (`seedsOwnerData`).
 
 ---
 
