@@ -165,7 +165,8 @@ do not own state or UI.
 
 Local-first means the UI never waits for a server. The edit lands in memory and on
 the device immediately; reconciliation is a background concern. The engineering is in
-what happens when the network is absent, and then returns.
+what happens when the network is absent, then the app mounts or the user edits after
+connectivity returns.
 
 1. **The edit applies locally first.** State updates, metadata cache is written. No
    spinner, no network in the path.
@@ -181,8 +182,9 @@ what happens when the network is absent, and then returns.
 5. **Flushes are chained, never concurrent.** Two in-flight pushes could complete out
    of order and regress the synced baseline, so each waits for the previous one.
    Ordering is a correctness property here, not a nicety.
-6. **Reconcile by last-write-wins.** On reconnect, local and remote merge per record
-   on `updatedAt` (`reconcileRecords`, `src/backend/sync.js`).
+6. **Reconcile by last-write-wins.** On a later mount or edit after reconnect, local
+   and remote merge per record on `updatedAt` (`reconcileRecords`,
+   `src/backend/sync.js`).
 
 ```mermaid
 sequenceDiagram
@@ -215,7 +217,7 @@ sequenceDiagram
     Queue-->>Sidecar: Leave durable sidecars in place
   end
 
-  Note over Hook,Remote: Later mount or reconnect
+  Note over Hook,Remote: Later mount or edit after reconnect
   Hook->>Sidecar: Read dirty state and pending deletes
   Hook->>Remote: List remote collection
   Remote-->>Hook: Return persisted rows
