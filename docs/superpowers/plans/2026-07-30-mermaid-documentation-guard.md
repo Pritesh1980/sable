@@ -27,7 +27,7 @@
 
 **Files:**
 - Create: `scripts/checkMermaidDocs.js`
-- Create: `scripts/checkMermaidDocs.test.js`
+- Create: `scripts/checkMermaidDocsTest.js`
 - Modify: `package.json:6-13`
 - Modify: `package.json:25-44`
 - Modify: `package-lock.json`
@@ -41,7 +41,7 @@
 
 - [ ] **Step 1: Write the failing checker tests**
 
-Create `scripts/checkMermaidDocs.test.js`:
+Create `scripts/checkMermaidDocsTest.js`:
 
 ```js
 import test from 'node:test'
@@ -120,7 +120,7 @@ test('fails when tracked Markdown contains no Mermaid diagrams', async () => {
 Run:
 
 ```bash
-node --test scripts/checkMermaidDocs.test.js
+node --test scripts/checkMermaidDocsTest.js
 ```
 
 Expected: FAIL with `ERR_MODULE_NOT_FOUND` for `scripts/checkMermaidDocs.js`.
@@ -140,7 +140,7 @@ Expected: `package.json` contains `"mermaid": "11.16.0"` and `package-lock.json`
 Add this script after `build` in `package.json`:
 
 ```json
-"docs:check": "node --test scripts/checkMermaidDocs.test.js && node scripts/checkMermaidDocs.js",
+"docs:check": "node --test scripts/checkMermaidDocsTest.js && node scripts/checkMermaidDocs.js",
 ```
 
 - [ ] **Step 5: Implement the minimal checker**
@@ -241,7 +241,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 Run:
 
 ```bash
-node --test scripts/checkMermaidDocs.test.js
+node --test scripts/checkMermaidDocsTest.js
 ```
 
 Expected: 3 tests pass.
@@ -261,7 +261,7 @@ Expected: the Node tests pass, then the command reports 15 parsed diagrams acros
 Run:
 
 ```bash
-npx eslint scripts/checkMermaidDocs.js scripts/checkMermaidDocs.test.js
+npx eslint scripts/checkMermaidDocs.js scripts/checkMermaidDocsTest.js
 ```
 
 Expected: exit 0.
@@ -269,7 +269,7 @@ Expected: exit 0.
 - [ ] **Step 9: Commit the checker**
 
 ```bash
-git add package.json package-lock.json scripts/checkMermaidDocs.js scripts/checkMermaidDocs.test.js
+git add package.json package-lock.json scripts/checkMermaidDocs.js scripts/checkMermaidDocsTest.js
 git commit -m "test(docs): validate Mermaid syntax"
 ```
 
@@ -461,7 +461,7 @@ Expected: exit 0; the existing chunk-size advisory may remain.
 - [ ] **Step 4: Lint every changed JavaScript file**
 
 ```bash
-npx eslint scripts/checkMermaidDocs.js scripts/checkMermaidDocs.test.js
+npx eslint scripts/checkMermaidDocs.js scripts/checkMermaidDocsTest.js
 ```
 
 Expected: exit 0.

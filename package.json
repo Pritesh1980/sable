@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "docs:check": "node --test scripts/checkMermaidDocs.test.js && node scripts/checkMermaidDocs.js",
+    "docs:check": "node --test scripts/checkMermaidDocsTest.js && node scripts/checkMermaidDocs.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",

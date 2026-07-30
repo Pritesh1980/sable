@@ -61,7 +61,8 @@ not a replacement table of contents.
 ### Files
 
 - `scripts/checkMermaidDocs.js` — extraction, tracked-file discovery, parsing, CLI.
-- `scripts/checkMermaidDocs.test.js` — separate Node test coverage for the checker.
+- `scripts/checkMermaidDocsTest.js` — separate Node test coverage for the checker,
+  deliberately outside Vitest's `*.test.js` discovery pattern.
 - `package.json` / `package-lock.json` — pinned Mermaid dependency and `docs:check`.
 - `.github/workflows/ci.yml` — run `npm run docs:check` after `npm ci`.
 
@@ -105,7 +106,7 @@ underlying path or command error.
 
 ## Test strategy
 
-`scripts/checkMermaidDocs.test.js` uses Node's built-in test runner and temporary
+`scripts/checkMermaidDocsTest.js` uses Node's built-in test runner and temporary
 fixtures. It verifies:
 
 1. Mermaid fences are extracted in order while other code fences are ignored.
