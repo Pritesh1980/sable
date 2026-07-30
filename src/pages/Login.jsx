@@ -90,7 +90,7 @@ export default function Login() {
           <p className="mt-8 text-center animate-slide-up">
             <a
               href={`${import.meta.env.BASE_URL}?demo=1`}
-              className="font-mono text-cream-muted/50 hover:text-cream-muted text-[0.625rem] tracking-widest uppercase transition-colors border-b border-ink-border hover:border-cream-muted/40 pb-0.5"
+              className="font-mono text-cream-muted hover:text-accent text-[0.6875rem] tracking-widest uppercase transition-colors border-b border-cream-muted/30 hover:border-accent pb-0.5"
             >
               No account? View the demo →
             </a>

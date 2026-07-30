@@ -39,6 +39,28 @@ describe('resolveAssetPath', () => {
     }
   })
 
+  // Review finding (codex): '//host/path' has no protocol but is not ours to
+  // rebase — prefixing it produces '/sable//host/path' and loses the host.
+  it('passes protocol-relative URLs through', () => {
+    expect(resolveAssetPath('//cdn.example.com/a.jpg', '/sable/'))
+      .toBe('//cdn.example.com/a.jpg')
+    expect(resolveAssetPath('//cdn.example.com/a.jpg', '/')).toBe('//cdn.example.com/a.jpg')
+  })
+
+  // Review finding (codex): a record carrying a *different* deploy's base —
+  // e.g. a backup exported from /sable/ and imported after a move — must not
+  // stack bases. App assets always live under '<base>images/', so anything
+  // before 'images/' is a stale base and is dropped.
+  it('strips a stale base rather than stacking a new one on top', () => {
+    expect(resolveAssetPath('/sable/images/demo/a.svg', '/new/'))
+      .toBe('/new/images/demo/a.svg')
+    expect(resolveAssetPath('/sable/images/demo/a.svg', '/'))
+      .toBe('/images/demo/a.svg')
+    // …while a genuine root-level asset path is untouched.
+    expect(resolveAssetPath('/images/demo/a.svg', '/new/'))
+      .toBe('/new/images/demo/a.svg')
+  })
+
   it('returns empty string for missing or non-string input', () => {
     expect(resolveAssetPath('', '/sable/')).toBe('')
     expect(resolveAssetPath(null, '/sable/')).toBe('')

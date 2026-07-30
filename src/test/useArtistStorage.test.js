@@ -1,12 +1,42 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { createElement } from 'react'
-import { applyDefaults, stripImages, useArtistStorage } from '../hooks/useArtistStorage'
+import { applyDefaults, mergeStaticImages, stripImages, useArtistStorage } from '../hooks/useArtistStorage'
 import { AuthProvider } from '../context/AuthContext'
 import { useAuth } from '../context/useAuth'
 import { DEFAULT_ARTISTS } from '../data/artists'
 
 // ── Pure function tests ───────────────────────────────────────────────────────
+
+// Review finding (codex): seed paths went base-relative while legacy IndexedDB
+// caches still hold the root-absolute form. Comparing the raw strings treats
+// them as different images, so every curated image appears twice — and the
+// duplicate is then persisted.
+describe('mergeStaticImages', () => {
+  it('treats a legacy root-absolute path and its base-relative twin as one image', () => {
+    const merged = mergeStaticImages(
+      ['/images/artists/zoia.ink/1.jpg'],
+      ['images/artists/zoia.ink/1.jpg']
+    )
+    expect(merged).toEqual(['/images/artists/zoia.ink/1.jpg'])
+  })
+
+  it('still appends static images the cache does not have', () => {
+    const merged = mergeStaticImages(
+      ['/images/artists/zoia.ink/1.jpg'],
+      ['images/artists/zoia.ink/1.jpg', 'images/artists/zoia.ink/2.jpg']
+    )
+    expect(merged).toEqual([
+      '/images/artists/zoia.ink/1.jpg',
+      'images/artists/zoia.ink/2.jpg',
+    ])
+  })
+
+  it('leaves uploaded data-URLs in place', () => {
+    const merged = mergeStaticImages(['data:image/png;base64,AAA'], ['images/artists/a/1.jpg'])
+    expect(merged).toEqual(['data:image/png;base64,AAA', 'images/artists/a/1.jpg'])
+  })
+})
 
 describe('stripImages', () => {
   it('removes images from every artist', () => {

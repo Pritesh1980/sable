@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { DEFAULT_ARTISTS } from '../data/artists'
+import { resolveAssetPath } from '../data/assetPath'
 import { backend } from '../backend'
 import { useAuth } from '../context/useAuth'
 import { seedsOwnerData } from '../backend/owner'
@@ -146,21 +147,33 @@ export async function displayFromCanonical(refs = []) {
   return items.filter(Boolean)
 }
 
+// Merge curated static paths into the IndexedDB display cache without
+// duplicating. Comparison is on the *resolved* path: seed data is stored
+// base-relative ("images/…") while legacy caches hold the root-absolute form
+// ("/images/…"), and those are the same image.
+export function mergeStaticImages(idbImages = [], staticImages = []) {
+  const cached = new Set(
+    idbImages
+      .filter((s) => typeof s === 'string' && !s.startsWith('data:'))
+      .map((s) => resolveAssetPath(s))
+  )
+  return [...idbImages, ...staticImages.filter((s) => !cached.has(resolveAssetPath(s)))]
+}
+
 // Build display-ready artists from metadata + the IndexedDB image map. Prefer the
 // local IndexedDB cache (instant, offline); otherwise resolve canonical refs from
-// the record (cross-device). DEFAULT_ARTISTS static paths are merged in.
-async function buildArtists(metaList, imageMap) {
+// the record (cross-device). DEFAULT_ARTISTS static paths are merged in — but
+// only on a build that ships them: with seeding off (the public demo) the
+// curated images are absent, and falling back to them would produce exactly the
+// broken requests the gate exists to prevent.
+async function buildArtists(metaList, imageMap, withDefaults = true) {
   return Promise.all(
     metaList.map(async (a) => {
-      const def = DEFAULT_ARTISTS.find((d) => d.id === a.id)
+      const def = withDefaults ? DEFAULT_ARTISTS.find((d) => d.id === a.id) : undefined
       const idbImages = imageMap[a.id]
       let display
       if (Array.isArray(idbImages) && idbImages.length) {
-        const staticImages = def?.images || []
-        const idbStatic = new Set(
-          idbImages.filter((s) => typeof s === 'string' && !s.startsWith('data:'))
-        )
-        display = [...idbImages, ...staticImages.filter((s) => !idbStatic.has(s))]
+        display = mergeStaticImages(idbImages, def?.images || [])
       } else {
         const canonical = Array.isArray(a.images) && a.images.length ? a.images : (def?.images || [])
         display = await displayFromCanonical(canonical)
@@ -264,7 +277,7 @@ export function useArtistStorage() {
 
         const imageMap = await dbGetAll()
         imageMapRef.current = imageMap
-        const built = await buildArtists(artistsRef.current, imageMap)
+        const built = await buildArtists(artistsRef.current, imageMap, seedsOwnerData(user))
         if (!cancelled) setArtistsRaw(built)
       } catch (e) {
         console.error('[tattoo] Failed to load images:', e)
@@ -339,7 +352,7 @@ export function useArtistStorage() {
 
         if (cancelled) return
         syncedRef.current = nextMeta
-        const built = await buildArtists(nextMeta, imageMapRef.current)
+        const built = await buildArtists(nextMeta, imageMapRef.current, seedsOwnerData(user))
         if (cancelled) return
         setArtistsRaw(built)
 
