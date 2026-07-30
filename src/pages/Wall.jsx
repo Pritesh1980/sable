@@ -13,6 +13,9 @@ import { discoverArtistsWithGemini } from '../data/discovery'
 import { uploadImages } from '../hooks/useImageUpload'
 import { useAuth } from '../context/useAuth'
 import { useStorage } from '../hooks/useStorage'
+import { backend } from '../backend'
+import { OWNER_SEED_ENABLED } from '../backend/owner'
+import { isDemoSession, canOfferDemo } from '../data/demoSeed'
 
 // The Wall — image-first home surface. Full-bleed masonry of every artist
 // reference image; the hairline bar above it is the only chrome. Routing is
@@ -101,7 +104,7 @@ export default function Wall({ artists = [], ideas = [], setArtists = () => {}, 
   }
 
   const navigate = useNavigate()
-  const { user } = useAuth() || {}
+  const { user, signOut } = useAuth() || {}
 
   const viewerOpen = viewerIndex !== null
 
@@ -201,6 +204,27 @@ export default function Wall({ artists = [], ideas = [], setArtists = () => {}, 
           >
             + Add artist
           </button>
+          {/* On the public demo build a sign-in lands here with nothing to look
+              at, and the demo is what that deploy exists to show. Signing out
+              first is required, not cosmetic: maybeSeedDemo refuses to write
+              over an existing session, so `?demo=1` alone would silently do
+              nothing. The full page load is also required — seeding runs at
+              boot in main.jsx, before render. */}
+          {canOfferDemo({
+            backendKind: backend.kind,
+            ownerSeedEnabled: OWNER_SEED_ENABLED,
+            demoActive: isDemoSession(),
+          }) && (
+            <button
+              onClick={async () => {
+                await signOut()
+                window.location.href = `${import.meta.env.BASE_URL}?demo=1`
+              }}
+              className="font-v2-ui text-v2-cream-muted hover:text-v2-accent text-[0.6875rem] tracking-widest uppercase transition-colors border-b border-v2-hairline hover:border-v2-accent pb-0.5 mt-2"
+            >
+              Or view the demo →
+            </button>
+          )}
         </div>
       ) : (
         <main className="columns-[300px] gap-[6px] p-[6px]">

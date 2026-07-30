@@ -8,6 +8,8 @@ import {
   DEMO_SEED_VERSION,
   seedDemoData,
   maybeSeedDemo,
+  isDemoSession,
+  canOfferDemo,
 } from '../data/demoSeed'
 import { DEFAULT_ARTISTS, STYLE_TAGS } from '../data/artists'
 
@@ -67,6 +69,54 @@ describe('DEMO_ARTISTS data integrity', () => {
         expect(existsSync(join(process.cwd(), 'public', img))).toBe(true)
       }
     }
+  })
+})
+
+// Used to decide whether to offer the demo from an empty wall: someone already
+// inside the demo should not be invited into it again.
+describe('isDemoSession', () => {
+  beforeEach(() => localStorage.clear())
+
+  it('is true only for a session the seeder marked', () => {
+    localStorage.setItem('tattoo_local_session', JSON.stringify(DEMO_SESSION))
+    expect(isDemoSession()).toBe(true)
+  })
+
+  it('is false for a real sign-in, even with the demo email', () => {
+    localStorage.setItem(
+      'tattoo_local_session',
+      JSON.stringify({ user: { id: 'local-demo@example.com', email: 'demo@example.com' } })
+    )
+    expect(isDemoSession()).toBe(false)
+  })
+
+  it('is false with no session, or unparseable storage', () => {
+    expect(isDemoSession()).toBe(false)
+    localStorage.setItem('tattoo_local_session', 'not json{')
+    expect(isDemoSession()).toBe(false)
+  })
+})
+
+// Entering the demo from a signed-in session requires signing out, after which
+// seeding overwrites the tattoo_* keys — so this is deliberately limited to the
+// public demo build, the only place with nothing to lose.
+describe('canOfferDemo', () => {
+  const demoBuild = { backendKind: 'local', ownerSeedEnabled: false, demoActive: false }
+
+  it('offers it on the public demo build to a non-demo session', () => {
+    expect(canOfferDemo(demoBuild)).toBe(true)
+  })
+
+  it('never offers it where the curated seed ships — a dev machine with real data', () => {
+    expect(canOfferDemo({ ...demoBuild, ownerSeedEnabled: true })).toBe(false)
+  })
+
+  it('never offers it to someone already in the demo', () => {
+    expect(canOfferDemo({ ...demoBuild, demoActive: true })).toBe(false)
+  })
+
+  it('never offers it on a real backend, where ?demo=1 does nothing', () => {
+    expect(canOfferDemo({ ...demoBuild, backendKind: 'supabase' })).toBe(false)
   })
 })
 

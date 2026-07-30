@@ -103,6 +103,30 @@ export function seedDemoData(storage = localStorage) {
   storage.setItem('tattoo_demo_seed_version', String(DEMO_SEED_VERSION))
 }
 
+// Is the current session one the seeder created? Same `demo: true` proof the
+// re-seed logic uses — localAuth.signIn writes only { user }, so a real
+// sign-in can never look like one. Used to decide whether offering the demo
+// makes sense; never to grant anything.
+export function isDemoSession() {
+  try {
+    return JSON.parse(localStorage.getItem('tattoo_local_session'))?.demo === true
+  } catch {
+    return false
+  }
+}
+
+// Whether to offer the demo from an empty signed-in wall.
+//
+// Narrow on purpose. Reaching the demo from inside a session means signing out
+// first (maybeSeedDemo refuses to write over an existing session), and seeding
+// then overwrites the `tattoo_*` keys — which on a local dev machine could be
+// real ideas or boards belonging to a wall that merely has no artists yet.
+// `ownerSeedEnabled === false` is set by one thing only, the public demo
+// deploy, where accounts are throwaway and there is nothing to lose.
+export function canOfferDemo({ backendKind, ownerSeedEnabled, demoActive }) {
+  return backendKind === 'local' && ownerSeedEnabled === false && !demoActive
+}
+
 // Two decisions, kept separate: first prove the session is the demo's own,
 // then compare dataset versions. The version key is global and mutable, so it
 // never participates in the ownership proof.
