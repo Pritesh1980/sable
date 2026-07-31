@@ -11,6 +11,26 @@ offline.
 
 ---
 
+## Start here
+
+```mermaid
+flowchart LR
+  NEED{"What do you need?"}
+  GUIDE["Learn the app<br/>numbered user guide"]
+  JOURNEY["Follow a planning journey<br/>typical user workflows"]
+  ENGINEERING["Build or debug Sable<br/>technical architecture"]
+
+  NEED -- "use a feature" --> GUIDE
+  NEED -- "connect the steps" --> JOURNEY
+  NEED -- "understand the system" --> ENGINEERING
+```
+
+Use the numbered sections below to learn individual features, the
+[typical user workflows](USER-WORKFLOWS.md) to follow end-to-end journeys, or the
+[technical architecture](ARCHITECTURE.md) to build and debug the system.
+
+---
+
 ## How the app is organised
 
 Sable opens on **the Wall** — every photo from every artist you follow, edge to edge.

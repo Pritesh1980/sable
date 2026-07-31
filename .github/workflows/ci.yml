@@ -27,6 +27,9 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      # Parse every Mermaid block in tracked Markdown before application checks.
+      - name: Validate Mermaid documentation
+        run: npm run docs:check
       # Suite is pinned to the offline local backend via vite.config.js test.env,
       # so no secrets or external services are needed here.
       - name: Run tests
