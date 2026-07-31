@@ -19,6 +19,14 @@ const BASE = self.location.pathname.replace(/sw\.js$/, '')
 const APP_SHELL = BASE + 'index.html'
 const PRECACHE = [BASE, APP_SHELL]
 
+// Web Share Target: a share_target carrying files must POST, and a static host
+// can't answer a POST — so this worker answers it, parks the image here, and
+// redirects to a plain GET the SPA can render. User data, not a rebuildable
+// asset bucket, so activate() below spares it. Mirrors src/sw/shareTarget.js
+// (guarded by src/test/swShareTarget.test.js).
+const SHARE_CACHE = 'sable-share-v1'
+const SHARE_STASH = BASE + 'share-stash/latest'
+
 // Filled by scripts/precachePlugin.js during `vite build`; empty in dev, where
 // there is no hashed build output to precache.
 const BUILD_MANIFEST = /* __PRECACHE_MANIFEST__ */ []
@@ -46,7 +54,16 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))))
+      .then((keys) =>
+        Promise.all(
+          keys
+            // SHARE_CACHE holds a just-shared image waiting to be collected by
+            // the page — dropping it here would lose a share that arrived while
+            // a new worker was activating.
+            .filter((k) => k !== CACHE_NAME && k !== SHARE_CACHE)
+            .map((k) => caches.delete(k))
+        )
+      )
       .then(() =>
         // Sweep hashed /assets/ entries that are not in the current build's
         // manifest — content-hashed filenames from older builds are
@@ -71,6 +88,33 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const { request } = event
+
+  // Must come before the non-GET bail-out below: the share arrives as a POST.
+  if (request.method === 'POST' && new URL(request.url).pathname === BASE + 'share') {
+    event.respondWith(
+      request
+        .formData()
+        .then((form) => {
+          const files = form.getAll('images')
+          const image = files.find((f) => f && typeof f.type === 'string' && f.type.startsWith('image/'))
+          if (!image) return null
+          return caches
+            .open(SHARE_CACHE)
+            .then((cache) =>
+              cache.put(
+                SHARE_STASH,
+                new Response(image, { headers: { 'Content-Type': image.type } })
+              )
+            )
+        })
+        // Redirect either way: with nothing usable shared, the landing route
+        // still opens intake ready for a paste rather than erroring.
+        .catch(() => null)
+        .then(() => Response.redirect(BASE + 'share?shared=1', 303))
+    )
+    return
+  }
+
   if (request.method !== 'GET') return
 
   const url = new URL(request.url)
