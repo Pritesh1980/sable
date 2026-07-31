@@ -6,6 +6,19 @@
 
 ---
 
+## Signing in — or just looking
+
+Sable opens on a sign-in screen. Enter your account details and you land on the Wall
+with your own collection.
+
+If you don't have an account — or you just want a look around — use
+**No account? View the demo →** underneath the form. It loads a fully fictional
+collection (six invented artists with original artwork) that runs entirely in your
+browser; nothing syncs anywhere, and you can edit freely. To get back out, clear the
+site's storage or open a fresh private window.
+
+---
+
 ## The Wall — your artists, edge to edge
 
 Open Sable and you're on **the Wall**: every photo from every artist in your collection,

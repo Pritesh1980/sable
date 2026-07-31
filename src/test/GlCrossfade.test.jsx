@@ -47,7 +47,9 @@ describe('GlCrossfade', () => {
     // The fallback renders a real <img> with the label as alt text.
     const img = await screen.findByAltText('Victor')
     expect(img).toBeInTheDocument()
-    expect(img).toHaveAttribute('src', 'a.jpg')
+    // Anchored to the deploy base — a bare relative src would otherwise
+    // resolve against the current route, not the app root.
+    expect(img).toHaveAttribute('src', '/a.jpg')
   })
 
   it('renders the monogram fallback without touching WebGL when src is empty', () => {

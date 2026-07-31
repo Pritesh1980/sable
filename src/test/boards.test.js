@@ -113,7 +113,9 @@ describe('getBoardCover', () => {
 
   it('falls back to first image of first idea with images', () => {
     const board = { cover: '', ideaIds: ['a', 'b', 'c'] }
-    expect(getBoardCover(board, ideas)).toBe('img-b-1.jpg')
+    // Anchored to the deploy base (see resolveAssetPath) rather than left
+    // relative to whatever route the board is being viewed from.
+    expect(getBoardCover(board, ideas)).toBe('/img-b-1.jpg')
   })
 
   it('returns empty string when no idea has an image', () => {

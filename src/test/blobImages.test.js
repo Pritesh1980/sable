@@ -42,6 +42,15 @@ describe('getImageUrl with keys', () => {
     expect(getImageNote({ url: 'x', note: 'hi' })).toBe('hi')
   })
 
+  // Idea/concept images take the same route as artist images: stored
+  // base-relative, based on the way to the <img>.
+  it('applies the deploy base to static paths but not to blob-backed ones', () => {
+    registerBlobUrl('k2', 'blob:http://localhost/k2')
+    expect(getImageUrl('images/demo/mora.blackfern/2.svg', '/sable/'))
+      .toBe('/sable/images/demo/mora.blackfern/2.svg')
+    expect(getImageUrl({ key: 'k2' }, '/sable/')).toBe('blob:http://localhost/k2')
+  })
+
   it('returns empty string for an unresolved key', () => {
     expect(getImageUrl({ key: 'not-resolved-yet' })).toBe('')
   })
