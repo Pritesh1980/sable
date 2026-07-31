@@ -4,18 +4,32 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test-and-build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v6
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
         with:
           node-version: 26
           cache: npm
-      - run: npm ci
+      - name: Install dependencies
+        run: npm ci
       # Suite is pinned to the offline local backend via vite.config.js test.env,
       # so no secrets or external services are needed here.
-      - run: npm test -- --run
-      - run: npm run build
+      - name: Run tests
+        run: npm test
+      - name: Build production app
+        run: npm run build
