@@ -114,6 +114,25 @@ describe('Wall page', () => {
     expect(screen.getByText('Add an artist')).toBeInTheDocument()
   })
 
+  // Signing in on the public demo build yields an empty account (the curated
+  // seed is not shipped there), which dead-ended with no route to the thing
+  // that deploy exists to show. Gating lives in canOfferDemo (see
+  // demoSeed.test.js); the suite runs with seeding enabled, i.e. NOT the demo
+  // build, so the default here is correctly hidden.
+  describe('empty-state demo entry', () => {
+    beforeEach(() => localStorage.clear())
+
+    it('stays hidden on a build that ships the curated seed', () => {
+      renderWall({ artists: [] })
+      expect(screen.queryByRole('button', { name: /view the demo/i })).toBeNull()
+    })
+
+    it('never appears when the wall has artists', () => {
+      renderWall()
+      expect(screen.queryByRole('button', { name: /view the demo/i })).toBeNull()
+    })
+  })
+
   describe('quick-add end to end', () => {
     beforeEach(() => vi.clearAllMocks())
 

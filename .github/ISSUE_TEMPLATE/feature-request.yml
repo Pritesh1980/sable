@@ -1,0 +1,49 @@
+name: Feature request
+description: Suggest an improvement to Sable's tattoo-planning workflow.
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: Describe the planning problem first so the smallest useful solution stays visible.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is difficult or impossible in the current workflow?
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: What should be easier when this is complete?
+    validations:
+      required: true
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Proposed workflow
+      description: Describe the smallest useful interaction from the user's perspective.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Include any workaround already available in Sable.
+  - type: dropdown
+    id: architecture-impact
+    attributes:
+      label: Likely architecture impact
+      options:
+        - Local-only behavior
+        - Synced account data
+        - Deployment or public sharing
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Add sketches or screenshots only after removing private data.

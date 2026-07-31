@@ -27,14 +27,19 @@ export const DEMO_SESSION = {
 // replaced). A returning visitor whose DEMO session carries an older version
 // is re-seeded, so the public demo never shows a stale mix of old data and
 // current files. Real (non-demo) sessions are never touched.
-export const DEMO_SEED_VERSION = 2
+// v3: image paths went base-relative. Old v2 records hold /sable/-prefixed
+// paths which resolveAssetPath still renders correctly, so this bump is about
+// converging stored data on the canonical form rather than fixing a break.
+export const DEMO_SEED_VERSION = 3
 
-// BASE_URL is '/' locally and '/sable/' on GitHub Pages — prefix demo asset
-// paths so the seeded artwork resolves under a sub-path deploy (otherwise every
-// image 404s and the demo shows monograms).
-const B = import.meta.env.BASE_URL
+// Base-relative, deliberately. seedDemoData writes these straight into
+// localStorage, so prefixing BASE_URL here would freeze the build's base into
+// stored records — and a visitor seeded under /sable/ would keep those paths
+// if the app ever moved. resolveAssetPath applies the base at display time,
+// and rebases anything already stored (including the /sable/-prefixed paths
+// the earlier version of this file wrote).
 const demoImages = (id, count = 3) =>
-  Array.from({ length: count }, (_, i) => `${B}images/demo/${id}/${i + 1}.svg`)
+  Array.from({ length: count }, (_, i) => `images/demo/${id}/${i + 1}.svg`)
 
 // Fictional artists only — invented names and handles, no resemblance to the
 // real artists in src/data/artists.js. Tags come from the canonical STYLE_TAGS.
@@ -54,7 +59,7 @@ export const DEMO_IDEAS = [
     description: 'Branching botanicals fading into a dark, starlit canopy. Fine line up top, denser black toward the elbow.',
     tags: ['dark-illustrative', 'fine-line'],
     placement: 'forearm',
-    images: [{ url: `${B}images/demo/mora.blackfern/2.svg`, note: 'Line density reference' }],
+    images: [{ url: `images/demo/mora.blackfern/2.svg`, note: 'Line density reference' }],
     linkedArtists: ['mora.blackfern'],
     status: 'idea',
   },
@@ -64,7 +69,7 @@ export const DEMO_IDEAS = [
     description: 'A near-total eclipse with thin drifting cloud lines below — quiet, heavy, mostly negative space.',
     tags: ['dark-fantasy', 'surrealism'],
     placement: 'upper arm',
-    images: [{ url: `${B}images/demo/vesper_noctis/1.svg`, note: 'Mood reference' }],
+    images: [{ url: `images/demo/vesper_noctis/1.svg`, note: 'Mood reference' }],
     linkedArtists: ['vesper_noctis'],
     status: 'booked',
   },
@@ -96,6 +101,30 @@ export function seedDemoData(storage = localStorage) {
   // Demo images are static paths — nothing to migrate to blob storage.
   storage.setItem('tattoo_img_migrated_v1', '1')
   storage.setItem('tattoo_demo_seed_version', String(DEMO_SEED_VERSION))
+}
+
+// Is the current session one the seeder created? Same `demo: true` proof the
+// re-seed logic uses — localAuth.signIn writes only { user }, so a real
+// sign-in can never look like one. Used to decide whether offering the demo
+// makes sense; never to grant anything.
+export function isDemoSession() {
+  try {
+    return JSON.parse(localStorage.getItem('tattoo_local_session'))?.demo === true
+  } catch {
+    return false
+  }
+}
+
+// Whether to offer the demo from an empty signed-in wall.
+//
+// Narrow on purpose. Reaching the demo from inside a session means signing out
+// first (maybeSeedDemo refuses to write over an existing session), and seeding
+// then overwrites the `tattoo_*` keys — which on a local dev machine could be
+// real ideas or boards belonging to a wall that merely has no artists yet.
+// `ownerSeedEnabled === false` is set by one thing only, the public demo
+// deploy, where accounts are throwaway and there is nothing to lose.
+export function canOfferDemo({ backendKind, ownerSeedEnabled, demoActive }) {
+  return backendKind === 'local' && ownerSeedEnabled === false && !demoActive
 }
 
 // Two decisions, kept separate: first prove the session is the demo's own,

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { LogoMark, Wordmark } from '../components/Logo'
 import { useAuth } from '../context/useAuth'
+import { backend } from '../backend'
 
 // Email + password sign-in. Invite-only — no sign-up link (accounts are created
 // admin-side). The password field reuses the masked-input pattern from the
@@ -79,6 +80,22 @@ export default function Login() {
             {submitting ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
+
+        {/* The backend-free build (GitHub Pages) has no account to sign into,
+            so the form alone is a dead end. `?demo=1` is what seeds the demo
+            dataset AND its session — a plain anchor, not a router link,
+            because maybeSeedDemo only runs at boot in main.jsx. Hidden on
+            real backends, where the query does nothing. */}
+        {backend.kind === 'local' && (
+          <p className="mt-8 text-center animate-slide-up">
+            <a
+              href={`${import.meta.env.BASE_URL}?demo=1`}
+              className="font-mono text-cream-muted hover:text-accent text-[0.6875rem] tracking-widest uppercase transition-colors border-b border-cream-muted/30 hover:border-accent pb-0.5"
+            >
+              No account? View the demo →
+            </a>
+          </p>
+        )}
       </div>
     </div>
   )

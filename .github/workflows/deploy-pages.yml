@@ -32,6 +32,11 @@ jobs:
       - run: npm run build
         env:
           VITE_BASE: /sable/
+          # The curated reference images are gitignored third-party work, so
+          # they are not in this build. Seeding DEFAULT_ARTISTS here would show
+          # anyone who signs in as the owner a wall of broken monograms — and
+          # OWNER_EMAIL's fallback is guessable. The demo is `?demo=1`.
+          VITE_OWNER_SEED: '0'
       # SPA deep-link fallback: GitHub Pages serves 404.html for unknown paths;
       # a copy of index.html lets React Router resolve the route client-side.
       - run: cp dist/index.html dist/404.html

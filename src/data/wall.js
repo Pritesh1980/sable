@@ -2,6 +2,7 @@
 // stream for the (future) Wall view. Pure data layer; no UI.
 
 import { DEFAULT_STUDIOS } from './artists'
+import { resolveAssetPath } from './assetPath'
 
 const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000
 
@@ -33,9 +34,12 @@ function addedAtOf(image) {
 // Resolves either image shape (plain string, or { url, addedAt } / { key }
 // refs) to a displayable <img src> string. Keyed refs that haven't been
 // resolved to a URL yet come back as '' so consumers fall back gracefully.
-export function imageSrc(image) {
-  if (typeof image === 'string') return image
-  return image?.url || ''
+// Unwraps an image ref to a displayable src, applying the deploy base. Data
+// stays base-relative so no build-time base is frozen into synced records —
+// see src/data/assetPath.js.
+export function imageSrc(image, base) {
+  const raw = typeof image === 'string' ? image : image?.url || ''
+  return resolveAssetPath(raw, base)
 }
 
 function studioNameOf(studioId) {

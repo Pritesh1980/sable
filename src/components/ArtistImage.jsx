@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { imageSrc } from '../data/wall'
 
 // A single artist/reference image that degrades gracefully: if the file is
 // missing (e.g. the public repo ships without the curated seed images) the
@@ -15,8 +16,9 @@ export default function ArtistImage({
   const [failed, setFailed] = useState(false)
   const trimmed = label.startsWith('@') ? label.slice(1) : label
   const initial = (trimmed.trim()[0] || '?').toUpperCase()
-  // Accept both image shapes: plain string, or { url, addedAt } refs.
-  const resolved = typeof src === 'string' ? src : src?.url || ''
+  // Accept both image shapes (plain string, or { url, addedAt } refs) and
+  // apply the deploy base — callers pass raw refs straight from artist data.
+  const resolved = imageSrc(src)
 
   if (!resolved || failed) {
     return (
