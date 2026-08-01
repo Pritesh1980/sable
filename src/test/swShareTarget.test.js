@@ -45,6 +45,20 @@ describe('public/sw.js share-target contract', () => {
     expect(sw).toMatch(new RegExp(`const SHARE_CACHE = '${SHARE_CACHE}'`))
   })
 
+  // Review findings (codex).
+  it('only intercepts same-origin POSTs', () => {
+    expect(sw).toMatch(/origin === self\.location\.origin/)
+  })
+
+  it('clears any earlier stash before storing a new share', () => {
+    const branch = sw.slice(sw.indexOf("request.method === 'POST'"), sw.indexOf("if (request.method !== 'GET')"))
+    // The delete must precede the formData parse, so a share carrying no image
+    // — or one that fails to store — can't leave the previous screenshot for
+    // the landing page to attach.
+    expect(branch.indexOf('cache.delete(SHARE_STASH)')).toBeGreaterThan(-1)
+    expect(branch.indexOf('cache.delete(SHARE_STASH)')).toBeLessThan(branch.indexOf('formData()'))
+  })
+
   it('keeps deriving the base from its own location rather than hardcoding it', () => {
     expect(sw).toContain("self.location.pathname.replace(/sw\\.js$/, '')")
   })

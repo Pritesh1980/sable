@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { takeSharedImage } from '../sw/shareTarget'
 import {
@@ -83,10 +83,17 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
   const [quickAdding, setQuickAdding] = useState(() => searchParams.get('shared') === '1')
   const [sharedFile, setSharedFile] = useState(null)
 
+  // Collecting the stash is destructive, and StrictMode runs this twice: the
+  // first pass would delete the image, then its cleanup would discard the
+  // result, and the second pass would find nothing. Holding the in-flight
+  // promise in a ref means both passes await the same single read, and
+  // whichever pass is still mounted sets the state.
+  const consumeRef = useRef(null)
   useEffect(() => {
-    if (searchParams.get('shared') !== '1') return
+    if (searchParams.get('shared') !== '1') return undefined
     let cancelled = false
-    takeSharedImage(import.meta.env.BASE_URL).then((file) => {
+    if (!consumeRef.current) consumeRef.current = takeSharedImage(import.meta.env.BASE_URL)
+    consumeRef.current.then((file) => {
       if (!cancelled && file) setSharedFile(file)
     })
     return () => { cancelled = true }
@@ -322,7 +329,7 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
         <QuickAddArtist
           artists={artists}
           onAdd={addArtist}
-          onClose={() => setQuickAdding(false)}
+          onClose={() => { setQuickAdding(false); setSharedFile(null) }}
           initialFile={sharedFile}
         />
       )}

@@ -1,5 +1,6 @@
 import { clearBlobUrls } from '../data/blobUrls'
 import { purgeDirtySidecars } from './dirty'
+import { SHARE_CACHE } from '../sw/shareTarget'
 
 // Local caches that hold the signed-in user's data. Cleared on sign-out so the
 // next account on a shared device never sees the previous user's content.
@@ -30,5 +31,13 @@ export function purgeLocalUserData() {
     indexedDB.deleteDatabase('tattoo-images-v1')
   } catch (e) {
     console.error('[tattoo] purge IndexedDB failed:', e)
+  }
+  // An uncollected shared screenshot is this user's content sitting in an
+  // origin-scoped cache — without this, A shares, closes before collecting,
+  // and B signs in and picks up A's image from /share.
+  try {
+    globalThis.caches?.delete?.(SHARE_CACHE)
+  } catch (e) {
+    console.error('[tattoo] purge share cache failed:', e)
   }
 }

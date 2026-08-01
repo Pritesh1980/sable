@@ -90,23 +90,36 @@ self.addEventListener('fetch', (event) => {
   const { request } = event
 
   // Must come before the non-GET bail-out below: the share arrives as a POST.
-  if (request.method === 'POST' && new URL(request.url).pathname === BASE + 'share') {
+  // Same-origin only — a cross-origin POST that happens to share this pathname
+  // (an API call from a controlled client) must not be hijacked, matching the
+  // cross-origin bail-out the GET path already applies.
+  const shareUrl = new URL(request.url)
+  if (
+    request.method === 'POST' &&
+    shareUrl.origin === self.location.origin &&
+    shareUrl.pathname === BASE + 'share'
+  ) {
     event.respondWith(
-      request
-        .formData()
-        .then((form) => {
-          const files = form.getAll('images')
-          const image = files.find((f) => f && typeof f.type === 'string' && f.type.startsWith('image/'))
-          if (!image) return null
-          return caches
-            .open(SHARE_CACHE)
-            .then((cache) =>
-              cache.put(
+      caches
+        .open(SHARE_CACHE)
+        // Clear first, unconditionally: an uncollected stash from an earlier
+        // share must never be what the landing page picks up when this one
+        // carries no image or fails to store.
+        .then((cache) =>
+          cache.delete(SHARE_STASH).then(() =>
+            request.formData().then((form) => {
+              const files = form.getAll('images')
+              const image = files.find(
+                (f) => f && typeof f.type === 'string' && f.type.startsWith('image/')
+              )
+              if (!image) return null
+              return cache.put(
                 SHARE_STASH,
                 new Response(image, { headers: { 'Content-Type': image.type } })
               )
-            )
-        })
+            })
+          )
+        )
         // Redirect either way: with nothing usable shared, the landing route
         // still opens intake ready for a paste rather than erroring.
         .catch(() => null)
