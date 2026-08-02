@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { takeSharedImage } from '../sw/shareTarget'
 import {
   DndContext,
   closestCenter,
@@ -76,7 +77,27 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
   // Deep links (?mode=manage) open maintenance directly; after that it's plain
   // state so toggling doesn't spam history.
   const [manageMode, setManageMode] = useState(() => searchParams.get('mode') === 'manage')
-  const [quickAdding, setQuickAdding] = useState(false)
+  // ?shared=1 is where /share lands: a screenshot arriving from the OS share
+  // sheet (Android) or an iOS Shortcut. Open intake straight away — on iOS
+  // there is no file to collect, so it opens empty and ready for a paste.
+  const [quickAdding, setQuickAdding] = useState(() => searchParams.get('shared') === '1')
+  const [sharedFile, setSharedFile] = useState(null)
+
+  // Collecting the stash is destructive, and StrictMode runs this twice: the
+  // first pass would delete the image, then its cleanup would discard the
+  // result, and the second pass would find nothing. Holding the in-flight
+  // promise in a ref means both passes await the same single read, and
+  // whichever pass is still mounted sets the state.
+  const consumeRef = useRef(null)
+  useEffect(() => {
+    if (searchParams.get('shared') !== '1') return undefined
+    let cancelled = false
+    if (!consumeRef.current) consumeRef.current = takeSharedImage(import.meta.env.BASE_URL)
+    consumeRef.current.then((file) => {
+      if (!cancelled && file) setSharedFile(file)
+    })
+    return () => { cancelled = true }
+  }, [searchParams])
 
   const artistsWithImages = artists.filter((a) => a.images?.length > 0)
 
@@ -308,7 +329,8 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
         <QuickAddArtist
           artists={artists}
           onAdd={addArtist}
-          onClose={() => setQuickAdding(false)}
+          onClose={() => { setQuickAdding(false); setSharedFile(null) }}
+          initialFile={sharedFile}
         />
       )}
 

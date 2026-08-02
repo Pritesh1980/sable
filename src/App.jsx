@@ -85,6 +85,10 @@ function AppShell() {
           />
           {/* Legacy deep links (old PWA home screens, bookmarks) */}
           <Route path="/manage" element={<Navigate to="/gallery?mode=manage" replace />} />
+          {/* Where a shared screenshot lands. Kept as its own stable URL — the
+              manifest's share_target and the iOS Shortcut both point here, so
+              intake can move without breaking either. */}
+          <Route path="/share" element={<Navigate to="/gallery?shared=1" replace />} />
         </Routes>
       </Suspense>
       {drawerOpen && <Drawer onClose={() => setDrawerOpen(false)} />}

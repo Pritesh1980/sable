@@ -40,6 +40,32 @@ describe('PWA manifest', () => {
   // changing start_url re-keys the app and installed tiles stop updating
   // (they appear as a second, separate install). Pinning `id` decouples the
   // two, leaving start_url free to change.
+  // Files can only be shared via POST/multipart; the service worker answers it
+  // (a static host can't). The field name here is the one sw.js reads.
+  it('declares a share_target the service worker can actually serve', () => {
+    const manifest = JSON.parse(readFileSync(join(root, 'public/manifest.json'), 'utf8'))
+    const st = manifest.share_target
+
+    expect(st).toBeTruthy()
+    expect(st.method.toUpperCase()).toBe('POST')
+    expect(st.enctype).toBe('multipart/form-data')
+    expect(st.action.startsWith('/'), 'action must be relative like every other manifest URL').toBe(false)
+
+    const files = st.params.files
+    expect(Array.isArray(files) && files.length).toBeTruthy()
+    expect(files[0].name).toBe('images')
+    expect(files[0].accept.some((a) => a.startsWith('image/'))).toBe(true)
+  })
+
+  it('points share_target at the same path the worker intercepts', () => {
+    const manifest = JSON.parse(readFileSync(join(root, 'public/manifest.json'), 'utf8'))
+    const sw = readFileSync(join(root, 'public/sw.js'), 'utf8')
+    // './share' resolves against the manifest's own location, matching the
+    // worker's BASE + 'share'.
+    expect(manifest.share_target.action.replace(/^\.\//, '')).toBe('share')
+    expect(sw).toContain("BASE + 'share'")
+  })
+
   it('pins an explicit id so identity survives a start_url change', () => {
     const manifest = JSON.parse(readFileSync(join(root, 'public/manifest.json'), 'utf8'))
 

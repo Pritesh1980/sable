@@ -33,6 +33,54 @@ function renderModal({ onAdd = vi.fn(), onClose = vi.fn() } = {}) {
   return { onAdd, onClose }
 }
 
+// A screenshot arriving from the OS share sheet must take exactly the same
+// intake path as one the user picked by hand — compress, analyse, score.
+describe('QuickAddArtist initialFile (shared screenshot)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+  })
+
+  it('runs intake on a file handed in at mount', async () => {
+    localStorage.setItem('gemini_api_key', 'k')
+    analyzeScreenshotWithGemini.mockResolvedValue({
+      handle: 'shared_artist', name: '', tags: [], styleNote: '',
+    })
+
+    render(
+      <QuickAddArtist
+        artists={existing}
+        onAdd={vi.fn()}
+        onClose={vi.fn()}
+        initialFile={new File(['x'], 'shared.png', { type: 'image/png' })}
+      />
+    )
+
+    await waitFor(() => expect(analyzeScreenshotWithGemini).toHaveBeenCalledTimes(1))
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('shared_artist')).toBeInTheDocument()
+    })
+  })
+
+  it('does nothing extra when mounted without one', async () => {
+    render(<QuickAddArtist artists={existing} onAdd={vi.fn()} onClose={vi.fn()} />)
+    await waitFor(() => expect(analyzeScreenshotWithGemini).not.toHaveBeenCalled())
+  })
+
+  it('ignores a non-image handed in by a share sheet', async () => {
+    localStorage.setItem('gemini_api_key', 'k')
+    render(
+      <QuickAddArtist
+        artists={existing}
+        onAdd={vi.fn()}
+        onClose={vi.fn()}
+        initialFile={new File(['x'], 'note.txt', { type: 'text/plain' })}
+      />
+    )
+    await waitFor(() => expect(analyzeScreenshotWithGemini).not.toHaveBeenCalled())
+  })
+})
+
 describe('QuickAddArtist screenshot intake', () => {
   beforeEach(() => {
     vi.clearAllMocks()

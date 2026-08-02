@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import TagPill from './TagPill'
 import { STYLE_TAGS, parseInstagramHandle } from '../data/artists'
 import { ARTIST_STATUSES } from '../data/planning'
@@ -18,7 +18,10 @@ import { getEmbedder } from '../data/embedder'
 // reference image. If the on-device style index exists, the screenshot is also
 // scored against the taste model — issue #19's deferred "discovery rescoring",
 // possible now that candidates carry images.
-export default function QuickAddArtist({ artists = [], onAdd, onClose }) {
+// `initialFile` is a screenshot that arrived from outside the app — the OS
+// share sheet on Android, or an iOS Shortcut. It takes the identical intake
+// path as a hand-picked file; nothing here is share-specific.
+export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFile = null }) {
   const [input, setInput] = useState('')
   const [name, setName] = useState('')
   const [tags, setTags] = useState([])
@@ -38,6 +41,13 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose }) {
   function toggleTag(tag) {
     setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]))
   }
+
+  // Run once for a screenshot handed in at mount. handleScreenshot already
+  // ignores non-images, and shotSeq guards against a later paste racing it.
+  useEffect(() => {
+    if (initialFile) handleScreenshot(initialFile)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialFile])
 
   async function handleScreenshot(file) {
     if (!file || !file.type?.startsWith('image/')) return

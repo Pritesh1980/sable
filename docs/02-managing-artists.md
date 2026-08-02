@@ -33,6 +33,30 @@ them — a first read on whether this artist belongs in your collection. Without
 screenshot still attaches; you fill in the details yourself. The **Full manage view** link in the form's footer jumps to the
 heavy-duty editor below.
 
+### Share a screenshot straight from Instagram
+
+Sable installs as a share destination, so a screenshot can go from Instagram into the
+add-artist form without saving it to your camera roll first.
+
+**Android / desktop Chrome.** Install Sable to your home screen, then **Share → Sable**
+from anywhere. The screenshot lands in the add-artist form with auto-fill already
+running.
+
+**iPhone.** Safari doesn't support apps registering as share destinations
+([WebKit bug 194593](https://bugs.webkit.org/show_bug.cgi?id=194593)), so iOS needs a
+one-off Shortcut instead. In the Shortcuts app:
+
+1. New Shortcut → turn on **Show in Share Sheet**, and set *Accepted Types* to **Images**
+2. Add **Copy to Clipboard** (input: Shortcut Input)
+3. Add **Open URL** → `https://pritesh1980.github.io/sable/share`
+4. Name it **Sable**
+
+Now from Instagram: **Share → Sable**, then paste (long-press → Paste) into the form that
+opens. The screenshot is already on your clipboard, so it's one tap plus a paste.
+
+Either way the form opens ready — with a Gemini key set, auto-fill runs as soon as the
+screenshot is attached.
+
 ## Add photos as you find them
 
 You don't need a form to grow a portfolio:
