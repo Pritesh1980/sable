@@ -5,11 +5,29 @@
 [![Release](https://img.shields.io/github/v/release/Pritesh1980/sable)](https://github.com/Pritesh1980/sable/releases/latest)
 [![Live demo](https://img.shields.io/badge/demo-open%20Sable-8b5cf6)](https://pritesh1980.github.io/sable/?demo=1)
 
-Sable is a local-first Progressive Web App for planning a personal tattoo journey. It keeps a curated artist collection, ranks favourites, links artists to tattoo ideas, groups ideas into mood boards, generates AI concept prompts/results, exports relief STL files from concept images, and tracks useful studio and convention context.
+**Every tattoo artist you love, in one place.**
+
+Sable gathers the artists you've collected — off Instagram, out of the camera roll — into a gallery built for browsing, then learns your taste by *looking* at their work instead of making you label it. It installs to your phone, works offline, and your reference images never leave the device.
 
 ![The Wall — Sable's home screen with the Top-5 dock and artist masonry](docs/images/wall.png)
 
-The app is built for Pritesh's own workflow. A live, backend-free demo runs on GitHub Pages; a real accounts + sync deployment (S3 + CloudFront) is left for later.
+- **One place, organised by artist.** Not two hundred saved posts — each artist's work, handle, styles and your own notes together on one card.
+- **Built for looking.** Four ways through the collection (filmstrip, compare, grid, style wall) plus the Wall home. Their work at full size, on black.
+- **It learns what you like.** Image embeddings computed on your device give every artist a visual fingerprint. Add someone new and Sable predicts roughly where they'd rank; open an artist and see who else in your collection sits closest to them.
+
+Then as much depth as you want: a ranked shortlist, tattoo ideas linked to artists, copyable artist-ready briefs, mood boards, AI concept generation, and convention and studio context.
+
+### Where it's heading
+
+Not built yet — the direction the on-device taste model is aimed at:
+
+- **Artists you haven't found yet.** Sable already models your taste from the collection you've ranked; the missing piece is a candidate pool to score against it.
+- **Matches explained in your own reference points** — "sits between the artists you ranked #2 and #7" rather than a bare similarity score.
+- **A style-space map**, where the collection clusters by real visual kinship instead of six hand-picked tags.
+
+The full reasoning is in [docs/ai-vision.md](docs/ai-vision.md).
+
+Sable is a local-first Progressive Web App, built for one obsessive collector's own planning — which is why it has opinions rather than settings. A live, backend-free demo runs on GitHub Pages; a real accounts + sync deployment (S3 + CloudFront) is left for later.
 
 ## Try the demo
 
@@ -33,7 +51,7 @@ The sign-in screen also links straight to it (**No account? View the demo →**)
 ## What It Includes
 
 - **Wall (home)**: Top-5 dock with rank nudges, consider shelf, and a visual masonry of the collection.
-- **Artists**: ranked artist gallery with filmstrip, grid, compare, style wall, browse, and swipe-ranking modes.
+- **Artists**: ranked artist gallery with four views — filmstrip, compare, grid, and style wall — plus browse and swipe-ranking modes.
 - **Brief**: tattoo ideas with descriptions, placements, style tags, reference images, linked artists, and copyable artist-ready briefs.
 - **Mood Boards**: grouped ideas that can be ordered and copied as a board brief.
 - **Convention Radar**: curated UK convention shortlist with distances from Milton Keynes and artist attendance override support.

@@ -32,7 +32,17 @@ export default function Login() {
         <div className="flex flex-col items-center text-cream mb-10 animate-slide-up">
           <LogoMark size={48} />
           <Wordmark className="mt-4" />
-          <p className="font-mono text-cream-muted/60 text-[0.625rem] tracking-widest uppercase mt-3">
+          {/* The proposition, not just a form label: most first-time visitors
+              arrive from the repo or the demo badge with no idea what Sable is
+              for. Kept to two lines so it never pushes the form below the fold
+              on an iPhone. */}
+          <p className="font-body text-cream text-sm text-center mt-5 leading-relaxed">
+            Every tattoo artist you love, in one place.
+          </p>
+          <p className="font-body text-cream-muted text-xs text-center mt-2 leading-relaxed max-w-[17rem]">
+            A gallery built for browsing — that learns your taste by looking at the work.
+          </p>
+          <p className="font-mono text-cream-muted/60 text-[0.625rem] tracking-widest uppercase mt-6">
             Sign in to continue
           </p>
         </div>

@@ -1,11 +1,16 @@
 # Sable — User Guide
 
-**Sable** is a personal, visual-first app for planning a tattoo journey: collecting
-favourite artists, soaking in their styles full-screen, generating concepts in those
-styles, and keeping ideas, conventions and studios in reach. It runs in your browser and
-installs to your phone's home screen like a native app. Sign in with your account and your
-data syncs across devices, with a local copy kept on each device so the app still works
-offline.
+**Sable** puts every tattoo artist you love in one place — a gallery built for
+browsing rather than a folder of screenshots. Each artist keeps their own work,
+handle, styles and your notes together, and Sable learns your taste by *looking* at
+that work: add an artist and it predicts roughly where they'd rank, open one and it
+shows who else in your collection sits closest. From there it goes as deep as you
+want — ranking, tattoo ideas linked to artists, concepts, conventions and studios.
+
+It runs in your browser and installs to your phone's home screen like a native app.
+Sign in with your account and your data syncs across devices, with a local copy kept
+on each device so the app still works offline. The taste model runs on your device,
+so your reference images never leave it.
 
 ![The Wall — Sable's home](../public/guide/wall.png)
 
