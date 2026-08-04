@@ -24,14 +24,14 @@
     "three": "^0.185.1"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.4",
+    "@eslint/js": "^10.0.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.0.5",
-    "eslint": "^9.39.4",
+    "eslint": "^10.8.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "fake-indexeddb": "^6.2.5",
@@ -44,10 +44,9 @@
     "vite": "^8.2.0",
     "vitest": "^4.1.10"
   },
-  "_overridesNote": "Transitive security bumps with no upstream release yet. Drop each entry once its parent ships a fixed range. adm-zip: GHSA memory-exhaustion, reached only via @huggingface/transformers > onnxruntime-node (the Node runtime, never bundled or executed here — the Taste Engine is browser-only). @babel/core: sourceMappingURL arbitrary file read, dev-only via eslint-plugin-react-hooks; pinned to the 7.x patch, not 8.x. brace-expansion: DoS, transitive via eslint tooling, held on the 1.x line.",
+  "_overridesNote": "Transitive security bumps with no upstream release yet. Drop each entry once its parent ships a fixed range. adm-zip: GHSA memory-exhaustion, reached only via @huggingface/transformers > onnxruntime-node (the Node runtime, never bundled or executed here — the Taste Engine is browser-only). @babel/core: sourceMappingURL arbitrary file read, dev-only via eslint-plugin-react-hooks; pinned to the 7.x patch, not 8.x.",
   "overrides": {
     "adm-zip": "^0.6.0",
-    "@babel/core": "^7.29.6",
-    "brace-expansion": "^1.1.16"
+    "@babel/core": "^7.29.6"
   }
 }
