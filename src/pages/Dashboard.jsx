@@ -62,7 +62,7 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
       <div className="mb-2">
         <p className="font-mono text-xs text-cream-muted tracking-widest uppercase mb-3">Shortlist pipeline</p>
         {pipelineEmpty ? (
-          <div className="bg-ink-card border border-ink-border rounded-sm p-6 text-center">
+          <div className="bg-ink-card border border-ink-border rounded-xs p-6 text-center">
             <p className="text-cream-muted/90 text-sm font-body mb-2">No artists in your collection yet.</p>
             <Link
               to="/gallery?mode=manage"
@@ -78,7 +78,7 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
                 <Link
                   key={status}
                   to="/gallery"
-                  className={`rounded-sm p-3 border transition-colors ${
+                  className={`rounded-xs p-3 border transition-colors ${
                     status === 'contact-next'
                       ? 'bg-accent/10 border-accent/40'
                       : 'bg-ink-card border-ink-border hover:border-cream-muted/40'
@@ -107,15 +107,15 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
 
       {/* Ideas at a glance */}
       <div className="grid grid-cols-3 gap-2 mb-6 mt-4">
-        <Link to="/brief" className="bg-ink-card border border-ink-border rounded-sm p-3">
+        <Link to="/brief" className="bg-ink-card border border-ink-border rounded-xs p-3">
           <p className="font-display text-2xl text-cream leading-none">{summary.activeIdeas.length}</p>
           <p className="font-mono text-[0.625rem] text-cream-muted tracking-widest uppercase mt-1.5">Active ideas</p>
         </Link>
-        <Link to="/brief" className="bg-ink-card border border-ink-border rounded-sm p-3">
+        <Link to="/brief" className="bg-ink-card border border-ink-border rounded-xs p-3">
           <p className="font-display text-2xl text-cream leading-none">{summary.exportReadyIdeas.length}</p>
           <p className="font-mono text-[0.625rem] text-cream-muted tracking-widest uppercase mt-1.5">Briefs ready</p>
         </Link>
-        <Link to="/brief?tab=boards" className="bg-ink-card border border-ink-border rounded-sm p-3">
+        <Link to="/brief?tab=boards" className="bg-ink-card border border-ink-border rounded-xs p-3">
           <p className="font-display text-2xl text-cream leading-none">{summary.openBoards.length}</p>
           <p className="font-mono text-[0.625rem] text-cream-muted tracking-widest uppercase mt-1.5">Live boards</p>
         </Link>
@@ -130,10 +130,10 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
                 <Link
                   key={artist.id}
                   to="/gallery"
-                  className="flex items-center gap-3 bg-ink-card border border-accent/25 rounded-sm px-3 py-3"
+                  className="flex items-center gap-3 bg-ink-card border border-accent/25 rounded-xs px-3 py-3"
                 >
                   {artist.images?.[0] && (
-                    <span className="w-10 h-12 rounded-sm overflow-hidden shrink-0">
+                    <span className="w-10 h-12 rounded-xs overflow-hidden shrink-0">
                       <ArtistImage src={artist.images[0]} label={artistLabel(artist)} className="w-full h-full object-cover" monogramClassName="text-base" />
                     </span>
                   )}
@@ -162,7 +162,7 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
             {ideaMatches.slice(0, 4).map(({ idea, matches }) => {
               const status = IDEA_STATUSES.find((s) => s.value === (idea.status || 'idea'))
               return (
-                <div key={idea.id} className="bg-ink-card border border-ink-border rounded-sm p-4">
+                <div key={idea.id} className="bg-ink-card border border-ink-border rounded-xs p-4">
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div>
                       <p className="font-display text-cream text-xl leading-tight">{idea.title || 'Untitled idea'}</p>

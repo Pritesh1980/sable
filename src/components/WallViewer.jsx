@@ -136,7 +136,7 @@ export default function WallViewer({
       aria-modal="true"
       aria-label={`${current.artistName} — image ${positionInArtist + 1} of ${artistImageCount}`}
       tabIndex={-1}
-      className="fixed inset-0 z-[60] bg-v2-ink overflow-hidden focus:outline-none"
+      className="fixed inset-0 z-[60] bg-v2-ink overflow-hidden focus:outline-hidden"
     >
       {/* t9: WebGL crossfade/ripple transition layer. Chosen once per open via
           resolveTransitionMode(); 'css' keeps the plain <img> path untouched. */}
@@ -211,7 +211,7 @@ export default function WallViewer({
                 src={getItemSrc(item)}
                 alt={`${item.artistName} thumbnail ${item.imageIndex + 1}`}
                 onClick={() => setIndex(items.indexOf(item))}
-                className={`h-14 w-[42px] object-cover rounded-sm cursor-pointer transition-opacity ${
+                className={`h-14 w-[42px] object-cover rounded-xs cursor-pointer transition-opacity ${
                   item === current ? 'opacity-100 outline outline-1 outline-v2-accent outline-offset-1' : 'opacity-45 hover:opacity-100'
                 }`}
               />
@@ -221,7 +221,7 @@ export default function WallViewer({
 
         <button
           onClick={() => onGenerate?.(current)}
-          className="absolute right-8 bottom-7 flex items-center gap-3 bg-v2-ink/70 backdrop-blur-md border border-v2-hairline hover:border-v2-accent rounded-sm px-4 py-3 text-v2-cream font-v2-ui text-sm pointer-events-auto transition-colors"
+          className="absolute right-8 bottom-7 flex items-center gap-3 bg-v2-ink/70 backdrop-blur-md border border-v2-hairline hover:border-v2-accent rounded-xs px-4 py-3 text-v2-cream font-v2-ui text-sm pointer-events-auto transition-colors"
         >
           Generate a concept in this style
           <kbd className="text-[0.7rem] text-v2-accent border border-v2-accent rounded px-1.5 py-0.5">G</kbd>

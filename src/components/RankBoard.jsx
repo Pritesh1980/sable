@@ -6,7 +6,7 @@ const label = (a) => a.name || `@${a.handle}`
 
 function Cover({ artist, size }) {
   return (
-    <span className={`${size} rounded-sm overflow-hidden shrink-0 block`}>
+    <span className={`${size} rounded-xs overflow-hidden shrink-0 block`}>
       <ArtistImage src={artist.images?.[0]} label={label(artist)} className="w-full h-full object-cover" monogramClassName="text-sm" />
     </span>
   )
@@ -59,7 +59,7 @@ export default function RankBoard({ artists = [], setArtists = () => {}, onClose
         <h2 className="font-v2-display text-v2-cream text-lg tracking-wide">Rank artists</h2>
         <button
           onClick={onClose}
-          className="font-v2-ui text-sm text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-sm px-4 py-1.5 transition-colors"
+          className="font-v2-ui text-sm text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-xs px-4 py-1.5 transition-colors"
         >
           Done
         </button>
@@ -82,7 +82,7 @@ export default function RankBoard({ artists = [], setArtists = () => {}, onClose
                 <button
                   aria-label={`Drop ${label(a)} out of top 5`}
                   onClick={() => setArtists((prev) => moveOutOfTop5(prev, a.id))}
-                  className="shrink-0 font-v2-ui text-xs text-v2-muted hover:text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-sm px-2.5 py-1.5 transition-colors"
+                  className="shrink-0 font-v2-ui text-xs text-v2-muted hover:text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-xs px-2.5 py-1.5 transition-colors"
                 >
                   Drop ↓
                 </button>
@@ -103,7 +103,7 @@ export default function RankBoard({ artists = [], setArtists = () => {}, onClose
                     <button
                       aria-label={`Move ${label(a)} into top 5`}
                       onClick={() => setArtists((prev) => moveIntoTop5(prev, a.id))}
-                      className="shrink-0 font-v2-ui text-xs text-v2-muted hover:text-v2-accent border border-v2-hairline hover:border-v2-accent rounded-sm px-2.5 py-1.5 transition-colors"
+                      className="shrink-0 font-v2-ui text-xs text-v2-muted hover:text-v2-accent border border-v2-hairline hover:border-v2-accent rounded-xs px-2.5 py-1.5 transition-colors"
                     >
                       ↑ To top 5
                     </button>

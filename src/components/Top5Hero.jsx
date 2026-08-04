@@ -44,7 +44,7 @@ function StaticGallery({ items, activeIndex, onSelect }) {
             onClick={() => onSelect(i)}
             aria-label={`Focus ${item.label} (rank ${item.rank})`}
             aria-pressed={focused}
-            className={`relative shrink-0 overflow-hidden rounded-sm border transition-all duration-300 ${
+            className={`relative shrink-0 overflow-hidden rounded-xs border transition-all duration-300 ${
               focused
                 ? 'border-accent/60 w-[68%] max-w-md h-full'
                 : 'border-ink-border w-16 sm:w-20 h-2/3 opacity-50 hover:opacity-90'
@@ -90,7 +90,7 @@ export default function Top5Hero({ artists = [], bench = [], onDropOut, onPullIn
 
   return (
     <div>
-      <div className="bg-ink-card/40 border border-ink-border rounded-sm overflow-hidden">
+      <div className="bg-ink-card/40 border border-ink-border rounded-xs overflow-hidden">
         {mode === 'webgl' ? (
           <Suspense fallback={<StaticGallery items={items} activeIndex={safeIndex} onSelect={setActiveIndex} />}>
             <Top5Coverflow items={items} activeIndex={safeIndex} onSelect={setActiveIndex} />
@@ -117,7 +117,7 @@ export default function Top5Hero({ artists = [], bench = [], onDropOut, onPullIn
               onClick={() => onDropOut(focused.id)}
               aria-label={`Move ${artistLabel(focused)} out of your top 5`}
               title="Move out of top 5"
-              className="font-mono text-xs text-cream-muted/70 hover:text-accent border border-ink-border hover:border-accent/40 rounded-sm px-3 py-2 shrink-0 transition-colors"
+              className="font-mono text-xs text-cream-muted/70 hover:text-accent border border-ink-border hover:border-accent/40 rounded-xs px-3 py-2 shrink-0 transition-colors"
             >
               Drop ↓
             </button>
@@ -135,7 +135,7 @@ export default function Top5Hero({ artists = [], bench = [], onDropOut, onPullIn
                 onClick={() => onPullIn(artist.id)}
                 aria-label={`Move ${artistLabel(artist)} into your top 5`}
                 title="Move into top 5"
-                className="flex items-center gap-1.5 font-mono text-xs text-cream-muted hover:text-cream border border-ink-border hover:border-accent/40 rounded-sm px-2 py-1 transition-colors"
+                className="flex items-center gap-1.5 font-mono text-xs text-cream-muted hover:text-cream border border-ink-border hover:border-accent/40 rounded-xs px-2 py-1 transition-colors"
               >
                 <span aria-hidden="true" className="text-accent">↑</span>
                 {artistLabel(artist)}

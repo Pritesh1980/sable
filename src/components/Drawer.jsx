@@ -71,7 +71,7 @@ export default function Drawer({ onClose }) {
               key={to}
               to={to}
               onClick={onClose}
-              className="px-6 py-4 border-b border-v2-hairline last:border-b-0 hover:bg-v2-ink focus:bg-v2-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-v2-accent transition-colors"
+              className="px-6 py-4 border-b border-v2-hairline last:border-b-0 hover:bg-v2-ink focus:bg-v2-ink focus:outline-hidden focus-visible:ring-2 focus-visible:ring-v2-accent transition-colors"
             >
               <p className="font-v2-ui text-v2-cream text-sm">{label}</p>
               <p className="font-v2-ui text-v2-muted text-xs mt-0.5">{description}</p>

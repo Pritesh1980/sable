@@ -58,7 +58,7 @@ export default function Login() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-mono placeholder-cream-muted/40"
+              className="w-full bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/50 font-mono placeholder-cream-muted/40"
               placeholder="you@example.com"
             />
           </div>
@@ -73,7 +73,7 @@ export default function Login() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-mono placeholder-cream-muted/40"
+              className="w-full bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/50 font-mono placeholder-cream-muted/40"
               placeholder="••••••••"
             />
           </div>
@@ -85,7 +85,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full px-4 py-2.5 bg-accent hover:bg-accent-hover disabled:opacity-50 text-cream text-sm font-body rounded-sm transition-colors tracking-wide"
+            className="w-full px-4 py-2.5 bg-accent hover:bg-accent-hover disabled:opacity-50 text-cream text-sm font-body rounded-xs transition-colors tracking-wide"
           >
             {submitting ? 'Signing in…' : 'Sign in'}
           </button>

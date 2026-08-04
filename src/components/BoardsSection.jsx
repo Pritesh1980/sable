@@ -17,7 +17,7 @@ function BoardCard({ board, ideas, onOpen }) {
   return (
     <button
       onClick={() => onOpen(board)}
-      className="group block w-full text-left bg-ink-card border border-ink-border rounded-sm overflow-hidden hover:border-cream-muted/50 transition-colors animate-slide-up"
+      className="group block w-full text-left bg-ink-card border border-ink-border rounded-xs overflow-hidden hover:border-cream-muted/50 transition-colors animate-slide-up"
     >
       <div className="aspect-[4/3] bg-ink-muted relative overflow-hidden">
         {cover ? (
@@ -109,7 +109,7 @@ function BoardModal({ board, onClose, onSave, onDelete, ideas, artists }) {
       <div className="flex-1 px-5 py-6 max-w-2xl mx-auto w-full space-y-6">
         <input
           autoFocus
-          className="bg-transparent border-b border-ink-border text-cream font-display text-2xl w-full outline-none pb-1 placeholder-cream-muted/60"
+          className="bg-transparent border-b border-ink-border text-cream font-display text-2xl w-full outline-hidden pb-1 placeholder-cream-muted/60"
           placeholder="Board name…"
           value={draft.name}
           onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
@@ -118,7 +118,7 @@ function BoardModal({ board, onClose, onSave, onDelete, ideas, artists }) {
         <div>
           <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-3">Description</p>
           <textarea
-            className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-body placeholder-cream-muted/60 resize-none"
+            className="w-full bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/50 font-body placeholder-cream-muted/60 resize-none"
             rows={3}
             placeholder="What's the theme of this board?"
             value={draft.description}
@@ -138,7 +138,7 @@ function BoardModal({ board, onClose, onSave, onDelete, ideas, artists }) {
               {boardIdeas.map((idea, idx) => (
                 <div
                   key={idea.id}
-                  className="flex items-center gap-2 px-3 py-2 rounded-sm border border-accent/40 bg-accent/5"
+                  className="flex items-center gap-2 px-3 py-2 rounded-xs border border-accent/40 bg-accent/5"
                 >
                   <div className="flex flex-col gap-0.5">
                     <button
@@ -153,7 +153,7 @@ function BoardModal({ board, onClose, onSave, onDelete, ideas, artists }) {
                     >▼</button>
                   </div>
                   {idea.images?.[0] && (
-                    <img src={getImageUrl(idea.images[0])} alt="" className="w-10 h-10 object-cover rounded-sm" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                    <img src={getImageUrl(idea.images[0])} alt="" className="w-10 h-10 object-cover rounded-xs" onError={(e) => { e.currentTarget.style.display = 'none' }} />
                   )}
                   <span className="flex-1 text-cream text-sm font-body truncate">{idea.title}</span>
                   <button
@@ -176,10 +176,10 @@ function BoardModal({ board, onClose, onSave, onDelete, ideas, artists }) {
                 <button
                   key={idea.id}
                   onClick={() => toggleIdea(idea.id)}
-                  className="w-full flex items-center gap-2 text-left px-3 py-2 rounded-sm text-sm font-body transition-colors border border-ink-border text-cream-muted hover:border-cream-muted/50"
+                  className="w-full flex items-center gap-2 text-left px-3 py-2 rounded-xs text-sm font-body transition-colors border border-ink-border text-cream-muted hover:border-cream-muted/50"
                 >
                   {idea.images?.[0] && (
-                    <img src={getImageUrl(idea.images[0])} alt="" className="w-8 h-8 object-cover rounded-sm" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                    <img src={getImageUrl(idea.images[0])} alt="" className="w-8 h-8 object-cover rounded-xs" onError={(e) => { e.currentTarget.style.display = 'none' }} />
                   )}
                   <span className="flex-1 truncate">{idea.title}</span>
                 </button>

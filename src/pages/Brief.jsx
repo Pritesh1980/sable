@@ -30,7 +30,7 @@ function IdeaCard({ idea, onOpen }) {
 
   return (
     <div
-      className="bg-ink-card border border-ink-border rounded-sm p-4 cursor-pointer hover:border-cream-muted/50 transition-colors animate-slide-up"
+      className="bg-ink-card border border-ink-border rounded-xs p-4 cursor-pointer hover:border-cream-muted/50 transition-colors animate-slide-up"
       onClick={() => onOpen(idea)}
     >
       <div className="flex items-start justify-between mb-1">
@@ -193,7 +193,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
         <div>
           <input
             autoFocus
-            className="bg-transparent border-b border-ink-border text-cream font-display text-2xl w-full outline-none pb-1 placeholder-cream-muted/60"
+            className="bg-transparent border-b border-ink-border text-cream font-display text-2xl w-full outline-hidden pb-1 placeholder-cream-muted/60"
             placeholder="Idea title…"
             value={draft.title}
             onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
@@ -208,7 +208,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
               <button
                 key={s.value}
                 onClick={() => setDraft((d) => ({ ...d, status: s.value }))}
-                className={`flex items-center gap-2 px-4 py-2 rounded-sm text-sm font-mono border transition-colors ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-xs text-sm font-mono border transition-colors ${
                   draft.status === s.value
                     ? 'border-cream-muted/50 text-cream bg-ink-card'
                     : 'border-ink-border text-cream-muted hover:border-cream-muted/30'
@@ -224,7 +224,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
         <div>
           <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-3">Description</p>
           <textarea
-            className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-body placeholder-cream-muted/60 resize-none"
+            className="w-full bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/50 font-body placeholder-cream-muted/60 resize-none"
             rows={4}
             placeholder="Describe the concept, mood, imagery…"
             value={draft.description}
@@ -275,7 +275,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
               {normalizeReferenceImages(draft.images).map((image) => {
                 const url = getImageUrl(image)
                 return (
-                <div key={url} className="bg-ink-muted rounded-sm overflow-hidden border border-ink-border">
+                <div key={url} className="bg-ink-muted rounded-xs overflow-hidden border border-ink-border">
                   <div className="relative aspect-square group">
                     <img src={url} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none' }} />
                     <button
@@ -284,7 +284,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
                     >×</button>
                   </div>
                   <textarea
-                    className="w-full bg-ink-card px-2 py-2 text-xs text-cream outline-none font-body placeholder-cream-muted/60 resize-none border-t border-ink-border"
+                    className="w-full bg-ink-card px-2 py-2 text-xs text-cream outline-hidden font-body placeholder-cream-muted/60 resize-none border-t border-ink-border"
                     rows={2}
                     placeholder="What to borrow from this image…"
                     value={getImageNote(image)}
@@ -298,7 +298,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
           <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={addFiles} />
           <div className="flex gap-2">
             <input
-              className="flex-1 bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-mono placeholder-cream-muted/60"
+              className="flex-1 bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/50 font-mono placeholder-cream-muted/60"
               placeholder="Paste image URL…"
               value={newImage}
               onChange={(e) => setNewImage(e.target.value)}
@@ -307,11 +307,11 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
             <button
               onClick={() => fileRef.current.click()}
               disabled={uploading}
-              className="px-3 py-2 bg-ink-muted border border-ink-border rounded-sm text-sm text-cream hover:border-cream-muted/50 transition-colors disabled:opacity-40 whitespace-nowrap"
+              className="px-3 py-2 bg-ink-muted border border-ink-border rounded-xs text-sm text-cream hover:border-cream-muted/50 transition-colors disabled:opacity-40 whitespace-nowrap"
             >
               {uploading ? '…' : '+ Photo'}
             </button>
-            <button onClick={addImage} className="px-4 py-2 bg-ink-muted border border-ink-border rounded-sm text-sm text-cream hover:border-cream-muted/50 transition-colors">
+            <button onClick={addImage} className="px-4 py-2 bg-ink-muted border border-ink-border rounded-xs text-sm text-cream hover:border-cream-muted/50 transition-colors">
               Add
             </button>
           </div>
@@ -329,7 +329,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
                   <button
                     key={artist.id}
                     onClick={() => toggleArtist(artist.id)}
-                    className={`w-full text-left p-3 rounded-sm text-sm transition-colors border ${
+                    className={`w-full text-left p-3 rounded-xs text-sm transition-colors border ${
                       linked
                         ? 'border-accent/50 bg-accent/5 text-cream'
                         : 'border-ink-border text-cream-muted hover:border-cream-muted/50'
@@ -337,7 +337,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
                   >
                     <div className="flex items-start gap-3">
                       {artist.images?.[0] && (
-                        <span className="w-12 h-14 rounded-sm overflow-hidden shrink-0">
+                        <span className="w-12 h-14 rounded-xs overflow-hidden shrink-0">
                           <ArtistImage src={artist.images[0]} label={artist.name || `@${artist.handle}`} className="w-full h-full object-cover" monogramClassName="text-xl" />
                         </span>
                       )}
@@ -383,9 +383,9 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
                 <button
                   key={a.id}
                   onClick={() => toggleArtist(a.id)}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-sm text-sm font-body transition-colors border border-accent/20 text-cream-muted hover:border-accent/50 hover:text-cream"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xs text-sm font-body transition-colors border border-accent/20 text-cream-muted hover:border-accent/50 hover:text-cream"
                 >
-                  {a.images?.[0] && <span className="w-6 h-6 rounded-sm overflow-hidden shrink-0"><ArtistImage src={a.images[0]} label={a.name || `@${a.handle}`} className="w-full h-full object-cover" monogramClassName="text-xs" /></span>}
+                  {a.images?.[0] && <span className="w-6 h-6 rounded-xs overflow-hidden shrink-0"><ArtistImage src={a.images[0]} label={a.name || `@${a.handle}`} className="w-full h-full object-cover" monogramClassName="text-xs" /></span>}
                   {a.name || `@${a.handle}`}
                 </button>
               ))}
@@ -403,9 +403,9 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
               <button
                 key={a.id}
                 onClick={() => toggleArtist(a.id)}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-sm text-sm font-body transition-colors border border-accent/40 bg-accent/5 text-cream"
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xs text-sm font-body transition-colors border border-accent/40 bg-accent/5 text-cream"
               >
-                {a.images?.[0] && <span className="w-6 h-6 rounded-sm overflow-hidden shrink-0"><ArtistImage src={a.images[0]} label={a.name || `@${a.handle}`} className="w-full h-full object-cover" monogramClassName="text-xs" /></span>}
+                {a.images?.[0] && <span className="w-6 h-6 rounded-xs overflow-hidden shrink-0"><ArtistImage src={a.images[0]} label={a.name || `@${a.handle}`} className="w-full h-full object-cover" monogramClassName="text-xs" /></span>}
                 {a.name || `@${a.handle}`}
               </button>
             ))}
@@ -413,9 +413,9 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
               <button
                 key={a.id}
                 onClick={() => toggleArtist(a.id)}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-sm text-sm font-body transition-colors border border-ink-border text-cream-muted hover:border-cream-muted/50"
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xs text-sm font-body transition-colors border border-ink-border text-cream-muted hover:border-cream-muted/50"
               >
-                {a.images?.[0] && <span className="w-6 h-6 rounded-sm overflow-hidden shrink-0"><ArtistImage src={a.images[0]} label={a.name || `@${a.handle}`} className="w-full h-full object-cover" monogramClassName="text-xs" /></span>}
+                {a.images?.[0] && <span className="w-6 h-6 rounded-xs overflow-hidden shrink-0"><ArtistImage src={a.images[0]} label={a.name || `@${a.handle}`} className="w-full h-full object-cover" monogramClassName="text-xs" /></span>}
                 {a.name || `@${a.handle}`}
               </button>
             ))}
@@ -476,7 +476,7 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
       </div>
 
       {/* Ideas | Boards tabs */}
-      <div className="inline-flex border border-ink-border rounded-sm overflow-hidden mb-6">
+      <div className="inline-flex border border-ink-border rounded-xs overflow-hidden mb-6">
         {[
           { value: 'ideas', label: `Ideas (${ideas.length})` },
           { value: 'boards', label: `Boards (${boards.length})` },
@@ -510,7 +510,7 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
         <div className="flex gap-2 mb-6">
           <button
             onClick={() => setStatusFilter(null)}
-            className={`px-3 py-1.5 rounded-sm text-xs font-mono border transition-colors ${
+            className={`px-3 py-1.5 rounded-xs text-xs font-mono border transition-colors ${
               !statusFilter ? 'border-cream-muted/50 text-cream' : 'border-ink-border text-cream-muted hover:border-cream-muted/30'
             }`}
           >
@@ -520,7 +520,7 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
             <button
               key={s.value}
               onClick={() => setStatusFilter(statusFilter === s.value ? null : s.value)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-sm text-xs font-mono border transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xs text-xs font-mono border transition-colors ${
                 statusFilter === s.value ? 'border-cream-muted/50 text-cream' : 'border-ink-border text-cream-muted hover:border-cream-muted/30'
               }`}
             >

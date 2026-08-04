@@ -182,12 +182,12 @@ function ReliefStlDrawerContent({ source, onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-ink-black/90 px-4 py-6 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 bg-ink-black/90 px-4 py-6 backdrop-blur-xs">
       <section
         role="dialog"
         aria-modal="true"
         aria-label="Make Relief STL"
-        className="mx-auto flex max-h-full w-full max-w-3xl flex-col overflow-hidden rounded-sm border border-ink-border bg-ink-card shadow-2xl shadow-black/70"
+        className="mx-auto flex max-h-full w-full max-w-3xl flex-col overflow-hidden rounded-xs border border-ink-border bg-ink-card shadow-2xl shadow-black/70"
       >
         <header className="flex items-start justify-between gap-4 border-b border-ink-border px-5 py-4">
           <div>
@@ -198,7 +198,7 @@ function ReliefStlDrawerContent({ source, onClose }) {
             ref={closeButtonRef}
             type="button"
             onClick={onClose}
-            className="rounded-sm border border-ink-border px-3 py-2 font-mono text-[0.6875rem] uppercase tracking-widest text-cream-muted transition-colors hover:border-cream-muted/50 hover:text-cream"
+            className="rounded-xs border border-ink-border px-3 py-2 font-mono text-[0.6875rem] uppercase tracking-widest text-cream-muted transition-colors hover:border-cream-muted/50 hover:text-cream"
           >
             Close
           </button>
@@ -211,7 +211,7 @@ function ReliefStlDrawerContent({ source, onClose }) {
               alt={`${sourceLabel} STL source`}
               onLoad={handleImageLoad}
               onError={handleImageError}
-              className="aspect-[4/3] w-full rounded-sm border border-ink-border bg-ink-muted object-contain"
+              className="aspect-[4/3] w-full rounded-xs border border-ink-border bg-ink-muted object-contain"
             />
           </div>
 
@@ -227,7 +227,7 @@ function ReliefStlDrawerContent({ source, onClose }) {
                 step="1"
                 value={settings.widthMm}
                 onChange={(event) => updateSetting('widthMm', event.target.value)}
-                className="w-full rounded-sm border border-ink-border bg-ink-muted px-3 py-2 font-body text-sm text-cream outline-none transition-colors focus:border-cream-muted/50"
+                className="w-full rounded-xs border border-ink-border bg-ink-muted px-3 py-2 font-body text-sm text-cream outline-hidden transition-colors focus:border-cream-muted/50"
               />
             </label>
 
@@ -242,7 +242,7 @@ function ReliefStlDrawerContent({ source, onClose }) {
                 step="0.1"
                 value={settings.maxReliefMm}
                 onChange={(event) => updateSetting('maxReliefMm', event.target.value)}
-                className="w-full rounded-sm border border-ink-border bg-ink-muted px-3 py-2 font-body text-sm text-cream outline-none transition-colors focus:border-cream-muted/50"
+                className="w-full rounded-xs border border-ink-border bg-ink-muted px-3 py-2 font-body text-sm text-cream outline-hidden transition-colors focus:border-cream-muted/50"
               />
             </label>
 
@@ -257,7 +257,7 @@ function ReliefStlDrawerContent({ source, onClose }) {
                 step="0.1"
                 value={settings.baseMm}
                 onChange={(event) => updateSetting('baseMm', event.target.value)}
-                className="w-full rounded-sm border border-ink-border bg-ink-muted px-3 py-2 font-body text-sm text-cream outline-none transition-colors focus:border-cream-muted/50"
+                className="w-full rounded-xs border border-ink-border bg-ink-muted px-3 py-2 font-body text-sm text-cream outline-hidden transition-colors focus:border-cream-muted/50"
               />
             </label>
 
@@ -268,7 +268,7 @@ function ReliefStlDrawerContent({ source, onClose }) {
               <select
                 value={settings.detail}
                 onChange={(event) => updateSetting('detail', event.target.value)}
-                className="w-full rounded-sm border border-ink-border bg-ink-muted px-3 py-2 font-body text-sm text-cream outline-none transition-colors focus:border-cream-muted/50"
+                className="w-full rounded-xs border border-ink-border bg-ink-muted px-3 py-2 font-body text-sm text-cream outline-hidden transition-colors focus:border-cream-muted/50"
               >
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
@@ -283,14 +283,14 @@ function ReliefStlDrawerContent({ source, onClose }) {
               <select
                 value={settings.smoothing}
                 onChange={(event) => updateSetting('smoothing', event.target.value)}
-                className="w-full rounded-sm border border-ink-border bg-ink-muted px-3 py-2 font-body text-sm text-cream outline-none transition-colors focus:border-cream-muted/50"
+                className="w-full rounded-xs border border-ink-border bg-ink-muted px-3 py-2 font-body text-sm text-cream outline-hidden transition-colors focus:border-cream-muted/50"
               >
                 <option value="off">Off</option>
                 <option value="light">Light</option>
               </select>
             </label>
 
-            <label className="flex items-center gap-3 rounded-sm border border-ink-border bg-ink-black/20 px-3 py-3 text-sm text-cream-muted">
+            <label className="flex items-center gap-3 rounded-xs border border-ink-border bg-ink-black/20 px-3 py-3 text-sm text-cream-muted">
               <input
                 aria-label="Invert relief height"
                 type="checkbox"
@@ -302,7 +302,7 @@ function ReliefStlDrawerContent({ source, onClose }) {
             </label>
 
             {[...validation.errors, error].filter(Boolean).map((message) => (
-              <p key={message} className="rounded-sm border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-accent">
+              <p key={message} className="rounded-xs border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-accent">
                 {message}
               </p>
             ))}
@@ -311,7 +311,7 @@ function ReliefStlDrawerContent({ source, onClose }) {
               type="button"
               disabled={downloadDisabled}
               onClick={handleDownload}
-              className="w-full rounded-sm bg-accent px-4 py-3 font-body text-sm text-cream transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-30"
+              className="w-full rounded-xs bg-accent px-4 py-3 font-body text-sm text-cream transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-30"
             >
               Download STL
             </button>

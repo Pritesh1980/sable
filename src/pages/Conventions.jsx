@@ -20,13 +20,13 @@ function ConventionLogo({ convention, size }) {
   const favicon = getConventionFavicon(convention)
   if (!favicon) {
     return (
-      <div className={`${size} shrink-0 bg-ink-muted rounded-sm flex items-center justify-center`}>
+      <div className={`${size} shrink-0 bg-ink-muted rounded-xs flex items-center justify-center`}>
         <span className="font-display text-cream-muted/40">{convention.name[0]}</span>
       </div>
     )
   }
   return (
-    <div className={`${size} shrink-0 bg-ink-muted rounded-sm overflow-hidden flex items-center justify-center`}>
+    <div className={`${size} shrink-0 bg-ink-muted rounded-xs overflow-hidden flex items-center justify-center`}>
       <img
         src={favicon}
         alt=""
@@ -86,7 +86,7 @@ function AttendeesEditor({ artists, attendingIds, onToggle }) {
               <button
                 key={a.id}
                 onClick={() => onToggle(a.id)}
-                className={`text-[0.6875rem] px-2 py-1 rounded-sm border font-mono tracking-wide transition-colors ${
+                className={`text-[0.6875rem] px-2 py-1 rounded-xs border font-mono tracking-wide transition-colors ${
                   on
                     ? 'border-accent bg-accent/10 text-accent'
                     : 'border-ink-border text-cream-muted hover:border-cream-muted hover:text-cream'
@@ -104,7 +104,7 @@ function AttendeesEditor({ artists, attendingIds, onToggle }) {
 
 function HeroCard({ convention, artists, attendingIds, onToggle }) {
   return (
-    <div className="bg-gradient-to-br from-accent/10 to-ink-card border border-accent/40 rounded-sm p-6 animate-slide-up">
+    <div className="bg-gradient-to-br from-accent/10 to-ink-card border border-accent/40 rounded-xs p-6 animate-slide-up">
       <div className="flex items-start gap-4">
         <ConventionLogo convention={convention} size="w-14 h-14" />
         <div className="flex-1 min-w-0">
@@ -134,7 +134,7 @@ function HeroCard({ convention, artists, attendingIds, onToggle }) {
 function ConventionCard({ convention, artists, attendingIds, onToggle }) {
   return (
     <div
-      className={`flex flex-col bg-ink-card border rounded-sm p-5 animate-slide-up ${
+      className={`flex flex-col bg-ink-card border rounded-xs p-5 animate-slide-up ${
         convention.popular ? 'border-accent/30' : 'border-ink-border'
       }`}
     >

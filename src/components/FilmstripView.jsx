@@ -7,7 +7,7 @@ import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
 function StatusPicker({ artist, onSetStatus, onClose }) {
   const current = normalizeArtistStatus(artist.status)
   return (
-    <div className="absolute top-full left-0 z-30 mt-1 bg-ink-card border border-ink-border rounded-sm shadow-2xl shadow-black/70 min-w-[148px]">
+    <div className="absolute top-full left-0 z-30 mt-1 bg-ink-card border border-ink-border rounded-xs shadow-2xl shadow-black/70 min-w-[148px]">
       {ARTIST_STATUSES.map((s) => (
         <button
           key={s.value}
@@ -68,7 +68,7 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onSetStatus, isFirst, 
             type="number"
             min={1}
             max={totalArtists}
-            className="w-8 text-center bg-ink-muted border border-cream-muted/40 rounded-sm text-xs font-mono text-cream outline-none py-0.5"
+            className="w-8 text-center bg-ink-muted border border-cream-muted/40 rounded-xs text-xs font-mono text-cream outline-hidden py-0.5"
             value={rankInput}
             onChange={(e) => setRankInput(e.target.value)}
             onBlur={commitRank}
@@ -81,7 +81,7 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onSetStatus, isFirst, 
           <button
             onClick={startEdit}
             title="Click to set rank"
-            className="text-xs font-mono text-cream-muted/50 hover:text-cream hover:bg-ink-card/60 w-7 h-6 rounded-sm transition-colors flex items-center justify-center"
+            className="text-xs font-mono text-cream-muted/50 hover:text-cream hover:bg-ink-card/60 w-7 h-6 rounded-xs transition-colors flex items-center justify-center"
           >
             {artist.rank}
           </button>
@@ -145,7 +145,7 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onSetStatus, isFirst, 
           artist.images.map((src, i) => (
             <div
               key={i}
-              className="shrink-0 w-24 h-24 lg:w-28 lg:h-28 xl:w-32 xl:h-32 rounded-sm overflow-hidden bg-ink-muted cursor-pointer hover:ring-1 hover:ring-cream-muted/30 transition-all"
+              className="shrink-0 w-24 h-24 lg:w-28 lg:h-28 xl:w-32 xl:h-32 rounded-xs overflow-hidden bg-ink-muted cursor-pointer hover:ring-1 hover:ring-cream-muted/30 transition-all"
               onClick={() => onOpen(artist)}
             >
               <ArtistImage src={src} label={artist.name || `@${artist.handle}`} className="w-full h-full object-cover" monogramClassName="text-2xl" />
@@ -163,7 +163,7 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onSetStatus, isFirst, 
 
 export default function FilmstripView({ artists, onOpenArtist, onSetRank, onSetStatus }) {
   return (
-    <div className="mx-4 border border-ink-border/50 rounded-sm overflow-hidden">
+    <div className="mx-4 border border-ink-border/50 rounded-xs overflow-hidden">
       {artists.map((artist, i) => (
         <FilmstripRow
           key={artist.id}

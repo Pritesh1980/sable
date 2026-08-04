@@ -22,9 +22,9 @@ function ArtistChip({ artist }) {
       href={`https://instagram.com/${artist.handle}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-2 bg-ink-muted/60 rounded-sm pl-1 pr-2.5 py-1 hover:bg-ink-muted transition-colors"
+      className="flex items-center gap-2 bg-ink-muted/60 rounded-xs pl-1 pr-2.5 py-1 hover:bg-ink-muted transition-colors"
     >
-      <span className="w-6 h-6 rounded-sm overflow-hidden shrink-0">
+      <span className="w-6 h-6 rounded-xs overflow-hidden shrink-0">
         <ArtistImage src={artist.images?.[0]} label={artist.name || `@${artist.handle}`} className="w-full h-full object-cover" monogramClassName="text-xs" />
       </span>
       <span className="text-xs font-mono text-cream-muted">@{artist.handle}</span>
@@ -34,7 +34,7 @@ function ArtistChip({ artist }) {
 
 function StudioCard({ studio, artists }) {
   return (
-    <div className="flex flex-col bg-ink-card border border-ink-border rounded-sm p-5 animate-slide-up">
+    <div className="flex flex-col bg-ink-card border border-ink-border rounded-xs p-5 animate-slide-up">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <h3 className="font-display text-cream text-lg leading-tight">{studio.name}</h3>
@@ -43,7 +43,7 @@ function StudioCard({ studio, artists }) {
           </p>
         </div>
         {!studio.confirmed && (
-          <span className="text-[0.5625rem] font-mono text-cream-muted/40 tracking-widest uppercase border border-ink-border rounded-sm px-1.5 py-0.5 shrink-0">
+          <span className="text-[0.5625rem] font-mono text-cream-muted/40 tracking-widest uppercase border border-ink-border rounded-xs px-1.5 py-0.5 shrink-0">
             TBC
           </span>
         )}

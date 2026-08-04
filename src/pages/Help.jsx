@@ -114,7 +114,7 @@ const SECTIONS = [
 
 function Section({ section, open, onToggle }) {
   return (
-    <div className="bg-ink-card border border-ink-border rounded-sm overflow-hidden">
+    <div className="bg-ink-card border border-ink-border rounded-xs overflow-hidden">
       <button
         onClick={onToggle}
         className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left hover:bg-ink-muted transition-colors"
@@ -136,7 +136,7 @@ function Section({ section, open, onToggle }) {
               </li>
             ))}
           </ol>
-          <div className="rounded-sm overflow-hidden border border-ink-border bg-ink-muted">
+          <div className="rounded-xs overflow-hidden border border-ink-border bg-ink-muted">
             <img
               src={`${import.meta.env.BASE_URL}guide/${section.image}`}
               alt={`${section.label} screenshot`}

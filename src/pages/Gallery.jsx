@@ -182,13 +182,13 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
             <>
               <button
                 onClick={() => setRanking(true)}
-                className="font-mono text-xs text-accent hover:text-cream border border-accent/40 hover:border-accent px-3 py-2 rounded-sm transition-colors tracking-widest uppercase"
+                className="font-mono text-xs text-accent hover:text-cream border border-accent/40 hover:border-accent px-3 py-2 rounded-xs transition-colors tracking-widest uppercase"
               >
                 Rank
               </button>
               <button
                 onClick={() => setBrowsing(true)}
-                className="font-mono text-xs text-cream-muted hover:text-cream border border-ink-border hover:border-cream-muted/40 px-3 py-2 rounded-sm transition-colors tracking-widest uppercase"
+                className="font-mono text-xs text-cream-muted hover:text-cream border border-ink-border hover:border-cream-muted/40 px-3 py-2 rounded-xs transition-colors tracking-widest uppercase"
               >
                 Browse
               </button>
@@ -197,13 +197,13 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
           {/* Always reachable — one-step onboarding for a new artist */}
           <button
             onClick={() => setQuickAdding(true)}
-            className="font-mono text-xs text-accent hover:text-cream border border-accent/40 hover:border-accent px-3 py-2 rounded-sm transition-colors tracking-widest uppercase"
+            className="font-mono text-xs text-accent hover:text-cream border border-accent/40 hover:border-accent px-3 py-2 rounded-xs transition-colors tracking-widest uppercase"
           >
             + Add
           </button>
           <button
             onClick={() => setManageMode((v) => !v)}
-            className={`font-mono text-xs px-3 py-2 rounded-sm transition-colors tracking-widest uppercase border ${
+            className={`font-mono text-xs px-3 py-2 rounded-xs transition-colors tracking-widest uppercase border ${
               manageMode
                 ? 'text-cream border-accent/50 bg-accent/10'
                 : 'text-cream-muted hover:text-cream border-ink-border hover:border-cream-muted/40'
@@ -263,7 +263,7 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
                 key={mode}
                 onClick={() => setViewMode(mode)}
                 title={title}
-                className={`px-2 py-1 rounded-sm text-[0.8125rem] font-mono transition-colors ${viewMode === mode ? 'text-cream bg-ink-card' : 'text-cream-muted/50 hover:text-cream-muted'}`}
+                className={`px-2 py-1 rounded-xs text-[0.8125rem] font-mono transition-colors ${viewMode === mode ? 'text-cream bg-ink-card' : 'text-cream-muted/50 hover:text-cream-muted'}`}
               >
                 {label}
               </button>

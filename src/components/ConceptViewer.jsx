@@ -158,7 +158,7 @@ export default function ConceptViewer({
       aria-modal="true"
       aria-label={`Concept: ${current.title || current.prompt || 'untitled'}`}
       tabIndex={-1}
-      className="fixed inset-0 z-[60] bg-v2-ink overflow-hidden focus:outline-none"
+      className="fixed inset-0 z-[60] bg-v2-ink overflow-hidden focus:outline-hidden"
     >
       {/* t9: WebGL crossfade/ripple chosen once per open; 'css' keeps <img>. */}
       {transitionMode === 'webgl' ? (
@@ -221,13 +221,13 @@ export default function ConceptViewer({
         <div className="absolute right-8 bottom-7 flex items-center gap-3 pointer-events-auto">
           <button
             onClick={() => onDelete?.(current.id)}
-            className="bg-v2-ink/70 backdrop-blur-md border border-v2-hairline hover:border-v2-accent rounded-sm px-4 py-3 text-v2-cream font-v2-ui text-sm transition-colors"
+            className="bg-v2-ink/70 backdrop-blur-md border border-v2-hairline hover:border-v2-accent rounded-xs px-4 py-3 text-v2-cream font-v2-ui text-sm transition-colors"
           >
             Delete
           </button>
           <button
             onClick={() => setShowInfo((s) => !s)}
-            className="flex items-center gap-3 bg-v2-ink/70 backdrop-blur-md border border-v2-hairline hover:border-v2-accent rounded-sm px-4 py-3 text-v2-cream font-v2-ui text-sm transition-colors"
+            className="flex items-center gap-3 bg-v2-ink/70 backdrop-blur-md border border-v2-hairline hover:border-v2-accent rounded-xs px-4 py-3 text-v2-cream font-v2-ui text-sm transition-colors"
           >
             Variants & STL export
             <kbd className="text-[0.7rem] text-v2-accent border border-v2-accent rounded px-1.5 py-0.5">I</kbd>

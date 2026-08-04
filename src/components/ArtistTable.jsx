@@ -89,7 +89,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
             <button
               onClick={(e) => { e.stopPropagation(); fileRef.current.click() }}
               disabled={uploading}
-              className="font-mono text-[0.8125rem] text-cream-muted hover:text-cream border border-ink-border hover:border-cream-muted/40 px-2 py-1 rounded-sm transition-colors disabled:opacity-40 whitespace-nowrap"
+              className="font-mono text-[0.8125rem] text-cream-muted hover:text-cream border border-ink-border hover:border-cream-muted/40 px-2 py-1 rounded-xs transition-colors disabled:opacity-40 whitespace-nowrap"
             >
               {uploading ? 'Importing…' : '+ Photos'}
             </button>
@@ -127,7 +127,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
               <div>
                 <p className="text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Shortlist Status</p>
                 <select
-                  className="bg-ink-muted border border-ink-border rounded-sm px-3 py-1.5 text-sm text-cream outline-none focus:border-cream-muted/40 font-body"
+                  className="bg-ink-muted border border-ink-border rounded-xs px-3 py-1.5 text-sm text-cream outline-hidden focus:border-cream-muted/40 font-body"
                   value={normalizeArtistStatus(artist.status)}
                   onChange={(e) => onUpdate(artist.id, { status: e.target.value })}
                 >
@@ -141,7 +141,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
               <div>
                 <p className="text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Studio</p>
                 <select
-                  className="bg-ink-muted border border-ink-border rounded-sm px-3 py-1.5 text-sm text-cream outline-none focus:border-cream-muted/40 font-body"
+                  className="bg-ink-muted border border-ink-border rounded-xs px-3 py-1.5 text-sm text-cream outline-hidden focus:border-cream-muted/40 font-body"
                   value={artist.studio || ''}
                   onChange={(e) => onUpdate(artist.id, { studio: e.target.value || null })}
                 >
@@ -157,7 +157,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
                 <p className="text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Notes</p>
                 <div className="flex gap-2">
                   <input
-                    className="flex-1 bg-ink-muted border border-ink-border rounded-sm px-3 py-1.5 text-sm text-cream outline-none focus:border-cream-muted/40 font-body placeholder-cream-muted/60"
+                    className="flex-1 bg-ink-muted border border-ink-border rounded-xs px-3 py-1.5 text-sm text-cream outline-hidden focus:border-cream-muted/40 font-body placeholder-cream-muted/60"
                     placeholder="Notes about this artist…"
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
@@ -173,7 +173,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
                   <p className="text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Photos ({imageCount})</p>
                   <div className="flex gap-2 flex-wrap">
                     {artist.images.map((src, idx) => (
-                      <div key={idx} className="relative w-14 h-14 rounded-sm overflow-hidden group bg-ink-muted shrink-0">
+                      <div key={idx} className="relative w-14 h-14 rounded-xs overflow-hidden group bg-ink-muted shrink-0">
                         <ArtistImage src={src} label={artist.name || `@${artist.handle}`} className="w-full h-full object-cover" monogramClassName="text-lg" />
                         <button
                           onClick={() => removeImage(idx)}
@@ -223,7 +223,7 @@ export default function ArtistTable({ artists, onSaveImages, onUpdate, onRemove 
       {/* Search */}
       <div className="mb-4">
         <input
-          className="w-full bg-ink-card border border-ink-border rounded-sm px-4 py-2.5 text-sm text-cream outline-none focus:border-cream-muted/40 font-body placeholder-cream-muted/60"
+          className="w-full bg-ink-card border border-ink-border rounded-xs px-4 py-2.5 text-sm text-cream outline-hidden focus:border-cream-muted/40 font-body placeholder-cream-muted/60"
           placeholder="Search artists…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -231,7 +231,7 @@ export default function ArtistTable({ artists, onSaveImages, onUpdate, onRemove 
       </div>
 
       {/* Table */}
-      <div className="border border-ink-border rounded-sm overflow-hidden">
+      <div className="border border-ink-border rounded-xs overflow-hidden">
         <table className="w-full">
           <thead>
             <tr className="border-b border-ink-border bg-ink-card">

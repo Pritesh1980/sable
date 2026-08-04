@@ -1,6 +1,12 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind 4: one import replaces the v3 base/components/utilities triple. */
+@import 'tailwindcss';
+
+/* Keep the JS config rather than porting the theme to CSS-first `@theme`.
+   tailwind.config.js is not just configuration here — src/test/v2-tokens.spec.js
+   imports it and asserts the six v2 colours and both font families, so it is the
+   design system's contract test. Moving the tokens into CSS would silently
+   delete that guard. `@config` is supported in v4 for exactly this case. */
+@config '../tailwind.config.js';
 
 /* ── Theme variables ───────────────────────────────────────────────────── */
 /* Values are space-separated RGB triplets — required for Tailwind's       */

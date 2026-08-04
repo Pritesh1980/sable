@@ -162,14 +162,14 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-v2-ink/90 backdrop-blur-sm flex items-start sm:items-center justify-center overflow-y-auto animate-fade-in"
+      className="fixed inset-0 z-50 bg-v2-ink/90 backdrop-blur-xs flex items-start sm:items-center justify-center overflow-y-auto animate-fade-in"
       onClick={onClose}
     >
       <form
         onSubmit={handleSave}
         onPaste={handlePaste}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md bg-v2-surface border border-v2-hairline rounded-sm p-6 m-4 mt-16 sm:mt-4 animate-slide-up"
+        className="w-full max-w-md bg-v2-surface border border-v2-hairline rounded-xs p-6 m-4 mt-16 sm:mt-4 animate-slide-up"
       >
         <h2 className="font-v2-display text-v2-cream text-[1.1rem] tracking-[0.2em] uppercase mb-5">
           Add an artist
@@ -181,7 +181,7 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
         <input
           id="quick-add-handle"
           autoFocus
-          className="w-full bg-v2-ink border border-v2-hairline rounded-sm px-3 py-2 text-sm text-v2-cream font-v2-ui outline-none focus:border-v2-accent placeholder-v2-muted mb-3.5"
+          className="w-full bg-v2-ink border border-v2-hairline rounded-xs px-3 py-2 text-sm text-v2-cream font-v2-ui outline-hidden focus:border-v2-accent placeholder-v2-muted mb-3.5"
           placeholder="@handle or Instagram URL"
           value={handle}
           onChange={(e) => { setHandle(e.target.value); setError('') }}
@@ -192,7 +192,7 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
         </label>
         <input
           id="quick-add-name"
-          className="w-full bg-v2-ink border border-v2-hairline rounded-sm px-3 py-2 text-sm text-v2-cream font-v2-ui outline-none focus:border-v2-accent placeholder-v2-muted mb-4"
+          className="w-full bg-v2-ink border border-v2-hairline rounded-xs px-3 py-2 text-sm text-v2-cream font-v2-ui outline-hidden focus:border-v2-accent placeholder-v2-muted mb-4"
           placeholder="Full name (optional)"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -206,7 +206,7 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
             <textarea
               id="quick-add-stylenote"
               rows={2}
-              className="w-full bg-v2-ink border border-v2-hairline rounded-sm px-3 py-2 text-sm text-v2-cream font-v2-ui outline-none focus:border-v2-accent placeholder-v2-muted mb-4 resize-none"
+              className="w-full bg-v2-ink border border-v2-hairline rounded-xs px-3 py-2 text-sm text-v2-cream font-v2-ui outline-hidden focus:border-v2-accent placeholder-v2-muted mb-4 resize-none"
               value={styleNote}
               onChange={(e) => setStyleNote(e.target.value)}
             />
@@ -220,7 +220,7 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
               key={tag}
               type="button"
               onClick={() => toggleTag(tag)}
-              className={`font-v2-ui text-[0.7rem] tracking-wide uppercase px-2 py-1 rounded-sm border transition-colors ${
+              className={`font-v2-ui text-[0.7rem] tracking-wide uppercase px-2 py-1 rounded-xs border transition-colors ${
                 tags.includes(tag)
                   ? 'border-v2-accent text-v2-accent bg-v2-accent/10'
                   : 'border-v2-hairline text-v2-muted hover:text-v2-cream hover:border-v2-cream'
@@ -233,7 +233,7 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
 
         <p className="font-v2-ui text-[0.68rem] tracking-[0.14em] uppercase text-v2-muted mb-2">Reference images (optional)</p>
         <div
-          className={`border-2 border-dashed rounded-sm px-4 py-5 text-center transition-colors ${
+          className={`border-2 border-dashed rounded-xs px-4 py-5 text-center transition-colors ${
             dragOver ? 'border-v2-accent bg-v2-accent/5' : 'border-v2-hairline'
           }`}
           onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
@@ -260,7 +260,7 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
                 <img
                   src={URL.createObjectURL(file)}
                   alt={`Staged reference ${i + 1}`}
-                  className="w-14 h-14 object-cover rounded-sm"
+                  className="w-14 h-14 object-cover rounded-xs"
                 />
                 <button
                   type="button"
@@ -326,7 +326,7 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
             <button
               type="submit"
               disabled={saving || !!duplicate}
-              className="bg-v2-accent text-v2-cream font-v2-ui text-sm rounded-sm px-5 py-2 transition-colors hover:brightness-110 disabled:opacity-30 disabled:cursor-not-allowed"
+              className="bg-v2-accent text-v2-cream font-v2-ui text-sm rounded-xs px-5 py-2 transition-colors hover:brightness-110 disabled:opacity-30 disabled:cursor-not-allowed"
             >
               {saving ? 'Saving…' : 'Save'}
             </button>

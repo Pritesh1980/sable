@@ -60,7 +60,7 @@ export default function PromptPackComposer({ ideas = [], artists = [], onSavePro
   }
 
   return (
-    <section className="mb-8 bg-ink-card border border-ink-border rounded-sm overflow-hidden">
+    <section className="mb-8 bg-ink-card border border-ink-border rounded-xs overflow-hidden">
       <div className="p-4 border-b border-ink-border">
         <p className="text-xs font-mono text-accent tracking-[0.3em] uppercase mb-1">Prompt Pack</p>
         <h2 className="font-display text-2xl text-cream leading-tight">Visual generation workbench</h2>
@@ -79,7 +79,7 @@ export default function PromptPackComposer({ ideas = [], artists = [], onSavePro
                 setPack(null)
                 setCopyError('')
               }}
-              className={`px-3 py-2 rounded-sm border text-[0.6875rem] font-mono tracking-widest uppercase transition-colors ${
+              className={`px-3 py-2 rounded-xs border text-[0.6875rem] font-mono tracking-widest uppercase transition-colors ${
                 sourceType === option.value
                   ? 'border-accent/50 text-accent bg-accent/5'
                   : 'border-ink-border text-cream-muted hover:text-cream hover:border-cream-muted/40'
@@ -92,7 +92,7 @@ export default function PromptPackComposer({ ideas = [], artists = [], onSavePro
 
         {sourceType === 'free-text' ? (
           <textarea
-            className="w-full bg-ink-muted border border-ink-border rounded-sm px-4 py-3 text-sm text-cream outline-none focus:border-cream-muted/40 font-body placeholder-cream-muted/60 resize-none transition-colors"
+            className="w-full bg-ink-muted border border-ink-border rounded-xs px-4 py-3 text-sm text-cream outline-hidden focus:border-cream-muted/40 font-body placeholder-cream-muted/60 resize-none transition-colors"
             rows={4}
             placeholder="Describe a tattoo concept to turn into provider-specific prompts..."
             value={prompt}
@@ -103,7 +103,7 @@ export default function PromptPackComposer({ ideas = [], artists = [], onSavePro
           />
         ) : (
           <select
-            className="w-full bg-ink-muted border border-ink-border rounded-sm px-4 py-3 text-sm text-cream outline-none focus:border-cream-muted/40 font-body"
+            className="w-full bg-ink-muted border border-ink-border rounded-xs px-4 py-3 text-sm text-cream outline-hidden focus:border-cream-muted/40 font-body"
             value={sourceIdeaId}
             onChange={(event) => {
               setSourceIdeaId(event.target.value)
@@ -121,14 +121,14 @@ export default function PromptPackComposer({ ideas = [], artists = [], onSavePro
           <button
             onClick={generatePack}
             disabled={!canGenerate}
-            className="px-5 py-2.5 bg-accent hover:bg-accent-hover disabled:opacity-30 disabled:cursor-not-allowed text-cream text-sm font-body rounded-sm transition-colors"
+            className="px-5 py-2.5 bg-accent hover:bg-accent-hover disabled:opacity-30 disabled:cursor-not-allowed text-cream text-sm font-body rounded-xs transition-colors"
           >
             Generate Prompt Pack
           </button>
           {pack && (
             <button
               onClick={savePack}
-              className="px-4 py-2 border border-ink-border hover:border-cream-muted/50 text-cream-muted hover:text-cream text-sm font-body rounded-sm transition-colors"
+              className="px-4 py-2 border border-ink-border hover:border-cream-muted/50 text-cream-muted hover:text-cream text-sm font-body rounded-xs transition-colors"
             >
               Save Pack
             </button>
@@ -142,7 +142,7 @@ export default function PromptPackComposer({ ideas = [], artists = [], onSavePro
                 <button
                   key={provider.id}
                   onClick={() => setActiveField(provider.field)}
-                  className={`px-3 py-2 rounded-sm border text-[0.6875rem] font-mono tracking-widest uppercase transition-colors ${
+                  className={`px-3 py-2 rounded-xs border text-[0.6875rem] font-mono tracking-widest uppercase transition-colors ${
                     activeField === provider.field
                       ? 'border-accent/50 text-accent bg-accent/5'
                       : 'border-ink-border text-cream-muted hover:text-cream hover:border-cream-muted/40'
@@ -155,7 +155,7 @@ export default function PromptPackComposer({ ideas = [], artists = [], onSavePro
 
             <textarea
               readOnly
-              className="w-full bg-ink-black border border-ink-border rounded-sm px-4 py-3 text-sm text-cream outline-none font-body resize-none"
+              className="w-full bg-ink-black border border-ink-border rounded-xs px-4 py-3 text-sm text-cream outline-hidden font-body resize-none"
               rows={9}
               value={activePrompt}
             />
@@ -163,7 +163,7 @@ export default function PromptPackComposer({ ideas = [], artists = [], onSavePro
             <div className="flex flex-wrap gap-2 items-center justify-between">
               <button
                 onClick={() => copyPrompt(activeField)}
-                className="px-4 py-2 bg-accent hover:bg-accent-hover text-cream text-sm font-body rounded-sm transition-colors"
+                className="px-4 py-2 bg-accent hover:bg-accent-hover text-cream text-sm font-body rounded-xs transition-colors"
               >
                 {copiedField === activeField ? 'Copied' : 'Copy Active Prompt'}
               </button>

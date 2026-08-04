@@ -30,7 +30,7 @@ export default function SavedPromptPack({ promptPack }) {
           <button
             key={field.id}
             onClick={() => setActiveField(field.field)}
-            className={`font-v2-ui text-[0.625rem] tracking-widest uppercase rounded-sm border px-2 py-1 transition-colors ${
+            className={`font-v2-ui text-[0.625rem] tracking-widest uppercase rounded-xs border px-2 py-1 transition-colors ${
               active.field === field.field ? 'border-v2-accent text-v2-cream' : 'border-v2-hairline text-v2-muted hover:text-v2-cream'
             }`}
           >
@@ -42,7 +42,7 @@ export default function SavedPromptPack({ promptPack }) {
         readOnly
         rows={5}
         value={active.value}
-        className="w-full bg-v2-ink border border-v2-hairline rounded-sm px-3 py-2 font-v2-ui text-xs text-v2-muted resize-none"
+        className="w-full bg-v2-ink border border-v2-hairline rounded-xs px-3 py-2 font-v2-ui text-xs text-v2-muted resize-none"
       />
       <button
         onClick={copySavedPrompt}

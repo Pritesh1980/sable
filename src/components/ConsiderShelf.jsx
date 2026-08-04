@@ -76,7 +76,7 @@ export default function ConsiderShelf({
         {suggestions.map((s) => (
           <article
             key={s.handle}
-            className="shrink-0 w-64 bg-v2-surface border border-v2-hairline rounded-sm px-4 py-3.5"
+            className="shrink-0 w-64 bg-v2-surface border border-v2-hairline rounded-xs px-4 py-3.5"
           >
             <h3 className="font-v2-display text-v2-cream text-[0.95rem] uppercase tracking-[0.12em] leading-tight truncate">
               {s.name}
@@ -103,14 +103,14 @@ export default function ConsiderShelf({
             <div className="flex gap-2 mt-3">
               <button
                 onClick={() => onAdd(s)}
-                className="font-v2-ui text-xs text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-sm px-3 py-1.5 transition-colors"
+                className="font-v2-ui text-xs text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-xs px-3 py-1.5 transition-colors"
               >
                 + Add
               </button>
               <button
                 onClick={() => onDismiss(s.handle)}
                 title="Don't suggest this artist again"
-                className="font-v2-ui text-xs text-v2-muted hover:text-v2-cream rounded-sm px-2 py-1.5 transition-colors"
+                className="font-v2-ui text-xs text-v2-muted hover:text-v2-cream rounded-xs px-2 py-1.5 transition-colors"
               >
                 Not for me
               </button>

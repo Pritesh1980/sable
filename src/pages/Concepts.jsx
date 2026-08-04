@@ -54,7 +54,7 @@ function KeyField({ label, help, placeholder, value, onSave, onRemove }) {
       <div className="flex gap-2">
         <input
           type="password"
-          className="flex-1 bg-v2-ink border border-v2-hairline rounded-sm px-3 py-2 text-sm text-v2-cream outline-none focus:border-v2-accent font-v2-ui"
+          className="flex-1 bg-v2-ink border border-v2-hairline rounded-xs px-3 py-2 text-sm text-v2-cream outline-hidden focus:border-v2-accent font-v2-ui"
           placeholder={placeholder}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -62,7 +62,7 @@ function KeyField({ label, help, placeholder, value, onSave, onRemove }) {
         />
         <button
           onClick={() => onSave(draft)}
-          className="px-4 py-2 bg-v2-accent text-v2-cream text-sm font-v2-ui rounded-sm transition-colors hover:brightness-110"
+          className="px-4 py-2 bg-v2-accent text-v2-cream text-sm font-v2-ui rounded-xs transition-colors hover:brightness-110"
         >
           Save
         </button>
@@ -295,7 +295,7 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
   }
 
   const aiSetupPanel = (
-    <div className="p-4 bg-v2-ink border border-v2-hairline rounded-sm">
+    <div className="p-4 bg-v2-ink border border-v2-hairline rounded-xs">
       <KeyField
         label="Gemini API key"
         help="Direct image generation via the Gemini API — paid, billing required (~$0.04/image). For free, skip this and use Copy Prompt below. Stored locally on your device only."
@@ -338,7 +338,7 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
         </nav>
         <button
           onClick={() => setComposerOpen(true)}
-          className="font-v2-ui text-sm text-v2-ink bg-v2-cream rounded-sm px-4 py-1.5 font-semibold hover:brightness-95 transition-[filter]"
+          className="font-v2-ui text-sm text-v2-ink bg-v2-cream rounded-xs px-4 py-1.5 font-semibold hover:brightness-95 transition-[filter]"
         >
           + New concept
         </button>
@@ -351,7 +351,7 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
           </p>
           <button
             onClick={() => setComposerOpen(true)}
-            className="font-v2-ui text-sm text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-sm px-5 py-2 transition-colors"
+            className="font-v2-ui text-sm text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-xs px-5 py-2 transition-colors"
           >
             + New concept
           </button>
@@ -371,7 +371,7 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
           </p>
           <div className="space-y-4">
             {draftConcepts.map((c) => (
-              <div key={c.id} className="bg-v2-surface border border-v2-hairline rounded-sm p-4">
+              <div key={c.id} className="bg-v2-surface border border-v2-hairline rounded-xs p-4">
                 <p className="font-v2-ui text-[0.625rem] tracking-widest uppercase text-v2-muted mb-1">Concept</p>
                 <p className="font-v2-display text-v2-cream text-sm italic mb-3">"{c.prompt}"</p>
                 <SavedPromptPack promptPack={c.promptPack} />

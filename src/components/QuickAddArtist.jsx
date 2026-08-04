@@ -126,7 +126,7 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
           const file = [...(e.clipboardData?.files || [])].find((f) => f.type.startsWith('image/'))
           if (file) { e.preventDefault(); handleScreenshot(file) }
         }}
-        className="w-full max-w-md bg-ink-card border border-ink-border rounded-sm p-5 m-4 mt-16 sm:mt-4 animate-slide-up"
+        className="w-full max-w-md bg-ink-card border border-ink-border rounded-xs p-5 m-4 mt-16 sm:mt-4 animate-slide-up"
       >
         <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-4">Add an artist</p>
 
@@ -142,7 +142,7 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
           />
           {shot ? (
             <div className="flex items-start gap-3">
-              <img src={shot} alt="Screenshot" className="w-16 h-16 object-cover rounded-sm border border-ink-border" />
+              <img src={shot} alt="Screenshot" className="w-16 h-16 object-cover rounded-xs border border-ink-border" />
               <div className="min-w-0">
                 {analyzing && (
                   <p className="font-mono text-xs text-cream-muted" role="status">Reading screenshot…</p>
@@ -159,7 +159,7 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
-              className="w-full border border-dashed border-ink-border rounded-sm px-3 py-3 text-left font-body text-sm text-cream-muted hover:border-cream-muted/40 transition-colors"
+              className="w-full border border-dashed border-ink-border rounded-xs px-3 py-3 text-left font-body text-sm text-cream-muted hover:border-cream-muted/40 transition-colors"
             >
               From a screenshot — choose or paste an Instagram screenshot to auto-fill
             </button>
@@ -171,7 +171,7 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
         </label>
         <input
           autoFocus
-          className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/40 font-mono placeholder-cream-muted/60 mb-3"
+          className="w-full bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/40 font-mono placeholder-cream-muted/60 mb-3"
           placeholder="@handle or Instagram URL"
           value={input}
           onChange={(e) => { setInput(e.target.value); setError('') }}
@@ -181,7 +181,7 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
           Display name
         </label>
         <input
-          className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/40 font-body placeholder-cream-muted/60 mb-4"
+          className="w-full bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/40 font-body placeholder-cream-muted/60 mb-4"
           placeholder="Full name (optional)"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -193,7 +193,7 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
               Style note (AI draft)
             </label>
             <textarea
-              className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/40 font-body placeholder-cream-muted/60 mb-4 resize-none"
+              className="w-full bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/40 font-body placeholder-cream-muted/60 mb-4 resize-none"
               rows={2}
               value={styleNote}
               onChange={(e) => setStyleNote(e.target.value)}
@@ -210,7 +210,7 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
 
         <p className="text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Shortlist status</p>
         <select
-          className="bg-ink-muted border border-ink-border rounded-sm px-3 py-1.5 text-sm text-cream outline-none focus:border-cream-muted/40 font-body mb-4"
+          className="bg-ink-muted border border-ink-border rounded-xs px-3 py-1.5 text-sm text-cream outline-hidden focus:border-cream-muted/40 font-body mb-4"
           value={status}
           onChange={(e) => setStatus(e.target.value)}
         >
@@ -231,7 +231,7 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
           </button>
           <button
             type="submit"
-            className="px-5 py-2 bg-accent hover:bg-accent-hover text-cream text-sm font-body rounded-sm transition-colors"
+            className="px-5 py-2 bg-accent hover:bg-accent-hover text-cream text-sm font-body rounded-xs transition-colors"
           >
             Add Artist
           </button>

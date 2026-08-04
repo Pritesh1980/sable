@@ -50,7 +50,7 @@ export default function DiscoverMore({ artists, exclude = [], onResults }) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="shrink-0 w-64 border border-dashed border-v2-hairline hover:border-v2-accent rounded-sm px-4 py-3.5 text-left transition-colors"
+        className="shrink-0 w-64 border border-dashed border-v2-hairline hover:border-v2-accent rounded-xs px-4 py-3.5 text-left transition-colors"
       >
         <span className="font-v2-display text-v2-cream text-[0.95rem] uppercase tracking-[0.12em] block">
           Find more like this
@@ -63,7 +63,7 @@ export default function DiscoverMore({ artists, exclude = [], onResults }) {
   }
 
   return (
-    <div className="shrink-0 w-80 bg-v2-surface border border-v2-hairline rounded-sm px-4 py-3.5">
+    <div className="shrink-0 w-80 bg-v2-surface border border-v2-hairline rounded-xs px-4 py-3.5">
       <div className="flex items-baseline justify-between">
         <h3 className="font-v2-display text-v2-cream text-[0.95rem] uppercase tracking-[0.12em]">Find more</h3>
         <button onClick={() => setOpen(false)} className="font-v2-ui text-v2-muted hover:text-v2-cream text-xs">close</button>
@@ -74,14 +74,14 @@ export default function DiscoverMore({ artists, exclude = [], onResults }) {
           <button
             onClick={askGemini}
             disabled={busy}
-            className="font-v2-ui text-xs text-v2-cream bg-v2-accent rounded-sm px-3 py-1.5 disabled:opacity-50"
+            className="font-v2-ui text-xs text-v2-cream bg-v2-accent rounded-xs px-3 py-1.5 disabled:opacity-50"
           >
             {busy ? 'Asking…' : 'Ask Gemini'}
           </button>
         )}
         <button
           onClick={copyPrompt}
-          className="font-v2-ui text-xs text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-sm px-3 py-1.5 transition-colors"
+          className="font-v2-ui text-xs text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-xs px-3 py-1.5 transition-colors"
         >
           {copied ? 'Copied ✓' : 'Copy prompt'}
         </button>
@@ -95,12 +95,12 @@ export default function DiscoverMore({ artists, exclude = [], onResults }) {
         onChange={(e) => setPasted(e.target.value)}
         rows={3}
         placeholder="handle | name | styles | note"
-        className="w-full bg-v2-ink text-v2-cream border border-v2-hairline rounded-sm px-2 py-1.5 font-v2-ui text-xs focus:outline focus:outline-1 focus:outline-v2-accent"
+        className="w-full bg-v2-ink text-v2-cream border border-v2-hairline rounded-xs px-2 py-1.5 font-v2-ui text-xs focus:outline focus:outline-1 focus:outline-v2-accent"
       />
       <button
         onClick={addPasted}
         disabled={!pasted.trim()}
-        className="font-v2-ui text-xs text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-sm px-3 py-1.5 mt-2 transition-colors disabled:opacity-40"
+        className="font-v2-ui text-xs text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-xs px-3 py-1.5 mt-2 transition-colors disabled:opacity-40"
       >
         Add results
       </button>

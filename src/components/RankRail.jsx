@@ -24,10 +24,10 @@ export default function RankRail({ artists = [], setArtists = () => {}, onOpenBo
           <li
             key={a.id}
             data-testid="rank-tile"
-            className="flex items-center gap-1.5 shrink-0 bg-v2-surface border border-v2-hairline rounded-sm pl-1.5 pr-1 py-1"
+            className="flex items-center gap-1.5 shrink-0 bg-v2-surface border border-v2-hairline rounded-xs pl-1.5 pr-1 py-1"
           >
             <span className="font-v2-display text-v2-accent text-sm w-4 text-center">{i + 1}</span>
-            <span className="w-7 h-7 rounded-sm overflow-hidden shrink-0">
+            <span className="w-7 h-7 rounded-xs overflow-hidden shrink-0">
               <ArtistImage src={a.images?.[0]} label={label(a)} className="w-full h-full object-cover" monogramClassName="text-[0.625rem]" />
             </span>
             <span className="font-v2-ui text-xs text-v2-cream max-w-[6.5rem] truncate">{label(a)}</span>
@@ -53,7 +53,7 @@ export default function RankRail({ artists = [], setArtists = () => {}, onOpenBo
 
       <button
         onClick={onOpenBoard}
-        className="shrink-0 font-v2-ui text-xs text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-sm px-3 py-1.5 transition-colors"
+        className="shrink-0 font-v2-ui text-xs text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-xs px-3 py-1.5 transition-colors"
       >
         Rank ⤢
       </button>

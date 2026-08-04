@@ -18,13 +18,13 @@ export default function Settings({ artists, setArtists, ideas, setIdeas, boards,
 
       {/* Account */}
       {auth?.user && (
-        <div className="bg-ink-card border border-ink-border rounded-sm p-4 mb-8">
+        <div className="bg-ink-card border border-ink-border rounded-xs p-4 mb-8">
           <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-1">Account</p>
           <div className="flex items-center justify-between gap-4">
             <p className="text-cream text-sm font-mono">{auth.user.email}</p>
             <button
               onClick={() => auth.signOut()}
-              className="px-4 py-2 border border-ink-border hover:border-cream-muted/50 text-cream-muted hover:text-accent text-sm font-body rounded-sm transition-colors"
+              className="px-4 py-2 border border-ink-border hover:border-cream-muted/50 text-cream-muted hover:text-accent text-sm font-body rounded-xs transition-colors"
             >
               Sign out
             </button>
@@ -49,7 +49,7 @@ export default function Settings({ artists, setArtists, ideas, setIdeas, boards,
       />
 
       {/* Appearance pointer */}
-      <div className="bg-ink-card border border-ink-border rounded-sm p-4">
+      <div className="bg-ink-card border border-ink-border rounded-xs p-4">
         <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-1">Appearance</p>
         <p className="text-cream-muted/90 text-sm font-body leading-relaxed">
           Theme (◑) and font size (A+) live in the top-right corner on every page. They're per-device and don't sync.

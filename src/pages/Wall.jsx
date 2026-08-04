@@ -50,7 +50,7 @@ function Bar({ activeView, onSwitchView, onAddArtist, onOpenDrawer }) {
 
       <button
         onClick={onAddArtist}
-        className="font-v2-ui text-sm text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-sm px-4 py-1.5 transition-colors"
+        className="font-v2-ui text-sm text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-xs px-4 py-1.5 transition-colors"
       >
         + Add artist
       </button>
@@ -206,7 +206,7 @@ export default function Wall({ artists = [], ideas = [], setArtists = () => {}, 
           </p>
           <button
             onClick={() => setAddArtistOpen(true)}
-            className="font-v2-ui text-sm text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-sm px-5 py-2 transition-colors"
+            className="font-v2-ui text-sm text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-xs px-5 py-2 transition-colors"
           >
             + Add artist
           </button>

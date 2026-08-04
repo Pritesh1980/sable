@@ -30,7 +30,7 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
   return (
     <div
       style={{ animationDelay: `${index * 0.04}s` }}
-      className={`animate-slide-up opacity-0 [animation-fill-mode:forwards] bg-ink-card border border-ink-border rounded-sm overflow-hidden cursor-pointer
+      className={`animate-slide-up opacity-0 [animation-fill-mode:forwards] bg-ink-card border border-ink-border rounded-xs overflow-hidden cursor-pointer
         transition-all duration-300
         hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-black/70 hover:border-cream-muted/30
         group ${isDragging ? 'opacity-40 scale-95 shadow-2xl' : ''}`}
@@ -104,14 +104,14 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
             </p>
           )}
           {studio && (
-            <span className="inline-block mt-1 px-1.5 py-px bg-ink-black/70 backdrop-blur-sm font-mono text-cream-muted/90 text-[0.625rem] tracking-widest truncate max-w-full">
+            <span className="inline-block mt-1 px-1.5 py-px bg-ink-black/70 backdrop-blur-xs font-mono text-cream-muted/90 text-[0.625rem] tracking-widest truncate max-w-full">
               {studio.name}
             </span>
           )}
         </div>
 
         {/* Rank badge */}
-        <div className="absolute top-2 left-2 w-5 h-5 rounded-full bg-ink-black/70 flex items-center justify-center backdrop-blur-sm">
+        <div className="absolute top-2 left-2 w-5 h-5 rounded-full bg-ink-black/70 flex items-center justify-center backdrop-blur-xs">
           <span className="text-[0.8125rem] font-mono text-cream-muted/80">{artist.rank}</span>
         </div>
       </div>

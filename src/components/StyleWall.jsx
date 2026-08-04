@@ -18,7 +18,7 @@ export default function StyleWall({ artists, onOpenArtist }) {
       {allImages.map(({ src, artist }, i) => (
         <div
           key={i}
-          className="relative mb-2 break-inside-avoid rounded-sm overflow-hidden cursor-pointer group"
+          className="relative mb-2 break-inside-avoid rounded-xs overflow-hidden cursor-pointer group"
           onClick={() => onOpenArtist(artist)}
         >
           <ArtistImage

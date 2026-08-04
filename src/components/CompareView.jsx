@@ -9,7 +9,7 @@ function CompareColumn({ artist, onOpen, onRemove }) {
   const instagramUrl = `https://www.instagram.com/${artist.handle}/`
 
   return (
-    <div className="flex flex-col border border-ink-border/50 rounded-sm overflow-hidden bg-ink-card/20 min-w-0">
+    <div className="flex flex-col border border-ink-border/50 rounded-xs overflow-hidden bg-ink-card/20 min-w-0">
       {/* Sticky header */}
       <div className="sticky top-0 z-10 bg-ink-black border-b border-ink-border/50 px-4 py-3">
         <div className="flex items-start justify-between gap-2">
@@ -46,7 +46,7 @@ function CompareColumn({ artist, onOpen, onRemove }) {
         {artist.images?.length > 0 ? (
           <div className="grid grid-cols-2 gap-2">
             {artist.images.map((src, i) => (
-              <div key={i} className="aspect-square bg-ink-muted rounded-sm overflow-hidden">
+              <div key={i} className="aspect-square bg-ink-muted rounded-xs overflow-hidden">
                 <ArtistImage src={src} label={displayName} className="w-full h-full object-cover" monogramClassName="text-2xl" />
               </div>
             ))}
@@ -70,10 +70,10 @@ function ArtistPicker({ artists, selected, onSelect }) {
   )
 
   return (
-    <div className="flex flex-col border border-dashed border-ink-border/50 rounded-sm min-w-0 items-center justify-center p-4">
+    <div className="flex flex-col border border-dashed border-ink-border/50 rounded-xs min-w-0 items-center justify-center p-4">
       <p className="text-cream-muted/40 font-mono text-xs tracking-widest uppercase mb-3">Add artist</p>
       <input
-        className="w-full max-w-xs bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-mono placeholder-cream-muted/40 mb-3"
+        className="w-full max-w-xs bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/50 font-mono placeholder-cream-muted/40 mb-3"
         placeholder="Search…"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
@@ -83,9 +83,9 @@ function ArtistPicker({ artists, selected, onSelect }) {
           <button
             key={a.id}
             onClick={() => { onSelect(a.id); setSearch('') }}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-sm text-sm font-body transition-colors border border-ink-border text-cream-muted hover:border-cream-muted/50 hover:text-cream"
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xs text-sm font-body transition-colors border border-ink-border text-cream-muted hover:border-cream-muted/50 hover:text-cream"
           >
-            {a.images?.[0] && <span className="w-6 h-6 rounded-sm overflow-hidden shrink-0"><ArtistImage src={a.images[0]} label={a.name || `@${a.handle}`} className="w-full h-full object-cover" monogramClassName="text-xs" /></span>}
+            {a.images?.[0] && <span className="w-6 h-6 rounded-xs overflow-hidden shrink-0"><ArtistImage src={a.images[0]} label={a.name || `@${a.handle}`} className="w-full h-full object-cover" monogramClassName="text-xs" /></span>}
             {a.name || `@${a.handle}`}
           </button>
         ))}

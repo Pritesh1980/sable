@@ -13,8 +13,8 @@ function GroupSection({ label, items, accent }) {
       </div>
       <div className="flex flex-wrap gap-2">
         {items.map((a) => (
-          <span key={a.id} className="inline-flex items-center gap-1.5 font-body text-[0.8125rem] text-cream-muted bg-ink-card px-2 py-1 rounded-sm">
-            {a.images?.[0] && <span className="w-5 h-5 rounded-sm overflow-hidden shrink-0"><ArtistImage src={a.images[0]} label={a.name || `@${a.handle}`} className="w-full h-full object-cover" monogramClassName="text-[0.625rem]" /></span>}
+          <span key={a.id} className="inline-flex items-center gap-1.5 font-body text-[0.8125rem] text-cream-muted bg-ink-card px-2 py-1 rounded-xs">
+            {a.images?.[0] && <span className="w-5 h-5 rounded-xs overflow-hidden shrink-0"><ArtistImage src={a.images[0]} label={a.name || `@${a.handle}`} className="w-full h-full object-cover" monogramClassName="text-[0.625rem]" /></span>}
             {a.name || `@${a.handle}`}
           </span>
         ))}
@@ -63,13 +63,13 @@ function SummaryScreen({ decisions, artists, onApply, onDiscard }) {
       <div className="shrink-0 px-5 pb-10 pt-4 border-t border-ink-border flex gap-3">
         <button
           onClick={onDiscard}
-          className="flex-1 py-3.5 font-mono text-xs tracking-widest uppercase text-cream-muted/60 border border-ink-border rounded-sm hover:text-cream-muted transition-colors"
+          className="flex-1 py-3.5 font-mono text-xs tracking-widest uppercase text-cream-muted/60 border border-ink-border rounded-xs hover:text-cream-muted transition-colors"
         >
           Discard
         </button>
         <button
           onClick={onApply}
-          className="flex-1 py-3.5 font-mono text-xs tracking-widest uppercase text-cream border border-cream/30 rounded-sm hover:bg-cream/5 transition-colors"
+          className="flex-1 py-3.5 font-mono text-xs tracking-widest uppercase text-cream border border-cream/30 rounded-xs hover:bg-cream/5 transition-colors"
         >
           Apply Ranking
         </button>
@@ -280,7 +280,7 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
         <div className="grid grid-cols-3 gap-3">
           <button
             onClick={() => decide('pass')}
-            className="py-4 flex flex-col items-center gap-1 font-mono tracking-widest uppercase text-cream-muted/60 bg-ink-card border border-ink-border rounded-sm hover:border-cream-muted/40 hover:text-cream-muted transition-colors active:scale-95"
+            className="py-4 flex flex-col items-center gap-1 font-mono tracking-widest uppercase text-cream-muted/60 bg-ink-card border border-ink-border rounded-xs hover:border-cream-muted/40 hover:text-cream-muted transition-colors active:scale-95"
           >
             <span className="text-xl leading-none">←</span>
             <span className="text-[0.6875rem]">Pass</span>
@@ -288,7 +288,7 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
           </button>
           <button
             onClick={() => decide('maybe')}
-            className="py-4 flex flex-col items-center gap-1 font-mono tracking-widest uppercase text-cream bg-ink-card border border-cream-muted/30 rounded-sm hover:border-cream-muted/60 hover:bg-cream/5 transition-colors active:scale-95"
+            className="py-4 flex flex-col items-center gap-1 font-mono tracking-widest uppercase text-cream bg-ink-card border border-cream-muted/30 rounded-xs hover:border-cream-muted/60 hover:bg-cream/5 transition-colors active:scale-95"
           >
             <span className="text-xl leading-none">↑</span>
             <span className="text-[0.6875rem]">Maybe</span>
@@ -296,7 +296,7 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
           </button>
           <button
             onClick={() => decide('top')}
-            className="py-4 flex flex-col items-center gap-1 font-mono tracking-widest uppercase text-accent bg-accent/5 border border-accent/50 rounded-sm hover:bg-accent/15 hover:border-accent transition-colors active:scale-95"
+            className="py-4 flex flex-col items-center gap-1 font-mono tracking-widest uppercase text-accent bg-accent/5 border border-accent/50 rounded-xs hover:bg-accent/15 hover:border-accent transition-colors active:scale-95"
           >
             <span className="text-xl leading-none">→</span>
             <span className="text-[0.6875rem]">Top</span>

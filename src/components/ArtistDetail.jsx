@@ -112,7 +112,7 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
           <div className="mb-6">
             {editing ? (
               <input
-                className="bg-transparent border-b border-ink-border text-cream font-display text-2xl w-full outline-none pb-1 mb-2 placeholder-cream-muted/60"
+                className="bg-transparent border-b border-ink-border text-cream font-display text-2xl w-full outline-hidden pb-1 mb-2 placeholder-cream-muted/60"
                 value={draft.name}
                 onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
                 placeholder="Display name (optional)"
@@ -172,7 +172,7 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
             <button
               onClick={() => fileRef.current.click()}
               disabled={uploading}
-              className="w-full flex items-center justify-center gap-3 py-3 mb-4 border border-dashed border-ink-muted rounded-sm text-cream-muted hover:text-cream hover:border-cream-muted/40 transition-colors disabled:opacity-40"
+              className="w-full flex items-center justify-center gap-3 py-3 mb-4 border border-dashed border-ink-muted rounded-xs text-cream-muted hover:text-cream hover:border-cream-muted/40 transition-colors disabled:opacity-40"
             >
               {uploading ? (
                 <span className="font-mono text-xs tracking-widest animate-pulse">Importing…</span>
@@ -196,13 +196,13 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
               {images.map((src, idx) => (
                 <div
                   key={idx}
-                  className={`relative snap-center shrink-0 w-[88%] sm:w-[520px] aspect-[4/5] bg-ink-muted rounded-sm overflow-hidden cursor-pointer ${idx === 0 ? 'ring-1 ring-accent' : ''}`}
+                  className={`relative snap-center shrink-0 w-[88%] sm:w-[520px] aspect-[4/5] bg-ink-muted rounded-xs overflow-hidden cursor-pointer ${idx === 0 ? 'ring-1 ring-accent' : ''}`}
                   onClick={() => setLightbox(idx)}
                 >
                   <ArtistImage src={src} label={artist.name || `@${artist.handle}`} className="w-full h-full object-cover" monogramClassName="text-6xl" loading="lazy" />
 
                   {idx === 0 && (
-                    <div className="absolute top-3 left-3 bg-accent/80 text-cream text-[0.6875rem] font-mono tracking-widest px-2 py-1 rounded-sm uppercase">
+                    <div className="absolute top-3 left-3 bg-accent/80 text-cream text-[0.6875rem] font-mono tracking-widest px-2 py-1 rounded-xs uppercase">
                       Cover
                     </div>
                   )}
@@ -211,14 +211,14 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
                     {idx !== 0 && (
                       <button
                         onClick={(e) => { e.stopPropagation(); setCover(idx) }}
-                        className="text-[0.6875rem] font-mono text-cream tracking-widest uppercase bg-ink-black/70 hover:bg-ink-black px-2.5 py-1 rounded-sm transition-colors backdrop-blur-sm"
+                        className="text-[0.6875rem] font-mono text-cream tracking-widest uppercase bg-ink-black/70 hover:bg-ink-black px-2.5 py-1 rounded-xs transition-colors backdrop-blur-xs"
                       >
                         Set cover
                       </button>
                     )}
                     <button
                       onClick={(e) => { e.stopPropagation(); removeImage(idx) }}
-                      className="w-7 h-7 flex items-center justify-center text-accent text-xl leading-none bg-ink-black/70 hover:bg-ink-black rounded-sm transition-colors backdrop-blur-sm"
+                      className="w-7 h-7 flex items-center justify-center text-accent text-xl leading-none bg-ink-black/70 hover:bg-ink-black rounded-xs transition-colors backdrop-blur-xs"
                       title="Remove photo"
                     >×</button>
                   </div>
@@ -272,7 +272,7 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
               <div className="mb-6">
                 <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-3">Shortlist status</p>
                 <select
-                  className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-body"
+                  className="w-full bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/50 font-body"
                   value={normalizeArtistStatus(draft.status)}
                   onChange={(e) => setDraft((d) => ({ ...d, status: e.target.value }))}
                 >
@@ -285,7 +285,7 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
               <div className="mb-6">
                 <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-3">Studio</p>
                 <select
-                  className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-body"
+                  className="w-full bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/50 font-body"
                   value={draft.studio || ''}
                   onChange={(e) => setDraft((d) => ({ ...d, studio: e.target.value || null }))}
                 >
@@ -309,7 +309,7 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
                     href={c.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-start justify-between gap-3 p-3 bg-ink-card border border-accent/25 rounded-sm hover:border-accent/50 transition-colors group"
+                    className="flex items-start justify-between gap-3 p-3 bg-ink-card border border-accent/25 rounded-xs hover:border-accent/50 transition-colors group"
                   >
                     <div className="min-w-0">
                       <p className="font-display text-cream text-base leading-tight truncate group-hover:text-accent transition-colors">{c.name}</p>
@@ -331,7 +331,7 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
             <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-3">Notes</p>
             {editing ? (
               <textarea
-                className="w-full bg-ink-muted border border-ink-border rounded-sm px-3 py-2 text-sm text-cream outline-none focus:border-cream-muted/50 font-body placeholder-cream-muted/60 resize-none"
+                className="w-full bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/50 font-body placeholder-cream-muted/60 resize-none"
                 rows={4}
                 placeholder="Personal notes about this artist…"
                 value={draft.notes || ''}

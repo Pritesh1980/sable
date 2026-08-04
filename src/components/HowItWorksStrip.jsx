@@ -22,7 +22,7 @@ export default function HowItWorksStrip() {
   }
 
   return (
-    <div className="relative bg-ink-card border border-ink-border rounded-sm p-4 mb-6 animate-slide-up">
+    <div className="relative bg-ink-card border border-ink-border rounded-xs p-4 mb-6 animate-slide-up">
       <button
         onClick={dismiss}
         aria-label="Dismiss guide"

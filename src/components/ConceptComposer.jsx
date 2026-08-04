@@ -8,7 +8,7 @@ function capitalize(word) {
 
 function ArtistPicker({ artists, onPick, onClear }) {
   return (
-    <div className="mt-2 max-h-52 overflow-y-auto border border-v2-hairline rounded-sm bg-v2-ink">
+    <div className="mt-2 max-h-52 overflow-y-auto border border-v2-hairline rounded-xs bg-v2-ink">
       <button
         onClick={onClear}
         className="w-full text-left px-3 py-2 font-v2-ui text-sm text-v2-muted hover:text-v2-cream border-b border-v2-hairline"
@@ -21,7 +21,7 @@ function ArtistPicker({ artists, onPick, onClear }) {
           onClick={() => onPick(artist.id)}
           className="w-full flex items-center gap-2 text-left px-3 py-2 font-v2-ui text-sm text-v2-cream hover:bg-v2-hairline/40"
         >
-          <ArtistImage src={artist.images?.[0]} label={artist.name || `@${artist.handle}`} className="w-7 h-7 object-cover rounded-sm shrink-0" monogramClassName="text-xs" />
+          <ArtistImage src={artist.images?.[0]} label={artist.name || `@${artist.handle}`} className="w-7 h-7 object-cover rounded-xs shrink-0" monogramClassName="text-xs" />
           <span className="truncate">{artist.name || `@${artist.handle}`}</span>
         </button>
       ))}
@@ -110,10 +110,10 @@ export default function ConceptComposer({
           : 'Describe an idea, or steer it toward one of your artists.'}
       </p>
 
-      <div className="flex items-center gap-3 bg-v2-ink border border-v2-hairline rounded-sm px-3.5 py-3 mb-1">
+      <div className="flex items-center gap-3 bg-v2-ink border border-v2-hairline rounded-xs px-3.5 py-3 mb-1">
         {steerArtist ? (
           <>
-            <ArtistImage src={steerArtist.images?.[0]} label={steerArtist.name || `@${steerArtist.handle}`} className="w-11 h-11 object-cover rounded-sm shrink-0" monogramClassName="text-lg" />
+            <ArtistImage src={steerArtist.images?.[0]} label={steerArtist.name || `@${steerArtist.handle}`} className="w-11 h-11 object-cover rounded-xs shrink-0" monogramClassName="text-lg" />
             <div className="flex-1 min-w-0">
               <b className="block font-v2-display text-v2-cream text-sm uppercase tracking-[0.1em] truncate">
                 {steerArtist.name || `@${steerArtist.handle}`}
@@ -151,7 +151,7 @@ export default function ConceptComposer({
         onChange={(e) => onIdeaChange(e.target.value)}
         onPaste={handlePaste}
         placeholder="A raven perched on a broken pocket watch, feathers dissolving into smoke, heavy black shading"
-        className="w-full bg-v2-ink text-v2-cream border border-v2-hairline rounded-sm px-3.5 py-3 font-v2-ui text-sm outline-none focus:border-v2-accent resize-y"
+        className="w-full bg-v2-ink text-v2-cream border border-v2-hairline rounded-xs px-3.5 py-3 font-v2-ui text-sm outline-hidden focus:border-v2-accent resize-y"
       />
 
       <label htmlFor="composer-placement" className="block font-v2-ui text-[0.68rem] tracking-[0.14em] uppercase text-v2-muted mt-5 mb-1.5">
@@ -181,7 +181,7 @@ export default function ConceptComposer({
             <button
               key={p.id}
               onClick={() => setProvider(p.id)}
-              className={`font-v2-ui text-[0.68rem] tracking-widest uppercase rounded-sm border px-3 py-1 transition-colors ${
+              className={`font-v2-ui text-[0.68rem] tracking-widest uppercase rounded-xs border px-3 py-1 transition-colors ${
                 provider === p.id ? 'border-v2-accent text-v2-cream' : 'border-v2-hairline text-v2-muted hover:text-v2-cream'
               }`}
             >
@@ -195,14 +195,14 @@ export default function ConceptComposer({
         <button
           onClick={() => (hasApiKey ? onGenerate() : onToggleAiSetup(true))}
           disabled={generating || !idea.trim()}
-          className="flex-1 bg-v2-accent text-v2-cream font-v2-ui text-sm font-medium rounded-sm px-4 py-3 transition-colors hover:brightness-110 disabled:opacity-30 disabled:cursor-not-allowed"
+          className="flex-1 bg-v2-accent text-v2-cream font-v2-ui text-sm font-medium rounded-xs px-4 py-3 transition-colors hover:brightness-110 disabled:opacity-30 disabled:cursor-not-allowed"
         >
           {generating ? 'Generating…' : 'Generate image'}
         </button>
         <button
           onClick={onCopyPrompt}
           disabled={!idea.trim()}
-          className="flex-1 border border-v2-hairline text-v2-cream font-v2-ui text-sm rounded-sm px-4 py-3 transition-colors hover:border-v2-accent disabled:opacity-30 disabled:cursor-not-allowed"
+          className="flex-1 border border-v2-hairline text-v2-cream font-v2-ui text-sm rounded-xs px-4 py-3 transition-colors hover:border-v2-accent disabled:opacity-30 disabled:cursor-not-allowed"
         >
           {copied ? 'Copied ✓' : 'Copy prompt instead'}
         </button>
@@ -219,7 +219,7 @@ export default function ConceptComposer({
           role="button"
           tabIndex={0}
           aria-label="Paste or drop a result image here"
-          className={`border-2 border-dashed rounded-sm px-4 py-6 text-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-v2-accent ${
+          className={`border-2 border-dashed rounded-xs px-4 py-6 text-center transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-v2-accent ${
             dragOver ? 'border-v2-accent bg-v2-accent/5' : 'border-v2-hairline'
           }`}
           onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}

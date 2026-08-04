@@ -30,7 +30,7 @@ function MoreMenu({ onClose }) {
   return (
     <div className="fixed inset-0 z-40" onClick={onClose}>
       <div
-        className="absolute bottom-[calc(env(safe-area-inset-bottom,0px)+3.5rem)] left-4 right-4 max-w-2xl mx-auto bg-ink-card border border-ink-border rounded-sm overflow-hidden animate-slide-up shadow-2xl shadow-black/60"
+        className="absolute bottom-[calc(env(safe-area-inset-bottom,0px)+3.5rem)] left-4 right-4 max-w-2xl mx-auto bg-ink-card border border-ink-border rounded-xs overflow-hidden animate-slide-up shadow-2xl shadow-black/60"
         onClick={(e) => e.stopPropagation()}
       >
         {MORE_LINKS.map(({ to, label, icon, description }) => (
