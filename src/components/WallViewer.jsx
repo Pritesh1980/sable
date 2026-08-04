@@ -82,7 +82,6 @@ export default function WallViewer({
   const [transitionMode] = useState(resolveTransitionMode)
 
   const {
-    index,
     current,
     setIndex,
     positionInArtist,

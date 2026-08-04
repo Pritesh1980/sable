@@ -44,7 +44,7 @@ function artistLabel(a) {
 
 // Lets you record which of your saved artists are appearing at a convention.
 // (Manual for now — automatic look-up is on the backlog.)
-function AttendeesEditor({ convention, artists, attendingIds, onToggle }) {
+function AttendeesEditor({ artists, attendingIds, onToggle }) {
   const [expanded, setExpanded] = useState(false)
   const attending = artists.filter((a) => attendingIds.includes(a.id))
 
@@ -126,7 +126,7 @@ function HeroCard({ convention, artists, attendingIds, onToggle }) {
       >
         More info →
       </a>
-      <AttendeesEditor convention={convention} artists={artists} attendingIds={attendingIds} onToggle={onToggle} />
+      <AttendeesEditor artists={artists} attendingIds={attendingIds} onToggle={onToggle} />
     </div>
   )
 }
@@ -166,7 +166,7 @@ function ConventionCard({ convention, artists, attendingIds, onToggle }) {
       >
         More info →
       </a>
-      <AttendeesEditor convention={convention} artists={artists} attendingIds={attendingIds} onToggle={onToggle} />
+      <AttendeesEditor artists={artists} attendingIds={attendingIds} onToggle={onToggle} />
     </div>
   )
 }
