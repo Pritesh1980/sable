@@ -17,6 +17,10 @@ collection (six invented artists with original artwork) that runs entirely in yo
 browser; nothing syncs anywhere, and you can edit freely. To get back out, clear the
 site's storage or open a fresh private window.
 
+The demo opens with a short strip across the top of the Wall explaining what you're
+looking at. Close it with **✕** and it stays closed on that device — it's an
+introduction, not a banner. It never appears on a real account.
+
 ---
 
 ## The Wall — your artists, edge to edge

@@ -23,6 +23,12 @@ export const DEMO_SESSION = {
   user: { id: 'local-demo@example.com', email: 'demo@example.com' },
 }
 
+// Device-local, and deliberately outside the seeded collections: dismissing the
+// intro is a preference about this browser, not demo data, so a re-seed (see
+// DEMO_SEED_VERSION below) must not bring the strip back for someone who has
+// already closed it.
+export const DEMO_INTRO_KEY = 'tattoo_demo_intro_dismissed'
+
 // Bump whenever the demo dataset changes shape (artists, image counts, art
 // replaced). A returning visitor whose DEMO session carries an older version
 // is re-seeded, so the public demo never shows a stale mix of old data and

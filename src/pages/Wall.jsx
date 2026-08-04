@@ -16,6 +16,7 @@ import { useStorage } from '../hooks/useStorage'
 import { backend } from '../backend'
 import { OWNER_SEED_ENABLED } from '../backend/owner'
 import { isDemoSession, canOfferDemo } from '../data/demoSeed'
+import DemoIntro from '../components/DemoIntro'
 
 // The Wall — image-first home surface. Full-bleed masonry of every artist
 // reference image; the hairline bar above it is the only chrome. Routing is
@@ -154,6 +155,11 @@ export default function Wall({ artists = [], ideas = [], setArtists = () => {}, 
           onOpenDrawer={onOpenDrawer}
         />
       )}
+
+      {/* Under the bar, above everything else: the demo drops visitors straight
+          onto a populated wall, and this is where they find out what they are
+          looking at. Hidden with the rest of the chrome once the viewer is open. */}
+      {!viewerOpen && <DemoIntro />}
 
       {!viewerOpen && (
         <RankRail
