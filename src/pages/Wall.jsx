@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { buildWallItems, stampAddedAt } from '../data/wall'
 import WallPiece from '../components/WallPiece'
 import WallViewer from '../components/WallViewer'

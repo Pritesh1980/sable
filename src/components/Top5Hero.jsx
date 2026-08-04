@@ -1,5 +1,5 @@
 import { lazy, Suspense, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
 import { resolveTransitionMode } from '../lib/gl'
 

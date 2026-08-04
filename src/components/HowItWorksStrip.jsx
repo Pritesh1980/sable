@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 
 // Device-local on purpose: dismissing the guide on your Mac shouldn't dismiss
 // it on your phone, and it must never enter the synced collections.

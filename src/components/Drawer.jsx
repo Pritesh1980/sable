@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 
 // Slide-over "everything else" menu for the Wall's ⋯ button — everything the
 // hairline bar doesn't surface directly (ideas, ranking, radar, studios, admin).

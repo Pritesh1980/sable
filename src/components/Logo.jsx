@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 
 // Inline SVG koru mark — inherits colour via currentColor.
 export function LogoMark({ size = 32, className = '' }) {

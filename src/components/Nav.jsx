@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink, useNavigate, useLocation } from 'react-router-dom'
+import { NavLink, useNavigate, useLocation } from 'react-router'
 import { useTheme } from '../context/useTheme'
 import { useAuth } from '../context/useAuth'
 

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from 'react'
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useNavigate } from 'react-router'
 import Nav from './components/Nav'
 import Drawer from './components/Drawer'
 import Wall from './pages/Wall'

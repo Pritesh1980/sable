@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { STYLE_TAGS, parseInstagramHandle, createArtist } from '../data/artists'
 import { uploadImages, compressImages } from '../hooks/useImageUpload'
 import { stampAddedAt } from '../data/wall'

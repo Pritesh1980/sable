@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import Logo from '../components/Logo'
 import TagPill from '../components/TagPill'
 import HowItWorksStrip from '../components/HowItWorksStrip'
