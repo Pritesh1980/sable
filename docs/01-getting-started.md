@@ -30,8 +30,9 @@ tiled edge to edge. No panels, no stats — the work itself is the interface.
 
 ![The Wall](../public/guide/wall.png)
 
-- **Hover a photo** to see whose it is — the artist's name (and their studio, when one
-  is set) fades in along the bottom edge.
+- **Whose photo is it?** On a phone or tablet the artist's name (and their studio, when
+  one is set) sits along the bottom edge of every tile. With a mouse it stays out of the
+  way and fades in on hover.
 - A **red dot** on a photo means it's new — added within the last 14 days.
 - Pinned just under the bar is your **Top 5** — the five artists you've ranked highest,
   as a slim strip. Nudge any of them up or down with **▲ / ▼**, or tap **Rank ⤢** to

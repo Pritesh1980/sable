@@ -109,7 +109,7 @@ function BoardModal({ board, onClose, onSave, onDelete, ideas, artists }) {
       <div className="flex-1 px-5 py-6 max-w-2xl mx-auto w-full space-y-6">
         <input
           autoFocus
-          className="bg-transparent border-b border-ink-border text-cream font-display text-2xl w-full outline-hidden pb-1 placeholder-cream-muted/60"
+          className="bg-transparent border-b border-ink-border text-cream font-display text-2xl w-full outline-hidden focus-visible:ring-2 focus-visible:ring-accent pb-1 placeholder-cream-muted/60"
           placeholder="Board name…"
           value={draft.name}
           onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}

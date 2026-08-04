@@ -53,7 +53,7 @@ export default function WallPiece({ item, onOpen, onDropImage }) {
       )}
 
       <figcaption
-        className="absolute inset-x-0 bottom-0 flex flex-col gap-0.5 px-3 pt-10 pb-2.5 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 bg-gradient-to-t from-v2-ink/95 via-v2-ink/60 to-transparent"
+        className="absolute inset-x-0 bottom-0 flex flex-col gap-0.5 px-3 pt-10 pb-2.5 pointer-events-none can-hover:opacity-0 group-hover:opacity-100 transition-opacity duration-150 bg-gradient-to-t from-v2-ink/95 via-v2-ink/60 to-transparent"
       >
         <span className="font-v2-display text-v2-cream text-base uppercase tracking-[0.18em] leading-tight truncate [text-shadow:0_1px_6px_rgba(0,0,0,0.9)]">
           {item.artistName}

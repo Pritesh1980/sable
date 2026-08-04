@@ -8,17 +8,28 @@
    delete that guard. `@config` is supported in v4 for exactly this case. */
 @config '../tailwind.config.js';
 
-/* v4 wraps hover/group-hover in `@media (hover: hover)`, so on a touch device
-   they never apply at all. Nine controls here are `opacity-0
-   group-hover:opacity-100` — including the remove-photo button in Brief and the
-   rank nudges in the filmstrip — which under v4 would be permanently invisible
-   on iPhone while still being tappable. This app is iPhone-first, so restore the
-   v3 semantics (iOS applies sticky :hover on tap, which is what made them
-   reachable before).
-   Revealing those controls properly on touch is the better long-term fix, but
-   that is a design change, not part of a migration whose promise was visual
-   parity. */
-@custom-variant hover (&:hover);
+/* Hover-capable pointers only — the inverse of what `hover:` already does in v4.
+   Nine controls are hover-revealed (`can-hover:opacity-0 group-hover:opacity-100`),
+   including Brief's destructive remove-photo button and the filmstrip rank nudges.
+   Gating the *hiding* on this variant is what makes them work on a phone: with no
+   hover pointer the `opacity-0` never applies, so the control is simply always
+   visible. On a mouse it is unchanged — hidden until hover.
+   This replaces the Tailwind 4 migration's `@custom-variant hover (&:hover)` shim,
+   which forced every hover style to apply on touch to preserve v3 behaviour. That
+   was visual parity with a broken affordance: it relied on iOS sticky :hover, so a
+   control needed one tap to appear and another to act. See #49.
+
+   Block form with @slot. The `(@media (hover: hover))` shorthand compiles
+   identically, but this spells out the at-rule being wrapped around the utility.
+   What matters is that `.can-hover\:opacity-0` ends up *inside* `@media
+   (hover:hover)` in the built CSS — if it ever compiles unwrapped it silently
+   reinstates the bug this fixes, and no source-level test can see that. Check
+   dist/assets/*.css structurally; grep -o hides the enclosing at-rule. */
+@custom-variant can-hover {
+  @media (hover: hover) {
+    @slot;
+  }
+}
 
 /* ── Theme variables ───────────────────────────────────────────────────── */
 /* Values are space-separated RGB triplets — required for Tailwind's       */

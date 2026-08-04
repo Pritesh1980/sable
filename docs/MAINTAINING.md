@@ -18,6 +18,14 @@ Screenshots are captured against the dev server with Playwright at a phone viewp
 (`430 × 920`), plus a couple at desktop width (`1280 × 900`). Capture **viewport** shots,
 not `fullPage` — the fixed bottom nav floats to the middle on full-page captures.
 
+A phone *viewport* is not a phone: a resized desktop context still reports
+`hover: hover`, so the nine `can-hover:opacity-0` controls (Wall/Style Wall captions,
+Brief's remove-photo ×, the artist-card handles) photograph as **hidden**, while a real
+iPhone shows them. To capture what a phone actually renders, use a mobile browser
+context — `browser.newContext({ viewport: { width: 430, height: 920 }, isMobile: true,
+hasTouch: true })` — which reports `hover: none`. The current image set predates that
+distinction and was shot with the plain viewport.
+
 1. Start a dev server pinned to the offline backend so seeded data can't sync to a
    real account: `VITE_BACKEND=local npm run dev -- --port 5174` (then capture against
    http://localhost:5174).

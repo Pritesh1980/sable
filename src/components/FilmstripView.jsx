@@ -57,7 +57,7 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onSetStatus, isFirst, 
         <button
           onClick={() => !isFirst && onSetRank(artist.id, artist.rank - 1)}
           className={`text-[0.625rem] leading-none px-1 py-0.5 transition-colors ${
-            isFirst ? 'text-transparent cursor-default' : 'text-cream-muted/30 hover:text-cream opacity-0 group-hover:opacity-100'
+            isFirst ? 'text-transparent cursor-default' : 'text-cream-muted/30 hover:text-cream can-hover:opacity-0 group-hover:opacity-100'
           }`}
         >
           ▲
@@ -68,7 +68,7 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onSetStatus, isFirst, 
             type="number"
             min={1}
             max={totalArtists}
-            className="w-8 text-center bg-ink-muted border border-cream-muted/40 rounded-xs text-xs font-mono text-cream outline-hidden py-0.5"
+            className="w-8 text-center bg-ink-muted border border-cream-muted/40 rounded-xs text-xs font-mono text-cream outline-hidden focus-visible:ring-2 focus-visible:ring-accent py-0.5"
             value={rankInput}
             onChange={(e) => setRankInput(e.target.value)}
             onBlur={commitRank}
@@ -89,7 +89,7 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onSetStatus, isFirst, 
         <button
           onClick={() => !isLast && onSetRank(artist.id, artist.rank + 1)}
           className={`text-[0.625rem] leading-none px-1 py-0.5 transition-colors ${
-            isLast ? 'text-transparent cursor-default' : 'text-cream-muted/30 hover:text-cream opacity-0 group-hover:opacity-100'
+            isLast ? 'text-transparent cursor-default' : 'text-cream-muted/30 hover:text-cream can-hover:opacity-0 group-hover:opacity-100'
           }`}
         >
           ▼

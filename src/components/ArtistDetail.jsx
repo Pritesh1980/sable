@@ -112,7 +112,7 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
           <div className="mb-6">
             {editing ? (
               <input
-                className="bg-transparent border-b border-ink-border text-cream font-display text-2xl w-full outline-hidden pb-1 mb-2 placeholder-cream-muted/60"
+                className="bg-transparent border-b border-ink-border text-cream font-display text-2xl w-full outline-hidden focus-visible:ring-2 focus-visible:ring-accent pb-1 mb-2 placeholder-cream-muted/60"
                 value={draft.name}
                 onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
                 placeholder="Display name (optional)"

@@ -27,7 +27,7 @@ export default function StyleWall({ artists, onOpenArtist }) {
             className="w-full block group-hover:scale-105 transition-transform duration-500"
             fallbackClassName="aspect-[4/5]"
           />
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink-black/90 to-transparent px-2.5 py-3 translate-y-1 group-hover:translate-y-0 opacity-0 group-hover:opacity-100 transition-all duration-300">
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink-black/90 to-transparent px-2.5 py-3 can-hover:translate-y-1 group-hover:translate-y-0 can-hover:opacity-0 group-hover:opacity-100 transition-all duration-300">
             <p className="font-display text-cream text-sm leading-tight">
               {artist.name || `@${artist.handle}`}
             </p>

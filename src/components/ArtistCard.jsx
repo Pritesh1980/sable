@@ -74,7 +74,7 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
           <div
             {...dragHandleProps}
             onClick={(e) => e.stopPropagation()}
-            className="absolute top-2 right-2 w-7 h-7 flex flex-col justify-center items-center gap-1 opacity-0 group-hover:opacity-50 transition-opacity cursor-grab active:cursor-grabbing z-10"
+            className="absolute top-2 right-2 w-7 h-7 flex flex-col justify-center items-center gap-1 can-hover:opacity-0 group-hover:opacity-50 transition-opacity cursor-grab active:cursor-grabbing z-10"
           >
             <span className="block w-4 h-px bg-cream" />
             <span className="block w-4 h-px bg-cream" />
@@ -86,7 +86,7 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
         {hasImages && !imgError && (
           <button
             onClick={(e) => { e.stopPropagation(); fileRef.current.click() }}
-            className="absolute bottom-8 right-1.5 w-6 h-6 rounded-full bg-ink-black/70 flex items-center justify-center opacity-0 group-hover:opacity-80 transition-opacity z-10"
+            className="absolute bottom-8 right-1.5 w-6 h-6 rounded-full bg-ink-black/70 flex items-center justify-center can-hover:opacity-0 group-hover:opacity-80 transition-opacity z-10"
             title="Add photos"
           >
             <span className="text-cream text-sm leading-none">+</span>

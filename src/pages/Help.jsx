@@ -11,7 +11,7 @@ const SECTIONS = [
     image: 'wall.png',
     steps: [
       'Sign in with your email and password to open the app. Your artists, ideas, boards and concepts are tied to your account and follow you across devices — add something on your Mac and it appears on your iPhone.',
-      'You open on the Wall: every photo from every artist in your collection, edge to edge. Hover a photo to see whose it is; a red dot means it was added in the last 14 days.',
+      'You open on the Wall: every photo from every artist in your collection, edge to edge. The artist’s name sits along the bottom of each tile on touch, and fades in on hover with a mouse; a red dot means it was added in the last 14 days.',
       'Pinned just under the bar is your Top 5 — the five artists you’ve ranked highest. Nudge any of them up or down with ▲ / ▼, or tap Rank ⤢ to open the full ranking board.',
       'Click any photo and it fills the screen. Arrow keys drive it: ←/→ moves through this artist’s work, ↑/↓ jumps between artists, G generates a concept in this artist’s style, I opens their info & notes, Esc returns to the Wall.',
       'Leave the mouse still and the viewer’s controls fade away, leaving just the image; move it and they return. The @handle link opens the artist’s Instagram in a new tab.',

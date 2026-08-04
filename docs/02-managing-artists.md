@@ -95,7 +95,8 @@ link, status and photo count. Type in the **search** box to filter by name or ha
 - **Studio** — pick where they work; this populates the [Studios](05-conventions-and-studios.md) page.
 - **Notes** — free text; saves when you tap away or press Enter.
 - **Photos** — tap **+ Photos** to upload screenshots (they're compressed automatically).
-  Hover/tap a thumbnail's **×** to remove it.
+  Tap a thumbnail's **×** to remove it — the × is always visible on touch, and appears
+  on hover with a mouse.
 - **Remove artist** — deletes them from your collection (with a confirmation).
 
 > **Tip:** you can also upload photos and edit tags/status/studio from an artist's full

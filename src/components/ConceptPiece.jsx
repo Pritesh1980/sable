@@ -21,7 +21,7 @@ export default function ConceptPiece({ item, onOpen }) {
       )}
 
       <figcaption
-        className="absolute inset-x-0 bottom-0 flex items-baseline justify-between gap-2 px-3 py-2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 bg-gradient-to-t from-v2-ink/[.82] to-transparent"
+        className="absolute inset-x-0 bottom-0 flex items-baseline justify-between gap-2 px-3 py-2 pointer-events-none can-hover:opacity-0 group-hover:opacity-100 transition-opacity duration-150 bg-gradient-to-t from-v2-ink/[.82] to-transparent"
       >
         <span className="font-v2-display text-v2-cream text-[0.82rem] uppercase tracking-[0.22em] truncate">
           {item.title}

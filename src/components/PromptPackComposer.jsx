@@ -155,7 +155,7 @@ export default function PromptPackComposer({ ideas = [], artists = [], onSavePro
 
             <textarea
               readOnly
-              className="w-full bg-ink-black border border-ink-border rounded-xs px-4 py-3 text-sm text-cream outline-hidden font-body resize-none"
+              className="w-full bg-ink-black border border-ink-border rounded-xs px-4 py-3 text-sm text-cream outline-hidden focus-visible:ring-2 focus-visible:ring-accent font-body resize-none"
               rows={9}
               value={activePrompt}
             />

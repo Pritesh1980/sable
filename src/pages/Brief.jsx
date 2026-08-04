@@ -193,7 +193,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
         <div>
           <input
             autoFocus
-            className="bg-transparent border-b border-ink-border text-cream font-display text-2xl w-full outline-hidden pb-1 placeholder-cream-muted/60"
+            className="bg-transparent border-b border-ink-border text-cream font-display text-2xl w-full outline-hidden focus-visible:ring-2 focus-visible:ring-accent pb-1 placeholder-cream-muted/60"
             placeholder="Idea title…"
             value={draft.title}
             onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
@@ -280,11 +280,11 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
                     <img src={url} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none' }} />
                     <button
                       onClick={() => setDraft((d) => ({ ...d, images: normalizeReferenceImages(d.images).filter((i) => i.url !== url) }))}
-                      className="absolute top-1 right-1 w-6 h-6 bg-ink-dark/80 text-accent rounded-full text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute top-1 right-1 w-6 h-6 bg-ink-dark/80 text-accent rounded-full text-xs can-hover:opacity-0 group-hover:opacity-100 transition-opacity"
                     >×</button>
                   </div>
                   <textarea
-                    className="w-full bg-ink-card px-2 py-2 text-xs text-cream outline-hidden font-body placeholder-cream-muted/60 resize-none border-t border-ink-border"
+                    className="w-full bg-ink-card px-2 py-2 text-xs text-cream outline-hidden focus-visible:ring-2 focus-visible:ring-accent font-body placeholder-cream-muted/60 resize-none border-t border-ink-border"
                     rows={2}
                     placeholder="What to borrow from this image…"
                     value={getImageNote(image)}
