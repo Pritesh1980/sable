@@ -128,4 +128,37 @@ describe('v2 design tokens', () => {
 
     expect(offenders).toEqual([])
   })
+
+  // Tailwind 4 shifted the `sm` tier one step larger, so the v3 spellings now
+  // silently render differently: rounded-sm is 4px where this design wants 2px,
+  // backdrop-blur-sm is 8px where it wants 4px, and outline-none no longer means
+  // what it did. The migration rewrote all 250 of them — this stops the next
+  // person (or agent) reaching for the familiar v3 name and quietly reintroducing
+  // 4px corners next to 2px ones.
+  //
+  // Deliberately NOT allowlist-aware, unlike the guard above: these are migration
+  // hazards everywhere in the app, not a preference that legacy files predate.
+  it('has no Tailwind-3-era class names left anywhere in src', () => {
+    const V3_CLASSES = [
+      ['rounded-sm', 'rounded-xs'],
+      ['backdrop-blur-sm', 'backdrop-blur-xs'],
+      ['outline-none', 'outline-hidden'],
+    ]
+    // Word-boundary-ish: must not be part of a longer token (rounded-smth) and
+    // must not be the replacement itself (rounded-xs contains neither).
+    const offenders = []
+    for (const file of listFilesRecursive(join(root, 'src'))) {
+      if (!/\.(jsx?|css)$/.test(file)) continue
+      if (file.endsWith('v2-tokens.spec.js')) continue // this file names them on purpose
+      const contents = readFileSync(file, 'utf8')
+      for (const [v3, v4] of V3_CLASSES) {
+        const re = new RegExp(`(?<![\\w-])${v3}(?![\\w-])`)
+        if (re.test(contents)) {
+          offenders.push(`${file.replace(root + '/', '')}: ${v3} → use ${v4}`)
+        }
+      }
+    }
+
+    expect(offenders).toEqual([])
+  })
 })
