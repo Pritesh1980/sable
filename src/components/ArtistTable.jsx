@@ -177,7 +177,8 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
                         <ArtistImage src={src} label={artist.name || `@${artist.handle}`} className="w-full h-full object-cover" monogramClassName="text-lg" />
                         <button
                           onClick={() => removeImage(idx)}
-                          className="absolute inset-0 bg-ink-black/60 text-accent text-xs can-hover:opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                          aria-label="Remove photo"
+                          className="absolute top-0.5 right-0.5 w-6 h-6 rounded-full bg-ink-black/80 text-accent text-xs can-hover:opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                         >
                           ×
                         </button>

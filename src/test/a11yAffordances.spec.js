@@ -22,6 +22,42 @@ function uiFiles() {
     .map((f) => ({ path: f, rel: f.replace(root + '/', ''), src: readFileSync(f, 'utf8') }))
 }
 
+// A className is frequently a multi-line template literal or ternary, so scanning
+// line-by-line lets `opacity-0` on one line and `group-hover:opacity-100` on the next
+// slip past. Collapse each className expression to a single string, keeping the line
+// it starts on for reporting.
+function classNameExpressions(src) {
+  const out = []
+  const re = /className\s*=\s*(\{`|\{|")/g
+  let m
+  while ((m = re.exec(src)) !== null) {
+    const open = m[1]
+    const start = m.index + m[0].length
+    let end
+    if (open === '"') {
+      end = src.indexOf('"', start)
+    } else {
+      // Balance braces so nested ${...} and ternaries are captured whole.
+      let depth = 1
+      let i = start
+      while (i < src.length && depth > 0) {
+        if (src[i] === '{') depth++
+        else if (src[i] === '}') depth--
+        i++
+      }
+      end = i - 1
+    }
+    if (end === -1 || end <= start) continue
+    const text = src.slice(start, end)
+    out.push({ line: src.slice(0, m.index).split('\n').length, text: text.replace(/\s+/g, ' ') })
+  }
+  return out
+}
+
+// `ring-0` and transparent colours satisfy a naive "has a focus affordance" check
+// while rendering nothing. Anything matching these is not an affordance.
+const NULL_AFFORDANCE = /(?:ring|border)-(?:0|transparent)(?![\w-])/
+
 // Full-screen viewer containers that take programmatic focus so keyboard events
 // (arrows, Escape) reach them. They are not controls the user tabs to, and a ring
 // around the entire viewport would be noise — suppressing the outline is correct.
@@ -39,13 +75,31 @@ describe('touch affordances (#49)', () => {
   it('never hides a hover-revealed control unconditionally', () => {
     const offenders = []
     for (const { rel, src } of uiFiles()) {
-      src.split('\n').forEach((line, i) => {
-        if (!/group-hover:opacity-/.test(line)) return
+      for (const { line, text } of classNameExpressions(src)) {
+        if (!/group-hover:opacity-/.test(text)) continue
         // Bare `opacity-0` — not preceded by a variant prefix such as `can-hover:`.
-        if (/(?<![\w:-])opacity-0(?![\w-])/.test(line)) {
-          offenders.push(`${rel}:${i + 1} — opacity-0 → use can-hover:opacity-0`)
+        if (/(?<![\w:-])opacity-0(?![\w-])/.test(text)) {
+          offenders.push(`${rel}:${line} — opacity-0 → use can-hover:opacity-0`)
         }
-      })
+      }
+    }
+
+    expect(offenders).toEqual([])
+  })
+
+  // Opacity changes painting, not hit-testing — a full-bleed hover-revealed control
+  // is a tap-anywhere target whether or not you can see it. Made visible on touch, a
+  // `inset-0` destructive overlay also veils the image it sits on. Localised targets
+  // only.
+  it('has no full-bleed hover-revealed controls', () => {
+    const offenders = []
+    for (const { rel, src } of uiFiles()) {
+      for (const { line, text } of classNameExpressions(src)) {
+        if (!/can-hover:opacity-0/.test(text)) continue
+        if (/(?<![\w-])inset-0(?![\w-])/.test(text)) {
+          offenders.push(`${rel}:${line} — inset-0 hover-revealed control; use a localised target`)
+        }
+      }
     }
 
     expect(offenders).toEqual([])
@@ -63,8 +117,10 @@ describe('touch affordances (#49)', () => {
     expect(css).toMatch(/@custom-variant\s+can-hover\b[\s\S]{0,80}?@media\s*\(hover:\s*hover\)/)
     // The Tailwind 4 migration shim. Once hiding is gated on `can-hover`, forcing
     // every `hover:` in the app to apply on touch is no longer needed — and it
-    // actively causes sticky-hover states on iOS.
-    expect(css).not.toMatch(/@custom-variant\s+hover\s+\(&:hover\)/)
+    // actively causes sticky-hover states on iOS. Matches the shorthand and the
+    // block form (`@custom-variant hover { &:hover { @slot } }`) alike — anything
+    // that redefines the bare `hover` variant at all.
+    expect(css).not.toMatch(/@custom-variant\s+hover\s*[({]/)
   })
 })
 
@@ -77,13 +133,14 @@ describe('focus affordances (#50)', () => {
 
     for (const { rel, src } of uiFiles()) {
       if (exempt.has(rel)) continue
-      src.split('\n').forEach((line, i) => {
-        if (!/outline-hidden/.test(line)) return
-        const hasAffordance = /focus-visible:ring|focus:border-|focus:bg-/.test(line)
-        if (!hasAffordance) {
-          offenders.push(`${rel}:${i + 1} — outline-hidden with no focus affordance`)
+      for (const { line, text } of classNameExpressions(src)) {
+        if (!/outline-hidden/.test(text)) continue
+        const affordances = text.match(/(?:focus-visible:ring|focus:border|focus:bg)-[\w./[\]-]+/g) || []
+        const real = affordances.filter((a) => !NULL_AFFORDANCE.test(a))
+        if (real.length === 0) {
+          offenders.push(`${rel}:${line} — outline-hidden with no visible focus affordance`)
         }
-      })
+      }
     }
 
     expect(offenders).toEqual([])
