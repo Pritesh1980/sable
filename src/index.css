@@ -8,6 +8,18 @@
    delete that guard. `@config` is supported in v4 for exactly this case. */
 @config '../tailwind.config.js';
 
+/* v4 wraps hover/group-hover in `@media (hover: hover)`, so on a touch device
+   they never apply at all. Nine controls here are `opacity-0
+   group-hover:opacity-100` — including the remove-photo button in Brief and the
+   rank nudges in the filmstrip — which under v4 would be permanently invisible
+   on iPhone while still being tappable. This app is iPhone-first, so restore the
+   v3 semantics (iOS applies sticky :hover on tap, which is what made them
+   reachable before).
+   Revealing those controls properly on touch is the better long-term fix, but
+   that is a design change, not part of a migration whose promise was visual
+   parity. */
+@custom-variant hover (&:hover);
+
 /* ── Theme variables ───────────────────────────────────────────────────── */
 /* Values are space-separated RGB triplets — required for Tailwind's       */
 /* rgb(var(--x) / <alpha-value>) opacity modifier syntax to work.          */
