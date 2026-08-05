@@ -49,9 +49,37 @@ function classNameExpressions(src) {
     }
     if (end === -1 || end <= start) continue
     const text = src.slice(start, end)
-    out.push({ line: src.slice(0, m.index).split('\n').length, text: text.replace(/\s+/g, ' ') })
+    // The element this className belongs to: scan back to the opening `<tag`.
+    const before = src.slice(0, m.index)
+    const tag = (before.match(/<([A-Za-z][\w.]*)(?![\s\S]*<[A-Za-z])/) || [])[1] || '?'
+    out.push({
+      line: before.split('\n').length,
+      text: text.replace(/\s+/g, ' '),
+      tag,
+    })
   }
   return out
+}
+
+// Decorative overlays are not tap targets; controls are. A drag handle is a `div`
+// spread with dnd-kit listeners, so treat `cursor-grab` as interactive too.
+function isInteractive({ tag, text }) {
+  if (/pointer-events-none/.test(text)) return false
+  return tag === 'button' || tag === 'a' || /cursor-grab/.test(text)
+}
+
+// Tailwind spacing unit is 0.25rem, so 11 => 44px. Anything at or above that on
+// both axes clears the 44pt minimum.
+function meetsTouchTarget(text) {
+  const axis = (props) => {
+    const re = new RegExp(`(?:^|[\\s'"\`])(?:min-)?(?:${props})-(\\d+)(?![\\w-])`, 'g')
+    let m
+    while ((m = re.exec(text)) !== null) {
+      if (Number(m[1]) >= 11) return true
+    }
+    return false
+  }
+  return axis('w') && axis('h')
 }
 
 // `ring-0` and transparent colours satisfy a naive "has a focus affordance" check
@@ -98,6 +126,24 @@ describe('touch affordances (#49)', () => {
         if (!/can-hover:opacity-0/.test(text)) continue
         if (/(?<![\w-])inset-0(?![\w-])/.test(text)) {
           offenders.push(`${rel}:${line} — inset-0 hover-revealed control; use a localised target`)
+        }
+      }
+    }
+
+    expect(offenders).toEqual([])
+  })
+
+  // #51. Making these controls visible on touch (#49) did not make them reachable:
+  // the filmstrip rank nudges were 16x14px. Apple asks for 44x44pt. The hit area is
+  // what has to grow — the visible chip stays small, nested inside.
+  it('gives every hover-revealed control a 44pt hit area', () => {
+    const offenders = []
+    for (const { rel, src } of uiFiles()) {
+      for (const expr of classNameExpressions(src)) {
+        if (!/can-hover:opacity-0/.test(expr.text)) continue
+        if (!isInteractive(expr)) continue
+        if (!meetsTouchTarget(expr.text)) {
+          offenders.push(`${rel}:${expr.line} — <${expr.tag}> below 44pt; needs w/h >= 11`)
         }
       }
     }

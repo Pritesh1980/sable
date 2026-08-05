@@ -5,6 +5,8 @@ import { uploadImages } from '../hooks/useImageUpload'
 import { useAuth } from '../context/useAuth'
 import TagPill from './TagPill'
 import ArtistImage from './ArtistImage'
+import UndoToast from './UndoToast'
+import { useUndoableRemoval } from '../hooks/useUndoableRemoval'
 
 function studioName(id) {
   const s = DEFAULT_STUDIOS.find((s) => s.id === id)
@@ -31,10 +33,14 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
     }
   }
 
-  function removeImage(idx) {
-    if (!window.confirm('Remove this photo?')) return
-    onSaveImages(artist.id, artist.images.filter((_, i) => i !== idx))
-  }
+  // Undo rather than a confirm dialog: removing photos is routine curation, and a
+  // blocking prompt on every one is friction. The 44pt target plus a recoverable
+  // window covers the mis-tap this used to guard against.
+  const {
+    pending: pendingImageRemoval,
+    remove: removeImage,
+    undo: undoImageRemoval,
+  } = useUndoableRemoval(artist.images || [], (next) => onSaveImages(artist.id, next))
 
   function saveNote() {
     onUpdate(artist.id, { notes: note })
@@ -171,16 +177,18 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
               {imageCount > 0 && (
                 <div>
                   <p className="text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Photos ({imageCount})</p>
+                  {/* Tiles are 72px rather than 56 so a 44pt remove target is a
+                      corner badge (~37% of the tile) instead of most of the photo. */}
                   <div className="flex gap-2 flex-wrap">
                     {artist.images.map((src, idx) => (
-                      <div key={idx} className="relative w-14 h-14 rounded-xs overflow-hidden group bg-ink-muted shrink-0">
+                      <div key={idx} className="relative w-18 h-18 rounded-xs overflow-hidden group bg-ink-muted shrink-0">
                         <ArtistImage src={src} label={artist.name || `@${artist.handle}`} className="w-full h-full object-cover" monogramClassName="text-lg" />
                         <button
                           onClick={() => removeImage(idx)}
                           aria-label="Remove photo"
-                          className="absolute top-0.5 right-0.5 w-6 h-6 rounded-full bg-ink-black/80 text-accent text-xs can-hover:opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                          className="absolute top-0 right-0 w-11 h-11 flex items-start justify-end p-0.5 can-hover:opacity-0 group-hover:opacity-100 transition-opacity"
                         >
-                          ×
+                          <span className="w-6 h-6 rounded-full bg-ink-black/80 text-accent text-xs flex items-center justify-center">×</span>
                         </button>
                       </div>
                     ))}
@@ -197,6 +205,12 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
                   Remove artist
                 </button>
               </div>
+
+              <UndoToast
+                show={!!pendingImageRemoval}
+                message="Photo removed"
+                onUndo={undoImageRemoval}
+              />
             </div>
           </td>
         </tr>

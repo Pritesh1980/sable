@@ -56,7 +56,8 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onSetStatus, isFirst, 
       <div className="w-12 shrink-0 flex flex-col items-center justify-center border-r border-ink-border/30 py-2">
         <button
           onClick={() => !isFirst && onSetRank(artist.id, artist.rank - 1)}
-          className={`text-[0.625rem] leading-none px-1 py-0.5 transition-colors ${
+          aria-label="Move up one rank"
+          className={`text-[0.625rem] leading-none w-11 h-11 flex items-center justify-center transition-colors ${
             isFirst ? 'text-transparent cursor-default' : 'text-cream-muted/30 hover:text-cream can-hover:opacity-0 group-hover:opacity-100'
           }`}
         >
@@ -88,7 +89,8 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onSetStatus, isFirst, 
         )}
         <button
           onClick={() => !isLast && onSetRank(artist.id, artist.rank + 1)}
-          className={`text-[0.625rem] leading-none px-1 py-0.5 transition-colors ${
+          aria-label="Move down one rank"
+          className={`text-[0.625rem] leading-none w-11 h-11 flex items-center justify-center transition-colors ${
             isLast ? 'text-transparent cursor-default' : 'text-cream-muted/30 hover:text-cream can-hover:opacity-0 group-hover:opacity-100'
           }`}
         >

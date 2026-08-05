@@ -8,6 +8,8 @@ import { STYLE_TAGS, PLACEMENTS } from '../data/artists'
 import { IDEA_STATUSES, matchArtistsToIdea } from '../data/brief'
 import { buildIdeaBrief } from '../data/export'
 import { compressImages } from '../hooks/useImageUpload'
+import { useUndoableRemoval } from '../hooks/useUndoableRemoval'
+import UndoToast from '../components/UndoToast'
 import { analyzeIdeaImageWithGemini } from '../data/screenshotIntake'
 import {
   ARTIST_STATUSES,
@@ -144,6 +146,15 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
     }
   }
 
+  // Removing a reference photo is one tap on a small target, so make it
+  // recoverable rather than gating it behind a confirm on every use.
+  const images = normalizeReferenceImages(draft.images)
+  const {
+    pending: pendingImageRemoval,
+    remove: removeImage,
+    undo: undoImageRemoval,
+  } = useUndoableRemoval(images, (next) => setDraft((d) => ({ ...d, images: next })))
+
   function updateImageNote(url, note) {
     setDraft((d) => ({
       ...d,
@@ -272,16 +283,21 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
           {analyzeNote && <p className="font-body text-xs text-cream-muted/70 mb-2">{analyzeNote}</p>}
           {draft.images?.length > 0 && (
             <div className="grid grid-cols-2 gap-2 mb-3">
-              {normalizeReferenceImages(draft.images).map((image) => {
+              {images.map((image, index) => {
                 const url = getImageUrl(image)
                 return (
                 <div key={url} className="bg-ink-muted rounded-xs overflow-hidden border border-ink-border">
                   <div className="relative aspect-square group">
                     <img src={url} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                    {/* 44pt hit area, 24px chip. The padding puts the chip exactly
+                        where it sat when the button itself was 24px. */}
                     <button
-                      onClick={() => setDraft((d) => ({ ...d, images: normalizeReferenceImages(d.images).filter((i) => i.url !== url) }))}
-                      className="absolute top-1 right-1 w-6 h-6 bg-ink-dark/80 text-accent rounded-full text-xs can-hover:opacity-0 group-hover:opacity-100 transition-opacity"
-                    >×</button>
+                      onClick={() => removeImage(index)}
+                      aria-label="Remove photo"
+                      className="absolute top-0 right-0 w-11 h-11 flex items-start justify-end p-1 can-hover:opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <span className="w-6 h-6 bg-ink-dark/80 text-accent rounded-full text-xs flex items-center justify-center">×</span>
+                    </button>
                   </div>
                   <textarea
                     className="w-full bg-ink-card px-2 py-2 text-xs text-cream outline-hidden focus-visible:ring-2 focus-visible:ring-accent font-body placeholder-cream-muted/60 resize-none border-t border-ink-border"
@@ -422,6 +438,12 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
           </div>
         </div>
       </div>
+
+      <UndoToast
+        show={!!pendingImageRemoval}
+        message="Photo removed"
+        onUndo={undoImageRemoval}
+      />
     </div>
   )
 }
