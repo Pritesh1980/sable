@@ -40,8 +40,10 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
   // has to survive this row collapsing (#53).
   const { remove: removeImage } = useUndoableRemoval(
     artist.images || [],
-    (next) => onSaveImages(artist.id, next),
-    { message: 'Photo removed', durable: true }
+    (updater) => onSaveImages(artist.id, updater),
+    // Name the artist: this offer can outlive the row, so by the time it is read
+    // the surface it came from may be collapsed or scrolled away.
+    { message: `Photo removed from ${artist.name || `@${artist.handle}`}`, durable: true }
   )
 
   function saveNote() {

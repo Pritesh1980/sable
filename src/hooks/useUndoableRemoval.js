@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
-import { removeAt, restoreRemoval } from '../data/undoableRemoval'
+import { removeAt, removeItem, restoreRemoval } from '../data/undoableRemoval'
 import { useUndo } from '../context/useUndo'
 
 /**
@@ -8,8 +8,12 @@ import { useUndo } from '../context/useUndo'
  * UndoProvider rather than kept here, so it survives this component unmounting
  * (a table row collapsing, a modal closing). See #53.
  *
- * @param list      current list (kept in a ref, so `remove` stays stable)
- * @param onChange  called with the next list on remove and on undo
+ * @param list      current list, used only to work out *what* is being removed
+ * @param onChange  called with an updater — `(currentList) => nextList` — never a
+ *                  plain array. A durable offer outlives this component, so its
+ *                  refs stop updating; composing against the caller's current
+ *                  list is what stops undo writing back over a change that
+ *                  landed in between (a sync, an import).
  * @param options.message  what the toast says
  * @param options.durable  true when the removal is already persisted, so the
  *                         offer should outlive this component; false when it
@@ -30,17 +34,17 @@ export function useUndoableRemoval(list, onChange, { message = 'Removed', durabl
   })
 
   const remove = useCallback((index) => {
-    const { list: next, removal } = removeAt(listRef.current, index)
+    // Which item, and what sat either side — read while still mounted.
+    const { removal } = removeAt(listRef.current, index)
     if (!removal) return
 
-    onChangeRef.current(next)
+    // Both sides compose against the caller's current list rather than a captured
+    // copy, so neither the removal nor the restore can clobber a concurrent edit.
+    onChangeRef.current((current) => removeItem(current, removal.item))
     offer({
       message,
       durable,
-      // Reads the list at undo time, so an edit landing in between is kept.
-      // restoreRemoval is idempotent and anchors to neighbours, so this is safe
-      // even if the list moved on.
-      onUndo: () => onChangeRef.current(restoreRemoval(listRef.current, removal)),
+      onUndo: () => onChangeRef.current((current) => restoreRemoval(current, removal)),
     })
   }, [offer, message, durable])
 

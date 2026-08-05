@@ -1,4 +1,4 @@
-import { StrictMode, useState } from 'react'
+import { StrictMode, useEffect, useRef, useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { UndoProvider } from '../context/UndoContext'
@@ -8,7 +8,16 @@ import { useUndoableRemoval } from '../hooks/useUndoableRemoval'
 // onChange, and renders a remove button per item.
 function List({ initial = ['a', 'b', 'c'], onChange, durable = true, message = 'Photo removed' }) {
   const [list, setList] = useState(initial)
-  const apply = (next) => { setList(next); onChange?.(next) }
+  const currentRef = useRef(list)
+  useEffect(() => { currentRef.current = list })
+  // onChange receives an updater, matching how the real pages apply it. The
+  // notification happens outside the state updater — a side effect in one would
+  // fire twice under StrictMode, which is what the test below guards.
+  const apply = (updater) => {
+    const next = updater(currentRef.current)
+    setList(next)
+    onChange?.(next)
+  }
   const { remove } = useUndoableRemoval(list, apply, { message, durable })
   return (
     <div>
@@ -119,6 +128,38 @@ describe('useUndoableRemoval', () => {
 
     expect(screen.getByRole('status')).toBeInTheDocument()
     expect(undoButton()).toBeInTheDocument()
+  })
+
+  // Found by the codex review of #53. A durable offer outlives its component, so
+  // its refs stop updating — restoring from a frozen copy of the list would write
+  // back over anything that landed in between (a sync, an import).
+  it('does not lose a concurrent change when restoring after unmount', () => {
+    function Row({ list, apply }) {
+      const { remove } = useUndoableRemoval(list, apply, { message: 'Photo removed', durable: true })
+      return <button onClick={() => remove(0)}>remove first</button>
+    }
+    function Host() {
+      const [items, setItems] = useState(['a', 'b'])
+      const [showRow, setShowRow] = useState(true)
+      const apply = (updater) =>
+        setItems((cur) => (typeof updater === 'function' ? updater(cur) : updater))
+      return (
+        <UndoProvider>
+          <span data-testid="list">{items.join(',')}</span>
+          {showRow && <Row list={items} apply={apply} />}
+          <button onClick={() => setShowRow(false)}>collapse</button>
+          <button onClick={() => setItems((l) => [...l, 'synced'])}>sync</button>
+        </UndoProvider>
+      )
+    }
+    render(<Host />)
+
+    fireEvent.click(screen.getByText('remove first'))   // ['b']
+    fireEvent.click(screen.getByText('collapse'))       // row unmounts, refs freeze
+    fireEvent.click(screen.getByText('sync'))           // ['b','synced'] arrives
+    fireEvent.click(undoButton())
+
+    expect(list()).toBe('a,b,synced')
   })
 
   it('withdraws a non-durable offer when the owning surface unmounts', () => {

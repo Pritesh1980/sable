@@ -38,6 +38,16 @@ export function removeAt(list, index) {
   }
 }
 
+/** Remove by identity rather than position, so it stays correct when applied to a
+ *  list that has shifted since the index was captured. */
+export function removeItem(list, item) {
+  const next = Array.isArray(list) ? list.slice() : []
+  const at = indexOfIdentity(next, item)
+  if (at === -1) return list
+  next.splice(at, 1)
+  return next
+}
+
 export function restoreRemoval(list, removal) {
   if (!removal) return list
   const next = Array.isArray(list) ? list.slice() : []

@@ -164,8 +164,15 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
     setArtists((prev) => prev.filter((a) => a.id !== id))
   }
 
-  function saveImagesById(id, images) {
-    setArtists((prev) => prev.map((a) => (a.id === id ? { ...a, images } : a)))
+  // Accepts either the next images or an updater of the current ones. The updater
+  // form matters for undo: a durable offer can outlive the row that made it, so it
+  // must compose with whatever the images are now, not a copy captured earlier.
+  function saveImagesById(id, imagesOrUpdater) {
+    setArtists((prev) => prev.map((a) => (
+      a.id === id
+        ? { ...a, images: typeof imagesOrUpdater === 'function' ? imagesOrUpdater(a.images || []) : imagesOrUpdater }
+        : a
+    )))
   }
 
   return (

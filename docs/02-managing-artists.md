@@ -96,8 +96,11 @@ link, status and photo count. Type in the **search** box to filter by name or ha
 - **Notes** — free text; saves when you tap away or press Enter.
 - **Photos** — tap **+ Photos** to upload screenshots (they're compressed automatically).
   Tap a thumbnail's **×** to remove it — the × is always visible on touch, and appears
-  on hover with a mouse. There's no confirmation prompt; instead a **Photo removed —
-  Undo** bar appears for a few seconds, and Undo puts the photo back where it was.
+  on hover with a mouse. There's no confirmation prompt; instead a **Photo removed
+  from <artist> — Undo** bar appears for a few seconds, and Undo puts the photo back
+  where it was. The bar sticks around even if you collapse the row, so you can still
+  take it back — and only ever one shows at a time, so removing a second photo
+  commits the first.
 - **Remove artist** — deletes them from your collection (with a confirmation).
 
 > **Tip:** you can also upload photos and edit tags/status/studio from an artist's full
