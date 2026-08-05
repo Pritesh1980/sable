@@ -219,6 +219,12 @@ medium+ branches, on plans, and on high-cost decisions, run both in parallel, re
 
 - `codex exec --sandbox read-only "<prompt>"` — correctness/security/edge cases.
   Installed via Homebrew cask; if it rejects its own model id, `brew upgrade --cask codex`.
+  **If it produces no output at all, the cask build is broken, not slow.** Confirm with
+  `timeout 20 codex --version` — a hang (exit 124) means it never gets past the dynamic
+  loader. Reinstalling does not help when the re-downloaded binary is byte-identical.
+  Fall back to the CLI bundled with the desktop app, which is a different (newer) build:
+  `/Applications/ChatGPT.app/Contents/Resources/codex`. This has happened twice (cask
+  0.146.0, Aug 2026; an interrupted 0.144.4 upgrade in July).
 - `agy --print "<prompt>"` — design/UX/strategy (replaces the defunct `gemini` CLI).
 
 Scope prompts to the change, demand file:line + concrete failure scenarios, cap
