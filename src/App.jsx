@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState } from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router'
+import { UndoProvider } from './context/UndoContext'
 import Nav from './components/Nav'
 import Drawer from './components/Drawer'
 import Wall from './pages/Wall'
@@ -43,56 +44,60 @@ function AppShell() {
 
   return (
     <div className="bg-ink-black min-h-screen pb-20">
-      <Suspense fallback={<div className="min-h-screen" aria-hidden="true" />}>
-        <Routes>
-          <Route
-            path="/"
-            element={(
-              <Wall
-                artists={artists}
-                setArtists={setArtists}
-                ideas={ideas}
-                activeView="artists"
-                onSwitchView={(view) => view === 'concepts' && navigate('/concepts')}
-                onOpenDrawer={() => setDrawerOpen(true)}
-              />
-            )}
-          />
-          <Route path="/pipeline" element={<Dashboard artists={artists} setArtists={setArtists} ideas={ideas} boards={boards} mergedConventions={mergedConventions} />} />
-          <Route path="/gallery" element={<Gallery artists={artists} setArtists={setArtists} mergedConventions={mergedConventions} />} />
-          <Route path="/brief" element={<Brief ideas={ideas} setIdeas={setIdeas} artists={artists} mergedConventions={mergedConventions} boards={boards} setBoards={setBoards} />} />
-          <Route path="/conventions" element={<Conventions artists={artists} conventionOverrides={conventionOverrides} setConventionOverrides={setConventionOverrides} />} />
-          <Route path="/studios" element={<Studios artists={artists} />} />
-          <Route path="/concepts" element={<Concepts concepts={concepts} setConcepts={setConcepts} artists={artists} ideas={ideas} />} />
-          <Route path="/boards" element={<Navigate to="/brief?tab=boards" replace />} />
-          <Route path="/help" element={<Help />} />
-          <Route
-            path="/settings"
-            element={(
-              <Settings
-                artists={artists}
-                setArtists={setArtists}
-                ideas={ideas}
-                setIdeas={setIdeas}
-                boards={boards}
-                setBoards={setBoards}
-                concepts={concepts}
-                setConcepts={setConcepts}
-                conventionOverrides={conventionOverrides}
-                setConventionOverrides={setConventionOverrides}
-              />
-            )}
-          />
-          {/* Legacy deep links (old PWA home screens, bookmarks) */}
-          <Route path="/manage" element={<Navigate to="/gallery?mode=manage" replace />} />
-          {/* Where a shared screenshot lands. Kept as its own stable URL — the
-              manifest's share_target and the iOS Shortcut both point here, so
-              intake can move without breaking either. */}
-          <Route path="/share" element={<Navigate to="/gallery?shared=1" replace />} />
-        </Routes>
-      </Suspense>
-      {drawerOpen && <Drawer onClose={() => setDrawerOpen(false)} />}
-      <Nav />
+      {/* Above the routes so a pending undo survives the surface that offered it
+          — a row collapsing, a modal closing, a navigation (#53). */}
+      <UndoProvider>
+        <Suspense fallback={<div className="min-h-screen" aria-hidden="true" />}>
+          <Routes>
+            <Route
+              path="/"
+              element={(
+                <Wall
+                  artists={artists}
+                  setArtists={setArtists}
+                  ideas={ideas}
+                  activeView="artists"
+                  onSwitchView={(view) => view === 'concepts' && navigate('/concepts')}
+                  onOpenDrawer={() => setDrawerOpen(true)}
+                />
+              )}
+            />
+            <Route path="/pipeline" element={<Dashboard artists={artists} setArtists={setArtists} ideas={ideas} boards={boards} mergedConventions={mergedConventions} />} />
+            <Route path="/gallery" element={<Gallery artists={artists} setArtists={setArtists} mergedConventions={mergedConventions} />} />
+            <Route path="/brief" element={<Brief ideas={ideas} setIdeas={setIdeas} artists={artists} mergedConventions={mergedConventions} boards={boards} setBoards={setBoards} />} />
+            <Route path="/conventions" element={<Conventions artists={artists} conventionOverrides={conventionOverrides} setConventionOverrides={setConventionOverrides} />} />
+            <Route path="/studios" element={<Studios artists={artists} />} />
+            <Route path="/concepts" element={<Concepts concepts={concepts} setConcepts={setConcepts} artists={artists} ideas={ideas} />} />
+            <Route path="/boards" element={<Navigate to="/brief?tab=boards" replace />} />
+            <Route path="/help" element={<Help />} />
+            <Route
+              path="/settings"
+              element={(
+                <Settings
+                  artists={artists}
+                  setArtists={setArtists}
+                  ideas={ideas}
+                  setIdeas={setIdeas}
+                  boards={boards}
+                  setBoards={setBoards}
+                  concepts={concepts}
+                  setConcepts={setConcepts}
+                  conventionOverrides={conventionOverrides}
+                  setConventionOverrides={setConventionOverrides}
+                />
+              )}
+            />
+            {/* Legacy deep links (old PWA home screens, bookmarks) */}
+            <Route path="/manage" element={<Navigate to="/gallery?mode=manage" replace />} />
+            {/* Where a shared screenshot lands. Kept as its own stable URL — the
+                manifest's share_target and the iOS Shortcut both point here, so
+                intake can move without breaking either. */}
+            <Route path="/share" element={<Navigate to="/gallery?shared=1" replace />} />
+          </Routes>
+        </Suspense>
+        {drawerOpen && <Drawer onClose={() => setDrawerOpen(false)} />}
+        <Nav />
+      </UndoProvider>
     </div>
   )
 }

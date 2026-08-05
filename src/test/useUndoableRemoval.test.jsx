@@ -1,122 +1,135 @@
-import { StrictMode } from 'react'
+import { StrictMode, useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, renderHook } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
+import { UndoProvider } from '../context/UndoContext'
 import { useUndoableRemoval } from '../hooks/useUndoableRemoval'
 
+// Exercises the hook the way a page does: it owns a list, hands the hook an
+// onChange, and renders a remove button per item.
+function List({ initial = ['a', 'b', 'c'], onChange, durable = true, message = 'Photo removed' }) {
+  const [list, setList] = useState(initial)
+  const apply = (next) => { setList(next); onChange?.(next) }
+  const { remove } = useUndoableRemoval(list, apply, { message, durable })
+  return (
+    <div>
+      <span data-testid="list">{list.join(',')}</span>
+      {list.map((item, i) => (
+        <button key={item} onClick={() => remove(i)}>{`remove ${item}`}</button>
+      ))}
+      <button onClick={() => remove(99)}>remove missing</button>
+    </div>
+  )
+}
+
+const list = () => screen.getByTestId('list').textContent
+const undoButton = () => screen.getByRole('button', { name: /^undo$/i })
+
 describe('useUndoableRemoval', () => {
-  beforeEach(() => vi.useFakeTimers())
+  beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }))
   afterEach(() => vi.useRealTimers())
 
-  function setup(initial = ['a', 'b', 'c'], duration) {
-    const onChange = vi.fn()
-    const view = renderHook(
-      ({ list }) => useUndoableRemoval(list, onChange, duration),
-      { initialProps: { list: initial } }
-    )
-    return { onChange, ...view }
-  }
-
   it('removes the item and offers it back', () => {
-    const { result, onChange } = setup()
+    render(<UndoProvider><List /></UndoProvider>)
 
-    act(() => result.current.remove(1))
+    fireEvent.click(screen.getByText('remove b'))
 
-    expect(onChange).toHaveBeenCalledWith(['a', 'c'])
-    expect(result.current.pending).toMatchObject({ item: 'b' })
+    expect(list()).toBe('a,c')
+    expect(screen.getByRole('status')).toHaveTextContent('Photo removed')
   })
 
   it('restores the item to its original position on undo', () => {
-    const { result, onChange, rerender } = setup()
+    render(<UndoProvider><List /></UndoProvider>)
 
-    act(() => result.current.remove(1))
-    rerender({ list: ['a', 'c'] })
-    act(() => result.current.undo())
+    fireEvent.click(screen.getByText('remove b'))
+    fireEvent.click(undoButton())
 
-    expect(onChange).toHaveBeenLastCalledWith(['a', 'b', 'c'])
-    expect(result.current.pending).toBeNull()
+    expect(list()).toBe('a,b,c')
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
-  it('withdraws the offer once the window passes', () => {
-    const { result } = setup(['a', 'b'], 5000)
+  it('withdraws the offer once the window passes, without restoring', () => {
+    render(<UndoProvider undoWindowMs={5000}><List /></UndoProvider>)
 
-    act(() => result.current.remove(0))
-    expect(result.current.pending).not.toBeNull()
-
+    fireEvent.click(screen.getByText('remove a'))
     act(() => vi.advanceTimersByTime(5000))
 
-    expect(result.current.pending).toBeNull()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(list()).toBe('b,c')
   })
 
-  it('does not resurrect the item when the window passes', () => {
-    const { result, onChange } = setup(['a', 'b'], 5000)
+  it('offers only the most recent of two quick removals', () => {
+    render(<UndoProvider undoWindowMs={5000}><List /></UndoProvider>)
 
-    act(() => result.current.remove(0))
-    onChange.mockClear()
-    act(() => vi.advanceTimersByTime(5000))
+    fireEvent.click(screen.getByText('remove a'))
+    fireEvent.click(screen.getByText('remove b'))
+    expect(list()).toBe('c')
 
-    expect(onChange).not.toHaveBeenCalled()
-  })
+    fireEvent.click(undoButton())
 
-  it('offers only the most recent removal when two happen in quick succession', () => {
-    const { result, onChange, rerender } = setup(['a', 'b', 'c'], 5000)
-
-    act(() => result.current.remove(0)) // 'a'
-    rerender({ list: ['b', 'c'] })
-    act(() => result.current.remove(0)) // 'b'
-    rerender({ list: ['c'] })
-
-    expect(result.current.pending).toMatchObject({ item: 'b' })
-
-    act(() => result.current.undo())
-
-    // Only 'b' comes back; 'a' is already committed.
-    expect(onChange).toHaveBeenLastCalledWith(['b', 'c'])
-  })
-
-  it('can be dismissed without restoring', () => {
-    const { result, onChange } = setup()
-
-    act(() => result.current.remove(1))
-    onChange.mockClear()
-    act(() => result.current.dismiss())
-
-    expect(result.current.pending).toBeNull()
-    expect(onChange).not.toHaveBeenCalled()
+    // Only b comes back; a is already committed.
+    expect(list()).toBe('b,c')
   })
 
   it('ignores an index that is not in the list', () => {
-    const { result, onChange } = setup(['a'])
+    render(<UndoProvider><List /></UndoProvider>)
 
-    act(() => result.current.remove(9))
+    fireEvent.click(screen.getByText('remove missing'))
 
-    expect(onChange).not.toHaveBeenCalled()
-    expect(result.current.pending).toBeNull()
+    expect(list()).toBe('a,b,c')
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('still removes when there is no provider, just without an offer', () => {
+    render(<List />)
+
+    fireEvent.click(screen.getByText('remove b'))
+
+    expect(list()).toBe('a,c')
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
   // main.jsx renders the app inside <StrictMode>, which double-invokes state
-  // updaters. Anything with a side effect in an updater restores twice.
+  // updaters. A side effect in one would restore twice.
   it('restores exactly once under StrictMode', () => {
     const onChange = vi.fn()
-    const { result, rerender } = renderHook(
-      ({ list }) => useUndoableRemoval(list, onChange),
-      { initialProps: { list: ['a', 'b', 'c'] }, wrapper: StrictMode }
+    render(
+      <StrictMode>
+        <UndoProvider><List onChange={onChange} /></UndoProvider>
+      </StrictMode>
     )
 
-    act(() => result.current.remove(1))
-    rerender({ list: ['a', 'c'] })
+    fireEvent.click(screen.getByText('remove b'))
     onChange.mockClear()
-    act(() => result.current.undo())
+    fireEvent.click(undoButton())
 
     expect(onChange).toHaveBeenCalledTimes(1)
     expect(onChange).toHaveBeenCalledWith(['a', 'b', 'c'])
   })
 
-  it('drops its timer on unmount', () => {
-    const { result, unmount } = setup(['a', 'b'], 5000)
+  // #53: the removal is already persisted, so the way back must outlive the row
+  // or modal that offered it.
+  it('keeps a durable offer after the owning surface unmounts', () => {
+    function Host({ show }) {
+      return <UndoProvider>{show && <List durable />}</UndoProvider>
+    }
+    const { rerender } = render(<Host show />)
 
-    act(() => result.current.remove(0))
-    unmount()
+    fireEvent.click(screen.getByText('remove b'))
+    rerender(<Host show={false} />)
 
-    expect(() => act(() => vi.advanceTimersByTime(5000))).not.toThrow()
+    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(undoButton()).toBeInTheDocument()
+  })
+
+  it('withdraws a non-durable offer when the owning surface unmounts', () => {
+    function Host({ show }) {
+      return <UndoProvider>{show && <List durable={false} />}</UndoProvider>
+    }
+    const { rerender } = render(<Host show />)
+
+    fireEvent.click(screen.getByText('remove b'))
+    rerender(<Host show={false} />)
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 })

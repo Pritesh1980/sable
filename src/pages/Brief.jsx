@@ -9,7 +9,6 @@ import { IDEA_STATUSES, matchArtistsToIdea } from '../data/brief'
 import { buildIdeaBrief } from '../data/export'
 import { compressImages } from '../hooks/useImageUpload'
 import { useUndoableRemoval } from '../hooks/useUndoableRemoval'
-import UndoToast from '../components/UndoToast'
 import { analyzeIdeaImageWithGemini } from '../data/screenshotIntake'
 import {
   ARTIST_STATUSES,
@@ -148,12 +147,14 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
 
   // Removing a reference photo is one tap on a small target, so make it
   // recoverable rather than gating it behind a confirm on every use.
+  // Not durable: this only edits the draft, which is discarded if the composer is
+  // closed without saving — an Undo left behind would restore into nothing (#53).
   const images = normalizeReferenceImages(draft.images)
-  const {
-    pending: pendingImageRemoval,
-    remove: removeImage,
-    undo: undoImageRemoval,
-  } = useUndoableRemoval(images, (next) => setDraft((d) => ({ ...d, images: next })))
+  const { remove: removeImage } = useUndoableRemoval(
+    images,
+    (next) => setDraft((d) => ({ ...d, images: next })),
+    { message: 'Photo removed', durable: false }
+  )
 
   function updateImageNote(url, note) {
     setDraft((d) => ({
@@ -438,12 +439,6 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
           </div>
         </div>
       </div>
-
-      <UndoToast
-        show={!!pendingImageRemoval}
-        message="Photo removed"
-        onUndo={undoImageRemoval}
-      />
     </div>
   )
 }

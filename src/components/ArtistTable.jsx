@@ -5,7 +5,6 @@ import { uploadImages } from '../hooks/useImageUpload'
 import { useAuth } from '../context/useAuth'
 import TagPill from './TagPill'
 import ArtistImage from './ArtistImage'
-import UndoToast from './UndoToast'
 import { useUndoableRemoval } from '../hooks/useUndoableRemoval'
 
 function studioName(id) {
@@ -36,11 +35,14 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
   // Undo rather than a confirm dialog: removing photos is routine curation, and a
   // blocking prompt on every one is friction. The 44pt target plus a recoverable
   // window covers the mis-tap this used to guard against.
-  const {
-    pending: pendingImageRemoval,
-    remove: removeImage,
-    undo: undoImageRemoval,
-  } = useUndoableRemoval(artist.images || [], (next) => onSaveImages(artist.id, next))
+  //
+  // Durable: the removal is written straight through to storage, so the way back
+  // has to survive this row collapsing (#53).
+  const { remove: removeImage } = useUndoableRemoval(
+    artist.images || [],
+    (next) => onSaveImages(artist.id, next),
+    { message: 'Photo removed', durable: true }
+  )
 
   function saveNote() {
     onUpdate(artist.id, { notes: note })
@@ -205,12 +207,6 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
                   Remove artist
                 </button>
               </div>
-
-              <UndoToast
-                show={!!pendingImageRemoval}
-                message="Photo removed"
-                onUndo={undoImageRemoval}
-              />
             </div>
           </td>
         </tr>
