@@ -116,6 +116,29 @@ describe('UndoProvider', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
+  // Found by the codex review. A removal arriving just under the ceiling used to
+  // merge and inherit whatever was left — milliseconds — so that photo had no
+  // usable Undo at all. It should start a new batch instead.
+  it('starts a new batch rather than handing out a sliver of a window', () => {
+    const settled = vi.fn()
+    function Repeat() {
+      const { offer } = useUndo()
+      return <button onClick={() => offer({ message: 'Removed', batchKey: 'k', onUndo: () => {}, onSettled: settled })}>go</button>
+    }
+    render(<UndoProvider undoWindowMs={5000} maxWindowMs={8000}><Repeat /></UndoProvider>)
+
+    fireEvent.click(screen.getByText('go'))       // t=0,    runs to 5000
+    act(() => vi.advanceTimersByTime(4000))
+    fireEvent.click(screen.getByText('go'))       // t=4000, merges, capped to 8000
+    act(() => vi.advanceTimersByTime(3900))
+    fireEvent.click(screen.getByText('go'))       // t=7900, only 100ms of ceiling left
+
+    // Still offered well past where merging would have cut it off.
+    act(() => vi.advanceTimersByTime(3000))
+    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(settled).toHaveBeenCalled()            // the exhausted batch committed
+  })
+
   it('gives a fresh batch its full window again', () => {
     function Repeat() {
       const { offer } = useUndo()

@@ -10,6 +10,10 @@ export const CONFIRM_MS = 2500
 // above the nav — for as long as it lasted. Past the ceiling the batch settles
 // and the next removal simply starts a new one.
 export const MAX_WINDOW_MS = 12000
+// If a merge would inherit less than this, the batch has effectively run out:
+// that removal would get a sliver of a window and no usable Undo, so it starts
+// a fresh batch instead and the exhausted one commits.
+export const MIN_WINDOW_MS = 1000
 
 /**
  * Holds the one pending undo offer for the whole app and renders the single
@@ -60,14 +64,19 @@ export function UndoProvider({
 
   const offerUndo = useCallback((offer) => {
     const current = pendingRef.current
+    // performance.now() rather than Date.now(): a clock correction on a phone
+    // must not silently extend a batch forever or expire one instantly.
+    const now = performance.now()
     // Same source, still inside the window: this extends the existing offer
-    // rather than replacing it, so nothing is silently committed.
-    const merging = !!current && current.batchKey != null && current.batchKey === offer.batchKey
+    // rather than replacing it, so nothing is silently committed. A batch with
+    // almost no ceiling left is treated as finished instead.
+    const sameBatch = !!current && current.batchKey != null && current.batchKey === offer.batchKey
+    const roomLeft = maxWindowMs - (now - batchStartedAtRef.current)
+    const merging = sameBatch && roomLeft >= MIN_WINDOW_MS
     if (current && !merging) current.onSettled?.()
 
     clearTimer()
     setConfirmation(null)
-    const now = Date.now()
     if (!merging) batchStartedAtRef.current = now
     pendingRef.current = offer
     setPending(offer)

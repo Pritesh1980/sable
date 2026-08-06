@@ -14,6 +14,8 @@ export default function UndoToast({ message, show, onUndo, actionLabel }) {
   // Whatever had focus when the action appeared, so it can be returned when the
   // action goes away.
   const returnToRef = useRef(null)
+  // Whether focus was inside the toast at the moment its action went away.
+  const heldFocusRef = useRef(false)
 
   // The action is removed on undo and on expiry. If it held focus at that
   // moment, focus would fall to <body> — outside whatever dialog the user was
@@ -24,27 +26,41 @@ export default function UndoToast({ message, show, onUndo, actionLabel }) {
     // Follow focus while the action exists rather than sampling once on mount:
     // at mount nothing is focused yet, and the element to come back to is
     // whatever the user was on immediately before reaching for Undo.
-    const remember = (el) => {
-      if (el && el !== document.body && !el.closest?.('[data-undo-toast]')) returnToRef.current = el
+    const isOurs = (el) => !!el?.closest?.('[data-undo-toast]')
+    const track = (el) => {
+      heldFocusRef.current = isOurs(el)
+      if (el && el !== document.body && !isOurs(el)) returnToRef.current = el
     }
-    remember(document.activeElement)
-    const onFocusIn = (e) => remember(e.target)
+    track(document.activeElement)
+    const onFocusIn = (e) => track(e.target)
     document.addEventListener('focusin', onFocusIn)
 
     return () => {
       document.removeEventListener('focusin', onFocusIn)
-      // Only step in if the disappearing button really did hold focus.
+      // Only step in if the disappearing button really did hold focus. Focus
+      // resting on <body> is not proof of that — the user may simply have
+      // clicked empty space, and grabbing it back would be the focus-stealing
+      // this component exists not to do.
+      if (!heldFocusRef.current) return
+      heldFocusRef.current = false
       const now = document.activeElement
       if (now && now !== document.body) return
-      const target = returnToRef.current
-      if (target?.isConnected && typeof target.focus === 'function') {
-        target.focus()
-        return
-      }
-      // The surface it came from has gone too; fall back to whatever modal is
-      // open so focus stays inside the trap rather than on <body>.
+
+      // Prefer the topmost open dialog when the remembered control sits behind
+      // it — restoring there would fight the trap.
       const dialogs = document.querySelectorAll('[aria-modal="true"]')
-      dialogs[dialogs.length - 1]?.focus?.()
+      const top = dialogs[dialogs.length - 1]
+      const target = returnToRef.current
+      const targetUsable = target?.isConnected && typeof target.focus === 'function'
+        && (!top || top.contains(target))
+
+      if (targetUsable) {
+        target.focus()
+        // `.focus()` is a no-op on a disabled or hidden control, so check it
+        // actually took before giving up on the fallback.
+        if (document.activeElement === target) return
+      }
+      top?.focus?.()
     }
   }, [show, hasAction])
 

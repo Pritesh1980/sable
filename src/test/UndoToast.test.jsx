@@ -73,6 +73,43 @@ describe('UndoToast', () => {
       expect(document.activeElement).toBe(screen.getByText('somewhere else'))
     })
 
+    // Found by the codex review. Focus on <body> does not prove the Undo button
+    // held it — the user may simply have clicked empty space. Refocusing the last
+    // remembered control then is the focus-stealing the component promises not
+    // to do.
+    it('does not grab focus back when the user deliberately blurred', () => {
+      const { rerender } = render(<Harness show />)
+      const other = screen.getByText('somewhere else')
+      other.focus()
+      other.blur()                                // user clicks empty space
+      expect(document.activeElement).toBe(document.body)
+
+      rerender(<Harness show={false} />)          // the offer expires
+
+      expect(document.activeElement).toBe(document.body)
+    })
+
+    it('falls back to the open dialog when the remembered control has gone', () => {
+      function WithDialog({ show, keepButton }) {
+        return (
+          <>
+            <div role="dialog" aria-modal="true" tabIndex={-1} data-testid="dialog">
+              {keepButton && <button>inside dialog</button>}
+            </div>
+            <UndoToast show={show} message="Photo removed" onUndo={() => {}} />
+          </>
+        )
+      }
+      const { rerender } = render(<WithDialog show keepButton />)
+      screen.getByText('inside dialog').focus()
+      screen.getByRole('button', { name: /undo/i }).focus()
+
+      // The control it would return to disappears along with the offer.
+      rerender(<WithDialog show={false} keepButton={false} />)
+
+      expect(document.activeElement).toBe(screen.getByTestId('dialog'))
+    })
+
     it('leaves focus alone when it was never on the toast', () => {
       const { rerender } = render(<Harness show />)
       screen.getByText('somewhere else').focus()
