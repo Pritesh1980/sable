@@ -96,6 +96,83 @@ describe('UndoProvider', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
+  // #61: the window extends with every removal, so a long pruning run could keep
+  // the bar parked over the bottom of a phone screen indefinitely. A ceiling on
+  // total lifetime bounds that; pruning past it simply starts a fresh batch.
+  it('stops extending the window once the ceiling is reached', () => {
+    function Repeat() {
+      const { offer } = useUndo()
+      return <button onClick={() => offer({ message: 'Removed', batchKey: 'k', onUndo: () => {} })}>go</button>
+    }
+    render(<UndoProvider undoWindowMs={5000} maxWindowMs={8000}><Repeat /></UndoProvider>)
+
+    fireEvent.click(screen.getByText('go'))            // t=0, would expire at 5000
+    act(() => vi.advanceTimersByTime(4000))            // t=4000
+    fireEvent.click(screen.getByText('go'))            // merges; uncapped it would run to 9000
+    expect(screen.getByRole('status')).toBeInTheDocument()
+
+    act(() => vi.advanceTimersByTime(4000))            // t=8000, the ceiling
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('gives a fresh batch its full window again', () => {
+    function Repeat() {
+      const { offer } = useUndo()
+      return <button onClick={() => offer({ message: 'Removed', batchKey: 'k', onUndo: () => {} })}>go</button>
+    }
+    render(<UndoProvider undoWindowMs={5000} maxWindowMs={8000}><Repeat /></UndoProvider>)
+
+    fireEvent.click(screen.getByText('go'))
+    act(() => vi.advanceTimersByTime(8000))            // expires at the ceiling
+    fireEvent.click(screen.getByText('go'))            // a new batch starts here
+
+    act(() => vi.advanceTimersByTime(4000))
+    expect(screen.getByRole('status')).toBeInTheDocument()
+  })
+
+  // #61: confirming a restore the user can already see is noise. The offer says
+  // whether its target is visible.
+  it('stays quiet when the restore target is on screen', () => {
+    function Visible() {
+      const { offer } = useUndo()
+      return (
+        <button onClick={() => offer({
+          message: 'Photo removed',
+          confirmMessage: 'Photo restored',
+          shouldConfirm: () => false,
+          onUndo: () => {},
+        })}>remove</button>
+      )
+    }
+    render(<UndoProvider><Visible /></UndoProvider>)
+
+    fireEvent.click(screen.getByText('remove'))
+    fireEvent.click(screen.getByRole('button', { name: /undo/i }))
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('confirms when the restore target is out of sight', () => {
+    function Hidden() {
+      const { offer } = useUndo()
+      return (
+        <button onClick={() => offer({
+          message: 'Photo removed',
+          confirmMessage: 'Photo restored',
+          shouldConfirm: () => true,
+          onUndo: () => {},
+        })}>remove</button>
+      )
+    }
+    render(<UndoProvider><Hidden /></UndoProvider>)
+
+    fireEvent.click(screen.getByText('remove'))
+    fireEvent.click(screen.getByRole('button', { name: /undo/i }))
+
+    expect(screen.getByRole('status')).toHaveTextContent('Photo restored')
+  })
+
   it('withdraws the offer when the window passes', () => {
     const onUndo = vi.fn()
     render(<UndoProvider undoWindowMs={5000}><Publisher onUndo={onUndo} /></UndoProvider>)

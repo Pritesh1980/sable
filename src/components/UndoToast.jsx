@@ -1,12 +1,53 @@
+import { useEffect, useRef } from 'react'
+
 /**
  * Transient "…removed — Undo" bar. Sits above the fixed bottom nav (z-50) and its
  * safe-area inset, so it never hides behind the nav on an iPhone.
  *
  * Deliberately not focus-stealing: removal is something the user just did, so the
- * offer is announced politely rather than interrupting what they are doing.
+ * offer is announced politely rather than interrupting what they are doing. It
+ * does hand focus *back*, though — see below.
  */
 export default function UndoToast({ message, show, onUndo, actionLabel }) {
   const label = actionLabel || 'Undo'
+  const hasAction = !!onUndo
+  // Whatever had focus when the action appeared, so it can be returned when the
+  // action goes away.
+  const returnToRef = useRef(null)
+
+  // The action is removed on undo and on expiry. If it held focus at that
+  // moment, focus would fall to <body> — outside whatever dialog the user was
+  // working in, and stuck there until the next Tab (#60).
+  useEffect(() => {
+    if (!show || !hasAction) return undefined
+
+    // Follow focus while the action exists rather than sampling once on mount:
+    // at mount nothing is focused yet, and the element to come back to is
+    // whatever the user was on immediately before reaching for Undo.
+    const remember = (el) => {
+      if (el && el !== document.body && !el.closest?.('[data-undo-toast]')) returnToRef.current = el
+    }
+    remember(document.activeElement)
+    const onFocusIn = (e) => remember(e.target)
+    document.addEventListener('focusin', onFocusIn)
+
+    return () => {
+      document.removeEventListener('focusin', onFocusIn)
+      // Only step in if the disappearing button really did hold focus.
+      const now = document.activeElement
+      if (now && now !== document.body) return
+      const target = returnToRef.current
+      if (target?.isConnected && typeof target.focus === 'function') {
+        target.focus()
+        return
+      }
+      // The surface it came from has gone too; fall back to whatever modal is
+      // open so focus stays inside the trap rather than on <body>.
+      const dialogs = document.querySelectorAll('[aria-modal="true"]')
+      dialogs[dialogs.length - 1]?.focus?.()
+    }
+  }, [show, hasAction])
+
   if (!show) return null
 
   return (
@@ -21,7 +62,7 @@ export default function UndoToast({ message, show, onUndo, actionLabel }) {
       <span className="font-body text-sm text-cream">{message}</span>
       {/* No action when this is a confirmation of what just happened — there is
           nothing left to undo, so an inert button would be a lie. */}
-      {onUndo && (
+      {hasAction && (
         <button
           onClick={onUndo}
           className="shrink-0 min-h-11 min-w-11 px-3 font-mono text-xs uppercase tracking-widest text-accent rounded-xs outline-hidden focus-visible:ring-2 focus-visible:ring-accent hover:bg-accent/10 transition-colors"

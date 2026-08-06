@@ -5,6 +5,11 @@ import UndoToast from '../components/UndoToast'
 export const UNDO_WINDOW_MS = 5000
 // Long enough to read, short enough not to linger over the work.
 export const CONFIRM_MS = 2500
+// Ceiling on one batch's total life. Each removal extends the window, so a long
+// pruning run would otherwise park the bar over the bottom of the screen — right
+// above the nav — for as long as it lasted. Past the ceiling the batch settles
+// and the next removal simply starts a new one.
+export const MAX_WINDOW_MS = 12000
 
 /**
  * Holds the one pending undo offer for the whole app and renders the single
@@ -19,7 +24,12 @@ export const CONFIRM_MS = 2500
  * pruning several photos in a row stays recoverable as a batch rather than
  * silently committing all but the last.
  */
-export function UndoProvider({ children, undoWindowMs = UNDO_WINDOW_MS, confirmMs = CONFIRM_MS }) {
+export function UndoProvider({
+  children,
+  undoWindowMs = UNDO_WINDOW_MS,
+  confirmMs = CONFIRM_MS,
+  maxWindowMs = MAX_WINDOW_MS,
+}) {
   const [pending, setPending] = useState(null)
   const [confirmation, setConfirmation] = useState(null)
   const timerRef = useRef(null)
@@ -27,6 +37,8 @@ export function UndoProvider({ children, undoWindowMs = UNDO_WINDOW_MS, confirmM
   // Mirrors `pending` so callbacks never read it through a state updater —
   // StrictMode double-invokes updaters, which would fire side effects twice.
   const pendingRef = useRef(null)
+  // When the current batch first appeared, so extensions can be bounded.
+  const batchStartedAtRef = useRef(0)
 
   const clearTimer = useCallback(() => {
     if (timerRef.current) {
@@ -55,16 +67,22 @@ export function UndoProvider({ children, undoWindowMs = UNDO_WINDOW_MS, confirmM
 
     clearTimer()
     setConfirmation(null)
+    const now = Date.now()
+    if (!merging) batchStartedAtRef.current = now
     pendingRef.current = offer
     setPending(offer)
+
+    // Extend, but never past the ceiling for this batch.
+    const elapsed = now - batchStartedAtRef.current
+    const life = Math.max(0, Math.min(undoWindowMs, maxWindowMs - elapsed))
     timerRef.current = setTimeout(() => {
       timerRef.current = null
       const expired = pendingRef.current
       pendingRef.current = null
       setPending(null)
       expired?.onSettled?.()
-    }, undoWindowMs)
-  }, [clearTimer, undoWindowMs])
+    }, life)
+  }, [clearTimer, undoWindowMs, maxWindowMs])
 
   const undoNow = useCallback(() => {
     const current = pendingRef.current
@@ -76,7 +94,8 @@ export function UndoProvider({ children, undoWindowMs = UNDO_WINDOW_MS, confirmM
     current.onSettled?.()
     // Restoring into a collapsed row or a closed modal changes nothing on
     // screen, so say what happened rather than just vanishing.
-    if (restored !== false && current.confirmMessage) {
+    const worthConfirming = current.shouldConfirm ? current.shouldConfirm() : true
+    if (restored !== false && worthConfirming && current.confirmMessage) {
       setConfirmation(current.confirmMessage)
       if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current)
       confirmTimerRef.current = setTimeout(() => {

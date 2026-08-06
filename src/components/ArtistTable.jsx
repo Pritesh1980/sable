@@ -50,6 +50,9 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
       batchMessage: (n) => `${n} photos removed from ${who}`,
       confirmMessage: (n) => (n === 1 ? `Photo restored to ${who}` : `${n} photos restored to ${who}`),
       durable: true,
+      // Photos only render in the expanded region — collapsed, a restore is
+      // invisible and worth confirming; expanded, the user watches it return.
+      isTargetVisible: () => expanded,
     }
   )
 

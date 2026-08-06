@@ -33,6 +33,7 @@ export function useUndoableRemoval(list, onChange, options = {}) {
     batchMessage = defaultBatchMessage,
     confirmMessage = defaultConfirmMessage,
     durable = false,
+    isTargetVisible,
   } = options
 
   const { offer, promote, withdraw } = useUndo()
@@ -45,6 +46,15 @@ export function useUndoableRemoval(list, onChange, options = {}) {
   // Where restores are written. Rebound by `commit` when another surface takes
   // ownership of the removal (saving a draft hands it to the saved record).
   const sinkRef = useRef(null)
+  // Whether the place a restore lands is on screen. Confirming something the
+  // user can already see is noise; confirming a restore into a collapsed row or
+  // a closed composer is the whole point (#61).
+  const visibleRef = useRef(isTargetVisible)
+  const mountedRef = useRef(true)
+  useEffect(() => {
+    mountedRef.current = true
+    return () => { mountedRef.current = false }
+  }, [])
 
   // Written in an effect, not during render: React may render without
   // committing, and a ref mutated on a discarded render would be wrong. Event
@@ -52,6 +62,7 @@ export function useUndoableRemoval(list, onChange, options = {}) {
   useEffect(() => {
     listRef.current = list
     onChangeRef.current = onChange
+    visibleRef.current = isTargetVisible
   })
 
   const remove = useCallback((index) => {
@@ -71,6 +82,8 @@ export function useUndoableRemoval(list, onChange, options = {}) {
       message: count === 1 ? message : batchMessage(count),
       actionLabel: count === 1 ? 'Undo' : 'Undo all',
       confirmMessage: confirmMessage(count),
+      // Unmounted means the surface is definitely gone; otherwise ask it.
+      shouldConfirm: () => !mountedRef.current || !(visibleRef.current?.() ?? true),
       // Newest first, so each restore lands against the list the next expects.
       onUndo: () => write((current) => batch.reduceRight((acc, r) => restoreRemoval(acc, r), current)),
       onSettled: () => { batchRef.current = [] },

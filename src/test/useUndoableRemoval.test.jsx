@@ -6,7 +6,7 @@ import { useUndoableRemoval } from '../hooks/useUndoableRemoval'
 
 // Exercises the hook the way a page does: it owns a list, hands the hook an
 // onChange, and renders a remove button per item.
-function List({ initial = ['a', 'b', 'c'], onChange, durable = true, message = 'Photo removed' }) {
+function List({ initial = ['a', 'b', 'c'], onChange, durable = true, message = 'Photo removed', isVisible }) {
   const [list, setList] = useState(initial)
   const currentRef = useRef(list)
   useEffect(() => { currentRef.current = list })
@@ -23,6 +23,7 @@ function List({ initial = ['a', 'b', 'c'], onChange, durable = true, message = '
     batchMessage: (n) => `${n} photos removed`,
     confirmMessage: (n) => (n === 1 ? 'Photo restored' : `${n} photos restored`),
     durable,
+    isTargetVisible: isVisible,
   })
   return (
     <div>
@@ -58,9 +59,8 @@ describe('useUndoableRemoval', () => {
     fireEvent.click(undoButton())
 
     expect(list()).toBe('a,b,c')
-    // The bar stays a moment to confirm, with nothing left to undo (#59).
-    expect(screen.getByRole('status')).toHaveTextContent('Photo restored')
-    expect(screen.queryByRole('button', { name: /undo/i })).not.toBeInTheDocument()
+    // The photo is visibly back on screen, so the bar simply goes (#61).
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
   it('withdraws the offer once the window passes, without restoring', () => {
@@ -230,20 +230,45 @@ describe('useUndoableRemoval', () => {
     })
   })
 
-  // #59: restoring into a row that is collapsed changes nothing on screen, so the
-  // toast confirms what happened instead of just vanishing.
-  it('confirms the restore instead of disappearing silently', () => {
-    render(<UndoProvider undoWindowMs={5000}><List /></UndoProvider>)
+  // #59 + #61: restoring into somewhere the user cannot see changes nothing on
+  // screen, so that — and only that — earns a confirmation.
+  describe('confirming a restore', () => {
+    it('says nothing when the surface is on screen', () => {
+      render(<UndoProvider undoWindowMs={5000}><List isVisible={() => true} /></UndoProvider>)
 
-    fireEvent.click(screen.getByText('remove b'))
-    fireEvent.click(undoButton())
+      fireEvent.click(screen.getByText('remove b'))
+      fireEvent.click(undoButton())
 
-    expect(screen.getByRole('status')).toHaveTextContent(/restored/i)
-    // …and it is only a confirmation, with nothing left to undo.
-    expect(screen.queryByRole('button', { name: /undo/i })).not.toBeInTheDocument()
+      expect(list()).toBe('a,b,c')
+      expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    })
 
-    act(() => vi.advanceTimersByTime(5000))
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    it('confirms when the surface reports itself hidden', () => {
+      render(<UndoProvider undoWindowMs={5000}><List isVisible={() => false} /></UndoProvider>)
+
+      fireEvent.click(screen.getByText('remove b'))
+      fireEvent.click(undoButton())
+
+      expect(screen.getByRole('status')).toHaveTextContent(/restored/i)
+      // …and it is only a confirmation, with nothing left to undo.
+      expect(screen.queryByRole('button', { name: /undo/i })).not.toBeInTheDocument()
+
+      act(() => vi.advanceTimersByTime(5000))
+      expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    })
+
+    it('confirms when the surface that offered it has gone', () => {
+      function Host({ show }) {
+        return <UndoProvider undoWindowMs={5000}>{show && <List durable />}</UndoProvider>
+      }
+      const { rerender } = render(<Host show />)
+
+      fireEvent.click(screen.getByText('remove b'))
+      rerender(<Host show={false} />)
+      fireEvent.click(undoButton())
+
+      expect(screen.getByRole('status')).toHaveTextContent(/restored/i)
+    })
   })
 
   // #57: the composer's offer is non-durable because its edit is discarded on
