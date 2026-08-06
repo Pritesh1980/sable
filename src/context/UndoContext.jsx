@@ -70,11 +70,13 @@ export function UndoProvider({ children, undoWindowMs = UNDO_WINDOW_MS, confirmM
     const current = pendingRef.current
     clear()
     if (!current) return
-    current.onUndo?.()
+    // A restore can report failure — its target may have been deleted since the
+    // offer was made — in which case there is nothing to confirm.
+    const restored = current.onUndo?.()
     current.onSettled?.()
     // Restoring into a collapsed row or a closed modal changes nothing on
     // screen, so say what happened rather than just vanishing.
-    if (current.confirmMessage) {
+    if (restored !== false && current.confirmMessage) {
       setConfirmation(current.confirmMessage)
       if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current)
       confirmTimerRef.current = setTimeout(() => {

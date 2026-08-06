@@ -69,6 +69,30 @@ describe('undo toast inside a modal focus trap (#58)', () => {
     expect(document.activeElement).toBe(screen.getByText('first'))
   })
 
+  // Found by the codex review. Listening on the document (needed so Tab still
+  // works once focus is on the toast) meant an open dialog also grabbed Tab
+  // presses belonging to a *second* dialog stacked over it — Concepts renders
+  // ReliefStlDrawer as a sibling of ConceptViewer, and both can be open.
+  it('ignores Tab belonging to another dialog stacked over it', () => {
+    render(
+      <>
+        <Dialog />
+        <div role="dialog" aria-modal="true">
+          <button>inner one</button>
+          <button>inner two</button>
+        </div>
+        <UndoToast show message="Photo removed" onUndo={() => {}} />
+      </>
+    )
+
+    screen.getByText('inner two').focus()
+    tab()
+
+    // The outer trap must keep its hands off; focus stays where the inner
+    // dialog's own trap left it rather than jumping behind the stacked dialog.
+    expect(document.activeElement).toBe(screen.getByText('inner two'))
+  })
+
   it('does not trap into a toast that is only a confirmation', () => {
     // No action button to reach — Tab should wrap inside the dialog as usual.
     render(

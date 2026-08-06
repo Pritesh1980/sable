@@ -65,6 +65,37 @@ describe('UndoProvider', () => {
     expect(first).not.toHaveBeenCalled()
   })
 
+  // Found by the codex review. A promoted offer can outlive the record it would
+  // restore into — save a removal, then delete the idea. The restore silently
+  // does nothing, so claiming "Photo restored" would be a lie.
+  it('does not confirm a restore that reported failure', () => {
+    function Failing() {
+      const { offer } = useUndo()
+      return (
+        <button onClick={() => offer({ message: 'Photo removed', confirmMessage: 'Photo restored', onUndo: () => false, durable: true })}>
+          remove
+        </button>
+      )
+    }
+    render(<UndoProvider><Failing /></UndoProvider>)
+
+    fireEvent.click(screen.getByText('remove'))
+    fireEvent.click(screen.getByRole('button', { name: /undo/i }))
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('confirms when the restore did not report failure', () => {
+    render(<UndoProvider><Publisher onUndo={() => {}} /></UndoProvider>)
+
+    fireEvent.click(screen.getByText('remove'))
+    fireEvent.click(screen.getByRole('button', { name: /undo/i }))
+
+    // Publisher offers no confirmMessage, so nothing lingers — but the absence
+    // must come from that, not from a failure signal.
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
   it('withdraws the offer when the window passes', () => {
     const onUndo = vi.fn()
     render(<UndoProvider undoWindowMs={5000}><Publisher onUndo={onUndo} /></UndoProvider>)

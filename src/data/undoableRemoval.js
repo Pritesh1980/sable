@@ -21,6 +21,11 @@ function indexOfIdentity(list, item) {
   return list.findIndex((candidate) => itemIdentity(candidate) === id)
 }
 
+function countIdentity(list, item) {
+  const id = itemIdentity(item)
+  return list.reduce((n, candidate) => (itemIdentity(candidate) === id ? n + 1 : n), 0)
+}
+
 export function removeAt(list, index) {
   if (!Array.isArray(list) || index < 0 || index >= list.length) {
     return { list, removal: null }
@@ -34,6 +39,10 @@ export function removeAt(list, index) {
       index,
       prev: index > 0 ? list[index - 1] : null,
       nextItem: index < list.length - 1 ? list[index + 1] : null,
+      // How many of this identity remained after the removal. Restoring is
+      // allowed back up to this many — which lets a batch bring back two photos
+      // that share a URL, while still refusing to restore one removal twice.
+      remaining: countIdentity(next, item),
     },
   }
 }
@@ -52,9 +61,11 @@ export function restoreRemoval(list, removal) {
   if (!removal) return list
   const next = Array.isArray(list) ? list.slice() : []
 
-  // Already back — a redelivered sync, or a write that never landed. Restoring
-  // again would insert a second copy.
-  if (indexOfIdentity(next, removal.item) !== -1) return list
+  // Already back — a redelivered sync, a write that never landed, or a second
+  // press of Undo. Compared by count rather than presence so that genuinely
+  // duplicated items (two photos sharing a URL) can both come back.
+  const allowed = removal.remaining ?? 0
+  if (countIdentity(next, removal.item) > allowed) return list
 
   // Prefer the neighbours it sat between; fall back to the recorded index.
   const prevIdx = removal.prev != null ? indexOfIdentity(next, removal.prev) : -1

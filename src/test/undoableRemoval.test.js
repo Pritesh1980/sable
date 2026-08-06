@@ -98,4 +98,27 @@ describe('restoreRemoval', () => {
 
     expect(original).toEqual(['a', 'c'])
   })
+
+  // Found by the codex review of #57–#59. The guard against restoring an item
+  // that is "already present" cannot be a bare identity check once removals are
+  // batched: two photos can legitimately share a URL, and restoring the batch
+  // brought only one of them back while the toast claimed two.
+  it('restores every copy when the same item was removed twice', () => {
+    let list = ['x', 'x', 'y']
+    const first = removeAt(list, 0)
+    const second = removeAt(first.list, 0)
+
+    const restored = [first.removal, second.removal]
+      .reduceRight((acc, r) => restoreRemoval(acc, r), second.list)
+
+    expect(restored).toEqual(['x', 'x', 'y'])
+  })
+
+  it('still refuses to restore the same removal twice', () => {
+    const { list, removal } = removeAt(['x', 'x', 'y'], 0)
+    const once = restoreRemoval(list, removal)
+
+    expect(once).toEqual(['x', 'x', 'y'])
+    expect(restoreRemoval(once, removal)).toEqual(['x', 'x', 'y'])
+  })
 })

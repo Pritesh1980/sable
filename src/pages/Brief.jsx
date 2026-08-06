@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useSearchParams } from 'react-router'
 import TagPill from '../components/TagPill'
 import Logo from '../components/Logo'
@@ -461,12 +461,19 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
   // Deep links (?tab=boards) land on the Boards tab; afterwards plain state.
   const [tab, setTab] = useState(() => (searchParams.get('tab') === 'boards' ? 'boards' : 'ideas'))
 
+  const ideasRef = useRef(ideas)
+  useEffect(() => { ideasRef.current = ideas })
+
   // Where a photo restored after saving lands: the saved idea, since the
-  // composer that removed it is gone by then (#57).
+  // composer that removed it is gone by then (#57). Reports false when that idea
+  // has since been deleted, so the toast does not claim a restore that did not
+  // happen — read through a ref because the offer outlives this render.
   function restoreIdeaImages(id, updater) {
+    if (!ideasRef.current.some((i) => i.id === id)) return false
     setIdeas((prev) => prev.map((i) => (
       i.id === id ? { ...i, images: updater(normalizeReferenceImages(i.images)) } : i
     )))
+    return true
   }
 
   function saveIdea(idea) {

@@ -10,6 +10,22 @@ export function undoToastFocusables() {
   return [...document.querySelectorAll('[data-undo-toast] button:not([disabled])')]
 }
 
+/**
+ * Whether this dialog should act on a Tab press. Listening on the document is
+ * what lets Tab keep working once focus is on the toast, but it also means an
+ * open dialog hears Tab presses meant for a *second* dialog stacked over it —
+ * Concepts renders ReliefStlDrawer as a sibling of ConceptViewer. Only handle
+ * focus that is ours, on the toast, or nowhere in particular.
+ */
+export function ownsFocus(container) {
+  const active = document.activeElement
+  if (!active || active === document.body) return true
+  if (container.contains(active) || active === container) return true
+  if (active.closest?.('[data-undo-toast]')) return true
+  // Focus sits in some other dialog — leave it to that dialog's own trap.
+  return !active.closest?.('[aria-modal="true"]')
+}
+
 // Dialog focus management for full-screen overlays (WallViewer,
 // ConceptViewer): moves focus into the overlay on open, wraps Tab within it,
 // and restores focus to the previously-focused element on close. Same
@@ -25,6 +41,7 @@ export default function useDialogFocus(open) {
 
     function handleKeyDown(e) {
       if (e.key !== 'Tab' || !containerRef.current) return
+      if (!ownsFocus(containerRef.current)) return
       const focusable = [
         ...containerRef.current.querySelectorAll(FOCUSABLE),
         ...undoToastFocusables(),
