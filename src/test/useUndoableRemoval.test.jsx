@@ -18,7 +18,12 @@ function List({ initial = ['a', 'b', 'c'], onChange, durable = true, message = '
     setList(next)
     onChange?.(next)
   }
-  const { remove } = useUndoableRemoval(list, apply, { message, durable })
+  const { remove } = useUndoableRemoval(list, apply, {
+    message,
+    batchMessage: (n) => `${n} photos removed`,
+    confirmMessage: (n) => (n === 1 ? 'Photo restored' : `${n} photos restored`),
+    durable,
+  })
   return (
     <div>
       <span data-testid="list">{list.join(',')}</span>
@@ -53,7 +58,9 @@ describe('useUndoableRemoval', () => {
     fireEvent.click(undoButton())
 
     expect(list()).toBe('a,b,c')
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    // The bar stays a moment to confirm, with nothing left to undo (#59).
+    expect(screen.getByRole('status')).toHaveTextContent('Photo restored')
+    expect(screen.queryByRole('button', { name: /undo/i })).not.toBeInTheDocument()
   })
 
   it('withdraws the offer once the window passes, without restoring', () => {
@@ -66,17 +73,26 @@ describe('useUndoableRemoval', () => {
     expect(list()).toBe('b,c')
   })
 
-  it('offers only the most recent of two quick removals', () => {
-    render(<UndoProvider undoWindowMs={5000}><List /></UndoProvider>)
+  // Batching is per source (#59). Removals from two different lists must not be
+  // rolled into one offer — the older one is committed instead.
+  it('does not batch across separate sources', () => {
+    render(
+      <UndoProvider undoWindowMs={5000}>
+        <List initial={['a', 'b']} />
+        <List initial={['x', 'y']} />
+      </UndoProvider>
+    )
+    const lists = () => screen.getAllByTestId('list').map((n) => n.textContent)
 
     fireEvent.click(screen.getByText('remove a'))
-    fireEvent.click(screen.getByText('remove b'))
-    expect(list()).toBe('c')
+    fireEvent.click(screen.getByText('remove x'))
+    expect(lists()).toEqual(['b', 'y'])
 
+    // The visible offer belongs to the second list only.
+    expect(screen.getByRole('status')).toHaveTextContent('Photo removed')
     fireEvent.click(undoButton())
 
-    // Only b comes back; a is already committed.
-    expect(list()).toBe('b,c')
+    expect(lists()).toEqual(['b', 'x,y'])
   })
 
   it('ignores an index that is not in the list', () => {
@@ -160,6 +176,74 @@ describe('useUndoableRemoval', () => {
     fireEvent.click(undoButton())
 
     expect(list()).toBe('a,b,synced')
+  })
+
+  // #59: pruning several references in a row is a normal workflow, and losing all
+  // but the last one's undo is a poor trade.
+  describe('batching consecutive removals', () => {
+    it('collapses them into one offer that counts them', () => {
+      render(<UndoProvider undoWindowMs={5000}><List /></UndoProvider>)
+
+      fireEvent.click(screen.getByText('remove a'))
+      fireEvent.click(screen.getByText('remove b'))
+
+      expect(list()).toBe('c')
+      expect(screen.getAllByRole('status')).toHaveLength(1)
+      expect(screen.getByRole('status')).toHaveTextContent('2 photos removed')
+      expect(screen.getByRole('button', { name: /undo all/i })).toBeInTheDocument()
+    })
+
+    it('restores the whole batch, in their original places', () => {
+      render(<UndoProvider undoWindowMs={5000}><List /></UndoProvider>)
+
+      fireEvent.click(screen.getByText('remove a'))
+      fireEvent.click(screen.getByText('remove b'))
+      fireEvent.click(screen.getByRole('button', { name: /undo all/i }))
+
+      expect(list()).toBe('a,b,c')
+    })
+
+    it('extends the window with each removal rather than expiring on the first', () => {
+      render(<UndoProvider undoWindowMs={5000}><List /></UndoProvider>)
+
+      fireEvent.click(screen.getByText('remove a'))
+      act(() => vi.advanceTimersByTime(3000))
+      fireEvent.click(screen.getByText('remove b'))
+      act(() => vi.advanceTimersByTime(3000))   // 6s since the first removal
+
+      expect(screen.getByRole('status')).toBeInTheDocument()
+      fireEvent.click(screen.getByRole('button', { name: /undo all/i }))
+      expect(list()).toBe('a,b,c')
+    })
+
+    it('starts a fresh batch once the window has closed', () => {
+      render(<UndoProvider undoWindowMs={5000}><List /></UndoProvider>)
+
+      fireEvent.click(screen.getByText('remove a'))
+      act(() => vi.advanceTimersByTime(5000))
+      fireEvent.click(screen.getByText('remove b'))
+
+      expect(screen.getByRole('status')).toHaveTextContent('Photo removed')
+      expect(screen.getByRole('status')).not.toHaveTextContent('2 photos')
+      fireEvent.click(undoButton())
+      expect(list()).toBe('b,c')   // only b comes back; a stayed committed
+    })
+  })
+
+  // #59: restoring into a row that is collapsed changes nothing on screen, so the
+  // toast confirms what happened instead of just vanishing.
+  it('confirms the restore instead of disappearing silently', () => {
+    render(<UndoProvider undoWindowMs={5000}><List /></UndoProvider>)
+
+    fireEvent.click(screen.getByText('remove b'))
+    fireEvent.click(undoButton())
+
+    expect(screen.getByRole('status')).toHaveTextContent(/restored/i)
+    // …and it is only a confirmation, with nothing left to undo.
+    expect(screen.queryByRole('button', { name: /undo/i })).not.toBeInTheDocument()
+
+    act(() => vi.advanceTimersByTime(5000))
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
   it('withdraws a non-durable offer when the owning surface unmounts', () => {

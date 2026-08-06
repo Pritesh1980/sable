@@ -1,6 +1,9 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useId, useRef } from 'react'
 import { removeAt, removeItem, restoreRemoval } from '../data/undoableRemoval'
 import { useUndo } from '../context/useUndo'
+
+const defaultBatchMessage = (n) => (n === 1 ? 'Removed' : `${n} items removed`)
+const defaultConfirmMessage = (n) => (n === 1 ? 'Restored' : `${n} items restored`)
 
 /**
  * Removal you can take back. The removal applies immediately — the list is the
@@ -8,22 +11,40 @@ import { useUndo } from '../context/useUndo'
  * UndoProvider rather than kept here, so it survives this component unmounting
  * (a table row collapsing, a modal closing). See #53.
  *
+ * Consecutive removals accumulate into one batch while the offer is live, so
+ * pruning several photos in a row stays recoverable as a whole (#59).
+ *
  * @param list      current list, used only to work out *what* is being removed
  * @param onChange  called with an updater — `(currentList) => nextList` — never a
  *                  plain array. A durable offer outlives this component, so its
  *                  refs stop updating; composing against the caller's current
  *                  list is what stops undo writing back over a change that
  *                  landed in between (a sync, an import).
- * @param options.message  what the toast says
+ * @param options.message  toast text for a single removal
+ * @param options.batchMessage  `(count) => string` once more than one is pending
+ * @param options.confirmMessage  `(count) => string` shown after restoring
  * @param options.durable  true when the removal is already persisted, so the
  *                         offer should outlive this component; false when it
- *                         only edited draft state discarded on close, where a
- *                         leftover Undo button would do nothing.
+ *                         only edited draft state discarded on close.
  */
-export function useUndoableRemoval(list, onChange, { message = 'Removed', durable = false } = {}) {
-  const { offer } = useUndo()
+export function useUndoableRemoval(list, onChange, options = {}) {
+  const {
+    message = 'Removed',
+    batchMessage = defaultBatchMessage,
+    confirmMessage = defaultConfirmMessage,
+    durable = false,
+  } = options
+
+  const { offer, promote } = useUndo()
   const listRef = useRef(list)
   const onChangeRef = useRef(onChange)
+  // Removals still inside the live window, oldest first.
+  const batchRef = useRef([])
+  // Stable per hook instance: what the host groups consecutive removals by.
+  const batchKey = useId()
+  // Where restores are written. Rebound by `commit` when another surface takes
+  // ownership of the removal (saving a draft hands it to the saved record).
+  const sinkRef = useRef(null)
 
   // Written in an effect, not during render: React may render without
   // committing, and a ref mutated on a discarded render would be wrong. Event
@@ -34,19 +55,38 @@ export function useUndoableRemoval(list, onChange, { message = 'Removed', durabl
   })
 
   const remove = useCallback((index) => {
-    // Which item, and what sat either side — read while still mounted.
     const { removal } = removeAt(listRef.current, index)
     if (!removal) return
 
-    // Both sides compose against the caller's current list rather than a captured
-    // copy, so neither the removal nor the restore can clobber a concurrent edit.
-    onChangeRef.current((current) => removeItem(current, removal.item))
-    offer({
-      message,
-      durable,
-      onUndo: () => onChangeRef.current((current) => restoreRemoval(current, removal)),
-    })
-  }, [offer, message, durable])
+    const write = (updater) => (sinkRef.current || onChangeRef.current)(updater)
+    write((current) => removeItem(current, removal.item))
 
-  return { remove }
+    const batch = [...batchRef.current, removal]
+    batchRef.current = batch
+    const count = batch.length
+
+    offer({
+      durable,
+      batchKey,
+      message: count === 1 ? message : batchMessage(count),
+      actionLabel: count === 1 ? 'Undo' : 'Undo all',
+      confirmMessage: confirmMessage(count),
+      // Newest first, so each restore lands against the list the next expects.
+      onUndo: () => write((current) => batch.reduceRight((acc, r) => restoreRemoval(acc, r), current)),
+      onSettled: () => { batchRef.current = [] },
+    })
+  }, [offer, message, batchMessage, confirmMessage, durable, batchKey])
+
+  /**
+   * Hand the live offer to whoever owns the data now, and make it durable. Used
+   * when saving commits a draft removal for real: the composer is about to
+   * close, but the removal has become permanent, so undo has to outlive it and
+   * write somewhere that still exists.
+   */
+  const commit = useCallback((sink) => {
+    if (sink) sinkRef.current = sink
+    promote()
+  }, [promote])
+
+  return { remove, commit }
 }

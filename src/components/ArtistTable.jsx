@@ -32,6 +32,8 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
     }
   }
 
+  const who = artist.name || `@${artist.handle}`
+
   // Undo rather than a confirm dialog: removing photos is routine curation, and a
   // blocking prompt on every one is friction. The 44pt target plus a recoverable
   // window covers the mis-tap this used to guard against.
@@ -43,7 +45,12 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
     (updater) => onSaveImages(artist.id, updater),
     // Name the artist: this offer can outlive the row, so by the time it is read
     // the surface it came from may be collapsed or scrolled away.
-    { message: `Photo removed from ${artist.name || `@${artist.handle}`}`, durable: true }
+    {
+      message: `Photo removed from ${who}`,
+      batchMessage: (n) => `${n} photos removed from ${who}`,
+      confirmMessage: (n) => (n === 1 ? `Photo restored to ${who}` : `${n} photos restored to ${who}`),
+      durable: true,
+    }
   )
 
   function saveNote() {

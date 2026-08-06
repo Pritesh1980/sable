@@ -153,7 +153,12 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
   const { remove: removeImage } = useUndoableRemoval(
     images,
     (updater) => setDraft((d) => ({ ...d, images: updater(normalizeReferenceImages(d.images)) })),
-    { message: 'Photo removed', durable: false }
+    {
+      message: 'Photo removed',
+      batchMessage: (n) => `${n} photos removed`,
+      confirmMessage: (n) => (n === 1 ? 'Photo restored' : `${n} photos restored`),
+      durable: false,
+    }
   )
 
   function updateImageNote(url, note) {
