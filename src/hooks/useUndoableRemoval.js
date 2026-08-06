@@ -35,7 +35,7 @@ export function useUndoableRemoval(list, onChange, options = {}) {
     durable = false,
   } = options
 
-  const { offer, promote } = useUndo()
+  const { offer, promote, withdraw } = useUndo()
   const listRef = useRef(list)
   const onChangeRef = useRef(onChange)
   // Removals still inside the live window, oldest first.
@@ -88,5 +88,15 @@ export function useUndoableRemoval(list, onChange, options = {}) {
     promote()
   }, [promote])
 
-  return { remove, commit }
+  /**
+   * Withdraw the live offer. For when the thing it would restore into is gone —
+   * deleting the artist whose photo is pending — where leaving Undo up would
+   * promise a restore that quietly does nothing.
+   */
+  const dismiss = useCallback(() => {
+    batchRef.current = []
+    withdraw()
+  }, [withdraw])
+
+  return { remove, commit, dismiss }
 }

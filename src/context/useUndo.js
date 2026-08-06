@@ -45,10 +45,18 @@ export function useUndo() {
   }, [ctx])
 
   const dismissOffer = ctx?.dismissOffer
+
+  // Withdraw this consumer's own offer — for when whatever it would restore into
+  // has gone away, so leaving Undo up would promise something it cannot deliver.
+  const withdraw = useCallback(() => {
+    const last = lastOfferRef.current
+    if (last) dismissOffer?.(last.id)
+  }, [dismissOffer])
+
   useEffect(() => () => {
     const last = lastOfferRef.current
     if (last && !last.durable) dismissOffer?.(last.id)
   }, [dismissOffer])
 
-  return { offer, promote, pending: ctx?.pending ?? null }
+  return { offer, promote, withdraw, pending: ctx?.pending ?? null }
 }

@@ -246,6 +246,90 @@ describe('useUndoableRemoval', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
+  // #57: the composer's offer is non-durable because its edit is discarded on
+  // close — but saving *persists* that edit and then closes. Undo has to survive
+  // that, and write to whoever owns the data now.
+  describe('commit(): handing a live offer to its new owner', () => {
+    function Composer({ onSaved, saveTo }) {
+      const [draft, setDraft] = useState(['a', 'b', 'c'])
+      const currentRef = useRef(draft)
+      useEffect(() => { currentRef.current = draft })
+      const apply = (updater) => setDraft(updater(currentRef.current))
+      const { remove, commit } = useUndoableRemoval(draft, apply, {
+        message: 'Photo removed',
+        confirmMessage: () => 'Photo restored',
+        durable: false,
+      })
+      return (
+        <div>
+          <span data-testid="draft">{draft.join(',')}</span>
+          <button onClick={() => remove(1)}>remove b</button>
+          <button onClick={() => { onSaved(currentRef.current); commit(saveTo) }}>save</button>
+        </div>
+      )
+    }
+
+    function Host({ open = true }) {
+      const [saved, setSaved] = useState(null)
+      const savedRef = useRef(null)
+      useEffect(() => { savedRef.current = saved })
+      const saveTo = (updater) => setSaved(updater(savedRef.current || []))
+      const [showing, setShowing] = useState(open)
+      return (
+        <UndoProvider undoWindowMs={5000}>
+          <span data-testid="saved">{saved ? saved.join(',') : '-'}</span>
+          {showing && <Composer onSaved={(v) => { setSaved(v); setShowing(false) }} saveTo={saveTo} />}
+        </UndoProvider>
+      )
+    }
+
+    it('keeps the offer alive once the composer saves and closes', () => {
+      render(<Host />)
+
+      fireEvent.click(screen.getByText('remove b'))
+      fireEvent.click(screen.getByText('save'))
+
+      expect(screen.getByTestId('saved').textContent).toBe('a,c')
+      expect(screen.getByRole('status')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /undo/i })).toBeInTheDocument()
+    })
+
+    it('restores into the saved record, not the discarded draft', () => {
+      render(<Host />)
+
+      fireEvent.click(screen.getByText('remove b'))
+      fireEvent.click(screen.getByText('save'))
+      fireEvent.click(screen.getByRole('button', { name: /undo/i }))
+
+      expect(screen.getByTestId('saved').textContent).toBe('a,b,c')
+    })
+  })
+
+  // #57: an offer whose target no longer exists should not sit there pretending.
+  it('can be withdrawn when its subject is deleted', () => {
+    function Host() {
+      const [items, setItems] = useState(['a', 'b'])
+      const currentRef = useRef(items)
+      useEffect(() => { currentRef.current = items })
+      const apply = (updater) => setItems(updater(currentRef.current))
+      const { remove, dismiss } = useUndoableRemoval(items, apply, { message: 'Photo removed', durable: true })
+      return (
+        <div>
+          <button onClick={() => remove(0)}>remove first</button>
+          <button onClick={() => dismiss()}>delete owner</button>
+        </div>
+      )
+    }
+    render(<UndoProvider undoWindowMs={5000}><Host /></UndoProvider>)
+
+    fireEvent.click(screen.getByText('remove first'))
+    expect(screen.getByRole('status')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByText('delete owner'))
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
   it('withdraws a non-durable offer when the owning surface unmounts', () => {
     function Host({ show }) {
       return <UndoProvider>{show && <List durable={false} />}</UndoProvider>

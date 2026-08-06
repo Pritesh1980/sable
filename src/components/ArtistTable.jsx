@@ -40,7 +40,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
   //
   // Durable: the removal is written straight through to storage, so the way back
   // has to survive this row collapsing (#53).
-  const { remove: removeImage } = useUndoableRemoval(
+  const { remove: removeImage, dismiss: dismissImageRemoval } = useUndoableRemoval(
     artist.images || [],
     (updater) => onSaveImages(artist.id, updater),
     // Name the artist: this offer can outlive the row, so by the time it is read
@@ -210,7 +210,13 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
               {/* Remove artist */}
               <div className="flex justify-end">
                 <button
-                  onClick={() => { if (window.confirm(`Remove ${artist.name || '@' + artist.handle}?`)) onRemove(artist.id) }}
+                  onClick={() => {
+                    if (!window.confirm(`Remove ${who}?`)) return
+                    // A pending photo undo would restore into an artist that no
+                    // longer exists, so retire it first (#57).
+                    dismissImageRemoval()
+                    onRemove(artist.id)
+                  }}
                   className="text-xs font-mono text-cream-muted/90 hover:text-accent transition-colors tracking-widest uppercase"
                 >
                   Remove artist

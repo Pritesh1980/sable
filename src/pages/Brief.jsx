@@ -57,7 +57,7 @@ function IdeaCard({ idea, onOpen }) {
   )
 }
 
-function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions = [] }) {
+function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, mergedConventions = [] }) {
   const [draft, setDraft] = useState({ status: 'idea', ...idea, images: normalizeReferenceImages(idea.images) })
   const [newImage, setNewImage] = useState('')
   const [copied, setCopied] = useState(false)
@@ -150,7 +150,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
   // Not durable: this only edits the draft, which is discarded if the composer is
   // closed without saving — an Undo left behind would restore into nothing (#53).
   const images = normalizeReferenceImages(draft.images)
-  const { remove: removeImage } = useUndoableRemoval(
+  const { remove: removeImage, commit: commitImageRemoval } = useUndoableRemoval(
     images,
     (updater) => setDraft((d) => ({ ...d, images: updater(normalizeReferenceImages(d.images)) })),
     {
@@ -172,7 +172,11 @@ function IdeaModal({ idea, onClose, onSave, onDelete, artists, mergedConventions
 
   function save() {
     if (!draft.title.trim()) return
-    onSave({ ...draft, images: normalizeReferenceImages(draft.images), id: draft.id || Date.now().toString() })
+    const id = draft.id || Date.now().toString()
+    onSave({ ...draft, images: normalizeReferenceImages(draft.images), id })
+    // The draft removal has just become permanent, and this modal is closing —
+    // hand any live undo offer to the saved idea so it outlives us (#57).
+    commitImageRemoval((updater) => onRestoreImages?.(id, updater))
   }
 
   async function copyBrief() {
@@ -457,6 +461,14 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
   // Deep links (?tab=boards) land on the Boards tab; afterwards plain state.
   const [tab, setTab] = useState(() => (searchParams.get('tab') === 'boards' ? 'boards' : 'ideas'))
 
+  // Where a photo restored after saving lands: the saved idea, since the
+  // composer that removed it is gone by then (#57).
+  function restoreIdeaImages(id, updater) {
+    setIdeas((prev) => prev.map((i) => (
+      i.id === id ? { ...i, images: updater(normalizeReferenceImages(i.images)) } : i
+    )))
+  }
+
   function saveIdea(idea) {
     setIdeas((prev) => {
       const exists = prev.find((i) => i.id === idea.id)
@@ -581,6 +593,7 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
           idea={modal}
           onClose={() => setModal(null)}
           onSave={saveIdea}
+          onRestoreImages={restoreIdeaImages}
           onDelete={deleteIdea}
           artists={artists}
           mergedConventions={mergedConventions}
