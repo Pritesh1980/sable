@@ -13,6 +13,9 @@ export default function UndoToast({ message, show, onUndo, actionLabel }) {
     <div
       role="status"
       aria-live="polite"
+      // Modal focus traps look for this so Undo stays reachable by keyboard
+      // while a dialog is open — it paints above them but lives outside (#58).
+      data-undo-toast=""
       className="fixed left-1/2 -translate-x-1/2 z-[60] bottom-[calc(env(safe-area-inset-bottom,0px)+4.5rem)] w-[min(24rem,calc(100vw-2rem))] flex items-center justify-between gap-3 pl-4 pr-1.5 py-1.5 bg-ink-dark/95 backdrop-blur-xs border border-ink-border rounded-xs shadow-lg"
     >
       <span className="font-body text-sm text-cream">{message}</span>

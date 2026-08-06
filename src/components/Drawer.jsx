@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Link } from 'react-router'
+import { undoToastFocusables } from '../hooks/useDialogFocus'
 
 // Slide-over "everything else" menu for the Wall's ⋯ button — everything the
 // hairline bar doesn't surface directly (ideas, ranking, radar, studios, admin).
@@ -23,17 +24,20 @@ export default function Drawer({ onClose }) {
         return
       }
       if (e.key === 'Tab') {
-        const focusable = panelRef.current?.querySelectorAll('a, button')
-        if (!focusable || focusable.length === 0) return
-        const first = focusable[0]
-        const last = focusable[focusable.length - 1]
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault()
-          last.focus()
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault()
-          first.focus()
-        }
+        // Includes the undo toast: it paints above the drawer but lives outside
+        // it, so a trap that ignored it would leave Undo unreachable (#58).
+        const focusable = [
+          ...(panelRef.current?.querySelectorAll('a, button') || []),
+          ...undoToastFocusables(),
+        ]
+        if (focusable.length === 0) return
+        e.preventDefault()
+        const at = focusable.indexOf(document.activeElement)
+        const step = e.shiftKey ? -1 : 1
+        const next = at === -1
+          ? (e.shiftKey ? focusable.length - 1 : 0)
+          : (at + step + focusable.length) % focusable.length
+        focusable[next].focus()
       }
     }
     document.addEventListener('keydown', handleKeyDown)
