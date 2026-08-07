@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useId, useState, useRef } from 'react'
 import { useSearchParams } from 'react-router'
 import TagPill from '../components/TagPill'
 import Logo from '../components/Logo'
@@ -65,6 +65,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
   const [analyzing, setAnalyzing] = useState(false)
   const [analyzeNote, setAnalyzeNote] = useState('')
   const fileRef = useRef()
+  const composerId = useId()
   const isNew = !idea.id
 
   // Fill-from-image (issue #20): a Gemini vision call drafts title,
@@ -158,10 +159,12 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
       batchMessage: (n) => `${n} photos removed`,
       confirmMessage: (n) => (n === 1 ? 'Photo restored' : `${n} photos restored`),
       durable: false,
-      // The composer shows the thumbnails, so while it is open a restore is its
-      // own feedback. Once it closes nothing renders this subject, so a restore
-      // into the saved idea confirms (#62).
-      subject: `idea:${draft.id || 'new'}`,
+      // Unique to this composer instance, not to the idea. Two consequences,
+      // both wanted: unsaved composers can't collide on a shared `idea:new`
+      // key, and reopening an idea later can't claim an older offer's subject
+      // is visible — a reopened composer holds its own snapshot and would not
+      // show a restore that landed in the saved record.
+      subject: `idea-draft:${composerId}`,
       isTargetVisible: () => true,
     }
   )

@@ -261,22 +261,42 @@ describe('useUndoableRemoval', () => {
     // #62: visibility used to be bound to the hook instance that made the offer,
     // so an offer outliving a remount confirmed a restore the user could see.
     it('asks whoever renders the subject now, not the instance that offered', () => {
+      // The list lives in the parent, as it does in the app — Gallery owns the
+      // artists, the row only renders them. A row that owned its own copy would
+      // come back reset, and the restore would land in a dead component's setter
+      // without the test noticing.
+      function Row({ items, apply }) {
+        const { remove } = useUndoableRemoval(items, apply, {
+          message: 'Photo removed',
+          confirmMessage: () => 'Photo restored',
+          durable: true,
+          subject: 'artist:1',
+          isTargetVisible: () => true,
+        })
+        return <button onClick={() => remove(1)}>remove b</button>
+      }
       function Host({ instance }) {
-        // Same logical subject, a brand new component instance.
+        const [items, setItems] = useState(['a', 'b', 'c'])
+        const apply = (updater) => setItems((cur) => updater(cur))
         return (
           <UndoProvider undoWindowMs={5000}>
-            <List key={instance} subject="artist:1" isVisible={() => true} durable />
+            <span data-testid="list">{items.join(',')}</span>
+            {/* Same logical subject, a brand new component instance. */}
+            <Row key={instance} items={items} apply={apply} />
           </UndoProvider>
         )
       }
       const { rerender } = render(<Host instance={1} />)
 
       fireEvent.click(screen.getByText('remove b'))
+      expect(list()).toBe('a,c')
       rerender(<Host instance={2} />)      // Manage toggled off and back on
 
       fireEvent.click(undoButton())
 
-      // The remounted row shows the restored photo, so there is nothing to say.
+      // The photo really comes back…
+      expect(list()).toBe('a,b,c')
+      // …into a row the user can see, so there is nothing to say.
       expect(screen.queryByRole('status')).not.toBeInTheDocument()
     })
 
