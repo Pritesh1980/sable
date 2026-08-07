@@ -52,6 +52,9 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
       durable: true,
       // Photos only render in the expanded region — collapsed, a restore is
       // invisible and worth confirming; expanded, the user watches it return.
+      // Keyed by the artist, so an offer outliving this row asks whichever row
+      // renders that artist now (#62).
+      subject: `artist:${artist.id}`,
       isTargetVisible: () => expanded,
     }
   )

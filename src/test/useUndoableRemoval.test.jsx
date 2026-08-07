@@ -6,7 +6,7 @@ import { useUndoableRemoval } from '../hooks/useUndoableRemoval'
 
 // Exercises the hook the way a page does: it owns a list, hands the hook an
 // onChange, and renders a remove button per item.
-function List({ initial = ['a', 'b', 'c'], onChange, durable = true, message = 'Photo removed', isVisible }) {
+function List({ initial = ['a', 'b', 'c'], onChange, durable = true, message = 'Photo removed', isVisible, subject }) {
   const [list, setList] = useState(initial)
   const currentRef = useRef(list)
   useEffect(() => { currentRef.current = list })
@@ -24,6 +24,7 @@ function List({ initial = ['a', 'b', 'c'], onChange, durable = true, message = '
     confirmMessage: (n) => (n === 1 ? 'Photo restored' : `${n} photos restored`),
     durable,
     isTargetVisible: isVisible,
+    subject,
   })
   return (
     <div>
@@ -255,6 +256,86 @@ describe('useUndoableRemoval', () => {
 
       act(() => vi.advanceTimersByTime(5000))
       expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    })
+
+    // #62: visibility used to be bound to the hook instance that made the offer,
+    // so an offer outliving a remount confirmed a restore the user could see.
+    it('asks whoever renders the subject now, not the instance that offered', () => {
+      function Host({ instance }) {
+        // Same logical subject, a brand new component instance.
+        return (
+          <UndoProvider undoWindowMs={5000}>
+            <List key={instance} subject="artist:1" isVisible={() => true} durable />
+          </UndoProvider>
+        )
+      }
+      const { rerender } = render(<Host instance={1} />)
+
+      fireEvent.click(screen.getByText('remove b'))
+      rerender(<Host instance={2} />)      // Manage toggled off and back on
+
+      fireEvent.click(undoButton())
+
+      // The remounted row shows the restored photo, so there is nothing to say.
+      expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    })
+
+    // Two surfaces can render the same subject at once. One going away must not
+    // retract the other's report, or the survivor's restores start confirming
+    // when they are plainly visible.
+    it('keeps a surviving reporter when a sibling for the same subject unmounts', () => {
+      function Host({ showSecond }) {
+        return (
+          <UndoProvider undoWindowMs={5000}>
+            <List subject="artist:1" isVisible={() => true} durable />
+            {showSecond && <List initial={['x', 'y']} subject="artist:1" isVisible={() => true} durable />}
+          </UndoProvider>
+        )
+      }
+      const { rerender } = render(<Host showSecond />)
+
+      fireEvent.click(screen.getByText('remove b'))   // offered by the first list
+      rerender(<Host showSecond={false} />)           // the sibling goes away
+
+      fireEvent.click(undoButton())
+
+      // The first list still renders the subject and says it is visible.
+      expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    })
+
+    // If any surface showing the subject can be seen, the restore is visible —
+    // it does not have to be visible everywhere.
+    it('treats the subject as seen when one of several surfaces shows it', () => {
+      render(
+        <UndoProvider undoWindowMs={5000}>
+          <List subject="artist:1" isVisible={() => false} durable />
+          <List initial={['x', 'y']} subject="artist:1" isVisible={() => true} durable />
+        </UndoProvider>
+      )
+
+      // Offered by the collapsed one, but the other has the subject on screen.
+      fireEvent.click(screen.getByText('remove b'))
+      fireEvent.click(undoButton())
+
+      expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    })
+
+    it('still confirms when nothing renders the subject any more', () => {
+      function Host({ show }) {
+        return (
+          <UndoProvider undoWindowMs={5000}>
+            {show && <List subject="artist:1" isVisible={() => true} durable />}
+          </UndoProvider>
+        )
+      }
+      const { rerender } = render(<Host show />)
+
+      fireEvent.click(screen.getByText('remove b'))
+      rerender(<Host show={false} />)
+
+      fireEvent.click(undoButton())
+
+      expect(screen.getByRole('status')).toHaveTextContent(/restored/i)
     })
 
     it('confirms when the surface that offered it has gone', () => {

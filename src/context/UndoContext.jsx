@@ -43,6 +43,10 @@ export function UndoProvider({
   const pendingRef = useRef(null)
   // When the current batch first appeared, so extensions can be bounded.
   const batchStartedAtRef = useRef(0)
+  // subject -> is that subject on screen right now. Keyed by the logical thing
+  // being restored into (an artist, an idea) rather than the component that
+  // happened to offer the undo, because a durable offer outlives components (#62).
+  const visibilityRef = useRef(new Map())
 
   const clearTimer = useCallback(() => {
     if (timerRef.current) {
@@ -93,6 +97,31 @@ export function UndoProvider({
     }, life)
   }, [clearTimer, undoWindowMs, maxWindowMs])
 
+  const registerVisibility = useCallback((subject, isVisible) => {
+    if (!subject || typeof isVisible !== 'function') return undefined
+    const map = visibilityRef.current
+    // A set, not a single entry: the same subject can be rendered by more than
+    // one surface at a time, and one of them going away must not retract the
+    // others' reports.
+    const reporters = map.get(subject) || new Set()
+    reporters.add(isVisible)
+    map.set(subject, reporters)
+    return () => {
+      reporters.delete(isVisible)
+      if (reporters.size === 0) map.delete(subject)
+    }
+  }, [])
+
+  // Nobody renders the subject -> definitely unseen. Someone does -> ask them.
+  // Without a subject, fall back to whatever the offer itself reported.
+  const targetUnseen = useCallback((offer) => {
+    if (!offer.subject) return offer.shouldConfirm ? offer.shouldConfirm() : true
+    const reporters = visibilityRef.current.get(offer.subject)
+    if (!reporters?.size) return true
+    // Seen if any surface currently showing this subject says so.
+    return ![...reporters].some((isVisible) => isVisible())
+  }, [])
+
   const undoNow = useCallback(() => {
     const current = pendingRef.current
     clear()
@@ -103,7 +132,7 @@ export function UndoProvider({
     current.onSettled?.()
     // Restoring into a collapsed row or a closed modal changes nothing on
     // screen, so say what happened rather than just vanishing.
-    const worthConfirming = current.shouldConfirm ? current.shouldConfirm() : true
+    const worthConfirming = targetUnseen(current)
     if (restored !== false && worthConfirming && current.confirmMessage) {
       setConfirmation(current.confirmMessage)
       if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current)
@@ -112,7 +141,7 @@ export function UndoProvider({
         setConfirmation(null)
       }, confirmMs)
     }
-  }, [clear, confirmMs])
+  }, [clear, confirmMs, targetUnseen])
 
   // Used when a non-durable owner unmounts: withdraw only if the visible offer is
   // still theirs, so a newer offer from elsewhere is left alone.
@@ -135,8 +164,8 @@ export function UndoProvider({
   }, [])
 
   const value = useMemo(
-    () => ({ pending, offerUndo, undoNow, dismissOffer, promoteOffer }),
-    [pending, offerUndo, undoNow, dismissOffer, promoteOffer]
+    () => ({ pending, offerUndo, undoNow, dismissOffer, promoteOffer, registerVisibility }),
+    [pending, offerUndo, undoNow, dismissOffer, promoteOffer, registerVisibility]
   )
 
   const visible = pending || confirmation

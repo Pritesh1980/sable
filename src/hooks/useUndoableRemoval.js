@@ -34,9 +34,10 @@ export function useUndoableRemoval(list, onChange, options = {}) {
     confirmMessage = defaultConfirmMessage,
     durable = false,
     isTargetVisible,
+    subject,
   } = options
 
-  const { offer, promote, withdraw } = useUndo()
+  const { offer, promote, withdraw, registerVisibility } = useUndo()
   const listRef = useRef(list)
   const onChangeRef = useRef(onChange)
   // Removals still inside the live window, oldest first.
@@ -50,6 +51,8 @@ export function useUndoableRemoval(list, onChange, options = {}) {
   // user can already see is noise; confirming a restore into a collapsed row or
   // a closed composer is the whole point (#61).
   const visibleRef = useRef(isTargetVisible)
+  // Publish this subject's visibility so an offer that outlives this component
+  // asks whoever renders the subject *now*, not a frozen ref (#62).
   const mountedRef = useRef(true)
   useEffect(() => {
     mountedRef.current = true
@@ -64,6 +67,11 @@ export function useUndoableRemoval(list, onChange, options = {}) {
     onChangeRef.current = onChange
     visibleRef.current = isTargetVisible
   })
+
+  useEffect(() => {
+    if (!subject || !registerVisibility) return undefined
+    return registerVisibility(subject, () => visibleRef.current?.() ?? true)
+  }, [subject, registerVisibility])
 
   const remove = useCallback((index) => {
     const { removal } = removeAt(listRef.current, index)
@@ -83,12 +91,14 @@ export function useUndoableRemoval(list, onChange, options = {}) {
       actionLabel: count === 1 ? 'Undo' : 'Undo all',
       confirmMessage: confirmMessage(count),
       // Unmounted means the surface is definitely gone; otherwise ask it.
+      subject,
+      // Fallback for callers without a subject: this instance's own view.
       shouldConfirm: () => !mountedRef.current || !(visibleRef.current?.() ?? true),
       // Newest first, so each restore lands against the list the next expects.
       onUndo: () => write((current) => batch.reduceRight((acc, r) => restoreRemoval(acc, r), current)),
       onSettled: () => { batchRef.current = [] },
     })
-  }, [offer, message, batchMessage, confirmMessage, durable, batchKey])
+  }, [offer, message, batchMessage, confirmMessage, durable, batchKey, subject])
 
   /**
    * Hand the live offer to whoever owns the data now, and make it durable. Used

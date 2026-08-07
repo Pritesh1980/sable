@@ -58,5 +58,11 @@ export function useUndo() {
     if (last && !last.durable) dismissOffer?.(last.id)
   }, [dismissOffer])
 
-  return { offer, promote, withdraw, pending: ctx?.pending ?? null }
+  return {
+    offer,
+    promote,
+    withdraw,
+    registerVisibility: ctx?.registerVisibility,
+    pending: ctx?.pending ?? null,
+  }
 }

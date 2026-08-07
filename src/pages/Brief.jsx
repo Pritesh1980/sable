@@ -158,8 +158,10 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
       batchMessage: (n) => `${n} photos removed`,
       confirmMessage: (n) => (n === 1 ? 'Photo restored' : `${n} photos restored`),
       durable: false,
-      // The composer shows the thumbnails, so while it is open a restore is
-      // its own feedback. After saving it closes and the hook reports gone.
+      // The composer shows the thumbnails, so while it is open a restore is its
+      // own feedback. Once it closes nothing renders this subject, so a restore
+      // into the saved idea confirms (#62).
+      subject: `idea:${draft.id || 'new'}`,
       isTargetVisible: () => true,
     }
   )
