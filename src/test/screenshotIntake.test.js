@@ -67,6 +67,13 @@ describe('artwork box (#24)', () => {
     }
   })
 
+  // Found by the codex review: accepting any line with >= 4 fields let an extra
+  // pipe smuggle in a decoy box — the first numeric fragment won and the real one
+  // was ignored.
+  it('rejects a line with more fields than the format allows', () => {
+    expect(parseIntakeResponse('inky | Inky | blackwork | Bold | 0,0,300,300 | 0,200,1000,900')).toBeNull()
+  })
+
   it('does not let a box alone count as a usable result', () => {
     // Nothing was actually extracted; a crop with no artist is not worth
     // prefilling anything from.

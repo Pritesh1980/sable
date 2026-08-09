@@ -12,9 +12,18 @@
 
 // Gemini reports boxes in a 0-1000 space.
 const BOX_SCALE = 1000
-// Below this the "box" is far more likely to be a misread than a real crop, and
-// cropping to it would throw the artwork away.
-const MIN_SIDE = 0.1
+// Floors on what counts as a plausible artwork region. Sides alone are not
+// enough: 10% by 10% clears a per-side check while being 1% of the picture, so
+// an injected box could replace the screenshot with its corner and lose the
+// tattoo (codex review). The screenshot is of a profile or post, so the artwork
+// is a large part of it — anything smaller is a misread, and a misread should
+// mean "don't crop".
+const MIN_SIDE = 0.2
+const MIN_AREA = 0.1
+// At this point the model is saying "it's all artwork". There is nothing to cut,
+// and cropping anyway would re-encode the image for nothing and label the taste
+// score precise when it still contains every bit of chrome.
+const FULL_FRAME_AREA = 0.98
 
 const clamp = (n, lo, hi) => Math.min(Math.max(n, lo), hi)
 
@@ -39,6 +48,8 @@ export function parseArtworkBox(text) {
   const w = round(x1 - x0)
   const h = round(y1 - y0)
   if (w < MIN_SIDE || h < MIN_SIDE) return null
+  const area = w * h
+  if (area < MIN_AREA || area >= FULL_FRAME_AREA) return null
 
   return { x: x0, y: y0, w, h }
 }

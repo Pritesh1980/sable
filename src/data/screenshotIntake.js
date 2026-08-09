@@ -34,7 +34,10 @@ export function buildIntakePrompt() {
 export function parseIntakeResponse(text = '') {
   for (const raw of String(text).split('\n')) {
     const parts = raw.split('|').map((p) => p.trim())
-    if (parts.length < 4) continue
+    // Exactly the four legacy fields or the five current ones. Accepting "at
+    // least four" let an extra pipe smuggle in a decoy box: the first numeric
+    // fragment won and the real one was ignored (codex review).
+    if (parts.length !== 4 && parts.length !== 5) continue
     if (parts[0].toLowerCase() === 'handle') continue // format header echoed back
     const clean = (s) => (s === '-' ? '' : s)
     // Instagram handles are strictly [a-z0-9._] — anything else coming back

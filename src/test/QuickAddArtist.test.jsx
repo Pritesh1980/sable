@@ -255,3 +255,45 @@ describe('QuickAddArtist artwork crop (#24)', () => {
     await waitFor(() => expect(embed).toHaveBeenCalledWith('data:image/jpeg;base64,SHOT'))
   })
 })
+
+// Both reviewers landed on the same point: silently swapping the user's image
+// for a machine-chosen crop needs to be visible and reversible — a bounding box
+// can clip the artwork, and an injected one could be deliberately wrong.
+describe('QuickAddArtist crop is visible and reversible (#24)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+  })
+
+  it('will not add the artist while the screenshot is still being read', async () => {
+    localStorage.setItem('gemini_api_key', 'test-key')
+    let release
+    analyzeScreenshotWithGemini.mockImplementation(() => new Promise((r) => { release = r }))
+    renderModal()
+    chooseScreenshot()
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^add artist$/i })).toBeDisabled())
+
+    release({ handle: 'late', name: '', tags: [], styleNote: '', crop: null })
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^add artist$/i })).toBeEnabled())
+  })
+
+  it('says it cropped, and puts the whole screenshot back on undo', async () => {
+    localStorage.setItem('gemini_api_key', 'test-key')
+    analyzeScreenshotWithGemini.mockResolvedValue({
+      handle: 'cropme', name: '', tags: [], styleNote: '',
+      crop: { x: 0, y: 0.25, w: 1, h: 0.5 },
+    })
+    const { onAdd } = renderModal()
+    chooseScreenshot()
+
+    const undo = await screen.findByRole('button', { name: /use the whole screenshot/i })
+    fireEvent.click(undo)
+
+    fireEvent.click(screen.getByRole('button', { name: /^add artist$/i }))
+    await waitFor(() => expect(onAdd).toHaveBeenCalled())
+    expect(onAdd.mock.calls.at(-1)[0].images).toEqual(['data:image/jpeg;base64,SHOT'])
+  })
+})

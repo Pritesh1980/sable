@@ -36,6 +36,13 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
   // partly measuring Instagram's UI rather than the tattoo.
   const [tasteRough, setTasteRough] = useState(false)
   const analyzedRef = useRef(false)
+  // The staged file as it arrived, so an unwanted crop can be undone — a
+  // bounding box can clip real artwork, and an injected one could be
+  // deliberately wrong (#24 review).
+  const [uncropped, setUncropped] = useState(null)
+  // Reading, cropping and scoring are in flight: saving now would store the
+  // screenshot the crop was meant to replace.
+  const [intakeBusy, setIntakeBusy] = useState(false)
 
   const cleanHandle = parseInstagramHandle(handle)
   const duplicate = cleanHandle
@@ -57,6 +64,8 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
   }
 
   async function analyzeFirst(file) {
+    setIntakeBusy(true)
+    setUncropped(null)
     const [dataUrl] = await compressImages([file])
     const apiKey = localStorage.getItem('gemini_api_key') || ''
     if (!apiKey) {
@@ -65,6 +74,7 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
       // precision the number doesn't have (#24).
       scoreTaste(dataUrl, { rough: true })
       setIntakeNote('Add a Gemini key (Concepts → AI setup) to auto-fill from screenshots.')
+      setIntakeBusy(false)
       return
     }
     setAnalyzing(true)
@@ -76,7 +86,10 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
       const didCrop = cropped !== dataUrl
       if (didCrop) {
         const cropFile = dataUrlToFile(cropped, `crop-${file.name || 'screenshot'}.jpg`)
-        if (cropFile) setStaged((prev) => prev.map((f) => (f === file ? cropFile : f)))
+        if (cropFile) {
+          setStaged((prev) => prev.map((f) => (f === file ? cropFile : f)))
+          setUncropped({ crop: cropFile, original: file, dataUrl })
+        }
       }
       scoreTaste(cropped, { rough: !didCrop })
       if (!result) {
@@ -93,6 +106,14 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
       setIntakeNote('Analysis failed — check your Gemini key/connection.')
     }
     setAnalyzing(false)
+    setIntakeBusy(false)
+  }
+
+  function useWholeScreenshot() {
+    if (!uncropped) return
+    setStaged((prev) => prev.map((f) => (f === uncropped.crop ? uncropped.original : f)))
+    scoreTaste(uncropped.dataUrl, { rough: true })
+    setUncropped(null)
   }
 
   // Taste-model score for the screenshot — only when a style index already
@@ -123,6 +144,7 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
         setIntakeNote('')
         setTasteFit(null)
         setTasteRough(false)
+        setUncropped(null)
       }
       return next
     })
@@ -146,6 +168,10 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
 
   async function handleSave(e) {
     e.preventDefault()
+    // Enter in a text field submits the form directly, bypassing the disabled
+    // button — so the guard has to live here too, or the screenshot the crop was
+    // about to replace is what gets stored (#24 review).
+    if (intakeBusy) return
     if (!cleanHandle) { setError('Instagram handle is required'); return }
     if (duplicate) return
     setSaving(true)
@@ -300,7 +326,19 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
             )}
             {tasteFit !== null && (
               <p data-testid="intake-taste" className="font-v2-ui text-xs text-v2-accent">
-                Taste fit {Math.round(tasteFit * 100)}%{tasteRough ? ' (rough — uncropped screenshot)' : ''}
+                Taste fit {Math.round(tasteFit * 100)}%{tasteRough ? ' · rough' : ''}
+              </p>
+            )}
+            {uncropped && (
+              <p className="font-v2-ui text-xs text-v2-muted/80">
+                Cropped to the tattoo.{' '}
+                <button
+                  type="button"
+                  onClick={useWholeScreenshot}
+                  className="text-v2-accent underline"
+                >
+                  Use the whole screenshot
+                </button>
               </p>
             )}
             {intakeNote && <p className="font-v2-ui text-xs text-v2-muted/80">{intakeNote}</p>}
@@ -317,7 +355,7 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
             <button
               type="button"
               onClick={handleAddToExisting}
-              disabled={saving}
+              disabled={saving || intakeBusy}
               className="font-v2-ui text-xs text-v2-accent tracking-widest uppercase hover:brightness-110 disabled:opacity-40"
             >
               Add images to {duplicate.name || `@${duplicate.handle}`} instead
@@ -343,7 +381,7 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
             </button>
             <button
               type="submit"
-              disabled={saving || !!duplicate}
+              disabled={saving || intakeBusy || !!duplicate}
               className="bg-v2-accent text-v2-cream font-v2-ui text-sm rounded-xs px-5 py-2 transition-colors hover:brightness-110 disabled:opacity-30 disabled:cursor-not-allowed"
             >
               {saving ? 'Saving…' : 'Save'}

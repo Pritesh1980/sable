@@ -93,6 +93,38 @@ describe('AddArtistModal screenshot analysis', () => {
       expect(files[0].type).toBe('image/jpeg')
     })
 
+    it('will not save while the screenshot is still being read', async () => {
+      localStorage.setItem('gemini_api_key', 'test-key')
+      let release
+      analyzeScreenshotWithGemini.mockImplementation(() => new Promise((r) => { release = r }))
+      renderModal()
+      stageImage()
+
+      await waitFor(() => expect(screen.getByRole('button', { name: /^save$/i })).toBeDisabled())
+
+      release({ handle: 'late', name: '', tags: [], styleNote: '', crop: null })
+      await waitFor(() => expect(screen.getByRole('button', { name: /^save$/i })).toBeEnabled())
+    })
+
+    it('says it cropped, and puts the whole screenshot back on undo', async () => {
+      localStorage.setItem('gemini_api_key', 'test-key')
+      analyzeScreenshotWithGemini.mockResolvedValue({
+        handle: 'cropme', name: '', tags: [], styleNote: '',
+        crop: { x: 0, y: 0.25, w: 1, h: 0.5 },
+      })
+      renderModal()
+      stageImage()
+
+      const undo = await screen.findByRole('button', { name: /use the whole screenshot/i })
+      fireEvent.click(undo)
+
+      fireEvent.submit(screen.getByRole('button', { name: /^save$/i }).closest('form'))
+      await waitFor(() => expect(uploadImages).toHaveBeenCalled())
+      const [files] = uploadImages.mock.calls.at(-1)
+      // Back to the file the user actually dropped in.
+      expect(files[0].name).toBe('shot.png')
+    })
+
     it('falls back to the raw screenshot when no box comes back', async () => {
       localStorage.setItem('gemini_api_key', 'test-key')
       analyzeScreenshotWithGemini.mockResolvedValue({
@@ -227,6 +259,9 @@ describe('AddArtistModal', () => {
     const fileInput = screen.getByLabelText(/choose files/i)
     fireEvent.change(fileInput, { target: { files: [file] } })
 
+    // Saving is held until the screenshot has been read and (if it can be)
+    // cropped, so the stored image is the one the crop produced.
+    await waitFor(() => expect(screen.getByRole('button', { name: /^save$/i })).toBeEnabled())
     fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
 
     await waitFor(() => expect(setArtists).toHaveBeenCalled())

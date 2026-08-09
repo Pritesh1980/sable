@@ -41,6 +41,13 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
   // pasted another image while the first was in flight) is discarded instead
   // of prefilling fields that no longer match the attached shot.
   const shotSeq = useRef(0)
+  // The screenshot as it arrived. Kept so an unwanted crop can be undone — a
+  // bounding box can clip real artwork, and an injected one could be
+  // deliberately wrong (#24 review).
+  const [uncropped, setUncropped] = useState('')
+  // Reading, cropping and scoring are in flight: saving now would store the
+  // screenshot the crop was meant to replace.
+  const [intakeBusy, setIntakeBusy] = useState(false)
 
   function toggleTag(tag) {
     setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]))
@@ -56,6 +63,8 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
   async function handleScreenshot(file) {
     if (!file || !file.type?.startsWith('image/')) return
     const seq = ++shotSeq.current
+    setIntakeBusy(true)
+    setUncropped('')
     const [dataUrl] = await compressImages([file])
     if (seq !== shotSeq.current) return
     setShot(dataUrl)
@@ -71,6 +80,7 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
       // Instagram chrome included (#24).
       scoreTaste(dataUrl, seq, { rough: true })
       setIntakeNote('Screenshot attached. Add a Gemini key (Concepts → AI setup) to auto-fill from screenshots.')
+      setIntakeBusy(false)
       return
     }
     setAnalyzing(true)
@@ -82,7 +92,10 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
       const cropped = await cropImageToDataUrl(dataUrl, result?.crop || null)
       if (seq !== shotSeq.current) return
       const didCrop = cropped !== dataUrl
-      if (didCrop) setShot(cropped)
+      if (didCrop) {
+        setShot(cropped)
+        setUncropped(dataUrl)
+      }
       scoreTaste(cropped, seq, { rough: !didCrop })
       if (!result) {
         setIntakeNote("Couldn't read artist details from this screenshot — fill them in below.")
@@ -98,6 +111,14 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
       if (seq === shotSeq.current) setIntakeNote('Analysis failed — check your Gemini key/connection, or fill in below.')
     }
     setAnalyzing(false)
+    if (seq === shotSeq.current) setIntakeBusy(false)
+  }
+
+  function useWholeScreenshot() {
+    if (!uncropped) return
+    setShot(uncropped)
+    setUncropped('')
+    scoreTaste(uncropped, shotSeq.current, { rough: true })
   }
 
   // Taste-model score for the screenshot itself — only when a style index
@@ -166,7 +187,19 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
                 )}
                 {tasteFit !== null && (
                   <p data-testid="intake-taste" className="font-mono text-xs text-accent mt-1">
-                    Taste fit {Math.round(tasteFit * 100)}%{tasteRough ? ' (rough — uncropped screenshot)' : ''}
+                    Taste fit {Math.round(tasteFit * 100)}%{tasteRough ? ' · rough' : ''}
+                  </p>
+                )}
+                {uncropped && (
+                  <p className="font-body text-xs text-cream-muted/70 mt-1">
+                    Cropped to the tattoo.{' '}
+                    <button
+                      type="button"
+                      onClick={useWholeScreenshot}
+                      className="text-accent hover:text-accent-hover underline"
+                    >
+                      Use the whole screenshot
+                    </button>
                   </p>
                 )}
                 {intakeNote && <p className="font-body text-xs text-cream-muted/70 mt-1">{intakeNote}</p>}
@@ -248,7 +281,8 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
           </button>
           <button
             type="submit"
-            className="px-5 py-2 bg-accent hover:bg-accent-hover text-cream text-sm font-body rounded-xs transition-colors"
+            disabled={intakeBusy}
+            className="px-5 py-2 bg-accent hover:bg-accent-hover text-cream text-sm font-body rounded-xs transition-colors disabled:opacity-40"
           >
             Add Artist
           </button>

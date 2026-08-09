@@ -11,7 +11,12 @@ describe('parseArtworkBox', () => {
   })
 
   it('clamps values that stray outside the coordinate space', () => {
-    expect(parseArtworkBox('-50,-50,1200,1200')).toEqual({ x: 0, y: 0, w: 1, h: 1 })
+    // Clamped to the top half, which is still a real crop.
+    expect(parseArtworkBox('-50,-50,1200,500')).toEqual({ x: 0, y: 0, w: 1, h: 0.5 })
+  })
+
+  it('treats a box that clamps to the whole frame as nothing to crop', () => {
+    expect(parseArtworkBox('-50,-50,1200,1200')).toBeNull()
   })
 
   it('is null for anything that is not four numbers', () => {
@@ -33,8 +38,23 @@ describe('parseArtworkBox', () => {
     expect(parseArtworkBox('0,0,1000,80')).toBeNull()       // 8% tall
   })
 
-  it('keeps a box that covers most of the image', () => {
-    expect(parseArtworkBox('0,0,1000,1000')).toEqual({ x: 0, y: 0, w: 1, h: 1 })
+  // Found by the codex review: the side check passed a box of exactly 10% by 10%,
+  // which is 1% of the picture. An injected box like that would have replaced the
+  // stored screenshot with its top-left corner and thrown the tattoo away.
+  it('is null for a box whose area is too small to be the artwork', () => {
+    expect(parseArtworkBox('0,0,100,100')).toBeNull()     // 1% of the image
+    expect(parseArtworkBox('0,0,300,300')).toBeNull()     // 9%, still implausible
+  })
+
+  it('keeps a plausible artwork region', () => {
+    expect(parseArtworkBox('0,200,1000,800')).toEqual({ x: 0, y: 0.2, w: 1, h: 0.6 })
+  })
+
+  // A full-frame box is the model saying "it's all artwork" — there is nothing to
+  // cut, so cropping would only re-encode the image and mislabel it as precise.
+  it('is null for a box that covers the whole image', () => {
+    expect(parseArtworkBox('0,0,1000,1000')).toBeNull()
+    expect(parseArtworkBox('0,0,995,995')).toBeNull()
   })
 })
 

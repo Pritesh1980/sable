@@ -30,7 +30,8 @@ are suggested from the artwork itself, and a draft style note is written for you
 The same read also locates the tattoo in the picture, and the screenshot is **cropped to
 the artwork** on your device — so Instagram's status bar, buttons and comments don't end
 up in your collection, or in the taste score. The crop becomes the artist's first
-reference image. If you've built the on-device style index, you also get a **taste fit**
+reference image; the form tells you it cropped and offers **Use the whole screenshot** if
+the box clipped something you wanted. If you've built the on-device style index, you also get a **taste fit**
 score before you even add them — a first read on whether this artist belongs in your
 collection. Without a key, the screenshot still attaches uncropped; you fill in the
 details yourself, and the taste score is marked *rough* because it is measuring the whole
