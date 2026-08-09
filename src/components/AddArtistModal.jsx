@@ -4,6 +4,7 @@ import { STYLE_TAGS, parseInstagramHandle, createArtist } from '../data/artists'
 import { uploadImages, compressImages } from '../hooks/useImageUpload'
 import { stampAddedAt } from '../data/wall'
 import { analyzeScreenshotWithGemini } from '../data/screenshotIntake'
+import { cropImageToDataUrl, dataUrlToFile } from '../data/screenshotCrop'
 import { cosineSimilarity } from '../data/embeddings'
 import { buildTasteVector } from '../data/taste'
 import { loadVectors } from '../data/styleIndex'
@@ -31,6 +32,9 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
   const [analyzing, setAnalyzing] = useState(false)
   const [intakeNote, setIntakeNote] = useState('')
   const [tasteFit, setTasteFit] = useState(null)
+  // True when the score came from an uncropped screenshot, so the number is
+  // partly measuring Instagram's UI rather than the tattoo.
+  const [tasteRough, setTasteRough] = useState(false)
   const analyzedRef = useRef(false)
 
   const cleanHandle = parseInstagramHandle(handle)
@@ -54,15 +58,27 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
 
   async function analyzeFirst(file) {
     const [dataUrl] = await compressImages([file])
-    scoreTaste(dataUrl)
     const apiKey = localStorage.getItem('gemini_api_key') || ''
     if (!apiKey) {
+      // Nothing to locate the artwork with, so the score is off the whole
+      // screenshot — Instagram chrome included. Say so rather than imply
+      // precision the number doesn't have (#24).
+      scoreTaste(dataUrl, { rough: true })
       setIntakeNote('Add a Gemini key (Concepts → AI setup) to auto-fill from screenshots.')
       return
     }
     setAnalyzing(true)
     try {
       const result = await analyzeScreenshotWithGemini(apiKey, dataUrl)
+      // Crop before embedding and before saving: the same chrome that skews the
+      // taste vector is what makes a screenshot look wrong on the Wall.
+      const cropped = await cropImageToDataUrl(dataUrl, result?.crop || null)
+      const didCrop = cropped !== dataUrl
+      if (didCrop) {
+        const cropFile = dataUrlToFile(cropped, `crop-${file.name || 'screenshot'}.jpg`)
+        if (cropFile) setStaged((prev) => prev.map((f) => (f === file ? cropFile : f)))
+      }
+      scoreTaste(cropped, { rough: !didCrop })
       if (!result) {
         setIntakeNote("Couldn't read artist details from this screenshot.")
       } else {
@@ -81,7 +97,7 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
 
   // Taste-model score for the screenshot — only when a style index already
   // exists on this device, so we never surprise-download the model.
-  async function scoreTaste(dataUrl) {
+  async function scoreTaste(dataUrl, { rough = false } = {}) {
     try {
       const vectors = await loadVectors(artists)
       if (vectors.size === 0) return
@@ -89,6 +105,7 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
       if (!taste) return
       const embed = await getEmbedder()
       setTasteFit(cosineSimilarity(taste, await embed(dataUrl)))
+      setTasteRough(rough)
     } catch (e) {
       console.error('[tattoo] screenshot taste score failed:', e)
     }
@@ -105,6 +122,7 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
         setStyleNote('')
         setIntakeNote('')
         setTasteFit(null)
+        setTasteRough(false)
       }
       return next
     })
@@ -282,7 +300,7 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
             )}
             {tasteFit !== null && (
               <p data-testid="intake-taste" className="font-v2-ui text-xs text-v2-accent">
-                Taste fit {Math.round(tasteFit * 100)}%
+                Taste fit {Math.round(tasteFit * 100)}%{tasteRough ? ' (rough — uncropped screenshot)' : ''}
               </p>
             )}
             {intakeNote && <p className="font-v2-ui text-xs text-v2-muted/80">{intakeNote}</p>}

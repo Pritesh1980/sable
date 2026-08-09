@@ -27,10 +27,14 @@ Both add forms — the Wall's **+ Add artist** and the Artists page's **+ Add** 
 themselves from an Instagram screenshot. Drop, paste or choose one and, with a Gemini key
 set (Concepts → AI setup), the handle and name are read from the screenshot, style tags
 are suggested from the artwork itself, and a draft style note is written for you to edit.
-The screenshot becomes the artist's first reference image. If you've built the on-device
-style index, you also get a **taste fit** score for the screenshot before you even add
-them — a first read on whether this artist belongs in your collection. Without a key, the
-screenshot still attaches; you fill in the details yourself. The **Full manage view** link in the form's footer jumps to the
+The same read also locates the tattoo in the picture, and the screenshot is **cropped to
+the artwork** on your device — so Instagram's status bar, buttons and comments don't end
+up in your collection, or in the taste score. The crop becomes the artist's first
+reference image. If you've built the on-device style index, you also get a **taste fit**
+score before you even add them — a first read on whether this artist belongs in your
+collection. Without a key, the screenshot still attaches uncropped; you fill in the
+details yourself, and the taste score is marked *rough* because it is measuring the whole
+screenshot rather than just the tattoo. The **Full manage view** link in the form's footer jumps to the
 heavy-duty editor below.
 
 ### Share a screenshot straight from Instagram

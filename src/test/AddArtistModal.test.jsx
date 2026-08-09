@@ -16,10 +16,19 @@ vi.mock('../data/styleIndex', () => ({
 vi.mock('../data/taste', () => ({
   buildTasteVector: vi.fn(() => [1, 0]),
 }))
+const embed = vi.fn(async () => [0.6, 0.8])
 vi.mock('../data/embedder', () => ({
-  getEmbedder: vi.fn(async () => async () => [0.6, 0.8]),
+  getEmbedder: vi.fn(async () => (url) => embed(url)),
+}))
+vi.mock('../data/screenshotCrop', async (importOriginal) => ({
+  ...(await importOriginal()),
+  // jsdom has no canvas and never fires Image load events, so the crop itself
+  // is stubbed; the geometry it wraps is unit-tested in screenshotCrop.test.js.
+  cropImageToDataUrl: vi.fn(async (dataUrl, box) => (box ? 'data:image/jpeg;base64,CROPPED' : dataUrl)),
 }))
 import { analyzeScreenshotWithGemini } from '../data/screenshotIntake'
+import { cropImageToDataUrl } from '../data/screenshotCrop'
+import { uploadImages } from '../hooks/useImageUpload'
 
 const existing = [{ id: 'zoia.ink', handle: 'zoia.ink', name: '', rank: 1, images: [] }]
 
@@ -43,6 +52,67 @@ describe('AddArtistModal screenshot analysis', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
+  })
+
+  // #24: Instagram chrome was going into both the CLIP vector behind taste-fit
+  // and the saved reference image. The intake call now returns the artwork's
+  // box and the screenshot is cropped to it on-device.
+  describe('cropping to the artwork', () => {
+    it('embeds the crop, not the raw screenshot', async () => {
+      localStorage.setItem('gemini_api_key', 'test-key')
+      analyzeScreenshotWithGemini.mockResolvedValue({
+        handle: 'cropme', name: '', tags: [], styleNote: 'Note.',
+        crop: { x: 0, y: 0.25, w: 1, h: 0.5 },
+      })
+      renderModal()
+      stageImage()
+
+      await waitFor(() => expect(embed).toHaveBeenCalled())
+      expect(cropImageToDataUrl).toHaveBeenCalledWith('data:image/jpeg;base64,SHOT', { x: 0, y: 0.25, w: 1, h: 0.5 })
+      expect(embed).toHaveBeenCalledWith('data:image/jpeg;base64,CROPPED')
+    })
+
+    it('saves the cropped image rather than the screenshot', async () => {
+      localStorage.setItem('gemini_api_key', 'test-key')
+      analyzeScreenshotWithGemini.mockResolvedValue({
+        handle: 'cropme', name: '', tags: [], styleNote: '',
+        crop: { x: 0, y: 0.25, w: 1, h: 0.5 },
+      })
+      renderModal()
+      stageImage()
+
+      await waitFor(() =>
+        expect(screen.getByPlaceholderText(/handle or instagram url/i)).toHaveValue('cropme'))
+
+      fireEvent.submit(screen.getByRole('button', { name: /save/i }).closest('form'))
+
+      await waitFor(() => expect(uploadImages).toHaveBeenCalled())
+      const [files] = uploadImages.mock.calls.at(-1)
+      // The staged screenshot was swapped for the crop before upload.
+      expect(files[0].name).toMatch(/crop/i)
+      expect(files[0].type).toBe('image/jpeg')
+    })
+
+    it('falls back to the raw screenshot when no box comes back', async () => {
+      localStorage.setItem('gemini_api_key', 'test-key')
+      analyzeScreenshotWithGemini.mockResolvedValue({
+        handle: 'nobox', name: '', tags: [], styleNote: 'Note.', crop: null,
+      })
+      renderModal()
+      stageImage()
+
+      await waitFor(() => expect(embed).toHaveBeenCalled())
+      expect(embed).toHaveBeenCalledWith('data:image/jpeg;base64,SHOT')
+    })
+
+    it('scores the raw screenshot, flagged rough, with no key to find the artwork', async () => {
+      renderModal()
+      stageImage()
+
+      await waitFor(() => expect(embed).toHaveBeenCalledWith('data:image/jpeg;base64,SHOT'))
+      await waitFor(() => expect(screen.getByTestId('intake-taste')).toHaveTextContent(/rough/i))
+      expect(cropImageToDataUrl).not.toHaveBeenCalled()
+    })
   })
 
   it('analyses the first staged screenshot and prefills handle, name, tags and style note', async () => {

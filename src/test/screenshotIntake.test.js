@@ -36,6 +36,44 @@ describe('geminiVision transport', () => {
   })
 })
 
+// #24: the same call that reads the handle also locates the artwork, so the
+// screenshot can be cropped free of Instagram's chrome before it is embedded
+// for taste-fit and saved as a reference image.
+describe('artwork box (#24)', () => {
+  it('asks for the artwork rectangle, excluding the app UI', () => {
+    const prompt = buildIntakePrompt()
+
+    expect(prompt).toMatch(/bounding box|rectangle/i)
+    expect(prompt).toMatch(/0-1000|0 to 1000/)
+    expect(prompt).toMatch(/handle \| name \| styles \| note \| box/)
+  })
+
+  it('reads the box as a normalised crop', () => {
+    const out = parseIntakeResponse('inky | Inky | blackwork | Bold work. | 0,250,1000,750')
+
+    expect(out.crop).toEqual({ x: 0, y: 0.25, w: 1, h: 0.5 })
+  })
+
+  it('still parses the old four-field shape, with no crop', () => {
+    const out = parseIntakeResponse('inky | Inky | blackwork | Bold work.')
+
+    expect(out.handle).toBe('inky')
+    expect(out.crop).toBeNull()
+  })
+
+  it('drops a box it cannot trust rather than cropping to nonsense', () => {
+    for (const box of ['-', 'somewhere in the middle', '900,200,100,800', '0,0,50,1000']) {
+      expect(parseIntakeResponse(`inky | Inky | blackwork | Note. | ${box}`).crop).toBeNull()
+    }
+  })
+
+  it('does not let a box alone count as a usable result', () => {
+    // Nothing was actually extracted; a crop with no artist is not worth
+    // prefilling anything from.
+    expect(parseIntakeResponse('- | - | - | - | 0,0,1000,1000')).toBeNull()
+  })
+})
+
 describe('parseIntakeResponse', () => {
   it('parses a well-formed line, normalising the handle and filtering tags', () => {
     const out = parseIntakeResponse('@Inky_Artist | Inky Artist | blackwork, Fine-Line, not-a-tag | Bold woodcut blackwork.')
@@ -44,6 +82,7 @@ describe('parseIntakeResponse', () => {
       name: 'Inky Artist',
       tags: ['blackwork', 'fine-line'],
       styleNote: 'Bold woodcut blackwork.',
+      crop: null,
     })
   })
 

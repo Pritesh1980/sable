@@ -7,6 +7,7 @@
 // the network wrapper is thin, mirroring src/data/discovery.js.
 import { STYLE_TAGS, PLACEMENTS } from './artists'
 import { GEMINI_TEXT_MODEL } from './discovery'
+import { parseArtworkBox } from './screenshotCrop'
 
 export function buildIntakePrompt() {
   return [
@@ -17,8 +18,13 @@ export function buildIntakePrompt() {
     '- the display name, if shown',
     `- 1-3 style tags describing the tattoo artwork, chosen ONLY from: ${STYLE_TAGS.join(', ')}`,
     '- one short editorial sentence describing the artistic style of the tattoos',
+    // The crop is what keeps Instagram's chrome out of both the stored image and
+    // the CLIP vector behind taste-fit (#24).
+    '- a bounding box around the tattoo artwork itself, tight enough to exclude the',
+    '  status bar, app buttons, profile header, captions and comments',
     'Reply with exactly ONE line and no other text, in this format:',
-    'handle | name | styles | note',
+    'handle | name | styles | note | box',
+    'box is x0,y0,x1,y1 as integers on a 0-1000 scale of the image (x across, y down).',
     "styles is comma-separated. Use '-' for any field you cannot determine.",
   ].join('\n')
 }
@@ -40,7 +46,16 @@ export function parseIntakeResponse(text = '') {
       .split(',')
       .map((t) => t.trim().toLowerCase())
       .filter((t) => STYLE_TAGS.includes(t))
-    const result = { handle, name: clean(parts[1]), tags, styleNote: clean(parts[3]) }
+    const result = {
+      handle,
+      name: clean(parts[1]),
+      tags,
+      styleNote: clean(parts[3]),
+      // Optional fifth field: absent on older/looser replies, and null whenever
+      // the box is anything we would not want to crop to.
+      crop: parseArtworkBox(clean(parts[4] ?? '')),
+    }
+    // A box on its own is not a result — there is nothing to prefill from it.
     if (result.handle || result.tags.length > 0 || result.styleNote) return result
   }
   return null

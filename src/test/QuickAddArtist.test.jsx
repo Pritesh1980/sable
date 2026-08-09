@@ -17,9 +17,16 @@ vi.mock('../data/styleIndex', () => ({
 vi.mock('../data/taste', () => ({
   buildTasteVector: vi.fn(() => [1, 0]),
 }))
+const embed = vi.fn(async () => [0.8, 0.6])
 vi.mock('../data/embedder', () => ({
-  getEmbedder: vi.fn(async () => async () => [0.8, 0.6]),
+  getEmbedder: vi.fn(async () => (url) => embed(url)),
 }))
+vi.mock('../data/screenshotCrop', async (importOriginal) => ({
+  ...(await importOriginal()),
+  // jsdom has no canvas; the geometry is unit-tested in screenshotCrop.test.js.
+  cropImageToDataUrl: vi.fn(async (dataUrl, box) => (box ? 'data:image/jpeg;base64,CROPPED' : dataUrl)),
+}))
+import { cropImageToDataUrl } from '../data/screenshotCrop'
 
 function chooseScreenshot() {
   const file = new File(['x'], 'shot.png', { type: 'image/png' })
@@ -209,5 +216,42 @@ describe('QuickAddArtist', () => {
     fireEvent.click(screen.getByRole('button', { name: /cancel/i }))
     expect(onClose).toHaveBeenCalled()
     expect(onAdd).not.toHaveBeenCalled()
+  })
+})
+
+// #24: the screenshot becomes the artist's first reference image *and* the
+// input to taste-fit, so Instagram's chrome has to come off both.
+describe('QuickAddArtist artwork crop (#24)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+  })
+
+  it('embeds and saves the crop rather than the raw screenshot', async () => {
+    localStorage.setItem('gemini_api_key', 'test-key')
+    analyzeScreenshotWithGemini.mockResolvedValue({
+      handle: 'cropme', name: '', tags: [], styleNote: '',
+      crop: { x: 0, y: 0.25, w: 1, h: 0.5 },
+    })
+    const { onAdd } = renderModal()
+    chooseScreenshot()
+
+    await waitFor(() => expect(embed).toHaveBeenCalledWith('data:image/jpeg;base64,CROPPED'))
+    expect(cropImageToDataUrl).toHaveBeenCalledWith('data:image/jpeg;base64,SHOT', { x: 0, y: 0.25, w: 1, h: 0.5 })
+
+    fireEvent.click(screen.getByRole('button', { name: /^add artist$/i }))
+    await waitFor(() => expect(onAdd).toHaveBeenCalled())
+    expect(onAdd.mock.calls.at(-1)[0].images).toEqual(['data:image/jpeg;base64,CROPPED'])
+  })
+
+  it('keeps the whole screenshot when the model gives no box', async () => {
+    localStorage.setItem('gemini_api_key', 'test-key')
+    analyzeScreenshotWithGemini.mockResolvedValue({
+      handle: 'nobox', name: '', tags: [], styleNote: '', crop: null,
+    })
+    renderModal()
+    chooseScreenshot()
+
+    await waitFor(() => expect(embed).toHaveBeenCalledWith('data:image/jpeg;base64,SHOT'))
   })
 })

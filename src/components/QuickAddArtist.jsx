@@ -4,6 +4,7 @@ import { STYLE_TAGS, parseInstagramHandle } from '../data/artists'
 import { ARTIST_STATUSES } from '../data/planning'
 import { compressImages } from '../hooks/useImageUpload'
 import { analyzeScreenshotWithGemini } from '../data/screenshotIntake'
+import { cropImageToDataUrl } from '../data/screenshotCrop'
 import { cosineSimilarity } from '../data/embeddings'
 import { buildTasteVector } from '../data/taste'
 import { loadVectors } from '../data/styleIndex'
@@ -32,6 +33,9 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
   const [analyzing, setAnalyzing] = useState(false)
   const [intakeNote, setIntakeNote] = useState('')
   const [tasteFit, setTasteFit] = useState(null)
+  // True when the score came from an uncropped screenshot, so it is partly
+  // measuring Instagram's UI rather than the tattoo (#24).
+  const [tasteRough, setTasteRough] = useState(false)
   const fileRef = useRef(null)
   // Monotonic id per screenshot: a superseded analysis/taste result (user
   // pasted another image while the first was in flight) is discarded instead
@@ -56,13 +60,16 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
     if (seq !== shotSeq.current) return
     setShot(dataUrl)
     setIntakeNote('')
+    // Scoring waits for the crop: analyze() owns both (#24).
     analyze(dataUrl, seq)
-    scoreTaste(dataUrl, seq)
   }
 
   async function analyze(dataUrl, seq) {
     const apiKey = localStorage.getItem('gemini_api_key') || ''
     if (!apiKey) {
+      // No way to locate the artwork, so the score is off the whole screenshot,
+      // Instagram chrome included (#24).
+      scoreTaste(dataUrl, seq, { rough: true })
       setIntakeNote('Screenshot attached. Add a Gemini key (Concepts → AI setup) to auto-fill from screenshots.')
       return
     }
@@ -70,6 +77,13 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
     try {
       const result = await analyzeScreenshotWithGemini(apiKey, dataUrl)
       if (seq !== shotSeq.current) return
+      // Crop to the artwork before it becomes the saved reference image and
+      // before it is embedded for taste-fit.
+      const cropped = await cropImageToDataUrl(dataUrl, result?.crop || null)
+      if (seq !== shotSeq.current) return
+      const didCrop = cropped !== dataUrl
+      if (didCrop) setShot(cropped)
+      scoreTaste(cropped, seq, { rough: !didCrop })
       if (!result) {
         setIntakeNote("Couldn't read artist details from this screenshot — fill them in below.")
       } else {
@@ -88,7 +102,7 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
 
   // Taste-model score for the screenshot itself — only when a style index
   // already exists on this device, so we never surprise-download the model.
-  async function scoreTaste(dataUrl, seq) {
+  async function scoreTaste(dataUrl, seq, { rough = false } = {}) {
     try {
       const vectors = await loadVectors(artists)
       if (vectors.size === 0) return
@@ -96,7 +110,10 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
       if (!taste) return
       const embed = await getEmbedder()
       const fit = cosineSimilarity(taste, await embed(dataUrl))
-      if (seq === shotSeq.current) setTasteFit(fit)
+      if (seq === shotSeq.current) {
+        setTasteFit(fit)
+        setTasteRough(rough)
+      }
     } catch (e) {
       console.error('[tattoo] screenshot taste score failed:', e)
     }
@@ -149,7 +166,7 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
                 )}
                 {tasteFit !== null && (
                   <p data-testid="intake-taste" className="font-mono text-xs text-accent mt-1">
-                    Taste fit {Math.round(tasteFit * 100)}%
+                    Taste fit {Math.round(tasteFit * 100)}%{tasteRough ? ' (rough — uncropped screenshot)' : ''}
                   </p>
                 )}
                 {intakeNote && <p className="font-body text-xs text-cream-muted/70 mt-1">{intakeNote}</p>}
