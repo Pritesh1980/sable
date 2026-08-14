@@ -48,9 +48,20 @@ function stageImage() {
   fireEvent.change(screen.getByLabelText(/choose files/i), { target: { files: [file] } })
 }
 
+function stageImages(...names) {
+  const files = names.map((name) => new File(['x'], name, { type: 'image/png' }))
+  fireEvent.change(screen.getByLabelText(/choose files/i), { target: { files } })
+  return files
+}
+
 describe('AddArtistModal screenshot analysis', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    analyzeScreenshotWithGemini.mockReset()
+    cropImageToDataUrl.mockReset().mockImplementation(async (dataUrl, box) => (
+      box ? 'data:image/jpeg;base64,CROPPED' : dataUrl
+    ))
+    embed.mockReset().mockResolvedValue([0.6, 0.8])
     localStorage.clear()
   })
 
@@ -196,6 +207,165 @@ describe('AddArtistModal screenshot analysis', () => {
     stageImage()
     await waitFor(() => expect(analyzeScreenshotWithGemini).toHaveBeenCalled())
     expect(screen.getByPlaceholderText(/handle or instagram url/i)).toHaveValue('typed_first')
+  })
+
+  it('discards a removed image\'s late result and analyses the next staged image', async () => {
+    localStorage.setItem('gemini_api_key', 'test-key')
+    let releaseFirst
+    analyzeScreenshotWithGemini
+      .mockImplementationOnce(() => new Promise((resolve) => { releaseFirst = resolve }))
+      .mockResolvedValueOnce({
+        handle: 'next_artist', name: '', tags: [], styleNote: '', crop: null,
+      })
+    renderModal()
+    stageImages('first.png', 'next.png')
+
+    await waitFor(() => expect(analyzeScreenshotWithGemini).toHaveBeenCalledTimes(1))
+    fireEvent.click(screen.getByLabelText(/remove staged image 1/i))
+
+    await waitFor(() => expect(analyzeScreenshotWithGemini).toHaveBeenCalledTimes(2))
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText(/handle or instagram url/i)).toHaveValue('next_artist'))
+
+    releaseFirst({
+      handle: 'removed_artist',
+      name: 'Removed Artist',
+      tags: ['surrealism'],
+      styleNote: 'This result belongs to the removed screenshot.',
+      crop: { x: 0, y: 0.25, w: 1, h: 0.5 },
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(screen.getByPlaceholderText(/handle or instagram url/i)).toHaveValue('next_artist')
+    expect(screen.queryByDisplayValue('Removed Artist')).not.toBeInTheDocument()
+    expect(screen.queryByDisplayValue(/belongs to the removed screenshot/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /use the whole screenshot/i })).not.toBeInTheDocument()
+    expect(cropImageToDataUrl).toHaveBeenCalledTimes(1)
+    expect(cropImageToDataUrl).toHaveBeenCalledWith('data:image/jpeg;base64,SHOT', null)
+
+    fireEvent.submit(screen.getByRole('button', { name: /^save$/i }).closest('form'))
+    await waitFor(() => expect(uploadImages).toHaveBeenCalled())
+    const [files] = uploadImages.mock.calls.at(-1)
+    expect(files).toHaveLength(1)
+    expect(files[0].name).toBe('next.png')
+  })
+
+  it('does not let a removed image\'s late taste score overwrite the next image', async () => {
+    localStorage.setItem('gemini_api_key', 'test-key')
+    analyzeScreenshotWithGemini.mockResolvedValue({
+      handle: '', name: '', tags: [], styleNote: '', crop: null,
+    })
+    let releaseFirstScore
+    embed
+      .mockImplementationOnce(() => new Promise((resolve) => { releaseFirstScore = resolve }))
+      .mockResolvedValueOnce([0, 1])
+    renderModal()
+    stageImages('first.png', 'next.png')
+
+    await waitFor(() => expect(embed).toHaveBeenCalledTimes(1))
+    fireEvent.click(screen.getByLabelText(/remove staged image 1/i))
+
+    await waitFor(() => expect(embed).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(screen.getByTestId('intake-taste')).toHaveTextContent(/taste fit 0%/i))
+
+    releaseFirstScore([1, 0])
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(screen.getByTestId('intake-taste')).toHaveTextContent(/taste fit 0%/i)
+  })
+
+  it('does not let a late crop score overwrite the whole screenshot score after undo', async () => {
+    localStorage.setItem('gemini_api_key', 'test-key')
+    analyzeScreenshotWithGemini.mockResolvedValue({
+      handle: '', name: '', tags: [], styleNote: '',
+      crop: { x: 0, y: 0.25, w: 1, h: 0.5 },
+    })
+    let releaseCropScore
+    embed
+      .mockImplementationOnce(() => new Promise((resolve) => { releaseCropScore = resolve }))
+      .mockResolvedValueOnce([0, 1])
+    renderModal()
+    stageImage()
+
+    const undo = await screen.findByRole('button', { name: /use the whole screenshot/i })
+    await waitFor(() => expect(embed).toHaveBeenCalledTimes(1))
+    fireEvent.click(undo)
+
+    await waitFor(() => expect(embed).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(screen.getByTestId('intake-taste')).toHaveTextContent(/taste fit 0% · rough/i))
+
+    releaseCropScore([1, 0])
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(screen.getByTestId('intake-taste')).toHaveTextContent(/taste fit 0% · rough/i)
+  })
+
+  it('drops a crop that finishes after its exact source image was removed', async () => {
+    localStorage.setItem('gemini_api_key', 'test-key')
+    analyzeScreenshotWithGemini
+      .mockResolvedValueOnce({
+        handle: 'first_artist', name: '', tags: [], styleNote: '',
+        crop: { x: 0, y: 0.25, w: 1, h: 0.5 },
+      })
+      .mockResolvedValueOnce({
+        handle: 'next_artist', name: '', tags: [], styleNote: '', crop: null,
+      })
+    let releaseFirstCrop
+    cropImageToDataUrl
+      .mockImplementationOnce(() => new Promise((resolve) => { releaseFirstCrop = resolve }))
+      .mockImplementationOnce(async (dataUrl) => dataUrl)
+    renderModal()
+    stageImages('first.png', 'next.png')
+
+    await waitFor(() => expect(cropImageToDataUrl).toHaveBeenCalledTimes(1))
+    fireEvent.click(screen.getByLabelText(/remove staged image 1/i))
+
+    await waitFor(() => expect(cropImageToDataUrl).toHaveBeenCalledTimes(2))
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText(/handle or instagram url/i)).toHaveValue('next_artist'))
+    releaseFirstCrop('data:image/jpeg;base64,LATE_CROP')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(screen.queryByRole('button', { name: /use the whole screenshot/i })).not.toBeInTheDocument()
+    fireEvent.submit(screen.getByRole('button', { name: /^save$/i }).closest('form'))
+    await waitFor(() => expect(uploadImages).toHaveBeenCalled())
+    const [files] = uploadImages.mock.calls.at(-1)
+    expect(files).toHaveLength(1)
+    expect(files[0].name).toBe('next.png')
+  })
+
+  it('clears only unchanged AI-prefilled fields when their image is removed', async () => {
+    localStorage.setItem('gemini_api_key', 'test-key')
+    analyzeScreenshotWithGemini
+      .mockResolvedValueOnce({
+        handle: 'first_artist',
+        name: 'First Artist',
+        tags: ['surrealism'],
+        styleNote: 'Prefilled from the first screenshot.',
+        crop: null,
+      })
+      .mockResolvedValueOnce({ handle: '', name: '', tags: [], styleNote: '', crop: null })
+    const { setArtists } = renderModal()
+    stageImages('first.png', 'next.png')
+
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText(/handle or instagram url/i)).toHaveValue('first_artist'))
+    fireEvent.change(screen.getByPlaceholderText(/handle or instagram url/i), {
+      target: { value: 'kept_user_edit' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'blackwork' }))
+    fireEvent.click(screen.getByLabelText(/remove staged image 1/i))
+
+    await waitFor(() => expect(analyzeScreenshotWithGemini).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(screen.getByRole('button', { name: /^save$/i })).toBeEnabled())
+    expect(screen.getByPlaceholderText(/handle or instagram url/i)).toHaveValue('kept_user_edit')
+    expect(screen.getByPlaceholderText(/full name/i)).toHaveValue('')
+    expect(screen.queryByDisplayValue(/prefilled from the first screenshot/i)).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
+    await waitFor(() => expect(setArtists).toHaveBeenCalled())
+    const added = setArtists.mock.calls[0][0](existing).find((artist) => artist.handle === 'kept_user_edit')
+    expect(added).toMatchObject({ name: '', tags: ['blackwork'] })
+    expect(added.tags).not.toContain('surrealism')
+    expect(added.styleNote).toBeFalsy()
   })
 
   it('removing the only staged image re-arms analysis for the next one', async () => {

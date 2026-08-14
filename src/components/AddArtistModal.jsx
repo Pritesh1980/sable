@@ -10,6 +10,10 @@ import { buildTasteVector } from '../data/taste'
 import { loadVectors } from '../data/styleIndex'
 import { getEmbedder } from '../data/embedder'
 
+function emptyAiPrefill() {
+  return { handle: null, name: null, styleNote: null, tags: new Set() }
+}
+
 // Quick-add modal for the Wall bar's "+ Add artist" — one compact v2-styled
 // form: handle, optional name, style tags, and an optional immediate image
 // drop/paste zone. Heavy editing (studio, notes, provenance) stays in the
@@ -35,7 +39,13 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
   // True when the score came from an uncropped screenshot, so the number is
   // partly measuring Instagram's UI rather than the tattoo.
   const [tasteRough, setTasteRough] = useState(false)
-  const analyzedRef = useRef(false)
+  // Analysis belongs to one exact staged File. The generation invalidates every
+  // async continuation from an image that has since been removed or replaced.
+  const stagedRef = useRef([])
+  const analysisSeq = useRef(0)
+  const tasteSeq = useRef(0)
+  const activeAnalysisFile = useRef(null)
+  const aiPrefill = useRef(emptyAiPrefill())
   // The staged file as it arrived, so an unwanted crop can be undone — a
   // bounding box can clip real artwork, and an injected one could be
   // deliberately wrong (#24 review).
@@ -50,104 +60,182 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
     : null
 
   function toggleTag(tag) {
+    // Once the user touches an AI-added tag, it becomes user-owned and must not
+    // be removed later just because the source screenshot is removed.
+    aiPrefill.current.tags.delete(tag)
     setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]))
+  }
+
+  function commitStaged(next) {
+    stagedRef.current = next
+    setStaged(next)
+  }
+
+  function replaceStagedFile(source, replacement) {
+    const index = stagedRef.current.indexOf(source)
+    if (index === -1) return false
+    const next = [...stagedRef.current]
+    next[index] = replacement
+    commitStaged(next)
+    return true
+  }
+
+  function analysisIsCurrent(seq, file = activeAnalysisFile.current) {
+    return analysisSeq.current === seq && activeAnalysisFile.current === file
+  }
+
+  function clearAiOwnedState() {
+    const owned = aiPrefill.current
+    aiPrefill.current = emptyAiPrefill()
+    tasteSeq.current += 1
+    setHandle((value) => (owned.handle !== null && value === owned.handle ? '' : value))
+    setName((value) => (owned.name !== null && value === owned.name ? '' : value))
+    setStyleNote((value) => (owned.styleNote !== null && value === owned.styleNote ? '' : value))
+    setTags((current) => current.filter((tag) => !owned.tags.has(tag)))
+    setIntakeNote('')
+    setTasteFit(null)
+    setTasteRough(false)
+    setUncropped(null)
+  }
+
+  function startAnalysis(file) {
+    const seq = analysisSeq.current + 1
+    analysisSeq.current = seq
+    activeAnalysisFile.current = file
+    analyzeFirst(file, seq)
   }
 
   function addFiles(files) {
     const images = Array.from(files || []).filter((f) => f.type?.startsWith('image/'))
     if (!images.length) return
-    setStaged((prev) => [...prev, ...images])
-    if (!analyzedRef.current) {
-      analyzedRef.current = true
-      analyzeFirst(images[0])
-    }
+    const next = [...stagedRef.current, ...images]
+    commitStaged(next)
+    if (!activeAnalysisFile.current) startAnalysis(next[0])
   }
 
-  async function analyzeFirst(file) {
+  async function analyzeFirst(file, seq) {
     setIntakeBusy(true)
     setUncropped(null)
-    const [dataUrl] = await compressImages([file])
-    const apiKey = localStorage.getItem('gemini_api_key') || ''
-    if (!apiKey) {
-      // Nothing to locate the artwork with, so the score is off the whole
-      // screenshot — Instagram chrome included. Say so rather than imply
-      // precision the number doesn't have (#24).
-      scoreTaste(dataUrl, { rough: true })
-      setIntakeNote('Add a Gemini key (Concepts → AI setup) to auto-fill from screenshots.')
-      setIntakeBusy(false)
-      return
-    }
-    setAnalyzing(true)
     try {
+      const [dataUrl] = await compressImages([file])
+      if (!analysisIsCurrent(seq, file)) return
+
+      const apiKey = localStorage.getItem('gemini_api_key') || ''
+      if (!apiKey) {
+        // Nothing to locate the artwork with, so the score is off the whole
+        // screenshot — Instagram chrome included. Say so rather than imply
+        // precision the number doesn't have (#24).
+        scoreTaste(dataUrl, { rough: true, seq })
+        setIntakeNote('Add a Gemini key (Concepts → AI setup) to auto-fill from screenshots.')
+        return
+      }
+
+      setAnalyzing(true)
       const result = await analyzeScreenshotWithGemini(apiKey, dataUrl)
+      if (!analysisIsCurrent(seq, file)) return
+
       // Crop before embedding and before saving: the same chrome that skews the
       // taste vector is what makes a screenshot look wrong on the Wall.
       const cropped = await cropImageToDataUrl(dataUrl, result?.crop || null)
+      if (!analysisIsCurrent(seq, file)) return
+
       const didCrop = cropped !== dataUrl
       if (didCrop) {
         const cropFile = dataUrlToFile(cropped, `crop-${file.name || 'screenshot'}.jpg`)
-        if (cropFile) {
-          setStaged((prev) => prev.map((f) => (f === file ? cropFile : f)))
-          setUncropped({ crop: cropFile, original: file, dataUrl })
+        if (cropFile && replaceStagedFile(file, cropFile)) {
+          activeAnalysisFile.current = cropFile
+          setUncropped({ crop: cropFile, original: file, dataUrl, seq })
         }
       }
-      scoreTaste(cropped, { rough: !didCrop })
+      scoreTaste(cropped, { rough: !didCrop, seq })
       if (!result) {
         setIntakeNote("Couldn't read artist details from this screenshot.")
       } else {
-        if (result.handle) setHandle((v) => v || result.handle)
-        if (result.name) setName((v) => v || result.name)
-        if (result.tags.length) setTags((prev) => [...new Set([...prev, ...result.tags])])
-        if (result.styleNote) setStyleNote((v) => v || result.styleNote)
+        if (result.handle) setHandle((value) => {
+          if (value) return value
+          aiPrefill.current.handle = result.handle
+          return result.handle
+        })
+        if (result.name) setName((value) => {
+          if (value) return value
+          aiPrefill.current.name = result.name
+          return result.name
+        })
+        if (result.tags?.length) setTags((current) => {
+          const added = result.tags.filter((tag) => !current.includes(tag))
+          added.forEach((tag) => aiPrefill.current.tags.add(tag))
+          return [...new Set([...current, ...result.tags])]
+        })
+        if (result.styleNote) setStyleNote((value) => {
+          if (value) return value
+          aiPrefill.current.styleNote = result.styleNote
+          return result.styleNote
+        })
         setIntakeNote(result.handle ? '' : 'Handle not visible in the screenshot — type it above.')
       }
     } catch (e) {
+      if (!analysisIsCurrent(seq)) return
       console.error('[tattoo] screenshot intake failed:', e)
       setIntakeNote('Analysis failed — check your Gemini key/connection.')
+    } finally {
+      if (analysisSeq.current === seq) {
+        setAnalyzing(false)
+        setIntakeBusy(false)
+      }
     }
-    setAnalyzing(false)
-    setIntakeBusy(false)
   }
 
   function useWholeScreenshot() {
     if (!uncropped) return
-    setStaged((prev) => prev.map((f) => (f === uncropped.crop ? uncropped.original : f)))
-    scoreTaste(uncropped.dataUrl, { rough: true })
+    if (uncropped.seq !== analysisSeq.current || activeAnalysisFile.current !== uncropped.crop) {
+      setUncropped(null)
+      return
+    }
+    if (!replaceStagedFile(uncropped.crop, uncropped.original)) {
+      setUncropped(null)
+      return
+    }
+    activeAnalysisFile.current = uncropped.original
+    setTasteFit(null)
+    setTasteRough(false)
+    scoreTaste(uncropped.dataUrl, { rough: true, seq: uncropped.seq })
     setUncropped(null)
   }
 
   // Taste-model score for the screenshot — only when a style index already
   // exists on this device, so we never surprise-download the model.
-  async function scoreTaste(dataUrl, { rough = false } = {}) {
+  async function scoreTaste(dataUrl, { rough = false, seq } = {}) {
+    const tasteRevision = tasteSeq.current + 1
+    tasteSeq.current = tasteRevision
     try {
       const vectors = await loadVectors(artists)
       if (vectors.size === 0) return
       const taste = buildTasteVector(artists, (s) => vectors.get(s) || null)
       if (!taste) return
       const embed = await getEmbedder()
-      setTasteFit(cosineSimilarity(taste, await embed(dataUrl)))
+      const score = cosineSimilarity(taste, await embed(dataUrl))
+      if (seq !== analysisSeq.current || tasteRevision !== tasteSeq.current) return
+      setTasteFit(score)
       setTasteRough(rough)
     } catch (e) {
+      if (seq !== analysisSeq.current || tasteRevision !== tasteSeq.current) return
       console.error('[tattoo] screenshot taste score failed:', e)
     }
   }
 
   function removeStaged(i) {
-    setStaged((prev) => {
-      const next = prev.filter((_, idx) => idx !== i)
-      // All images gone: forget the analysis so the next staged image is
-      // analysed fresh instead of inheriting the removed screenshot's
-      // extracted identity (codex review finding).
-      if (next.length === 0) {
-        analyzedRef.current = false
-        setStyleNote('')
-        setIntakeNote('')
-        setTasteFit(null)
-        setTasteRough(false)
-        setUncropped(null)
-      }
-      return next
-    })
+    const removed = stagedRef.current[i]
+    if (!removed) return
+    const next = stagedRef.current.filter((_, idx) => idx !== i)
+    commitStaged(next)
+    if (removed !== activeAnalysisFile.current) return
+
+    analysisSeq.current += 1
+    activeAnalysisFile.current = null
+    setAnalyzing(false)
+    setIntakeBusy(false)
+    clearAiOwnedState()
+    if (next.length) startAnalysis(next[0])
   }
 
   function handleDrop(e) {
@@ -228,7 +316,11 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
           className="w-full bg-v2-ink border border-v2-hairline rounded-xs px-3 py-2 text-sm text-v2-cream font-v2-ui outline-hidden focus:border-v2-accent placeholder-v2-muted mb-3.5"
           placeholder="@handle or Instagram URL"
           value={handle}
-          onChange={(e) => { setHandle(e.target.value); setError('') }}
+          onChange={(e) => {
+            aiPrefill.current.handle = null
+            setHandle(e.target.value)
+            setError('')
+          }}
         />
 
         <label htmlFor="quick-add-name" className="block font-v2-ui text-[0.68rem] tracking-[0.14em] uppercase text-v2-muted mb-1.5">
@@ -239,7 +331,10 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
           className="w-full bg-v2-ink border border-v2-hairline rounded-xs px-3 py-2 text-sm text-v2-cream font-v2-ui outline-hidden focus:border-v2-accent placeholder-v2-muted mb-4"
           placeholder="Full name (optional)"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {
+            aiPrefill.current.name = null
+            setName(e.target.value)
+          }}
         />
 
         {styleNote && (
@@ -252,7 +347,10 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
               rows={2}
               className="w-full bg-v2-ink border border-v2-hairline rounded-xs px-3 py-2 text-sm text-v2-cream font-v2-ui outline-hidden focus:border-v2-accent placeholder-v2-muted mb-4 resize-none"
               value={styleNote}
-              onChange={(e) => setStyleNote(e.target.value)}
+              onChange={(e) => {
+                aiPrefill.current.styleNote = null
+                setStyleNote(e.target.value)
+              }}
             />
           </>
         )}
