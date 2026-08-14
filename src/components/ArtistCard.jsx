@@ -59,21 +59,26 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
           </div>
         )}
 
-        {/* Hidden file input */}
+        {/* Hidden file input. The click stop matters: the buttons below open the
+            picker with fileRef.current.click(), and that dispatches a *fresh*
+            bubbling click from inside the card — so stopping propagation in the
+            button alone still let the artist detail open behind the picker. */}
         <input
           ref={fileRef}
           type="file"
           accept="image/*"
           multiple
           className="hidden"
+          onClick={(e) => e.stopPropagation()}
           onChange={handleFiles}
         />
 
-        {/* Drag handle */}
+        {/* Drag handle. It deliberately does NOT stop clicks itself (#54) — the
+            owner decides, so a tap that never became a drag opens the artist and
+            the 44pt corner stops being a dead zone. */}
         {dragHandleProps && (
           <div
             {...dragHandleProps}
-            onClick={(e) => e.stopPropagation()}
             className="absolute top-0 right-0 w-11 h-11 p-2 flex items-start justify-end can-hover:opacity-0 group-hover:opacity-50 transition-opacity cursor-grab active:cursor-grabbing z-10"
           >
             <span className="w-7 h-7 flex flex-col justify-center items-center gap-1">
