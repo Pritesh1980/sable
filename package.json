@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "audit:targets": "node scripts/auditTouchTargets.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

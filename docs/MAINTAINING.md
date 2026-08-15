@@ -73,6 +73,31 @@ with Reorder **off** — that is the view people arrive in.
    wait ~1.5s for images → `browser_take_screenshot` per state, clicking view toggles / opening
    modals as needed.)
 
+## Auditing touch targets
+
+```bash
+VITE_BACKEND=local npm run dev -- --port 5174
+npx playwright install chromium   # once
+npm run audit:targets -- http://localhost:5174
+```
+
+`scripts/auditTouchTargets.mjs` walks every route in a **mobile** browser context,
+measures each interactive control, and lists anything under 44 × 44. It reports; it
+never fails. The judgement is in `src/a11y/touchTargets.js` and is unit-tested — this
+is the same pure-module-plus-thin-wrapper split the service worker uses.
+
+It exists because the source scan in `src/test/a11yAffordances.spec.js` **cannot** do
+this job, and it is worth understanding why before trusting a green suite here. That
+scan reads `w-N` / `h-N` classes, so:
+
+- a control sized by padding (`px-2 py-1`) has no size it can read, and
+- `<button>{label}</button>` is indistinguishable from a button holding a sentence.
+
+The Artists view switcher sat at 24 × 28 for months with every test passing (#73). If
+you are changing control sizes, the browser is the only thing that can tell you the
+truth — as with the `can-hover` media wrapper, which also survives only in a real
+mobile context.
+
 ## Cross-check before committing
 
 Every referenced image should exist, and every image should be referenced:

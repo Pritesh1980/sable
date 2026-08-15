@@ -264,8 +264,12 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
       <>
       {/* Sticky filter bar */}
       <div className="sticky top-0 z-20 bg-ink-black/80 backdrop-blur-md border-b border-ink-border px-4 py-3 mb-8">
-        <div className="flex items-center gap-2">
+        {/* #73: five 44pt targets are ~236px, which crushed the filters onto
+            single-file rows when they shared a line on a phone. Wrap instead —
+            the switcher takes its own line until there is room beside them. */}
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="flex gap-2 flex-wrap flex-1">
+
             <TagPill
               tag="All"
               active={!activeTag}
@@ -280,8 +284,10 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
               />
             ))}
           </div>
-          {/* View toggle */}
-          <div className="flex gap-1 shrink-0 ml-2">
+          {/* View toggle. The button is the 44pt target (#73); the chip inside
+              keeps the size the bar has always had (#51's pattern — grow the
+              hit area, not the look). */}
+          <div className="flex gap-1 shrink-0 w-full justify-end sm:w-auto sm:ml-2">
             {[
               { mode: 'filmstrip', label: '☰', title: 'Filmstrip view' },
               { mode: 'compare', label: '⊟', title: 'Compare artists' },
@@ -292,9 +298,20 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
                 key={mode}
                 onClick={() => changeView(mode)}
                 title={title}
-                className={`px-2 py-1 rounded-xs text-[0.8125rem] font-mono transition-colors ${viewMode === mode ? 'text-cream bg-ink-card' : 'text-cream-muted/50 hover:text-cream-muted'}`}
+                // Not decoration: accessible-name computation prefers element
+                // content over `title`, so without this these announce as
+                // "⊞ button" (codex review).
+                aria-label={title}
+                aria-pressed={viewMode === mode}
+                // The fill belongs on the 44pt box, not on the glyph: a
+                // highlight smaller than the target reads as a badge floating in
+                // an empty square, and stops showing what is actually tappable
+                // (agy review).
+                className={`w-11 h-11 flex items-center justify-center rounded-xs transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
+                  viewMode === mode ? 'text-cream bg-ink-card' : 'text-cream-muted/50 hover:text-cream-muted'
+                }`}
               >
-                {label}
+                <span className="text-[0.8125rem] font-mono">{label}</span>
               </button>
             ))}
             {/* #70: only grid has cards to drag, so the toggle only appears
@@ -312,11 +329,11 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
                 title={editing ? 'Done — back to browsing' : 'Reorder and add photos'}
                 // Divided off from the view switcher: those four are mutually
                 // exclusive views, this is a toggle on top of one of them.
-                className={`ml-2 pl-2 border-l border-ink-border px-2 py-1 rounded-xs text-[0.8125rem] font-mono transition-colors ${
+                className={`ml-1 w-11 h-11 flex items-center justify-center rounded-xs border-l border-ink-border transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
                   editing ? 'text-cream bg-accent/20' : 'text-cream-muted/50 hover:text-cream-muted'
                 }`}
               >
-                ⇅
+                <span className="text-[0.8125rem] font-mono">⇅</span>
               </button>
             )}
           </div>
