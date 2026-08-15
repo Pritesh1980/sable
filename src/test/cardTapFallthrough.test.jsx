@@ -6,6 +6,10 @@ import { DRAG_CLICK_WINDOW_MS } from '../data/dragTap'
 // #54: the drag handle claims a 44pt corner of a 113x150 card. It is a drag
 // activator, not a button, so a tap on it should fall through and open the
 // artist — while the click a real drag produces must still be swallowed.
+//
+// Every card here renders with `editing` on, because #70 moved the handle and
+// the quick-upload + behind that mode. The rules below are what happens once
+// they are on screen; whether they appear at all is gridEditMode.test.jsx.
 // dnd-kit is mocked so the test can drive `isDragging` directly; the wiring
 // under test is ours, not the library's.
 //
@@ -47,7 +51,7 @@ function setSortable(overrides = {}) {
 
 function renderCard(onOpen) {
   return render(
-    <SortableArtistCard artist={artist} onOpen={onOpen} onSaveImages={() => {}} index={0} />
+    <SortableArtistCard artist={artist} onOpen={onOpen} onSaveImages={() => {}} index={0} editing />
   )
 }
 
@@ -80,9 +84,9 @@ describe('artist card tap fall-through (#54)', () => {
     const { container, rerender } = renderCard(onOpen)
 
     setSortable({ isDragging: true })
-    rerender(<SortableArtistCard artist={artist} onOpen={onOpen} onSaveImages={() => {}} index={0} />)
+    rerender(<SortableArtistCard artist={artist} onOpen={onOpen} onSaveImages={() => {}} index={0} editing />)
     setSortable({ isDragging: false })
-    rerender(<SortableArtistCard artist={artist} onOpen={onOpen} onSaveImages={() => {}} index={0} />)
+    rerender(<SortableArtistCard artist={artist} onOpen={onOpen} onSaveImages={() => {}} index={0} editing />)
 
     fireEvent.click(container.querySelector(HANDLE))
 
@@ -94,9 +98,9 @@ describe('artist card tap fall-through (#54)', () => {
     const { container, rerender } = renderCard(onOpen)
 
     setSortable({ isDragging: true })
-    rerender(<SortableArtistCard artist={artist} onOpen={onOpen} onSaveImages={() => {}} index={0} />)
+    rerender(<SortableArtistCard artist={artist} onOpen={onOpen} onSaveImages={() => {}} index={0} editing />)
     setSortable({ isDragging: false })
-    rerender(<SortableArtistCard artist={artist} onOpen={onOpen} onSaveImages={() => {}} index={0} />)
+    rerender(<SortableArtistCard artist={artist} onOpen={onOpen} onSaveImages={() => {}} index={0} editing />)
 
     // The drag's own click never arrived, so a bare latch would still be set.
     // The pointerdown that starts this tap is what clears it — note the clock has
@@ -116,9 +120,9 @@ describe('artist card tap fall-through (#54)', () => {
     const { container, rerender } = renderCard(onOpen)
 
     setSortable({ isDragging: true })
-    rerender(<SortableArtistCard artist={artist} onOpen={onOpen} onSaveImages={() => {}} index={0} />)
+    rerender(<SortableArtistCard artist={artist} onOpen={onOpen} onSaveImages={() => {}} index={0} editing />)
     setSortable({ isDragging: false })
-    rerender(<SortableArtistCard artist={artist} onOpen={onOpen} onSaveImages={() => {}} index={0} />)
+    rerender(<SortableArtistCard artist={artist} onOpen={onOpen} onSaveImages={() => {}} index={0} editing />)
 
     now += 400
     fireEvent.click(container.querySelector(HANDLE))
@@ -131,15 +135,58 @@ describe('artist card tap fall-through (#54)', () => {
     const { container, rerender } = renderCard(onOpen)
 
     setSortable({ isDragging: true })
-    rerender(<SortableArtistCard artist={artist} onOpen={onOpen} onSaveImages={() => {}} index={0} />)
+    rerender(<SortableArtistCard artist={artist} onOpen={onOpen} onSaveImages={() => {}} index={0} editing />)
     setSortable({ isDragging: false })
-    rerender(<SortableArtistCard artist={artist} onOpen={onOpen} onSaveImages={() => {}} index={0} />)
+    rerender(<SortableArtistCard artist={artist} onOpen={onOpen} onSaveImages={() => {}} index={0} editing />)
 
     // No pointerdown at all — e.g. an assistive-technology activation.
     now += DRAG_CLICK_WINDOW_MS
     fireEvent.click(container.querySelector(HANDLE))
 
     expect(onOpen).toHaveBeenCalledWith(artist)
+  })
+
+  // codex review of #69/#70. The echo latch exists to swallow the click a
+  // *pointer* drag produces. A keyboard drag produces no click at all, so arming
+  // it there only eats the next assistive-technology activation — which has no
+  // pointerdown to clear it, so the 1.5s backstop is all that saves it.
+  it('does not arm the echo guard for a keyboard-initiated drag', () => {
+    const onOpen = vi.fn()
+    const { container, rerender } = renderCard(onOpen)
+    const again = () => rerender(
+      <SortableArtistCard artist={artist} onOpen={onOpen} onSaveImages={() => {}} index={0} editing />
+    )
+    const handle = container.querySelector(HANDLE)
+
+    // Space on the handle is how dnd-kit's KeyboardSensor picks a card up.
+    fireEvent.keyDown(handle, { key: ' ' })
+    setSortable({ isDragging: true }); again()
+    setSortable({ isDragging: false }); again()
+
+    // The AT click that follows the drop, with no pointerdown anywhere.
+    fireEvent.click(container.querySelector(HANDLE))
+
+    expect(onOpen).toHaveBeenCalledWith(artist)
+  })
+
+  it('still arms it when the pointer was the more recent activator', () => {
+    const onOpen = vi.fn()
+    const { container, rerender } = renderCard(onOpen)
+    const again = () => rerender(
+      <SortableArtistCard artist={artist} onOpen={onOpen} onSaveImages={() => {}} index={0} editing />
+    )
+    const handle = container.querySelector(HANDLE)
+
+    // A keyboard drag earlier in the session must not disarm a later pointer drag.
+    fireEvent.keyDown(handle, { key: ' ' })
+    now += 50
+    fireEvent.pointerDown(handle)
+    setSortable({ isDragging: true }); again()
+    setSortable({ isDragging: false }); again()
+
+    fireEvent.click(container.querySelector(HANDLE))
+
+    expect(onOpen).not.toHaveBeenCalled()
   })
 
   it("still hands pointerdown to dnd-kit, so dragging isn't traded away", () => {
@@ -158,7 +205,7 @@ describe('artist card tap fall-through (#54)', () => {
     setSortable({ isDragging: true })
     const { container } = render(
       <StrictMode>
-        <SortableArtistCard artist={artist} onOpen={onOpen} onSaveImages={() => {}} index={0} />
+        <SortableArtistCard artist={artist} onOpen={onOpen} onSaveImages={() => {}} index={0} editing />
       </StrictMode>
     )
 
@@ -175,6 +222,7 @@ describe('artist card tap fall-through (#54)', () => {
         onOpen={onOpen}
         onSaveImages={() => {}}
         index={0}
+        editing
       />
     )
 

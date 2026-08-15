@@ -4,6 +4,7 @@ import { takeSharedImage } from '../sw/shareTarget'
 import {
   DndContext,
   closestCenter,
+  KeyboardSensor,
   PointerSensor,
   TouchSensor,
   useSensor,
@@ -13,6 +14,7 @@ import {
   SortableContext,
   arrayMove,
   rectSortingStrategy,
+  sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable'
 import SortableArtistCard from '../components/SortableArtistCard'
 import Logo from '../components/Logo'
@@ -28,7 +30,7 @@ import ArtistTable from '../components/ArtistTable'
 import QuickAddArtist from '../components/QuickAddArtist'
 import { STYLE_TAGS, createArtist } from '../data/artists'
 
-function ArtistGrid({ items, sensors, onDragEnd, onOpen, onSaveImages }) {
+function ArtistGrid({ items, sensors, onDragEnd, onOpen, onSaveImages, editing }) {
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
       <SortableContext items={items.map((a) => a.id)} strategy={rectSortingStrategy}>
@@ -43,6 +45,7 @@ function ArtistGrid({ items, sensors, onDragEnd, onOpen, onSaveImages }) {
                 onSaveImages={onSaveImages}
                 featured={true}
                 index={i}
+                editing={editing}
               />
             ))}
           </div>
@@ -58,6 +61,7 @@ function ArtistGrid({ items, sensors, onDragEnd, onOpen, onSaveImages }) {
                 onSaveImages={onSaveImages}
                 featured={false}
                 index={3 + i}
+                editing={editing}
               />
             ))}
           </div>
@@ -72,11 +76,25 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
   const [activeTag, setActiveTag] = useState(null)
   const [selected, setSelected] = useState(null)
   const [viewMode, setViewMode] = useState('filmstrip')
+  // #70: grid cards are pure navigation until this is on. Only grid can reorder,
+  // so leaving grid drops it — otherwise the state outlives its only switch.
+  const [editing, setEditing] = useState(false)
+  function changeView(mode) {
+    setViewMode(mode)
+    setEditing(false)
+  }
   const [browsing, setBrowsing] = useState(false)
   const [ranking, setRanking] = useState(false)
   // Deep links (?mode=manage) open maintenance directly; after that it's plain
   // state so toggling doesn't spam history.
   const [manageMode, setManageMode] = useState(() => searchParams.get('mode') === 'manage')
+  // Manage replaces the browsing views wholesale, so its toggle hides the
+  // Reorder switch. Coming back with editing still on would restore handles the
+  // user could not have turned on from there (codex review).
+  function changeManage(next) {
+    setManageMode(next)
+    setEditing(false)
+  }
   // ?shared=1 is where /share lands: a screenshot arriving from the OS share
   // sheet (Android) or an iOS Shortcut. Open intake straight away — on iOS
   // there is no file to collect, so it opens empty and ready for a paste.
@@ -103,7 +121,11 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
+    // #69: dnd-kit's attributes have always announced "press the space bar to
+    // pick up", but without this sensor nothing answered. The coordinate getter
+    // is what makes the arrow keys move between cards in a wrapping grid.
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
   const sorted = artists
@@ -209,7 +231,7 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
             + Add
           </button>
           <button
-            onClick={() => setManageMode((v) => !v)}
+            onClick={() => changeManage(!manageMode)}
             className={`font-mono text-xs px-3 py-2 rounded-xs transition-colors tracking-widest uppercase border ${
               manageMode
                 ? 'text-cream border-accent/50 bg-accent/10'
@@ -268,13 +290,35 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
             ].map(({ mode, label, title }) => (
               <button
                 key={mode}
-                onClick={() => setViewMode(mode)}
+                onClick={() => changeView(mode)}
                 title={title}
                 className={`px-2 py-1 rounded-xs text-[0.8125rem] font-mono transition-colors ${viewMode === mode ? 'text-cream bg-ink-card' : 'text-cream-muted/50 hover:text-cream-muted'}`}
               >
                 {label}
               </button>
             ))}
+            {/* #70: only grid has cards to drag, so the toggle only appears
+                there. A glyph rather than a text label — "⇅ Reorder" widened
+                this group enough to squeeze the filter pills into six
+                single-file rows on a phone. */}
+            {viewMode === 'grid' && (
+              <button
+                onClick={() => setEditing((v) => !v)}
+                aria-pressed={editing}
+                // Names both jobs: the mode reveals the quick-upload + as well
+                // as the drag handle, and "Reorder" alone does not imply
+                // "add photos" (agy review).
+                aria-label="Reorder and add photos"
+                title={editing ? 'Done — back to browsing' : 'Reorder and add photos'}
+                // Divided off from the view switcher: those four are mutually
+                // exclusive views, this is a toggle on top of one of them.
+                className={`ml-2 pl-2 border-l border-ink-border px-2 py-1 rounded-xs text-[0.8125rem] font-mono transition-colors ${
+                  editing ? 'text-cream bg-accent/20' : 'text-cream-muted/50 hover:text-cream-muted'
+                }`}
+              >
+                ⇅
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -293,6 +337,7 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
             onDragEnd={handleDragEnd}
             onOpen={setSelected}
             onSaveImages={saveImages}
+            editing={editing}
           />
           {sorted.length === 0 && (
             <div className="py-10 text-center">
@@ -301,7 +346,7 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
               </p>
               {artists.length === 0 && (
                 <button
-                  onClick={() => setManageMode(true)}
+                  onClick={() => changeManage(true)}
                   className="text-accent hover:text-accent-hover font-body text-sm mt-3 underline underline-offset-4"
                 >
                   Add your first artist

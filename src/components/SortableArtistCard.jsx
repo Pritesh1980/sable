@@ -4,7 +4,7 @@ import { CSS } from '@dnd-kit/utilities'
 import ArtistCard from './ArtistCard'
 import { isDragEcho } from '../data/dragTap'
 
-export default function SortableArtistCard({ artist, onOpen, onSaveImages, index, featured }) {
+export default function SortableArtistCard({ artist, onOpen, onSaveImages, index, featured, editing = false }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: artist.id,
   })
@@ -14,10 +14,20 @@ export default function SortableArtistCard({ artist, onOpen, onSaveImages, index
   // that drag's own click is swallowed.
   const draggedAt = useRef(null)
   const pointerDownAt = useRef(null)
+  const keyDownAt = useRef(null)
   const wasDragging = useRef(false)
+  const fromKeyboard = useRef(false)
   useEffect(() => {
     if (isDragging) {
       wasDragging.current = true
+      // Whichever activator fired most recently is the one that started this
+      // drag. A keyboard drag (#69) ends with Space, not pointerup, so it
+      // produces no click to swallow — arming the guard there would only eat
+      // the next assistive-technology activation, which has no pointerdown to
+      // clear it (codex review).
+      fromKeyboard.current =
+        keyDownAt.current != null &&
+        (pointerDownAt.current == null || keyDownAt.current > pointerDownAt.current)
       return
     }
     // Only a genuine true -> false transition means a drag ended. Stamping from
@@ -25,7 +35,7 @@ export default function SortableArtistCard({ artist, onOpen, onSaveImages, index
     // setup/cleanup probe for a card that mounts mid-drag (codex review).
     if (wasDragging.current) {
       wasDragging.current = false
-      draggedAt.current = performance.now()
+      if (!fromKeyboard.current) draggedAt.current = performance.now()
     }
   }, [isDragging])
 
@@ -42,6 +52,11 @@ export default function SortableArtistCard({ artist, onOpen, onSaveImages, index
     onPointerDown: (e) => {
       pointerDownAt.current = performance.now()
       listeners?.onPointerDown?.(e)
+    },
+    // Same wrapping for the keyboard activator, so the two can be compared.
+    onKeyDown: (e) => {
+      keyDownAt.current = performance.now()
+      listeners?.onKeyDown?.(e)
     },
     onClick: (e) => {
       // Not a button: let a plain tap bubble to the card. Only the click that a
@@ -62,6 +77,7 @@ export default function SortableArtistCard({ artist, onOpen, onSaveImages, index
         dragHandleProps={dragHandleProps}
         featured={featured}
         index={index}
+        editing={editing}
       />
     </div>
   )

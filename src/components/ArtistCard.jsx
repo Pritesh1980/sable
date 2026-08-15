@@ -4,7 +4,10 @@ import { useAuth } from '../context/useAuth'
 import { DEFAULT_STUDIOS } from '../data/artists'
 import { imageSrc } from '../data/wall'
 
-export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandleProps, isDragging, featured, index = 0 }) {
+// `editing` gates every control that is not "open this artist" (#70). Off — the
+// default — the card is one undivided tap target; on, it grows the drag handle
+// and the quick-upload affordances.
+export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandleProps, isDragging, featured, index = 0, editing = false }) {
   const displayName = artist.name || `@${artist.handle}`
   const studio = artist.studio ? DEFAULT_STUDIOS.find((s) => s.id === artist.studio) : null
   const hasImages = artist.images && artist.images.length > 0
@@ -49,13 +52,15 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
             <span className={`text-cream-muted/10 font-display ${featured ? 'text-6xl' : 'text-4xl'}`}>
               {(displayName[0] === '@' ? displayName[1] : displayName[0]).toUpperCase()}
             </span>
-            {/* Quick upload prompt on empty tiles */}
-            <button
-              onClick={(e) => { e.stopPropagation(); fileRef.current.click() }}
-              className="text-[0.8125rem] font-mono text-cream-muted/75 hover:text-cream-muted/80 tracking-widest uppercase transition-colors"
-            >
-              {uploading ? 'Importing…' : '+ Add photo'}
-            </button>
+            {/* Quick upload prompt on empty tiles — editing only */}
+            {editing && (
+              <button
+                onClick={(e) => { e.stopPropagation(); fileRef.current.click() }}
+                className="text-[0.8125rem] font-mono text-cream-muted/75 hover:text-cream-muted/80 tracking-widest uppercase transition-colors"
+              >
+                {uploading ? 'Importing…' : '+ Add photo'}
+              </button>
+            )}
           </div>
         )}
 
@@ -73,13 +78,15 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
           onChange={handleFiles}
         />
 
-        {/* Drag handle. It deliberately does NOT stop clicks itself (#54) — the
-            owner decides, so a tap that never became a drag opens the artist and
-            the 44pt corner stops being a dead zone. */}
-        {dragHandleProps && (
+        {/* Drag handle — editing only (#70), and always visible there rather
+            than hover-revealed: an explicit mode that still hid its controls
+            would be the worst of both. It deliberately does NOT stop clicks
+            itself (#54) — the owner decides, so a tap that never became a drag
+            opens the artist and the 44pt corner is not a dead zone. */}
+        {dragHandleProps && editing && (
           <div
             {...dragHandleProps}
-            className="absolute top-0 right-0 w-11 h-11 p-2 flex items-start justify-end can-hover:opacity-0 group-hover:opacity-50 transition-opacity cursor-grab active:cursor-grabbing z-10"
+            className="absolute top-0 right-0 w-11 h-11 p-2 flex items-start justify-end opacity-70 hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing z-10 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent rounded-xs"
           >
             <span className="w-7 h-7 flex flex-col justify-center items-center gap-1">
               <span className="block w-4 h-px bg-cream" />
@@ -89,11 +96,13 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
           </div>
         )}
 
-        {/* Quick upload button on hover (tiles that already have images) */}
-        {hasImages && !imgError && (
+        {/* Quick upload on tiles that already have images — editing only (#70).
+            This corner is the one-handed thumb sweep, and the payoff for a
+            mis-tap is the system photo sheet over the whole UI. */}
+        {hasImages && !imgError && editing && (
           <button
             onClick={(e) => { e.stopPropagation(); fileRef.current.click() }}
-            className="absolute bottom-6 right-0 w-11 h-11 p-1.5 flex items-end justify-end can-hover:opacity-0 group-hover:opacity-80 transition-opacity z-10"
+            className="absolute bottom-6 right-0 w-11 h-11 p-1.5 flex items-end justify-end opacity-80 hover:opacity-100 transition-opacity z-10 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent rounded-xs"
             title="Add photos"
             aria-label="Add photos"
           >

@@ -47,7 +47,7 @@ const SECTIONS = [
       'The quickest place to rank is the Home Wall: your Top 5 is pinned at the top. Nudge any of the five up or down with ▲ / ▼, or tap Rank ⤢ to open the full ranking board — Top 5 pinned, everyone else below, with ▲ / ▼ on every row, Drop ↓ to push an artist out of the Top 5, and ↑ To top 5 to pull one in. Esc returns to the Wall.',
       'Open Drawer → Classic gallery for structured browsing. Switch views with the toggle: ☰ Filmstrip, ⊟ Compare, ⊞ Grid, ▦ Style Wall.',
       'Tap a style tag in the filter bar to show only artists with that tag; tap All to clear it.',
-      'The Classic gallery also ranks: drag a card in Grid view, or nudge the rank number in Filmstrip. Every method feeds the same single ranking.',
+      'The Classic gallery also ranks: in Grid view turn on ⇅ Reorder to get drag handles (and a + for photos) on each card, or nudge the rank number in Filmstrip. With Reorder off, a grid card is one big tap target that just opens the artist. Every method feeds the same single ranking.',
       'Tap Rank to enter swipe-compare: pick the better of two artists repeatedly to build an order. Undo reverses your last choice.',
       'Tap any card to open the full artist detail — photos, tags, status, studio, notes and conventions they are attending.',
       'In the artist detail, Similar ink shows the three closest artists by how their work actually looks. Tap Build style index once — a small vision model downloads and all matching then runs on your device; your images never leave the browser.',

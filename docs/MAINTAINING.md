@@ -19,12 +19,17 @@ Screenshots are captured against the dev server with Playwright at a phone viewp
 not `fullPage` — the fixed bottom nav floats to the middle on full-page captures.
 
 A phone *viewport* is not a phone: a resized desktop context still reports
-`hover: hover`, so the nine `can-hover:opacity-0` controls (Wall/Style Wall captions,
-Brief's remove-photo ×, the artist-card handles) photograph as **hidden**, while a real
+`hover: hover`, so the seven `can-hover:opacity-0` controls (Wall/Style Wall captions,
+Brief's remove-photo ×, the filmstrip rank nudges) photograph as **hidden**, while a real
 iPhone shows them. To capture what a phone actually renders, use a mobile browser
 context — `browser.newContext({ viewport: { width: 430, height: 920 }, isMobile: true,
-hasTouch: true })` — which reports `hover: none`. The current image set predates that
-distinction and was shot with the plain viewport.
+hasTouch: true })` — which reports `hover: none`. Most of the image set predates that
+distinction and was shot with the plain viewport; the two Grid shots were re-captured
+with a mobile context for #70.
+
+The grid card's own handle and **+** are no longer in that group: since #70 they appear
+only with **⇅ Reorder** on, so a default Grid shot has bare cards either way. Shoot Grid
+with Reorder **off** — that is the view people arrive in.
 
 1. Start a dev server pinned to the offline backend so seeded data can't sync to a
    real account: `VITE_BACKEND=local npm run dev -- --port 5174` (then capture against

@@ -21,8 +21,16 @@ on the right.
 ![Filmstrip view](../public/guide/gallery-filmstrip.png)
 
 ### ⊞ Grid
-A visual grid with your top three featured large. **Drag a card** to reorder — its new
-position becomes its rank.
+A visual grid with your top three featured large. Tapping anywhere on a card opens that
+artist — the whole tile is the target, with nothing else competing for it.
+
+To reorder or add photos, turn on **⇅ Reorder** (next to the view toggle). Each card
+grows a drag handle in its top corner and a **+** for adding photos; **drag a card** to
+reorder and its new position becomes its rank. Turn Reorder off to go back to browsing.
+Switching to another view turns it off for you.
+
+> **Keyboard:** with Reorder on, Tab to a card's handle, press **Space** to pick it up,
+> move it with the **arrow keys**, then **Space** to drop it (or **Esc** to cancel).
 
 ![Grid view](../public/guide/gallery-grid.png)
 
@@ -78,7 +86,7 @@ in. Close it (or press **Esc**) to return to the Wall.
 
 The Classic gallery keeps its own ranking tools for when you're already there organising:
 
-1. **Drag** in Grid view.
+1. **Drag** in Grid view, with **⇅ Reorder** turned on.
 2. **Nudge** the rank number up/down in Filmstrip view.
 3. **Swipe-compare** — tap **Rank** (top-right of the Artists page) to judge artists one at
    a time as **Pass / Maybe / Top**. Made a mistake? **Undo** reverses your last decision.
