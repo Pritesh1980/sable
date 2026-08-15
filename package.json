@@ -38,7 +38,7 @@
     "fake-indexeddb": "^6.2.5",
     "globals": "^17.8.0",
     "jsdom": "^29.1.1",
-    "mermaid": "11.16.0",
+    "mermaid": "11.16.1",
     "playwright": "^1.62.1",
     "postcss": "^8.5.25",
     "tailwindcss": "^4.3.3",
