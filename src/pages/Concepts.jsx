@@ -328,17 +328,17 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
         <nav className="flex items-center gap-6 flex-1">
           <button
             onClick={() => navigate('/')}
-            className="font-v2-ui text-sm tracking-wide uppercase pb-1 border-b-2 border-transparent text-v2-muted hover:text-v2-cream"
+            className="font-v2-ui text-sm tracking-wide uppercase min-h-11 flex items-center border-b-2 border-transparent text-v2-muted hover:text-v2-cream"
           >
             Artists
           </button>
-          <button className="font-v2-ui text-sm tracking-wide uppercase pb-1 border-b-2 border-v2-accent text-v2-cream">
+          <button className="font-v2-ui text-sm tracking-wide uppercase min-h-11 flex items-center border-b-2 border-v2-accent text-v2-cream">
             Concepts
           </button>
         </nav>
         <button
           onClick={() => setComposerOpen(true)}
-          className="font-v2-ui text-sm text-v2-ink bg-v2-cream rounded-xs px-4 py-1.5 font-semibold hover:brightness-95 transition-[filter]"
+          className="font-v2-ui text-sm text-v2-ink bg-v2-cream rounded-xs px-4 min-h-11 font-semibold hover:brightness-95 transition-[filter]"
         >
           + New concept
         </button>
@@ -351,7 +351,7 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
           </p>
           <button
             onClick={() => setComposerOpen(true)}
-            className="font-v2-ui text-sm text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-xs px-5 py-2 transition-colors"
+            className="font-v2-ui text-sm text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-xs px-5 min-h-11 transition-colors"
           >
             + New concept
           </button>

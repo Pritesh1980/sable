@@ -51,6 +51,9 @@ function MoreMenu({ onClose }) {
   )
 }
 
+// The visible circle. The button around it is the tap target, and is bigger.
+const CHIP = 'w-8 h-8 flex items-center justify-center rounded-full bg-ink-card border border-ink-border'
+
 export default function Nav() {
   const { theme, toggle, fontSize, toggleFont } = useTheme()
   const auth = useAuth()
@@ -93,29 +96,40 @@ export default function Nav() {
           </button>
 
           {/* Accessibility + theme controls — chrome lives in chrome, so these
-              can never float over page content (they used to be fixed top-right). */}
-          <div className="flex items-center gap-1.5 pl-3 pr-2 border-l border-ink-border">
+              can never float over page content (they used to be fixed top-right).
+              Each button is a 44pt target (#76) wrapping the 32px chip it used to
+              be, so the circles look unchanged. */}
+          <div className="flex items-center pl-1 pr-1 border-l border-ink-border">
             <button
               onClick={toggleFont}
               title={fontSize === 'large' ? 'Reduce font size' : 'Increase font size'}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-ink-card border border-ink-border text-cream-muted hover:text-cream transition-colors duration-200 font-mono text-xs font-bold leading-none"
+              aria-label={fontSize === 'large' ? 'Reduce font size' : 'Increase font size'}
+              className="w-11 h-11 flex items-center justify-center group"
             >
-              {fontSize === 'large' ? 'A−' : 'A+'}
+              <span className={`${CHIP} text-cream-muted group-hover:text-cream transition-colors duration-200 font-mono text-xs font-bold leading-none`}>
+                {fontSize === 'large' ? 'A−' : 'A+'}
+              </span>
             </button>
             <button
               onClick={toggle}
               title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-ink-card border border-ink-border text-cream-muted hover:text-cream transition-colors duration-200 text-sm"
+              aria-label={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
+              className="w-11 h-11 flex items-center justify-center group"
             >
-              {theme === 'dark' ? '◑' : '◐'}
+              <span className={`${CHIP} text-cream-muted group-hover:text-cream transition-colors duration-200 text-sm`}>
+                {theme === 'dark' ? '◑' : '◐'}
+              </span>
             </button>
             {auth?.user && (
               <button
                 onClick={() => auth.signOut()}
                 title={`Sign out (${auth.user.email})`}
-                className="w-8 h-8 flex items-center justify-center rounded-full bg-ink-card border border-ink-border text-cream-muted hover:text-accent transition-colors duration-200 text-sm"
+                aria-label={`Sign out (${auth.user.email})`}
+                className="w-11 h-11 flex items-center justify-center group"
               >
-                ⏻
+                <span className={`${CHIP} text-cream-muted group-hover:text-accent transition-colors duration-200 text-sm`}>
+                  ⏻
+                </span>
               </button>
             )}
           </div>

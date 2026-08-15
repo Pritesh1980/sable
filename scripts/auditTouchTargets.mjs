@@ -26,6 +26,38 @@ const ROUTES = ['/', '/gallery', '/brief', '/conventions', '/studios', '/concept
 // reasoning as the screenshot recipe.
 const CONTEXT = { viewport: { width: 430, height: 920 }, isMobile: true, hasTouch: true }
 
+// Occlusion needs each control scrolled into the middle of the screen first:
+// the fixed bottom nav covers whatever happens to be under it, which is every
+// control on every page at some scroll position, and reporting that would bury
+// the real finding — a control enlarged until it covers its neighbour.
+const findOccludedInPage = () => {
+  const SELECTOR = 'button, a[href], [role="button"], input:not([type="hidden"]), select, textarea, summary'
+  const covered = []
+  const els = [...document.querySelectorAll(SELECTOR)]
+  for (let index = 0; index < els.length; index++) {
+    const el = els[index]
+    el.scrollIntoView({ block: 'center', inline: 'center' })
+    const r = el.getBoundingClientRect()
+    if (r.width <= 0 || r.height <= 0) continue
+    const cx = r.left + r.width / 2
+    const cy = r.top + r.height / 2
+    if (cx < 0 || cx > innerWidth || cy < 0 || cy > innerHeight) continue
+    // Still clipped by a rail or drawer it could not be scrolled inside.
+    let clipped = false
+    for (let a = el.parentElement; a && !clipped; a = a.parentElement) {
+      const st = getComputedStyle(a)
+      if (!/(auto|scroll|hidden)/.test(st.overflowX + st.overflowY)) continue
+      const ar = a.getBoundingClientRect()
+      if (cx < ar.left || cx > ar.right || cy < ar.top || cy > ar.bottom) clipped = true
+    }
+    if (clipped) continue
+    const hit = document.elementFromPoint(cx, cy)
+    if (!hit || el.contains(hit) || hit.contains(el)) continue
+    covered.push(index)
+  }
+  return covered
+}
+
 const measureInPage = () => {
   const SELECTOR = 'button, a[href], [role="button"], input:not([type="hidden"]), select, textarea, summary'
   return [...document.querySelectorAll(SELECTOR)].map((el) => {
@@ -48,6 +80,10 @@ const measureInPage = () => {
       // Text around the control, so a <p> used as a wrapper for one call to
       // action is not mistaken for prose.
       proseAround: paragraph ? Math.max(0, (paragraph.textContent || '').trim().length - own.length) : 0,
+      // Does a tap at the centre actually reach this control? Enlarging targets
+      // is what makes them cover each other, and size alone cannot see it.
+      // Filled in by the occlusion pass below, which has to scroll.
+      occluded: false,
     }
   })
 }
@@ -87,12 +123,15 @@ for (const route of ROUTES) {
   await page.waitForSelector('nav a, [role="navigation"] a', { timeout: 10000 }).catch(() => {})
   const found = await page.evaluate(measureInPage)
   if (found.length === 0) console.error(`  ! ${route} rendered no controls — check it loaded`)
-  all.push(...found.map((el) => ({ ...el, route })))
+  // Positional identity: both passes walk the same selector in document order,
+  // so index is the only thing that distinguishes six identical rank buttons.
+  const covered = new Set(await page.evaluate(findOccludedInPage))
+  all.push(...found.map((el, i) => ({ ...el, route, occluded: covered.has(i) })))
 }
 
 await browser.close()
 
-const { checked, offenders, uniqueOffenders, byRoute } = summarise(all, MIN_TARGET_PX)
+const { checked, offenders, uniqueOffenders, occluded, byRoute } = summarise(all, MIN_TARGET_PX)
 
 console.log(`\nTouch-target audit — minimum ${MIN_TARGET_PX}x${MIN_TARGET_PX}, ${CONTEXT.viewport.width}x${CONTEXT.viewport.height} mobile context`)
 console.log(`checked ${checked} controls across ${ROUTES.length} routes`)
@@ -103,6 +142,12 @@ for (const [route, count] of Object.entries(byRoute).sort((a, b) => b[1] - a[1])
 // The distinct list is the worklist; the raw count mostly measures how many
 // routes the shared shell appears on.
 console.log('')
+if (occluded.length > 0) {
+  console.log(`\ncovered by something else — a tap at the centre misses (${occluded.length}):`)
+  for (const el of occluded) console.log('  ' + formatOffender(el))
+  console.log('')
+}
+
 for (const el of uniqueOffenders) {
   const repeats = el.sightings > 1 ? `  x${el.sightings}` : ''
   const shared = el.routes.length > 1 ? ` across ${el.routes.length} routes` : ''

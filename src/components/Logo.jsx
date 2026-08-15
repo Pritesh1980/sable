@@ -35,7 +35,7 @@ export default function Logo({ size = 28, className = '' }) {
   return (
     <Link
       to="/"
-      className={`inline-flex items-center gap-2 rounded-xs text-cream focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-ink-black ${className}`}
+      className={`inline-flex items-center gap-2 min-h-11 rounded-xs text-cream focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-ink-black ${className}`}
     >
       <LogoMark size={size} />
       <Wordmark />

@@ -24,12 +24,12 @@ import DemoIntro from '../components/DemoIntro'
 // add-artist and drawer affordances are emitted as callbacks for a later task.
 function Bar({ activeView, onSwitchView, onAddArtist, onOpenDrawer }) {
   return (
-    <header className="sticky top-0 z-10 flex items-center gap-8 px-8 py-3.5 bg-v2-ink/[.88] backdrop-blur-md border-b border-v2-hairline">
+    <header className="sticky top-0 z-10 flex items-center gap-3 sm:gap-8 px-3 sm:px-8 py-3.5 bg-v2-ink/[.88] backdrop-blur-md border-b border-v2-hairline">
       <div className="font-v2-display text-[1.35rem] tracking-[0.28em] uppercase text-v2-cream">
         Sable<span className="text-v2-accent">.</span>
       </div>
 
-      <nav className="flex items-center gap-6 flex-1">
+      <nav className="flex items-center gap-4 sm:gap-6 flex-1 min-w-0">
         {[
           { id: 'artists', label: 'Artists' },
           { id: 'concepts', label: 'Concepts' },
@@ -37,7 +37,7 @@ function Bar({ activeView, onSwitchView, onAddArtist, onOpenDrawer }) {
           <button
             key={id}
             onClick={() => onSwitchView(id)}
-            className={`font-v2-ui text-sm tracking-wide uppercase pb-1 border-b-2 transition-colors ${
+            className={`font-v2-ui text-sm tracking-wide uppercase min-h-11 flex items-center border-b-2 transition-colors ${
               activeView === id
                 ? 'text-v2-cream border-v2-accent'
                 : 'text-v2-muted border-transparent hover:text-v2-cream'
@@ -50,7 +50,7 @@ function Bar({ activeView, onSwitchView, onAddArtist, onOpenDrawer }) {
 
       <button
         onClick={onAddArtist}
-        className="font-v2-ui text-sm text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-xs px-4 py-1.5 transition-colors"
+        className="font-v2-ui text-sm text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-xs px-3 sm:px-4 min-h-11 shrink-0 whitespace-nowrap transition-colors"
       >
         + Add artist
       </button>
@@ -58,7 +58,8 @@ function Bar({ activeView, onSwitchView, onAddArtist, onOpenDrawer }) {
       <button
         onClick={onOpenDrawer}
         title="Everything else — ideas, ranking, conventions, studios, settings"
-        className="font-v2-ui text-lg text-v2-muted hover:text-v2-cream px-1"
+        aria-label="Everything else — ideas, ranking, conventions, studios, settings"
+        className="font-v2-ui text-lg text-v2-muted hover:text-v2-cream w-11 h-11 flex items-center justify-center shrink-0"
       >
         ⋯
       </button>

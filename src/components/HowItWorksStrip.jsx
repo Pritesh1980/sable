@@ -27,7 +27,7 @@ export default function HowItWorksStrip() {
         onClick={dismiss}
         aria-label="Dismiss guide"
         title="Dismiss"
-        className="absolute top-2.5 right-3 text-cream-muted/60 hover:text-cream text-xs"
+        className="absolute top-0 right-0 w-11 h-11 flex items-center justify-center text-cream-muted/60 hover:text-cream text-xs"
       >
         ✕
       </button>

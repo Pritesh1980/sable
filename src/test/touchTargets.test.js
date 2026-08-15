@@ -20,6 +20,7 @@ const el = (over = {}) => ({
   pointerEvents: 'auto',
   disabled: false,
   proseAround: 0,
+  occluded: false,
   ...over,
 })
 
@@ -89,6 +90,31 @@ describe('isInlineTextLink', () => {
 
   it('never excuses a button', () => {
     expect(isInlineTextLink(el({ tag: 'BUTTON', proseAround: 200 }))).toBe(false)
+  })
+})
+
+// Growing a target is exactly the activity that creates occlusion — a control
+// enlarged with a negative margin covers its neighbour and starts stealing taps.
+// Size alone cannot see that: the thief measures 44x44 and passes (#76).
+describe('occlusion', () => {
+  it('reports a control whose centre lands on something else', () => {
+    const out = summarise([el({ label: 'Instagram link', occluded: true, width: 99, height: 44 })])
+    expect(out.occluded.map((o) => o.label)).toEqual(['Instagram link'])
+  })
+
+  it('keeps it out of the undersized list — it is a different defect', () => {
+    const out = summarise([el({ occluded: true, width: 99, height: 44 })])
+    expect(out.offenders).toHaveLength(0)
+  })
+
+  it('reports a control that is both too small and covered, in both lists', () => {
+    const out = summarise([el({ occluded: true, width: 20, height: 20 })])
+    expect(out.occluded).toHaveLength(1)
+    expect(out.offenders).toHaveLength(1)
+  })
+
+  it('says nothing when every control receives its own taps', () => {
+    expect(summarise([el(), el({ route: '/brief' })]).occluded).toEqual([])
   })
 })
 

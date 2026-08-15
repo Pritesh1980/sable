@@ -98,6 +98,21 @@ you are changing control sizes, the browser is the only thing that can tell you 
 truth — as with the `can-hover` media wrapper, which also survives only in a real
 mobile context.
 
+### It also checks nothing is covered
+
+Growing targets is what makes them overlap, so the audit hit-tests each control's
+centre after scrolling it into view, and reports anything a tap would miss. Scrolling
+first matters: the fixed bottom nav covers whatever is under it at some scroll
+position, and reporting that would bury the real finding.
+
+**Its blind spot, and the guard for it:** the pass only looks at controls, so it cannot
+see a control covering *non-interactive* content. That is exactly how #76's worst
+regression appeared — the filmstrip's Instagram link was grown to 44pt with `-my-3`
+and covered the artist's name, so tapping the name opened Instagram. The victim was an
+`<h3>`, invisible to the audit. What is visible is the technique, so
+`a11yAffordances.spec.js` fails any 44pt growth class combined with a negative margin.
+**Grow the layout, never pull the target over its neighbour.**
+
 ## Cross-check before committing
 
 Every referenced image should exist, and every image should be referenced:

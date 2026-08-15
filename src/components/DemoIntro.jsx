@@ -29,7 +29,7 @@ export default function DemoIntro() {
           onClick={dismiss}
           aria-label="Dismiss introduction"
           title="Dismiss"
-          className="absolute top-3 right-4 text-v2-muted hover:text-v2-cream text-sm leading-none p-1 transition-colors"
+          className="absolute top-1 right-1 w-11 h-11 flex items-center justify-center text-v2-muted hover:text-v2-cream text-sm leading-none transition-colors"
         >
           ✕
         </button>

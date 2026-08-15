@@ -59,7 +59,7 @@ function AttendeesEditor({ artists, attendingIds, onToggle }) {
         {artists.length > 0 && (
           <button
             onClick={() => setExpanded((v) => !v)}
-            className="text-[0.625rem] font-mono text-accent tracking-widest uppercase hover:text-accent-hover transition-colors"
+            className="min-w-11 min-h-11 px-3 flex items-center justify-center shrink-0 text-[0.625rem] font-mono text-accent tracking-widest uppercase hover:text-accent-hover transition-colors"
           >
             {expanded ? 'Done' : 'Edit'}
           </button>
@@ -122,7 +122,7 @@ function HeroCard({ convention, artists, attendingIds, onToggle }) {
         href={convention.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-block text-xs font-mono text-accent tracking-widest uppercase mt-4 hover:underline"
+        className="inline-flex items-center min-h-11 text-xs font-mono text-accent tracking-widest uppercase mt-1 hover:underline"
       >
         More info →
       </a>
@@ -162,7 +162,7 @@ function ConventionCard({ convention, artists, attendingIds, onToggle }) {
         href={convention.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-block text-[0.6875rem] font-mono text-cream-muted/70 tracking-widest uppercase mt-4 hover:text-accent transition-colors"
+        className="inline-flex items-center min-h-11 text-[0.6875rem] font-mono text-cream-muted/70 tracking-widest uppercase mt-1 hover:text-accent transition-colors"
       >
         More info →
       </a>

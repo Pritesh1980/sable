@@ -82,7 +82,7 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onSetStatus, isFirst, 
           <button
             onClick={startEdit}
             title="Click to set rank"
-            className="text-xs font-mono text-cream-muted/50 hover:text-cream hover:bg-ink-card/60 w-7 h-6 rounded-xs transition-colors flex items-center justify-center"
+            className="text-xs font-mono text-cream-muted/50 hover:text-cream hover:bg-ink-card/60 w-11 h-11 rounded-xs transition-colors flex items-center justify-center"
           >
             {artist.rank}
           </button>
@@ -109,7 +109,7 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onSetStatus, isFirst, 
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="font-mono text-[0.6875rem] text-cream-muted/60 hover:text-accent transition-colors mb-1.5"
+          className="font-mono text-[0.6875rem] text-cream-muted/60 hover:text-accent transition-colors mb-1.5 w-fit"
         >
           @{artist.handle}
         </a>
@@ -121,7 +121,7 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onSetStatus, isFirst, 
         <div className="relative" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={() => setStatusOpen((v) => !v)}
-            className={`text-[0.625rem] font-mono tracking-widest uppercase transition-opacity hover:opacity-70 ${currentStatus.tone}`}
+            className={`min-h-11 flex items-center text-[0.625rem] font-mono tracking-widest uppercase transition-opacity hover:opacity-70 ${currentStatus.tone}`}
           >
             {currentStatus.label}
           </button>

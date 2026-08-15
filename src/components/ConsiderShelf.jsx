@@ -38,7 +38,7 @@ export default function ConsiderShelf({
         <button
           onClick={toggle}
           aria-expanded={!collapsed}
-          className="flex-1 min-w-0 flex items-baseline gap-3 text-left group/toggle"
+          className="flex-1 min-w-0 min-h-11 flex items-center gap-3 text-left group/toggle"
         >
           <h2 className="font-v2-display text-v2-cream text-sm uppercase tracking-[0.28em]">Consider</h2>
           <span className="font-v2-ui text-v2-muted text-xs truncate">

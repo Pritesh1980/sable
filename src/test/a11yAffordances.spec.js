@@ -151,6 +151,46 @@ describe('touch affordances (#49)', () => {
     expect(offenders).toEqual([])
   })
 
+  // #76. Growing a target with a negative margin makes it cover whatever sits
+  // next to it: the filmstrip's Instagram link was enlarged to 44pt with -my-3
+  // and swallowed taps meant for the artist's name, so tapping the name opened
+  // Instagram. The browser audit cannot see that — its victim was an <h3>, not a
+  // control — but the technique that causes it is visible right here.
+  it('never grows a touch target with a negative margin', () => {
+    // Growth: w-/h-/min-w-/min-h-/size- at 11+ (44px), plus arbitrary values in
+    // px or rem. `w-13` and `size-11` were holes in the first cut (codex).
+    const GROWTH = /(?:^|[\s'"`])(?:min-)?(?:[wh]|size)-(?:(\d+)|\[(\d+(?:\.\d+)?)(px|rem)\])(?![\w-])/g
+    // Any negative margin, including a responsive variant like sm:-mt-2, but
+    // not a no-op like -mt-0.
+    const PULL = /(?:^|[\s'"`])(?:[a-z-]+:)?-m[xytblrse]?-(?!0(?![\w.]))/
+
+    const grows = (text) => {
+      let m
+      GROWTH.lastIndex = 0
+      while ((m = GROWTH.exec(text)) !== null) {
+        if (m[1] !== undefined && Number(m[1]) >= 11) return true
+        if (m[2] !== undefined) {
+          const px = m[3] === 'rem' ? Number(m[2]) * 16 : Number(m[2])
+          if (px >= 44) return true
+        }
+      }
+      return false
+    }
+
+    const offenders = []
+    for (const { rel, src } of uiFiles()) {
+      for (const expr of classNameExpressions(src)) {
+        // Only controls: a spacer or image sized 44px with a negative margin is
+        // ordinary layout, not a target that can steal a tap.
+        if (!isInteractive(expr)) continue
+        if (!grows(expr.text) || !PULL.test(expr.text)) continue
+        offenders.push(`${rel}:${expr.line} — 44pt target pulled by a negative margin; grow the layout instead`)
+      }
+    }
+
+    expect(offenders).toEqual([])
+  })
+
   it('defines the can-hover variant and no longer overrides hover globally', () => {
     // Comments stripped: index.css explains why the old shim was removed, and
     // naming it in prose must not read as redeclaring it.

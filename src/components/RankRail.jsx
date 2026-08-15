@@ -31,6 +31,12 @@ export default function RankRail({ artists = [], setArtists = () => {}, onOpenBo
               <ArtistImage src={a.images?.[0]} label={label(a)} className="w-full h-full object-cover" monogramClassName="text-[0.625rem]" />
             </span>
             <span className="font-v2-ui text-xs text-v2-cream max-w-[6.5rem] truncate">{label(a)}</span>
+            {/* Deliberately still under 44pt — see #76. Two stacked 44x44
+                targets need 88px of row height in a sticky rail; side by side
+                they pushed the Top 5 down to one visible tile; and 44x22 each
+                just splits one 44pt band between two inverse actions, so a
+                small error demotes instead of promoting. It needs a different
+                control, not a bigger one. */}
             <span className="flex flex-col">
               <button
                 aria-label={`Move ${label(a)} up`}
@@ -53,7 +59,7 @@ export default function RankRail({ artists = [], setArtists = () => {}, onOpenBo
 
       <button
         onClick={onOpenBoard}
-        className="shrink-0 font-v2-ui text-xs text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-xs px-3 py-1.5 transition-colors"
+        className="shrink-0 font-v2-ui text-xs text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-xs px-3 min-h-11 transition-colors"
       >
         Rank ⤢
       </button>

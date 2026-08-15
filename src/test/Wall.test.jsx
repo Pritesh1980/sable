@@ -92,7 +92,9 @@ describe('Wall page', () => {
 
     expect(screen.getByText('Sable')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: /⋯/ }))
+    // Named for what it does, not for its glyph (#76) — it used to announce as
+    // "⋯ button", which is what this query was matching.
+    fireEvent.click(screen.getByRole('button', { name: /everything else/i }))
     expect(onOpenDrawer).toHaveBeenCalledTimes(1)
 
     fireEvent.click(screen.getByRole('button', { name: /concepts/i }))

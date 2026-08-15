@@ -24,7 +24,7 @@ export default function Settings({ artists, setArtists, ideas, setIdeas, boards,
             <p className="text-cream text-sm font-mono">{auth.user.email}</p>
             <button
               onClick={() => auth.signOut()}
-              className="px-4 py-2 border border-ink-border hover:border-cream-muted/50 text-cream-muted hover:text-accent text-sm font-body rounded-xs transition-colors"
+              className="px-4 min-h-11 border border-ink-border hover:border-cream-muted/50 text-cream-muted hover:text-accent text-sm font-body rounded-xs transition-colors"
             >
               Sign out
             </button>

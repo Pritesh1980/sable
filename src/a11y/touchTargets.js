@@ -42,6 +42,13 @@ export function isUndersized(el, min = MIN_TARGET_PX) {
   return el.width < min || el.height < min
 }
 
+// A tap at the control's centre lands on something else — it is covered, or it
+// covers a neighbour. Enlarging targets is what creates this, so an audit that
+// only measures size will pass the very regression it invited.
+export function isOccluded(el) {
+  return el.occluded === true
+}
+
 export function shortfall(el, min = MIN_TARGET_PX) {
   return {
     width: Math.max(0, min - el.width),
@@ -83,7 +90,9 @@ export function summarise(measurements, min = MIN_TARGET_PX) {
   }
   const uniqueOffenders = [...seen.values()]
 
-  return { checked: hittable.length, offenders, uniqueOffenders, byRoute }
+  const occluded = hittable.filter(isOccluded)
+
+  return { checked: hittable.length, offenders, uniqueOffenders, occluded, byRoute }
 }
 
 export function formatOffender(el) {

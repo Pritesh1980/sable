@@ -516,7 +516,7 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
         {tab === 'ideas' && (
           <button
             onClick={() => setModal(BLANK_IDEA)}
-            className="w-10 h-10 rounded-full border border-ink-border text-cream-muted hover:text-cream hover:border-cream-muted/50 transition-colors flex items-center justify-center text-xl"
+            className="w-11 h-11 rounded-full border border-ink-border text-cream-muted hover:text-cream hover:border-cream-muted/50 transition-colors flex items-center justify-center text-xl"
             title="New idea"
           >
             +
@@ -533,7 +533,7 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
           <button
             key={value}
             onClick={() => setTab(value)}
-            className={`px-4 py-2 text-xs font-mono tracking-widest uppercase transition-colors ${
+            className={`px-4 min-h-11 text-xs font-mono tracking-widest uppercase transition-colors ${
               tab === value
                 ? 'bg-ink-muted text-cream shadow-[inset_0_-1.5px_0_theme(colors.accent.DEFAULT)]'
                 : 'text-cream-muted hover:text-cream/70'
@@ -559,7 +559,7 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
         <div className="flex gap-2 mb-6">
           <button
             onClick={() => setStatusFilter(null)}
-            className={`px-3 py-1.5 rounded-xs text-xs font-mono border transition-colors ${
+            className={`px-3 min-h-11 rounded-xs text-xs font-mono border transition-colors ${
               !statusFilter ? 'border-cream-muted/50 text-cream' : 'border-ink-border text-cream-muted hover:border-cream-muted/30'
             }`}
           >
@@ -569,7 +569,7 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
             <button
               key={s.value}
               onClick={() => setStatusFilter(statusFilter === s.value ? null : s.value)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xs text-xs font-mono border transition-colors ${
+              className={`flex items-center gap-1.5 px-3 min-h-11 rounded-xs text-xs font-mono border transition-colors ${
                 statusFilter === s.value ? 'border-cream-muted/50 text-cream' : 'border-ink-border text-cream-muted hover:border-cream-muted/30'
               }`}
             >
