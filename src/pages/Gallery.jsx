@@ -146,7 +146,15 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
 
   function saveArtist(updated) {
     setArtists((prev) => prev.map((a) => (a.id === updated.id ? updated : a)))
-    setSelected(updated)
+    // The write itself is always correct — it targets updated.id regardless of
+    // who is on screen. But the sheet's identity can move on between when a
+    // save was fired and when it lands: an upload for artist A can resolve
+    // after switching to B (#78's key remounts the component, but its async
+    // closure over the old artist still runs to completion and calls this).
+    // Reopening A on top of an in-progress B session would be worse than the
+    // bug the key fixed. The functional form reads the current value at
+    // commit time, not the one captured when saveArtist was called.
+    setSelected((current) => (current?.id === updated.id ? updated : current))
   }
 
   // Delegates so both entry points resolve an updater against the newest list;
@@ -380,6 +388,12 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
 
       {selected && (
         <ArtistDetail
+          // Remounts on switch (#78): ArtistDetail's local images/draft
+          // initialise once from props and never re-sync, and the sheet can
+          // change `selected` from inside itself via Similar ink. Without a
+          // key, a save made just after switching wrote onto the artist that
+          // was open first — draft still named it, spread last in the write.
+          key={selected.id}
           artist={selected}
           onClose={() => setSelected(null)}
           onSave={saveArtist}
