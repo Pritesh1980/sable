@@ -25,7 +25,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
     setUploading(true)
     try {
       const uploaded = await uploadImages(files, { userId: user?.id, scope: 'artists', id: artist.id })
-      onSaveImages(artist.id, [...(artist.images || []), ...uploaded])
+      onSaveImages(artist.id, (current) => [...(current || []), ...uploaded])
     } finally {
       setUploading(false)
       e.target.value = ''

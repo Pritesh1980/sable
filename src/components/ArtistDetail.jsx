@@ -16,6 +16,12 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
   const [lightbox, setLightbox] = useState(null)
   const [currentIdx, setCurrentIdx] = useState(0)
   const fileRef = useRef()
+  // The list as it stands right now, not as it was when a render began. An
+  // upload that resolves while another is in flight has to append to this, or
+  // the later save overwrites the earlier batch (#75). It is a ref rather than
+  // a setImages updater because calling onSave inside an updater would fire the
+  // save twice under StrictMode.
+  const imagesRef = useRef(artist.images || [])
   const carouselRef = useRef(null)
   const { user } = useAuth() || {}
 
@@ -35,6 +41,7 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
 
   // Images auto-save immediately — no need to be in edit mode
   function saveImages(newImages) {
+    imagesRef.current = newImages
     setImages(newImages)
     onSave({ ...artist, ...draft, images: newImages })
   }
@@ -45,7 +52,7 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
     setUploading(true)
     try {
       const uploaded = await uploadImages(files, { userId: user?.id, scope: 'artists', id: artist.id })
-      saveImages([...images, ...uploaded])
+      saveImages([...imagesRef.current, ...uploaded])
     } finally {
       setUploading(false)
       e.target.value = ''

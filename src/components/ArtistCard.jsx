@@ -23,7 +23,10 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
     setUploading(true)
     try {
       const uploaded = await uploadImages(files, { userId: user?.id, scope: 'artists', id: artist.id })
-      onSaveImages(artist, [...(artist.images || []), ...uploaded])
+      // An updater, not an array: a second batch started before this one
+      // resolved would otherwise overwrite it with a list computed before it
+      // existed, losing those photos silently (#75).
+      onSaveImages(artist, (current) => [...(current || []), ...uploaded])
     } finally {
       setUploading(false)
       e.target.value = ''

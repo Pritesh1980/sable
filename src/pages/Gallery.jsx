@@ -149,8 +149,10 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
     setSelected(updated)
   }
 
-  function saveImages(artist, images) {
-    setArtists((prev) => prev.map((a) => (a.id === artist.id ? { ...a, images } : a)))
+  // Delegates so both entry points resolve an updater against the newest list;
+  // an array is still accepted for callers that genuinely have the whole set.
+  function saveImages(artist, imagesOrUpdater) {
+    saveImagesById(artist.id, imagesOrUpdater)
   }
 
   function setRank(artistId, newRank) {
