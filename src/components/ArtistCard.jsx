@@ -33,14 +33,35 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
     }
   }
 
+  // Not a real <button>: editing mode nests genuinely interactive controls
+  // (drag handle, quick-upload buttons, a file input), and a <button>
+  // containing other interactive controls is invalid, broken semantics.
+  // role="button" + tabIndex + a real keydown handler is the WAI-ARIA
+  // authoring practice for that shape (#30). Guarded by e.target ===
+  // e.currentTarget so Enter/Space activating a nested control (which
+  // already stops propagation on click, but keydown still bubbles natively)
+  // doesn't also open the artist.
+  function handleKeyDown(e) {
+    if (e.target !== e.currentTarget) return
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      onOpen(artist)
+    }
+  }
+
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-label={displayName}
       style={{ animationDelay: `${index * 0.04}s` }}
       className={`animate-slide-up opacity-0 [animation-fill-mode:forwards] bg-ink-card border border-ink-border rounded-xs overflow-hidden cursor-pointer
         transition-all duration-300
         hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-black/70 hover:border-cream-muted/30
+        focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent
         group ${isDragging ? 'opacity-40 scale-95 shadow-2xl' : ''}`}
       onClick={() => onOpen(artist)}
+      onKeyDown={handleKeyDown}
     >
       <div className={`${featured ? 'aspect-[3/4]' : 'aspect-[4/5]'} bg-ink-muted relative overflow-hidden`}>
         {hasImages && !imgError ? (
