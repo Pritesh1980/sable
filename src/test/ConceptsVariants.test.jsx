@@ -79,6 +79,12 @@ function DuplicateVariantHarness() {
 }
 
 describe('Concepts variant integration', () => {
+  // #23: purely synchronous work (one render plus a long chain of fireEvent
+  // calls, each triggering a re-render) — no async gap, no race. Under real
+  // CPU contention from concurrent test workers this legitimately exceeds
+  // vitest's default 5000ms budget (measured ~9s here); it never hangs. A
+  // longer budget for this one slow-but-correct test is the fix, not a retry
+  // or a timing workaround.
   it('keeps repeated concept actions distinguishable while adding and editing one concept result', () => {
     render(<ConceptsHarness />)
 
@@ -138,7 +144,7 @@ describe('Concepts variant integration', () => {
 
     expect(screen.queryByText('Moth silhouette pass')).not.toBeInTheDocument()
     expect(screen.getAllByText('0 results')).toHaveLength(2)
-  })
+  }, 15000)
 
   it('scopes duplicate saved result action names by concept', () => {
     render(<DuplicateVariantHarness />)
