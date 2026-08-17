@@ -5,19 +5,20 @@ import { useEffect, useRef, useState } from 'react'
 // If the user prefers reduced motion, idle never becomes true — the HUD just
 // stays put rather than animating.
 export default function useIdleFade(timeoutMs = 2000) {
-  // Read once at mount (#32) rather than inside the effect below: `idle`
-  // already starts false, so re-asserting it there on every effect run was a
-  // no-op setState the moment the effect fires — the actual behaviour this
-  // gates is simply "run the activity-timer logic at all".
-  const [reducedMotion] = useState(() => (
-    typeof window !== 'undefined'
-      && typeof window.matchMedia === 'function'
-      && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  ))
   const [idle, setIdle] = useState(false)
   const timerRef = useRef(null)
 
   useEffect(() => {
+    const reducedMotion = typeof window !== 'undefined'
+      && typeof window.matchMedia === 'function'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    // No setIdle(false) here (#32) — `idle` already starts false, and this
+    // branch never lets it become true, so re-asserting it on every effect
+    // run was a no-op the lint rule (correctly) doesn't like seeing in an
+    // effect body. `reducedMotion` stays computed inline rather than lifted
+    // to state, so a caller that ever passes a changing `timeoutMs` still
+    // gets it freshly re-evaluated on that re-run, same as before.
     if (reducedMotion) return undefined
 
     function reset() {
@@ -35,7 +36,7 @@ export default function useIdleFade(timeoutMs = 2000) {
       window.removeEventListener('mousemove', reset)
       window.removeEventListener('keydown', reset)
     }
-  }, [timeoutMs, reducedMotion])
+  }, [timeoutMs])
 
   return idle
 }
