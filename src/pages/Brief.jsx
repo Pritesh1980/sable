@@ -95,17 +95,24 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
       if (!result) {
         setAnalyzeNote("Couldn't draft an idea from this image.")
       } else {
-        touch('title')
-        touch('description')
-        touch('tags')
-        touch('placement')
-        setDraft((d) => ({
-          ...d,
-          title: d.title || result.title,
-          description: d.description || result.description,
-          tags: [...new Set([...(d.tags || []), ...result.tags])],
-          placement: d.placement || result.placement,
-        }))
+        // Only if the fill actually changes something (#63 review) — the
+        // conditional fallbacks below mean an already-set field is often a
+        // no-op, and marking it touched anyway would let this composer patch
+        // its own unchanged value back over a concurrent external edit to
+        // that same field.
+        setDraft((d) => {
+          if (!d.title && result.title) touch('title')
+          if (!d.description && result.description) touch('description')
+          if (result.tags?.some((tag) => !d.tags?.includes(tag))) touch('tags')
+          if (!d.placement && result.placement) touch('placement')
+          return {
+            ...d,
+            title: d.title || result.title,
+            description: d.description || result.description,
+            tags: [...new Set([...(d.tags || []), ...result.tags])],
+            placement: d.placement || result.placement,
+          }
+        })
       }
     } catch (e) {
       console.error('[tattoo] idea image intake failed:', e)
@@ -529,7 +536,13 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
     setIdeas((prev) => {
       const exists = prev.some((i) => i.id === id)
       if (!exists) {
-        return [...prev, typeof patchOrUpdater === 'function' ? patchOrUpdater(undefined) : patchOrUpdater]
+        // A patch/updater has nothing to apply to — the idea it targeted is
+        // gone (e.g. deleted by a sync landing while the composer was open).
+        // Resurrecting it from just the touched-field patch would append a
+        // corrupted record missing every field the session never touched,
+        // id included. Only a plain object — a genuinely new idea — inserts.
+        if (typeof patchOrUpdater === 'function') return prev
+        return [...prev, patchOrUpdater]
       }
       return prev.map((i) => (
         i.id === id
