@@ -41,6 +41,15 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
   // e.currentTarget so Enter/Space activating a nested control (which
   // already stops propagation on click, but keydown still bubbles natively)
   // doesn't also open the artist.
+  //
+  // Known trade-off (cross-model review, #83): role="button" technically
+  // shouldn't have focusable descendants, and while editing the drag handle
+  // and upload buttons are exactly that — a conforming AT combination isn't
+  // guaranteed to expose them correctly while the card reads as a button
+  // widget. In the default browsing view (editing off) this doesn't apply at
+  // all: every one of those controls is gated behind `editing`, so there are
+  // no interactive descendants to begin with. A fully correct fix needs an
+  // overlay-button restructure, tracked in #83 rather than done here.
   function handleKeyDown(e) {
     if (e.target !== e.currentTarget) return
     if (e.key === 'Enter' || e.key === ' ') {
