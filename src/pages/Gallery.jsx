@@ -144,17 +144,21 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
     setArtists((prev) => prev.map((a) => reordered.find((r) => r.id === a.id) || a))
   }
 
-  function saveArtist(updated) {
-    setArtists((prev) => prev.map((a) => (a.id === updated.id ? updated : a)))
-    // The write itself is always correct — it targets updated.id regardless of
-    // who is on screen. But the sheet's identity can move on between when a
-    // save was fired and when it lands: an upload for artist A can resolve
-    // after switching to B (#78's key remounts the component, but its async
-    // closure over the old artist still runs to completion and calls this).
-    // Reopening A on top of an in-progress B session would be worse than the
-    // bug the key fixed. The functional form reads the current value at
-    // commit time, not the one captured when saveArtist was called.
-    setSelected((current) => (current?.id === updated.id ? updated : current))
+  // (id, patch | updater) rather than a whole record (#79). Two saves for the
+  // same artist in flight at once used to race on whichever payload a stale
+  // closure was holding — start an upload, toggle a tag before it resolves,
+  // and the upload's own closure still carried the pre-toggle draft, so its
+  // save silently reverted the tag. Resolving the patch here, against
+  // whatever is latest at commit time, means two saves that touch different
+  // fields (images vs tags) can no longer clobber each other regardless of
+  // which one was in flight longer.
+  function saveArtist(id, patchOrUpdater) {
+    const applyPatch = (record) =>
+      typeof patchOrUpdater === 'function' ? patchOrUpdater(record) : { ...record, ...patchOrUpdater }
+    setArtists((prev) => prev.map((a) => (a.id === id ? applyPatch(a) : a)))
+    // Same identity guard as before (#78): a stale save for an artist that is
+    // no longer open must not reopen them on top of whatever is now selected.
+    setSelected((current) => (current?.id === id ? applyPatch(current) : current))
   }
 
   // Delegates so both entry points resolve an updater against the newest list;

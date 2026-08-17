@@ -39,11 +39,15 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
   const instagramUrl = `https://www.instagram.com/${artist.handle}/`
   const currentStatus = ARTIST_STATUSES.find((s) => s.value === normalizeArtistStatus(artist.status))
 
-  // Images auto-save immediately — no need to be in edit mode
+  // Images auto-save immediately — no need to be in edit mode. Patches only
+  // images (#79): sending the whole draft here is what let this closure —
+  // captured whenever the upload/remove/reorder started — silently revert a
+  // tag or status change that had landed in the meantime through a different
+  // auto-save.
   function saveImages(newImages) {
     imagesRef.current = newImages
     setImages(newImages)
-    onSave({ ...artist, ...draft, images: newImages })
+    onSave(artist.id, (current) => ({ ...current, images: newImages }))
   }
 
   async function handleFiles(e) {
@@ -74,15 +78,24 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
     setDraft((d) => {
       const tags = d.tags.includes(tag) ? d.tags.filter((t) => t !== tag) : [...d.tags, tag]
       const next = { ...d, tags }
+      // Patches only tags, for the same reason saveImages patches only
+      // images: this can auto-save while an upload is still in flight, and
+      // must not carry this closure's stale images back over it (#79).
       if (!editing) {
-        onSave({ ...artist, ...next, images })
+        onSave(artist.id, (current) => ({ ...current, tags }))
       }
       return next
     })
   }
 
+  // The explicit multi-field form save. Deliberately excludes images: they
+  // auto-save immediately through their own controls above (#79), so by the
+  // time this fires the store already has the latest ones, and resolving
+  // against `current` rather than a snapshot means this can't win a race
+  // against an image change still in flight either.
   function save() {
-    onSave({ ...draft, images })
+    const { images: _images, ...editedFields } = draft
+    onSave(artist.id, (current) => ({ ...current, ...editedFields }))
     setEditing(false)
   }
 

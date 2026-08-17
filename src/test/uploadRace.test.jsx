@@ -169,7 +169,17 @@ describe('two upload batches in flight, artist detail (#75)', () => {
       <ArtistDetail
         artist={artist}
         onClose={() => {}}
-        onSave={(updated) => store.apply(updated.images)}
+        // onSave is now (id, patchOrUpdater) (#79) rather than a whole record;
+        // resolve it against the latest known record the same way
+        // Gallery.saveArtist does, then keep only what this store tracks.
+        onSave={(id, patchOrUpdater) => {
+          const currentRecord = { ...artist, images: store.get() }
+          const next =
+            typeof patchOrUpdater === 'function'
+              ? patchOrUpdater(currentRecord)
+              : { ...currentRecord, ...patchOrUpdater }
+          store.apply(next.images)
+        }}
       />
     )
 
