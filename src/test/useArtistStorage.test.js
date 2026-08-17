@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { createElement } from 'react'
 import { applyDefaults, mergeStaticImages, stripImages, useArtistStorage } from '../hooks/useArtistStorage'
@@ -205,5 +205,41 @@ describe('useArtistStorage', () => {
     // Static paths from DEFAULT_ARTISTS are merged in after the upload
     const def = DEFAULT_ARTISTS.find((a) => a.id === DEFAULT_ARTISTS[0].id)
     def.images.forEach((p) => expect(migrated.images).toContain(p))
+  })
+
+  // #32 (react-hooks/exhaustive-deps flags the missing `user` on this effect's
+  // `[]` deps). Deliberately mount-once: it does legacy-key migration and an
+  // initial IndexedDB image load, and is safe to read `user` from because
+  // ProtectedRoute holds a spinner until the session resolves (see the comment
+  // above `useState(() => ...)` for `artists` in the hook). Naively satisfying
+  // the lint suggestion by adding `user` would re-run migration/load on every
+  // identity change — pinning the current, intended behaviour so a future
+  // "fix" of the warning doesn't silently do that.
+  //
+  // The direct-A-to-B-swap gap this still doesn't cover (no committed null
+  // in between, so the effect never even sees a fresh mount) is real and
+  // already tracked separately in #28 — not something this test asserts.
+  it('does not re-run the initial image-load effect on a user identity change with no intervening sign-out', async () => {
+    const getItemSpy = vi.spyOn(localStorage, 'getItem')
+
+    const { result } = renderHook(
+      () => ({ storage: useArtistStorage(), auth: useAuth() }),
+      { wrapper }
+    )
+    await waitFor(() => expect(result.current.storage).toBeTruthy())
+    await act(async () => {})
+
+    const callsBefore = getItemSpy.mock.calls.filter(([k]) => k === 'tattoo_artists').length
+    expect(callsBefore).toBe(1)
+
+    // A direct A -> B swap, same shape as backend.auth.signIn while already
+    // signed in: the local adapter sets a new session and emits, with no
+    // intervening null.
+    await act(async () => {
+      await result.current.auth.signIn({ email: 'a-different-user@example.com' })
+    })
+
+    const callsAfter = getItemSpy.mock.calls.filter(([k]) => k === 'tattoo_artists').length
+    expect(callsAfter).toBe(1)
   })
 })

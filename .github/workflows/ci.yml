@@ -30,20 +30,13 @@ jobs:
       # Parse every Mermaid block in tracked Markdown before application checks.
       - name: Validate Mermaid documentation
         run: npm run docs:check
-      # ESLint exits 1 for rule violations and 2 for a fatal config/crash error.
-      # Only the latter fails CI: the repo still carries known react-hooks errors
-      # (#32), so a blocking lint step would be permanently red and get ignored.
-      # This catches the case that actually bit us — the eslint 10 bump crashed
-      # the linter outright, and CI was green because it never ran eslint at all.
-      - name: Check ESLint runs
-        run: |
-          lint_status=0
-          npx eslint . || lint_status=$?
-          if [ "$lint_status" -ge 2 ]; then
-            echo "::error::ESLint failed to run (exit $lint_status) — config or dependency problem, not a lint violation."
-            exit 1
-          fi
-          echo "ESLint ran (exit $lint_status); rule violations are tracked in #32."
+      # Blocking (#32 closed the last known violations). ESLint exits 1 for
+      # rule violations and 2 for a fatal config/crash error — both fail CI
+      # now. (The eslint 10 bump once crashed the linter outright while CI
+      # stayed green, having never run it at all; a plain `npx eslint .` here
+      # fails loudly on either kind of problem instead.)
+      - name: Lint
+        run: npx eslint .
       # Suite is pinned to the offline local backend via vite.config.js test.env,
       # so no secrets or external services are needed here.
       - name: Run tests

@@ -92,6 +92,14 @@ function InfoPanel({ item, artists, onClose, onSaveTags, onAddVariant, onMarkBes
 // (idle-fading HUD, arrows, filmstrip) adapted for a flat list of concepts
 // rather than artist image groups. Variants + STL export live behind the
 // info panel (toggle with I or the button below).
+//
+// `initialIndex` is read once, at mount — the caller (Concepts.jsx) only ever
+// mounts this fresh per open (`viewerOpen && <ConceptViewer key={viewerIndex}
+// .../>`), never changes it on a live instance, so there is nothing to
+// re-sync via an effect (#32 — that used to be `useEffect(() =>
+// setIndex(initialIndex), [initialIndex])`, dead weight given the call site).
+// A caller that ever needs to jump a mounted viewer to a different item must
+// change its `key`, the same way it already resets on open.
 export default function ConceptViewer({
   items,
   initialIndex = 0,
@@ -112,10 +120,6 @@ export default function ConceptViewer({
   const [transitionMode] = useState(resolveTransitionMode)
   const idle = useIdleFade(2000)
   const dialogRef = useDialogFocus(open)
-
-  useEffect(() => {
-    setIndex(initialIndex)
-  }, [initialIndex])
 
   useEffect(() => {
     if (!open) return undefined

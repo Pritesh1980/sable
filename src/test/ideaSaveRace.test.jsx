@@ -38,7 +38,7 @@ function Harness({ seed }) {
   useEffect(() => {
     lastIdeas = ideas
     lastSetIdeas = setIdeas
-  })
+  }, [ideas])
   return (
     <MemoryRouter initialEntries={['/brief']}>
       <UndoProvider>

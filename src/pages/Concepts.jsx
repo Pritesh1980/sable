@@ -84,10 +84,17 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
   const [searchParams] = useSearchParams()
 
   const initialDraft = useMemo(() => loadComposerDraft(), [])
-  const [steerArtistId, setSteerArtistId] = useState(initialDraft.steerArtistId)
+  // t7: a steer=<artistId> query param (from the Wall viewer's "G" flow) opens
+  // the composer pre-steered on mount, taking priority over any saved draft.
+  // Artist ids may contain dots (zoia.ink). Read once, in the initializers
+  // below — searchParams is available synchronously at first render, so this
+  // needs no effect (#32; this used to run in a mount-only useEffect).
+  const [steerArtistId, setSteerArtistId] = useState(
+    () => searchParams.get('steer') || initialDraft.steerArtistId
+  )
   const [idea, setIdea] = useState(initialDraft.idea)
   const [placement, setPlacement] = useState(initialDraft.placement)
-  const [composerOpen, setComposerOpen] = useState(false)
+  const [composerOpen, setComposerOpen] = useState(() => Boolean(searchParams.get('steer')))
   const [pendingPasteConceptId, setPendingPasteConceptId] = useState(null)
 
   const [openaiKey, setOpenaiKey] = useState(() => localStorage.getItem('openai_api_key') || '')
@@ -105,17 +112,6 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
   const hasOpenai = Boolean(openaiKey)
   const hasGemini = Boolean(geminiKey)
   const hasApiKey = hasOpenai || hasGemini
-
-  // t7: a steer=<artistId> query param (from the Wall viewer's "G" flow) opens
-  // the composer pre-steered on mount. Artist ids may contain dots (zoia.ink).
-  useEffect(() => {
-    const steerParam = searchParams.get('steer')
-    if (steerParam) {
-      setSteerArtistId(steerParam)
-      setComposerOpen(true)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   // Device-local draft persistence — same class of data as tattoo_theme, NOT
   // synced. Restored on mount above; cleared explicitly on successful save.
@@ -429,6 +425,7 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
 
       {viewerOpen && (
         <ConceptViewer
+          key={viewerIndex}
           items={wallItems}
           initialIndex={viewerIndex}
           artists={artists}

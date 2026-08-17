@@ -259,6 +259,14 @@ export function useArtistStorage() {
 
   // On mount: migrate images from the old localStorage key, then load from
   // IndexedDB and merge them onto whatever metadata is current (offline path).
+  // Deliberately mount-once (#32): `user` is read below, but safe to read
+  // once — ProtectedRoute holds a spinner until the session resolves, so
+  // it's already settled by mount (see the comment on the `artists` lazy
+  // initializer above). Re-running on every identity change would re-migrate
+  // and re-load on every sign-in, which is wrong, not just untidy — pinned
+  // by a regression test in useArtistStorage.test.js. The remaining
+  // direct-A-to-B-swap gap (no committed null in between, so this effect
+  // never gets a fresh mount at all) is tracked separately in #28.
   useEffect(() => {
     let cancelled = false
     async function init() {
@@ -285,6 +293,7 @@ export function useArtistStorage() {
     }
     init()
     return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Sync metadata once the user is known. Owner-only seeding: the owner keeps the
@@ -446,6 +455,13 @@ export function useArtistStorage() {
   }, [runFlushMeta])
 
   const flushMetaRef = useRef(null)
+  // Standard "latest ref" pattern (#32): stash the current flushMeta so the
+  // async callbacks that call it via flushMetaRef.current?.() (lines above and
+  // below) always run the freshest closure, not one captured when they were
+  // scheduled. The write happens in an effect, after commit, never during
+  // render — react-hooks/immutability's write-after-effect-read heuristic
+  // doesn't distinguish that from a real mutation-during-render bug.
+  // eslint-disable-next-line react-hooks/immutability
   useEffect(() => { flushMetaRef.current = flushMeta }, [flushMeta])
 
   function setArtists(updater) {

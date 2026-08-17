@@ -246,7 +246,7 @@ export function useStorage(key, defaultValue, codecArg) {
         }, 500)
       }
     },
-    [user, collection]
+    [user, collection, key]
   )
 
   // Cancel a pending push on unmount (the value is already in the localStorage cache).
