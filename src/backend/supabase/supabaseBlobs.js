@@ -10,6 +10,10 @@ const SIGNED_URL_TTL = 3600
 export function createSupabaseBlobs() {
   const sb = getSupabaseClient()
   return {
+    // Read by blobUrls.js's cache (#29) to know a cached signed URL goes
+    // stale and needs refreshing — local's blob store has no such field, so
+    // its (never-expiring) data: URLs are cached forever, as before.
+    urlTtlMs: SIGNED_URL_TTL * 1000,
     async upload(_userId, key, blob, contentType) {
       const { error } = await sb.storage
         .from(BUCKET)
