@@ -13,7 +13,8 @@ vi.mock('../backend', () => ({
 }))
 
 const { backend } = await import('../backend')
-const { resolveBlobKey, clearBlobUrls } = await import('../data/blobUrls')
+const { resolveBlobKey, getCachedBlobUrl, keyForUrl, registerBlobUrl, clearBlobUrls } =
+  await import('../data/blobUrls')
 
 beforeEach(() => {
   clearBlobUrls()
@@ -78,5 +79,45 @@ describe('blob URL cache respects a backend TTL (#29)', () => {
 
     expect(second).toBe('data:image/jpeg;base64,AAA')
     expect(getUrl).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('review follow-ups (#29)', () => {
+  it('getCachedBlobUrl does not hand back an expired url, and kicks off a refresh', async () => {
+    backend.blobs.urlTtlMs = 3600_000
+    vi.useFakeTimers()
+    getUrl.mockResolvedValueOnce('https://signed.example/first')
+    await resolveBlobKey('k1')
+
+    expect(getCachedBlobUrl('k1')).toBe('https://signed.example/first')
+
+    // Past the refresh margin — a synchronous read must not serve this.
+    vi.setSystemTime(Date.now() + 3600_000 - 30_000)
+    getUrl.mockResolvedValueOnce('https://signed.example/second')
+
+    expect(getCachedBlobUrl('k1')).toBe('')
+    // The background refresh it triggered needs its microtasks flushed.
+    await vi.waitFor(() => expect(getCachedBlobUrl('k1')).toBe('https://signed.example/second'))
+  })
+
+  it('does not leak the old url in the reverse map once a key is re-registered', () => {
+    registerBlobUrl('k1', 'https://signed.example/old')
+    registerBlobUrl('k1', 'https://signed.example/new')
+
+    expect(keyForUrl('https://signed.example/old')).toBeNull()
+    expect(keyForUrl('https://signed.example/new')).toBe('k1')
+  })
+
+  it('falls back to the last cached url when a refresh fails, instead of going blank', async () => {
+    backend.blobs.urlTtlMs = 3600_000
+    vi.useFakeTimers()
+    getUrl.mockResolvedValueOnce('https://signed.example/first')
+    await resolveBlobKey('k1')
+
+    vi.setSystemTime(Date.now() + 3600_000 - 30_000)
+    getUrl.mockRejectedValueOnce(new Error('network blip'))
+
+    const result = await resolveBlobKey('k1')
+    expect(result).toBe('https://signed.example/first')
   })
 })

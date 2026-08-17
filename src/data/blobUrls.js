@@ -21,17 +21,34 @@ const inflight = new Map()
 function isFresh(entry) {
   const ttlMs = backend.blobs?.urlTtlMs
   if (!ttlMs) return true
-  return Date.now() - entry.cachedAt < ttlMs - REFRESH_MARGIN_MS
+  // Never let the margin swallow the whole TTL — an unexpectedly short TTL
+  // (a future backend, a misconfiguration) must not make every fresh entry
+  // stale on arrival and thrash the backend on every call.
+  const margin = Math.min(REFRESH_MARGIN_MS, ttlMs / 2)
+  return Date.now() - entry.cachedAt < ttlMs - margin
 }
 
 export function registerBlobUrl(key, url) {
   if (!key) return
+  // Drop the old url's reverse mapping first — a key that gets re-resolved
+  // over a long session (every TTL refresh) would otherwise pile up entries
+  // for urls nothing points to any more.
+  const previous = keyToEntry.get(key)
+  if (previous?.url) urlToKey.delete(previous.url)
   keyToEntry.set(key, { url, cachedAt: Date.now() })
   if (url) urlToKey.set(url, key)
 }
 
+// Synchronous cache peek for render paths that can't await resolveBlobKey. A
+// stale entry is never handed back (it would eventually 403) — instead this
+// starts a background refresh for next time and reports unresolved, the same
+// as a key that was never cached at all.
 export function getCachedBlobUrl(key) {
-  return keyToEntry.get(key)?.url || ''
+  const cached = keyToEntry.get(key)
+  if (!cached) return ''
+  if (isFresh(cached)) return cached.url
+  resolveBlobKey(key)
+  return ''
 }
 
 // Reverse lookup: given a resolved/display URL, the canonical key it came from
@@ -59,7 +76,11 @@ export async function resolveBlobKey(key) {
     .catch((e) => {
       inflight.delete(key)
       console.error('[tattoo] blob resolve failed:', key, e)
-      return ''
+      // A transient failure (offline for a moment right at the refresh
+      // margin) shouldn't blank an image that was still displaying fine a
+      // moment ago — fall back to whatever was last cached, stale or not,
+      // over surfacing a broken image for a URL that may still work.
+      return cached?.url || ''
     })
   inflight.set(key, p)
   return p
