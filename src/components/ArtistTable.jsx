@@ -6,6 +6,7 @@ import { useAuth } from '../context/useAuth'
 import TagPill from './TagPill'
 import ArtistImage from './ArtistImage'
 import { useUndoableRemoval } from '../hooks/useUndoableRemoval'
+import { intersectsViewport } from '../data/viewport'
 
 function studioName(id) {
   const s = DEFAULT_STUDIOS.find((s) => s.id === id)
@@ -18,6 +19,13 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
   const [expanded, setExpanded] = useState(false)
   const [note, setNote] = useState(artist.notes || '')
   const { user } = useAuth() || {}
+  // #64: expanded meant *rendered*, not on screen — a row scrolled well past
+  // the fold still reported visible, so a restore into it stayed silent. The
+  // expanded <tr> is always present while expanded (unlike the photo strip
+  // beneath it, which is conditional on there being photos — and at the
+  // moment Undo is pressed there may be none yet), so it is the stable anchor
+  // to measure.
+  const expandedRowRef = useRef(null)
 
   async function handleFiles(e) {
     const files = e.target.files
@@ -55,7 +63,15 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
       // Keyed by the artist, so an offer outliving this row asks whichever row
       // renders that artist now (#62).
       subject: `artist:${artist.id}`,
-      isTargetVisible: () => expanded,
+      isTargetVisible: () => {
+        if (!expanded) return false
+        const el = expandedRowRef.current
+        if (!el) return false
+        return intersectsViewport(el.getBoundingClientRect(), {
+          width: window.innerWidth,
+          height: window.innerHeight,
+        })
+      },
     }
   )
 
@@ -132,7 +148,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
 
       {/* Expanded row */}
       {expanded && (
-        <tr className="border-b border-ink-border bg-ink-card/30">
+        <tr ref={expandedRowRef} className="border-b border-ink-border bg-ink-card/30">
           <td colSpan={5} className="px-4 py-4">
             <div className="space-y-4">
 
