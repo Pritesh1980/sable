@@ -59,6 +59,16 @@ function IdeaCard({ idea, onOpen }) {
 
 function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, mergedConventions = [] }) {
   const [draft, setDraft] = useState({ status: 'idea', ...idea, images: normalizeReferenceImages(idea.images) })
+  // Which fields the user has actually edited this session (#63). `draft` is a
+  // one-time snapshot that never reconciles with `idea` — anything that
+  // changes the saved record while this composer is open (an Undo restore
+  // handed off elsewhere, a sync landing) is invisible to it. Sending the
+  // whole draft back on save would silently revert that. Saving a patch of
+  // only the touched fields, resolved against whatever is latest at commit
+  // time, means an untouched field can't be clobbered by a stale snapshot of
+  // itself — this composer never had an opinion on it.
+  const touchedRef = useRef(new Set())
+  const touch = (field) => touchedRef.current.add(field)
   const [newImage, setNewImage] = useState('')
   const [copied, setCopied] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -85,6 +95,10 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
       if (!result) {
         setAnalyzeNote("Couldn't draft an idea from this image.")
       } else {
+        touch('title')
+        touch('description')
+        touch('tags')
+        touch('placement')
         setDraft((d) => ({
           ...d,
           title: d.title || result.title,
@@ -107,6 +121,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
   const statusLabel = (status) => ARTIST_STATUSES.find((s) => s.value === normalizeArtistStatus(status))?.label
 
   function toggleTag(tag) {
+    touch('tags')
     setDraft((d) => ({
       ...d,
       tags: d.tags.includes(tag) ? d.tags.filter((t) => t !== tag) : [...d.tags, tag],
@@ -114,6 +129,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
   }
 
   function toggleArtist(id) {
+    touch('linkedArtists')
     setDraft((d) => ({
       ...d,
       linkedArtists: d.linkedArtists?.includes(id)
@@ -125,6 +141,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
   function addImage() {
     const url = newImage.trim()
     if (url) {
+      touch('images')
       setDraft((d) => ({ ...d, images: [...(d.images || []), { url, note: '' }] }))
     }
     setNewImage('')
@@ -136,6 +153,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
     setUploading(true)
     try {
       const compressed = await compressImages(files)
+      touch('images')
       setDraft((d) => ({
         ...d,
         images: [...(d.images || []), ...compressed.map((url) => ({ url, note: '' }))],
@@ -153,7 +171,10 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
   const images = normalizeReferenceImages(draft.images)
   const { remove: removeImage, commit: commitImageRemoval } = useUndoableRemoval(
     images,
-    (updater) => setDraft((d) => ({ ...d, images: updater(normalizeReferenceImages(d.images)) })),
+    (updater) => {
+      touch('images')
+      setDraft((d) => ({ ...d, images: updater(normalizeReferenceImages(d.images)) }))
+    },
     {
       message: 'Photo removed',
       batchMessage: (n) => `${n} photos removed`,
@@ -170,6 +191,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
   )
 
   function updateImageNote(url, note) {
+    touch('images')
     setDraft((d) => ({
       ...d,
       images: normalizeReferenceImages(d.images).map((image) => (
@@ -181,7 +203,20 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
   function save() {
     if (!draft.title.trim()) return
     const id = draft.id || Date.now().toString()
-    onSave({ ...draft, images: normalizeReferenceImages(draft.images), id })
+    const normalizedImages = normalizeReferenceImages(draft.images)
+    if (isNew) {
+      // Nothing existing to race against — this is the whole record.
+      onSave(id, { ...draft, images: normalizedImages, id })
+    } else {
+      // Only what this session actually touched (#63) — an untouched field
+      // resolves against whatever is latest at commit time, not this stale
+      // snapshot of it.
+      const patch = {}
+      for (const field of touchedRef.current) {
+        patch[field] = field === 'images' ? normalizedImages : draft[field]
+      }
+      onSave(id, (current) => ({ ...current, ...patch }))
+    }
     // The draft removal has just become permanent, and this modal is closing —
     // hand any live undo offer to the saved idea so it outlives us (#57).
     commitImageRemoval((updater) => onRestoreImages?.(id, updater))
@@ -225,7 +260,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
             className="bg-transparent border-b border-ink-border text-cream font-display text-2xl w-full outline-hidden focus-visible:ring-2 focus-visible:ring-accent pb-1 placeholder-cream-muted/60"
             placeholder="Idea title…"
             value={draft.title}
-            onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
+            onChange={(e) => { touch('title'); setDraft((d) => ({ ...d, title: e.target.value })) }}
           />
         </div>
 
@@ -236,7 +271,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
             {IDEA_STATUSES.map((s) => (
               <button
                 key={s.value}
-                onClick={() => setDraft((d) => ({ ...d, status: s.value }))}
+                onClick={() => { touch('status'); setDraft((d) => ({ ...d, status: s.value })) }}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xs text-sm font-mono border transition-colors ${
                   draft.status === s.value
                     ? 'border-cream-muted/50 text-cream bg-ink-card'
@@ -257,7 +292,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
             rows={4}
             placeholder="Describe the concept, mood, imagery…"
             value={draft.description}
-            onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
+            onChange={(e) => { touch('description'); setDraft((d) => ({ ...d, description: e.target.value })) }}
           />
         </div>
 
@@ -278,7 +313,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
                 key={p}
                 tag={p}
                 active={draft.placement === p}
-                onClick={() => setDraft((d) => ({ ...d, placement: d.placement === p ? '' : p }))}
+                onClick={() => { touch('placement'); setDraft((d) => ({ ...d, placement: d.placement === p ? '' : p })) }}
               />
             ))}
           </div>
@@ -484,10 +519,23 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
     return true
   }
 
-  function saveIdea(idea) {
+  // (id, patch | updater) rather than a whole record (#63) — same shape as
+  // Gallery.saveArtist (#79). A patch applies only the fields the composer
+  // actually touched, resolved against whatever is latest here at commit
+  // time, so a change that landed while the composer was open survives.
+  // Creating a new idea has nothing to race against, so the whole record is
+  // sent as a plain object rather than an updater.
+  function saveIdea(id, patchOrUpdater) {
     setIdeas((prev) => {
-      const exists = prev.find((i) => i.id === idea.id)
-      return exists ? prev.map((i) => (i.id === idea.id ? idea : i)) : [...prev, idea]
+      const exists = prev.some((i) => i.id === id)
+      if (!exists) {
+        return [...prev, typeof patchOrUpdater === 'function' ? patchOrUpdater(undefined) : patchOrUpdater]
+      }
+      return prev.map((i) => (
+        i.id === id
+          ? (typeof patchOrUpdater === 'function' ? patchOrUpdater(i) : { ...i, ...patchOrUpdater })
+          : i
+      ))
     })
     setModal(null)
   }
