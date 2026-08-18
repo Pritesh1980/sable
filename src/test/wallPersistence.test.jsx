@@ -80,6 +80,13 @@ describe('addedAt survives a cross-device round trip through useArtistStorage', 
 
   it('hydrates addedAt from a remote { key, addedAt } canonical ref', async () => {
     const key = 'user/local-second@device.com/artists/c1/x.jpg'
+    // The remote row must be written under the same signed-in identity that
+    // will later read it back (#28 namespaces the local backend's simulated
+    // remote per user, matching how Supabase's RLS already scopes writes).
+    localStorage.setItem(
+      'tattoo_local_session',
+      JSON.stringify({ user: { id: 'local-second@device.com', email: 'second@device.com' } })
+    )
     await backend.blobs.upload('u', key, 'data:image/jpeg;base64,REMOTE', 'image/jpeg')
     await backend.store.upsert('artistsMeta', [
       {
@@ -91,10 +98,6 @@ describe('addedAt survives a cross-device round trip through useArtistStorage', 
         updatedAt: '2026-06-01T00:00:00Z',
       },
     ])
-    localStorage.setItem(
-      'tattoo_local_session',
-      JSON.stringify({ user: { id: 'local-second@device.com', email: 'second@device.com' } })
-    )
 
     const { result } = renderHook(() => ({ auth: useAuth(), store: useArtistStorage() }), { wrapper })
     await waitFor(() => expect(result.current.store[0]).toHaveLength(1))

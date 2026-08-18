@@ -16,7 +16,33 @@ const PURGE_KEYS = [
   'tattoo_img_migrated_v1',
 ]
 
-export function purgeLocalUserData() {
+// Deletes an IndexedDB database and waits for the outcome instead of firing
+// and forgetting. A blocked delete (another connection still open on the DB)
+// would otherwise hang forever with no signal — resolve anyway and log it, so
+// callers awaiting purge don't stall on a lingering connection somewhere else.
+function deleteDatabaseAsync(name) {
+  return new Promise((resolve) => {
+    let req
+    try {
+      req = indexedDB.deleteDatabase(name)
+    } catch (e) {
+      console.error(`[tattoo] purge IndexedDB (${name}) failed:`, e)
+      resolve()
+      return
+    }
+    req.onsuccess = () => resolve()
+    req.onerror = () => {
+      console.error(`[tattoo] purge IndexedDB (${name}) failed:`, req.error)
+      resolve()
+    }
+    req.onblocked = () => {
+      console.error(`[tattoo] purge IndexedDB (${name}) blocked by an open connection`)
+      resolve()
+    }
+  })
+}
+
+export async function purgeLocalUserData() {
   try {
     PURGE_KEYS.forEach((k) => localStorage.removeItem(k))
     // Dirty-state sidecars (tattoo_dirty_*, tattoo_pending_delete_*,
@@ -26,17 +52,15 @@ export function purgeLocalUserData() {
     console.error('[tattoo] purge localStorage failed:', e)
   }
   clearBlobUrls()
-  try {
-    // Display image cache only — the simulated remote (tattoo-blobs-v1) stays.
-    indexedDB.deleteDatabase('tattoo-images-v1')
-  } catch (e) {
-    console.error('[tattoo] purge IndexedDB failed:', e)
-  }
+  // Display image cache only — the simulated remote (tattoo-blobs-v1) stays;
+  // its blob keys are already per-user-namespaced (user/<userId>/...) so it
+  // doesn't leak between accounts the way an unnamespaced cache would.
+  await deleteDatabaseAsync('tattoo-images-v1')
   // An uncollected shared screenshot is this user's content sitting in an
   // origin-scoped cache — without this, A shares, closes before collecting,
   // and B signs in and picks up A's image from /share.
   try {
-    globalThis.caches?.delete?.(SHARE_CACHE)
+    await globalThis.caches?.delete?.(SHARE_CACHE)
   } catch (e) {
     console.error('[tattoo] purge share cache failed:', e)
   }

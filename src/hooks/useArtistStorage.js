@@ -39,8 +39,8 @@ async function dbPut(id, images) {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE, 'readwrite')
     tx.objectStore(STORE).put(images, id)
-    tx.oncomplete = resolve
-    tx.onerror = () => reject(tx.error)
+    tx.oncomplete = () => { db.close(); resolve() }
+    tx.onerror = () => { db.close(); reject(tx.error) }
   })
 }
 
@@ -52,9 +52,9 @@ async function dbGetAll() {
     tx.objectStore(STORE).openCursor().onsuccess = (e) => {
       const c = e.target.result
       if (c) { out[c.key] = c.value; c.continue() }
-      else resolve(out)
+      else { db.close(); resolve(out) }
     }
-    tx.onerror = () => reject(tx.error)
+    tx.onerror = () => { db.close(); reject(tx.error) }
   })
 }
 

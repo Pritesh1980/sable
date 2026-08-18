@@ -66,10 +66,13 @@ describe('useArtistStorage owner seeding + sync', () => {
   })
 
   it('hydrates a non-owner from their own remote rows (no default seeding)', async () => {
+    // The remote row must be written under the same signed-in identity that
+    // will later read it back (#28 namespaces the local backend's simulated
+    // remote per user, matching how Supabase's RLS already scopes writes).
+    seedSession('artist@studio.com')
     await backend.store.upsert('artistsMeta', [
       { id: 'custom1', handle: 'their_artist', rank: 1, tags: [], updatedAt: '2026-06-01T00:00:00Z' },
     ])
-    seedSession('artist@studio.com')
 
     const { result } = renderSynced()
     await waitFor(() => expect(result.current.store[0]).toHaveLength(1))

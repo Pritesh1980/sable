@@ -58,4 +58,33 @@ describe('auth gate (local backend)', () => {
     fireEvent.click(screen.getByText('do-signout'))
     await waitFor(() => expect(screen.getByText('out')).toBeInTheDocument())
   })
+
+  // #28: onAuthStateChange only purged via the explicit signOut() path. A direct
+  // account swap (local auth's signIn() emits the new session with no null event
+  // in between) left the previous user's local cache to leak into the new session.
+  it('purges the previous user cache on a direct account swap with no intervening sign-out', async () => {
+    function Probe() {
+      const { user, signIn } = useAuth()
+      return (
+        <div>
+          <span>{user ? `in:${user.email}` : 'out'}</span>
+          <button onClick={() => signIn({ email: 'artist-a@studio.com', password: 'x' })}>signin-a</button>
+          <button onClick={() => signIn({ email: 'artist-b@studio.com', password: 'x' })}>signin-b</button>
+        </div>
+      )
+    }
+    render(<AuthProvider><Probe /></AuthProvider>)
+    await waitFor(() => expect(screen.getByText('out')).toBeInTheDocument())
+
+    fireEvent.click(screen.getByText('signin-a'))
+    await waitFor(() => expect(screen.getByText('in:artist-a@studio.com')).toBeInTheDocument())
+
+    // Simulate user A's unsynced local cache still sitting around.
+    localStorage.setItem('tattoo_ideas', '[{"id":"a-idea"}]')
+
+    fireEvent.click(screen.getByText('signin-b'))
+    await waitFor(() => expect(screen.getByText('in:artist-b@studio.com')).toBeInTheDocument())
+
+    await waitFor(() => expect(localStorage.getItem('tattoo_ideas')).toBeNull())
+  })
 })

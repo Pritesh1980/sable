@@ -98,11 +98,14 @@ describe('idea/concept image migration to blobs', () => {
 
   it('resolves a remote idea {key} image on a fresh device', async () => {
     const key = 'user/local-artist@studio.com/ideas/i9/x.jpg'
+    // The remote row must be written under the same signed-in identity that
+    // will later read it back (#28 namespaces the local backend's simulated
+    // remote per user, matching how Supabase's RLS already scopes writes).
+    seedSession('artist@studio.com')
     await backend.blobs.upload('u', key, 'data:image/jpeg;base64,CLOUD', 'image/jpeg')
     await backend.store.upsert('ideas', [
       { id: 'i9', title: 'Synced', images: [{ key }], updatedAt: '2026-06-01T00:00:00Z' },
     ])
-    seedSession('artist@studio.com')
 
     const { result } = render('tattoo_ideas', [], ideasCodec)
     await waitFor(() =>

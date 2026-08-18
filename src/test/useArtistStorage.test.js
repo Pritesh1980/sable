@@ -170,6 +170,29 @@ describe('useArtistStorage', () => {
     expect(raw).not.toContain('base64')
   })
 
+  // #28: dbPut/dbGetAll opened a fresh IndexedDB connection per call and never
+  // closed it, which can block a later `indexedDB.deleteDatabase` (purge) from
+  // ever completing.
+  it('closes its IndexedDB connections after a write (does not block deletion)', async () => {
+    const result = await renderOwned()
+    await act(async () => {})
+
+    await act(async () => {
+      result.current[1]((prev) =>
+        prev.map((a) => (a.id === DEFAULT_ARTISTS[0].id ? { ...a, images: ['data:image/jpeg;base64,closetest'] } : a))
+      )
+    })
+    await act(async () => {})
+
+    const req = indexedDB.deleteDatabase('tattoo-images-v1')
+    const blocked = await new Promise((resolve) => {
+      req.onsuccess = () => resolve(false)
+      req.onerror = () => resolve(false)
+      req.onblocked = () => resolve(true)
+    })
+    expect(blocked).toBe(false)
+  })
+
   it('setArtists with a plain array works as well as a function', async () => {
     const result = await renderOwned()
     await act(async () => {})

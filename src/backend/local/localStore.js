@@ -5,10 +5,29 @@
 // offline.
 
 const PREFIX = 'tattoo_remote_'
+const SESSION_KEY = 'tattoo_local_session'
+const ANON_NAMESPACE = 'anon'
+
+// Namespace by the signed-in user so two accounts sharing a browser under the
+// local backend don't see each other's "remote" rows (#28). Falls back to a
+// single fixed namespace when signed out, matching today's behavior exactly
+// for the common no-auth dev/demo case.
+function currentUserNamespace() {
+  try {
+    const session = JSON.parse(localStorage.getItem(SESSION_KEY))
+    return session?.user?.id || ANON_NAMESPACE
+  } catch {
+    return ANON_NAMESPACE
+  }
+}
+
+function storageKey(collection) {
+  return `${PREFIX}${currentUserNamespace()}_${collection}`
+}
 
 function load(collection) {
   try {
-    return JSON.parse(localStorage.getItem(PREFIX + collection)) || []
+    return JSON.parse(localStorage.getItem(storageKey(collection))) || []
   } catch {
     return []
   }
@@ -16,7 +35,7 @@ function load(collection) {
 
 function save(collection, rows) {
   try {
-    localStorage.setItem(PREFIX + collection, JSON.stringify(rows))
+    localStorage.setItem(storageKey(collection), JSON.stringify(rows))
   } catch (e) {
     console.error('[tattoo] local store save failed:', e)
   }
