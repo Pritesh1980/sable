@@ -230,6 +230,35 @@ describe('useArtistStorage', () => {
     def.images.forEach((p) => expect(migrated.images).toContain(p))
   })
 
+  // #55 review (agy): a migrated legacy image's { key } ref must actually be
+  // persisted to the offline cache (tattoo_artists_meta), not just held in
+  // React state for this one session — otherwise a reload after migration,
+  // with no other edit in between, could lose it.
+  it('a migrated legacy image survives a reload with no further edits', async () => {
+    // A data-URL unique to this test — reusing another test's fixture string
+    // would collide with blobUrls.js's registration map, which this describe
+    // block's beforeEach doesn't reset, making a stale registration from an
+    // earlier test look like "already migrated" here.
+    const dataUrl = 'data:image/jpeg;base64,migratedimgpersist'
+    const oldData = DEFAULT_ARTISTS.map((a, i) =>
+      i === 0 ? { ...a, images: [dataUrl] } : { ...a, images: [] }
+    )
+    localStorage.setItem('tattoo_artists', JSON.stringify(oldData))
+
+    await renderOwned()
+    await waitFor(() => expect(localStorage.getItem('tattoo_artists')).toBeNull())
+    await waitFor(() => {
+      const meta = JSON.parse(localStorage.getItem('tattoo_artists_meta'))
+      const migrated = meta.find((a) => a.id === DEFAULT_ARTISTS[0].id)
+      expect(migrated.images.some((img) => img && img.key)).toBe(true)
+    })
+
+    // A fresh mount ("reload") — no further edits happened in between.
+    const second = await renderOwned()
+    const migratedAgain = second.current[0].find((a) => a.id === DEFAULT_ARTISTS[0].id)
+    expect(migratedAgain.images[0]).toBe(dataUrl)
+  })
+
   // #32 (react-hooks/exhaustive-deps flags the missing `user` on this effect's
   // `[]` deps). Deliberately mount-once: it does legacy-key migration and an
   // initial IndexedDB image load, and is safe to read `user` from because

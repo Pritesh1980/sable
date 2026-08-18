@@ -10,6 +10,7 @@ import {
 } from '../hooks/useArtistStorage'
 import { backend } from '../backend'
 import { clearBlobUrls, registerBlobUrl } from '../data/blobUrls'
+import { DEFAULT_ARTISTS } from '../data/artists'
 
 const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>
 
@@ -65,6 +66,28 @@ describe('buildArtists (pure)', () => {
     const imageMap = { x: ['data:image/jpeg;base64,UNMIGRATED'] }
     const built = await buildArtists(meta, imageMap, false)
     expect(built[0].images).toContain('data:image/jpeg;base64,UNMIGRATED')
+  })
+
+  // #55 review (codex + agy): a removed DEFAULT_ARTISTS curated static image
+  // was re-added on every buildArtists call regardless of canonical removal
+  // or a tombstone — mergeStaticImages doesn't know about either. Removing a
+  // curated seed image was completely ineffective.
+  it('does not re-add a curated DEFAULT_ARTISTS image that has a tombstone', async () => {
+    const staticPath = DEFAULT_ARTISTS[0].images[0]
+    const meta = [{
+      id: DEFAULT_ARTISTS[0].id,
+      handle: DEFAULT_ARTISTS[0].handle,
+      images: [],
+      removedImages: [{ ref: staticPath, removedAt: '2026-07-01T00:00:00Z' }],
+    }]
+    const built = await buildArtists(meta, {}, true)
+    expect(built[0].images).not.toContain(staticPath)
+  })
+
+  it('still shows curated DEFAULT_ARTISTS images that were never removed', async () => {
+    const meta = [{ id: DEFAULT_ARTISTS[0].id, handle: DEFAULT_ARTISTS[0].handle, images: [] }]
+    const built = await buildArtists(meta, {}, true)
+    expect(built[0].images).toEqual(expect.arrayContaining(DEFAULT_ARTISTS[0].images))
   })
 })
 
@@ -231,5 +254,74 @@ describe('end-to-end: a removed photo survives a stale whole-record write from a
     await waitFor(() => expect(second.result.current.store[0][0].notes).toBe('from device B'))
     expect(second.result.current.store[0][0].images).not.toContain('data:image/jpeg;base64,X')
     expect(second.result.current.store[0][0].images).toContain('data:image/jpeg;base64,Y')
+  })
+})
+
+// #55 review (codex + agy): a tombstone was never cleared once created, so
+// even a deliberate, intentional re-add of the exact same photo would be
+// silently stripped right back out the next time reconciliation ran.
+describe('re-adding a tombstoned photo clears its tombstone (#55)', () => {
+  beforeEach(async () => {
+    localStorage.clear()
+    clearBlobUrls()
+    await clearStore('tattoo-images-v1', 'artist-images')
+    await clearStore('tattoo-blobs-v1', 'blobs')
+  })
+
+  it('does not re-strip a photo the user intentionally re-added after removing it', async () => {
+    seedSession('artist@studio.com')
+    const key = 'user/local-artist@studio.com/artists/c1/x.jpg'
+    await backend.blobs.upload('u', key, 'data:image/jpeg;base64,X', 'image/jpeg')
+    await backend.store.upsert('artistsMeta', [
+      { id: 'c1', handle: 'x', rank: 1, tags: [], images: [{ key }], updatedAt: '2026-06-01T00:00:00Z' },
+    ])
+
+    const first = renderSynced()
+    await waitFor(() => expect(first.result.current.store[0]).toHaveLength(1))
+    await waitFor(() => expect(first.result.current.store[0][0].images).toContain('data:image/jpeg;base64,X'))
+
+    // Remove it — a tombstone is recorded.
+    act(() => {
+      first.result.current.store[1]((prev) =>
+        prev.map((a) => (a.id === 'c1' ? { ...a, images: [] } : a))
+      )
+    })
+    await waitFor(() => {
+      const meta = JSON.parse(localStorage.getItem('tattoo_artists_meta'))
+      expect(meta[0].removedImages).toHaveLength(1)
+    })
+
+    // The user changes their mind and adds the exact same photo back.
+    act(() => {
+      first.result.current.store[1]((prev) =>
+        prev.map((a) => (a.id === 'c1' ? { ...a, images: ['data:image/jpeg;base64,X'] } : a))
+      )
+    })
+    await waitFor(() => {
+      const meta = JSON.parse(localStorage.getItem('tattoo_artists_meta'))
+      expect(meta[0].removedImages).toEqual([])
+    })
+    expect(first.result.current.store[0][0].images).toContain('data:image/jpeg;base64,X')
+
+    // Reload — reconciliation must not strip the re-added photo back out.
+    // The seed row already had { key } from the start, so checking for its
+    // presence alone would trivially pass before the debounced flush (500ms)
+    // ever lands — wait for updatedAt to actually move past the seed value,
+    // proving a real push happened.
+    await waitFor(async () => {
+      const rows = await backend.store.list('artistsMeta')
+      const row = rows.find((r) => r.id === 'c1')
+      expect(row?.updatedAt).not.toBe('2026-06-01T00:00:00Z')
+      expect(row?.images).toEqual(expect.arrayContaining([{ key }]))
+    }, { timeout: 3000 })
+    first.unmount()
+
+    // The initial-paint state (before the async pull/reconcile effect
+    // resolves) has this artist's images as [] by design — wait for the
+    // real resolved content, not just the record's presence.
+    const second = renderSynced()
+    await waitFor(() => expect(second.result.current.store[0]).toHaveLength(1))
+    await waitFor(() => expect(second.result.current.store[0][0].images.length).toBeGreaterThan(0))
+    expect(second.result.current.store[0][0].images).toContain('data:image/jpeg;base64,X')
   })
 })

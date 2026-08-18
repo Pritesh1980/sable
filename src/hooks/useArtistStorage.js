@@ -255,7 +255,13 @@ export async function buildArtists(metaList, imageMap, withDefaults = true) {
         ? idbImages.filter((s) => typeof s === 'string' && s.startsWith('data:') && !keyForUrl(s))
         : []
       const own = legacyLocalOnly.length ? [...legacyLocalOnly, ...resolved] : resolved
-      const display = mergeStaticImages(own, def?.images || [])
+      // A tombstoned DEFAULT_ARTISTS image must not be merged back in —
+      // DEFAULT_ARTISTS is a fixed static list, so without this a removed
+      // curated photo reappeared on every call regardless of the removal or
+      // its tombstone (#55 review, codex + agy).
+      const doomed = new Set((a.removedImages || []).map((t) => refIdentity(t.ref)).filter(Boolean))
+      const defImages = (def?.images || []).filter((img) => !doomed.has(refIdentity(img)))
+      const display = mergeStaticImages(own, defImages)
       return { ...a, images: display }
     })
   )
@@ -585,13 +591,20 @@ export function useArtistStorage() {
       let stamped = stampChangedRows(prev, next, at)
       // A removed photo becomes a durable tombstone at the edit too, so a
       // stale whole-record write from another device can't resurrect it
-      // during reconciliation even if it otherwise wins LWW (#55).
+      // during reconciliation even if it otherwise wins LWW (#55). A ref
+      // that's back in the new images also has its tombstone cleared —
+      // without this, a deliberate re-add of the exact same photo would be
+      // silently stripped right back out the next time reconciliation ran,
+      // since a tombstone was only ever added, never removed (#55 review,
+      // codex + agy).
       stamped = stamped.map((a) => {
         const prevA = prev.find((p) => p.id === a.id)
         if (!prevA || prevA.images === a.images) return a
-        const tombstones = removedImageTombstones(prevA.images, a.images, at)
-        if (!tombstones.length) return a
-        return { ...a, removedImages: [...(a.removedImages || []), ...tombstones] }
+        const liveIds = new Set(canonicalizeImages(a.images || []).map(refIdentity).filter(Boolean))
+        const survivors = (a.removedImages || []).filter((t) => !liveIds.has(refIdentity(t.ref)))
+        const fresh = removedImageTombstones(prevA.images, a.images, at)
+        if (survivors.length === (a.removedImages || []).length && !fresh.length) return a
+        return { ...a, removedImages: [...survivors, ...fresh] }
       })
       // Tombstones become durable at the edit, not at the flush 500ms later —
       // a tab closed inside the debounce window must not lose the delete.
