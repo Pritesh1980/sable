@@ -23,6 +23,12 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
   // stale snapshot of itself.
   const touchedRef = useRef(new Set())
   const touch = (field) => touchedRef.current.add(field)
+  // Captured once at mount (#80), not read live off `artist` on each save:
+  // if this artist is deleted and a new one is added with the same handle
+  // while this session is still holding a stale closure (a slow upload,
+  // most concretely), the id alone can't tell them apart. Gallery.saveArtist
+  // rejects a save whose generation doesn't match the currently-live record.
+  const identityRef = useRef({ id: artist.id, generation: artist.generation })
   const [uploading, setUploading] = useState(false)
   const [lightbox, setLightbox] = useState(null)
   const [currentIdx, setCurrentIdx] = useState(0)
@@ -58,7 +64,7 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
   function saveImages(newImages) {
     imagesRef.current = newImages
     setImages(newImages)
-    onSave(artist.id, (current) => ({ ...current, images: newImages }))
+    onSave(identityRef.current.id, identityRef.current.generation, (current) => ({ ...current, images: newImages }))
   }
 
   async function handleFiles(e) {
@@ -103,7 +109,7 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
       // images: this can auto-save while an upload is still in flight, and
       // must not carry this closure's stale images back over it (#79).
       if (!editing) {
-        onSave(artist.id, (current) => ({ ...current, tags }))
+        onSave(identityRef.current.id, identityRef.current.generation, (current) => ({ ...current, tags }))
       }
       return next
     })
@@ -119,7 +125,7 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
     for (const field of touchedRef.current) {
       patch[field] = draft[field]
     }
-    onSave(artist.id, (current) => ({ ...current, ...patch }))
+    onSave(identityRef.current.id, identityRef.current.generation, (current) => ({ ...current, ...patch }))
     touchedRef.current = new Set()
     setEditing(false)
   }

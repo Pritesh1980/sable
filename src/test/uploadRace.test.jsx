@@ -46,6 +46,7 @@ const artist = {
   status: 'researching',
   notes: '',
   studio: null,
+  generation: 'g-fixed',
 }
 
 // A store that behaves like Gallery's setArtists: the updater form always sees
@@ -169,10 +170,11 @@ describe('two upload batches in flight, artist detail (#75)', () => {
       <ArtistDetail
         artist={artist}
         onClose={() => {}}
-        // onSave is now (id, patchOrUpdater) (#79) rather than a whole record;
-        // resolve it against the latest known record the same way
-        // Gallery.saveArtist does, then keep only what this store tracks.
-        onSave={(id, patchOrUpdater) => {
+        // onSave is now (id, generation, patchOrUpdater) (#79, #80) rather
+        // than a whole record; resolve it against the latest known record
+        // the same way Gallery.saveArtist does, then keep only what this
+        // store tracks.
+        onSave={(id, generation, patchOrUpdater) => {
           const currentRecord = { ...artist, images: store.get() }
           const next =
             typeof patchOrUpdater === 'function'

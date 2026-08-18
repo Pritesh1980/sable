@@ -162,21 +162,30 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
     setArtists((prev) => prev.map((a) => reordered.find((r) => r.id === a.id) || a))
   }
 
-  // (id, patch | updater) rather than a whole record (#79). Two saves for the
-  // same artist in flight at once used to race on whichever payload a stale
-  // closure was holding — start an upload, toggle a tag before it resolves,
-  // and the upload's own closure still carried the pre-toggle draft, so its
-  // save silently reverted the tag. Resolving the patch here, against
-  // whatever is latest at commit time, means two saves that touch different
-  // fields (images vs tags) can no longer clobber each other regardless of
-  // which one was in flight longer.
-  function saveArtist(id, patchOrUpdater) {
+  // (id, generation, patch | updater) rather than a whole record (#79). Two
+  // saves for the same artist in flight at once used to race on whichever
+  // payload a stale closure was holding — start an upload, toggle a tag
+  // before it resolves, and the upload's own closure still carried the
+  // pre-toggle draft, so its save silently reverted the tag. Resolving the
+  // patch here, against whatever is latest at commit time, means two saves
+  // that touch different fields (images vs tags) can no longer clobber each
+  // other regardless of which one was in flight longer.
+  //
+  // `generation` guards identity, not content (#80): artist ids are handles,
+  // so deleting an artist and adding a new one with the same handle produces
+  // a record with the identical id the old one had. A save/upload closure
+  // captured while viewing the original artist would otherwise still match
+  // by id alone and land on the recreated artist's record. createArtist
+  // assigns a fresh generation on every call, so a stale save's captured
+  // generation no longer matches the live record's once it's been replaced.
+  function saveArtist(id, generation, patchOrUpdater) {
     const applyPatch = (record) =>
       typeof patchOrUpdater === 'function' ? patchOrUpdater(record) : { ...record, ...patchOrUpdater }
-    setArtists((prev) => prev.map((a) => (a.id === id ? applyPatch(a) : a)))
+    const matches = (record) => record.id === id && record.generation === generation
+    setArtists((prev) => prev.map((a) => (matches(a) ? applyPatch(a) : a)))
     // Same identity guard as before (#78): a stale save for an artist that is
     // no longer open must not reopen them on top of whatever is now selected.
-    setSelected((current) => (current?.id === id ? applyPatch(current) : current))
+    setSelected((current) => (current && matches(current) ? applyPatch(current) : current))
   }
 
   // Delegates so both entry points resolve an updater against the newest list;

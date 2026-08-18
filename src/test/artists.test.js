@@ -82,7 +82,9 @@ describe('createArtist', () => {
   ]
 
   it('creates an artist with defaults and rank after the current max', () => {
-    const artist = createArtist({ handle: 'new_artist', name: 'New Artist' }, existing)
+    const { generation, ...artist } = createArtist({ handle: 'new_artist', name: 'New Artist' }, existing)
+    expect(typeof generation).toBe('string')
+    expect(generation).not.toBe('')
     expect(artist).toEqual({
       id: 'new_artist',
       handle: 'new_artist',
@@ -103,6 +105,16 @@ describe('createArtist', () => {
   it('returns null for a duplicate handle, case-insensitively', () => {
     expect(createArtist({ handle: 'zoia.ink', name: '' }, existing)).toBeNull()
     expect(createArtist({ handle: 'OscarAkermo', name: '' }, existing)).toBeNull()
+  })
+
+  // #80: a re-add after delete must get a different identity even with the
+  // exact same handle — this is what lets a stale save from before the
+  // delete be rejected even though the id (handle) still matches.
+  it('assigns a fresh generation every call, even for the same handle twice in a row', () => {
+    const first = createArtist({ handle: 'zoia.ink', name: '' }, [])
+    const second = createArtist({ handle: 'zoia.ink', name: '' }, []) // simulates delete then re-add
+    expect(first.generation).not.toBe(second.generation)
+    expect(first.id).toBe(second.id) // same handle → same id, by design
   })
 })
 

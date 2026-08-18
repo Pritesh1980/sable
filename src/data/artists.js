@@ -86,6 +86,11 @@ export function createArtist(
   return {
     id: handle,
     handle,
+    // Opaque identity token, fresh on every call — including a re-add after
+    // delete, where the new record gets the same id (handle) the deleted one
+    // had. Lets a stale save/upload from before the delete be rejected even
+    // though its id still matches (#80).
+    generation: globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`,
     name,
     tags,
     images,
