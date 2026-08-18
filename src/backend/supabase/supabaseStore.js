@@ -41,24 +41,24 @@ export function createSupabaseStore() {
     async upsert(collection, rows = []) {
       if (!rows.length) return rows
       const userId = await currentUserId()
+      const kind = kindFor(collection)
+      const payload = rows.map((r) => ({
+        kind,
+        id: r.id,
+        data: r,
+        updated_at: r.updatedAt || new Date().toISOString(),
+      }))
       // A bare upsert is arrival-order, not last-write-wins: nothing compares
       // the incoming updated_at against the stored one, so a delayed older
       // write can overwrite a newer row and walk updated_at backwards (#56).
-      // upsert_if_newer (supabase/schema.sql) enforces the comparison
-      // atomically on the database side; a resolved call with no error may
-      // still be a legitimate no-op if the stored row was already newer.
-      await Promise.all(
-        rows.map(async (r) => {
-          const { error } = await sb.rpc('upsert_if_newer', {
-            p_user_id: userId,
-            p_kind: kindFor(collection),
-            p_id: r.id,
-            p_data: r,
-            p_updated_at: r.updatedAt || new Date().toISOString(),
-          })
-          if (error) throw new Error(error.message)
-        })
-      )
+      // upsert_many_if_newer (supabase/schema.sql) enforces the comparison
+      // atomically, one row at a time, inside a single statement — one RPC
+      // call for the whole batch, not one per row, so a batch can't be left
+      // half-committed by a mid-batch network failure the way N independent
+      // RPC calls under Promise.all could. A resolved call with no error may
+      // still be a legitimate no-op for any row whose stored copy was newer.
+      const { error } = await sb.rpc('upsert_many_if_newer', { p_user_id: userId, p_rows: payload })
+      if (error) throw new Error(error.message)
       return rows
     },
     async remove(collection, ids = []) {

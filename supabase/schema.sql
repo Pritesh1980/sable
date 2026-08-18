@@ -29,27 +29,39 @@ create policy "own rows - delete" on public.collections
 -- A bare `upsert()` is arrival-order, not last-write-wins: a delayed older
 -- write that lands after a newer one has already been stored would silently
 -- overwrite it (#56). This enforces the recency comparison atomically on the
--- database side — the row is only touched when the incoming write is newer
+-- database side — a row is only touched when the incoming write is newer
 -- than what's stored, so out-of-order arrival can never move updated_at
--- backwards. security invoker (the default, made explicit) so the insert/
--- update below still runs as the calling role — RLS on `collections` keeps
--- applying, and a caller cannot pass someone else's p_user_id and have it
--- silently succeed; `with check (auth.uid() = user_id)` on the existing
--- policies rejects it. The fixed search_path is still worth pinning even
--- under invoker rights, so an unqualified reference here can't be shadowed.
-create or replace function public.upsert_if_newer(
+-- backwards. `updated_at` is `not null default now()` above, so the stored
+-- side of the comparison is never NULL and the `<` below can't silently
+-- short-circuit on an unset column. security invoker (the default, made
+-- explicit) so the insert/update below still runs as the calling role — RLS
+-- on `collections` keeps applying, and a caller cannot pass someone else's
+-- p_user_id and have it silently succeed; `with check (auth.uid() = user_id)`
+-- on the existing policies rejects it. The fixed search_path is still worth
+-- pinning even under invoker rights, so an unqualified reference here can't
+-- be shadowed.
+--
+-- Takes the whole batch as one jsonb array (each element:
+-- {kind, id, data, updated_at}) and applies it in a single statement, so a
+-- multi-row sync can't be left half-committed by a failure partway through —
+-- unlike calling this once per row, which would turn one logical batch into
+-- N independent, separately-committed round trips.
+create or replace function public.upsert_many_if_newer(
   p_user_id uuid,
-  p_kind text,
-  p_id text,
-  p_data jsonb,
-  p_updated_at timestamptz
+  p_rows jsonb
 ) returns void
 language sql
 security invoker
 set search_path = public
 as $$
   insert into public.collections (user_id, kind, id, data, updated_at)
-  values (p_user_id, p_kind, p_id, p_data, p_updated_at)
+  select
+    p_user_id,
+    (elem->>'kind')::text,
+    (elem->>'id')::text,
+    (elem->'data'),
+    (elem->>'updated_at')::timestamptz
+  from jsonb_array_elements(p_rows) as elem
   on conflict (user_id, kind, id) do update
     set data = excluded.data, updated_at = excluded.updated_at
     where collections.updated_at < excluded.updated_at;
