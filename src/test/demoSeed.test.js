@@ -10,6 +10,7 @@ import {
   maybeSeedDemo,
   isDemoSession,
   canOfferDemo,
+  watchForDemoReseed,
 } from '../data/demoSeed'
 import { DEFAULT_ARTISTS, STYLE_TAGS } from '../data/artists'
 
@@ -278,5 +279,67 @@ describe('maybeSeedDemo', () => {
     localStorage.setItem('tattoo_artists_meta', JSON.stringify([{ id: 'newer' }]))
     expect(maybeSeedDemo({ search: '?demo=1' }, 'local')).toBe(false)
     expect(JSON.parse(localStorage.getItem('tattoo_artists_meta'))[0].id).toBe('newer')
+  })
+})
+
+// #34: a re-seed in one tab (after a version-bump deploy) must not let a
+// still-open sibling demo tab go on flushing its old in-memory dataset over
+// the freshly re-seeded one — that tab needs to reload, not keep running.
+describe('watchForDemoReseed', () => {
+  beforeEach(() => localStorage.clear())
+
+  function fakeStorageBus() {
+    const listeners = []
+    return {
+      addListener: (event, cb) => { if (event === 'storage') listeners.push(cb) },
+      fire: (key, newValue) => listeners.forEach((cb) => cb({ key, newValue })),
+    }
+  }
+
+  it('reloads a demo tab when a sibling tab re-seeds to a newer version', () => {
+    seedDemoData(localStorage) // this tab is a demo session
+    const bus = fakeStorageBus()
+    const reload = () => { reload.called = true }
+    watchForDemoReseed(DEMO_SEED_VERSION, { addListener: bus.addListener, reload })
+
+    bus.fire('tattoo_demo_seed_version', String(DEMO_SEED_VERSION + 1))
+
+    expect(reload.called).toBe(true)
+  })
+
+  it('does not reload for an unrelated storage key', () => {
+    seedDemoData(localStorage)
+    const bus = fakeStorageBus()
+    const reload = () => { reload.called = true }
+    watchForDemoReseed(DEMO_SEED_VERSION, { addListener: bus.addListener, reload })
+
+    bus.fire('tattoo_ideas', '[]')
+
+    expect(reload.called).toBeUndefined()
+  })
+
+  it('does not reload for a same-or-older version (no real re-seed happened)', () => {
+    seedDemoData(localStorage)
+    const bus = fakeStorageBus()
+    const reload = () => { reload.called = true }
+    watchForDemoReseed(DEMO_SEED_VERSION, { addListener: bus.addListener, reload })
+
+    bus.fire('tattoo_demo_seed_version', String(DEMO_SEED_VERSION))
+
+    expect(reload.called).toBeUndefined()
+  })
+
+  it('does not reload a non-demo (real signed-in) tab', () => {
+    localStorage.setItem(
+      'tattoo_local_session',
+      JSON.stringify({ user: { id: 'local-owner@example.com', email: 'owner@example.com' } })
+    )
+    const bus = fakeStorageBus()
+    const reload = () => { reload.called = true }
+    watchForDemoReseed(DEMO_SEED_VERSION, { addListener: bus.addListener, reload })
+
+    bus.fire('tattoo_demo_seed_version', String(DEMO_SEED_VERSION + 1))
+
+    expect(reload.called).toBeUndefined()
   })
 })

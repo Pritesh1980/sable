@@ -5,11 +5,14 @@ import './index.css'
 import App from './App.jsx'
 import { ThemeProvider } from './context/ThemeContext'
 import { AuthProvider } from './context/AuthContext'
-import { maybeSeedDemo } from './data/demoSeed'
+import { maybeSeedDemo, watchForDemoReseed } from './data/demoSeed'
 
 // Demo mode: visiting any route with ?demo=1 on the local backend seeds a
 // fictional dataset + session before the app boots (no-op when signed in).
 maybeSeedDemo()
+// If a sibling tab re-seeds to a newer demo dataset while this tab is open,
+// reload rather than let this tab's stale in-memory copy flush over it (#34).
+watchForDemoReseed()
 
 // Register service worker. When a new SW takes control (after a deploy), reload
 // once so the page swaps to the fresh assets — but not on the first-ever visit

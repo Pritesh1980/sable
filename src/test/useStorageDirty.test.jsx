@@ -4,6 +4,7 @@ import { AuthProvider } from '../context/AuthContext'
 import { useAuth } from '../context/useAuth'
 import { useStorage } from '../hooks/useStorage'
 import { backend } from '../backend'
+import { isDirty, setDirty, writeStamp } from '../backend/dirty'
 
 const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>
 
@@ -148,6 +149,38 @@ describe('useStorage dirty-state handling', () => {
     }, { timeout: 3000 })
     const rows = await backend.store.list('conventionOverrides')
     expect(rows[0].updatedAt).not.toBe('2027-01-01T00:00:00.000Z')
+  })
+
+  // #35: the dirty flag is a shared localStorage sidecar, but editSeq (the
+  // guard on clearing it) is tab-local. A second tab's edit landing while this
+  // tab's flush is in flight must not have its dirty bit cleared by a flush
+  // that never actually pushed it.
+  it('a list edit from another tab mid-flush is not marked synced by this flush', async () => {
+    seedSession()
+    const { result } = renderSynced('tattoo_ideas', [])
+    await waitFor(() => expect(result.current.auth.user).toBeTruthy())
+
+    const realUpsert = backend.store.upsert.bind(backend.store)
+    const upsert = vi.spyOn(backend.store, 'upsert').mockImplementation(async (...args) => {
+      // Simulate another tab's hook instance writing its own edit's shared
+      // sidecars (setDirty/writeStamp) while this tab's flush is in flight —
+      // exactly what setValueAndSync in that other tab would do.
+      setDirty('tattoo_ideas')
+      writeStamp('tattoo_ideas', '2027-01-01T00:00:00.000Z')
+      return realUpsert(...args)
+    })
+
+    act(() => result.current.store[1]([{ id: 'a', title: 'from this tab' }]))
+    await waitFor(() => expect(upsert).toHaveBeenCalled(), { timeout: 3000 })
+    await waitFor(async () => {
+      const rows = await backend.store.list('ideas')
+      expect(rows.find((r) => r.id === 'a')?.title).toBe('from this tab')
+    }, { timeout: 3000 })
+
+    // This tab's write landed, but the other tab's edit (simulated above)
+    // never got its own push — dirty must still be set so a later flush or
+    // reload retries it, not silently dropped.
+    expect(isDirty('tattoo_ideas')).toBe(true)
   })
 
   it('re-adding a row supersedes its pending delete (the delete must not win)', async () => {

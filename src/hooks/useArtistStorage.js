@@ -13,6 +13,8 @@ import {
   readPendingDeletes,
   addPendingDeletes,
   clearPendingDeletes,
+  writeStamp,
+  readStamp,
 } from '../backend/dirty'
 import { resolveBlobKey, keyForUrl, registerBlobUrl } from '../data/blobUrls'
 
@@ -424,6 +426,10 @@ export function useArtistStorage() {
 
   const runFlushMeta = useCallback(async () => {
     if (!user) return
+    // Snapshot the shared edit stamp before doing any async work. It's a
+    // localStorage sidecar, so another tab editing artist meta mid-flush
+    // will have moved it by the time we check again (#35).
+    const stampAtStart = readStamp(META_KEY)
     const meta = artistsRef.current.map(canonicalizeArtist)
     const at = nowStamp()
     // Rows keep the stamp set when the edit happened; `at` only fills rows
@@ -452,9 +458,10 @@ export function useArtistStorage() {
 
     syncedRef.current = meta
     clearPendingDeletes(META_KEY, pendingDeletes)
-    // A newer edit may have arrived while the writes were in flight; its own
-    // flush is already scheduled, so only that flush may clear the flag.
-    if (editSeq.current === seq) clearDirty(META_KEY)
+    // A newer edit may have arrived while the writes were in flight — either
+    // this tab's own (editSeq) or another tab's on the same key (the shared
+    // stamp sidecar, #35) — so only clear dirty if neither moved.
+    if (editSeq.current === seq && readStamp(META_KEY) === stampAtStart) clearDirty(META_KEY)
   }, [user])
 
   const flushMeta = useCallback(() => {
@@ -502,6 +509,9 @@ export function useArtistStorage() {
     })
     editSeq.current += 1
     setDirty(META_KEY)
+    // Shared across tabs (unlike editSeq) — lets a flush detect an edit that
+    // landed in *another* tab while it was in flight (#35).
+    writeStamp(META_KEY, at)
     if (user) {
       clearTimeout(pushTimer.current)
       pushTimer.current = setTimeout(() => {

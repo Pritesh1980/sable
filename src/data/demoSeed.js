@@ -158,6 +158,27 @@ function isStaleDemoSession(raw) {
   }
 }
 
+// Cross-tab guard (#34): a re-seed in one tab (after a version-bump deploy)
+// writes tattoo_demo_seed_version, which fires a native `storage` event in
+// every *other* open tab on the origin. A still-open sibling demo tab has the
+// old dataset in memory; left running, any edit there flushes with a later
+// updatedAt and last-write-wins sync resurrects the removed/replaced demo
+// artists. Reloading that tab is simpler and safer than trying to reconcile
+// two demo datasets in place. Real (non-demo) tabs are never touched — this
+// only ever fires for a session this seeder marked (see isDemoSession above).
+export function watchForDemoReseed(
+  bootVersion = DEMO_SEED_VERSION,
+  { addListener = (...a) => window.addEventListener(...a), reload = () => window.location.reload() } = {}
+) {
+  const handler = (e) => {
+    if (e.key !== 'tattoo_demo_seed_version' || !isDemoSession()) return
+    const newVersion = Number(e.newValue)
+    if (Number.isSafeInteger(newVersion) && newVersion > bootVersion) reload()
+  }
+  addListener('storage', handler)
+  return handler
+}
+
 // Boot-time hook (called from main.jsx before render). Creating a demo session
 // from nothing requires `?demo=1` and no existing session; but a proven demo
 // session whose stored dataset predates the shipped files re-seeds on ANY boot

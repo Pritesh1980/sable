@@ -4,6 +4,7 @@ import { AuthProvider } from '../context/AuthContext'
 import { useAuth } from '../context/useAuth'
 import { useArtistStorage } from '../hooks/useArtistStorage'
 import { backend } from '../backend'
+import { isDirty, setDirty, writeStamp } from '../backend/dirty'
 
 const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>
 
@@ -84,6 +85,39 @@ describe('useArtistStorage dirty-state handling', () => {
     await waitFor(async () => {
       expect((await backend.store.list('artistsMeta')).map((r) => r.id)).toEqual(['keep'])
     }, { timeout: 3000 })
+  })
+
+  // #35: the dirty flag is a shared localStorage sidecar, but editSeq (the
+  // guard on clearing it) is tab-local. A second tab's edit landing while this
+  // tab's flush is in flight must not have its dirty bit cleared by a flush
+  // that never actually pushed it.
+  it('an artist edit from another tab mid-flush is not marked synced by this flush', async () => {
+    seedSession()
+    await backend.store.upsert('artistsMeta', [remoteArtist('x')])
+    const { result } = renderSynced()
+    await waitFor(() => expect(result.current.store[0]).toHaveLength(1))
+
+    const realUpsert = backend.store.upsert.bind(backend.store)
+    const upsert = vi.spyOn(backend.store, 'upsert').mockImplementation(async (...args) => {
+      // Simulate another tab's own edit landing while this tab's flush is in
+      // flight — exactly what setArtists in that other tab would do.
+      setDirty('tattoo_artists_meta')
+      writeStamp('tattoo_artists_meta', '2027-01-01T00:00:00.000Z')
+      return realUpsert(...args)
+    })
+
+    act(() =>
+      result.current.store[1]((prev) =>
+        prev.map((a) => (a.id === 'x' ? { ...a, status: 'shortlisted' } : a))
+      )
+    )
+    await waitFor(() => expect(upsert).toHaveBeenCalled(), { timeout: 3000 })
+    await waitFor(async () => {
+      const rows = await backend.store.list('artistsMeta')
+      expect(rows.find((r) => r.id === 'x')?.status).toBe('shortlisted')
+    }, { timeout: 3000 })
+
+    expect(isDirty('tattoo_artists_meta')).toBe(true)
   })
 
   it('the one-time migration push preserves stamps of unchanged artists', async () => {
