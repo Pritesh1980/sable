@@ -1,40 +1,65 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AuthContext } from './auth-context'
 import { backend } from '../backend'
 import { purgeLocalUserData } from '../backend/purge'
+
+// Persists the last-known signed-in identity across reloads (deliberately NOT
+// in purge.js's PURGE_KEYS — it's the bookkeeping marker purge itself relies
+// on, not signed-in user data). Without this, an in-memory ref alone can't
+// detect a full-page reload/navigation (e.g. an OAuth redirect) that boots
+// straight into a different account (#28 review, codex).
+const LAST_USER_KEY = 'tattoo_last_user_id'
 
 // Holds the current auth session and exposes signIn/signOut, wired to
 // backend.auth. Mirrors the ThemeContext split (context · provider · hook).
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
-  // undefined = identity not yet established (initial hydration in flight);
-  // set once by whichever of getSession()/onAuthStateChange resolves first.
-  const prevUserIdRef = useRef(undefined)
 
   useEffect(() => {
     let mounted = true
+    // Whichever of getSession()/onAuthStateChange resolves first establishes
+    // the baseline identity; once set, a late-arriving getSession() result is
+    // stale and must not stomp over a real auth event that already landed
+    // (#28 review, codex).
+    let baselineSet = false
+    let prevUserId
+
+    async function applyIdentity(nextUserId, nextSession) {
+      if (!baselineSet) {
+        baselineSet = true
+        const lastKnown = localStorage.getItem(LAST_USER_KEY)
+        prevUserId = lastKnown === null ? nextUserId : lastKnown
+      }
+      if (prevUserId !== nextUserId) {
+        // Purge — and only then publish the new session — on any identity
+        // change, not just the explicit signOut() path: passive session
+        // expiry, a direct A→B swap with no null event in between, and a
+        // reload into a different account are all covered. Publishing before
+        // purge completes would let an A-owned read still in flight populate
+        // B's freshly-rendered state (#28 review, codex).
+        await purgeLocalUserData().catch((e) => console.error('[tattoo] purge on auth change failed:', e))
+      }
+      prevUserId = nextUserId
+      try {
+        if (nextUserId) localStorage.setItem(LAST_USER_KEY, nextUserId)
+        else localStorage.removeItem(LAST_USER_KEY)
+      } catch (e) { console.error('[tattoo] failed to persist last user id:', e) }
+      if (mounted) setSession(nextSession)
+    }
+
     backend.auth
       .getSession()
       .then((s) => {
-        if (!mounted) return
-        if (prevUserIdRef.current === undefined) prevUserIdRef.current = s?.user?.id || null
-        setSession(s)
+        if (!mounted || baselineSet) return
+        return applyIdentity(s?.user?.id || null, s)
       })
       .catch((e) => console.error('[tattoo] getSession failed:', e))
       .finally(() => { if (mounted) setLoading(false) })
 
     const unsub = backend.auth.onAuthStateChange((s) => {
       if (!mounted) return
-      const nextUserId = s?.user?.id || null
-      // Purge on any identity change, not just the explicit signOut() path —
-      // covers passive session expiry and a direct A→B swap with no null
-      // event in between (#28).
-      if (prevUserIdRef.current !== undefined && prevUserIdRef.current !== nextUserId) {
-        purgeLocalUserData().catch((e) => console.error('[tattoo] purge on auth change failed:', e))
-      }
-      prevUserIdRef.current = nextUserId
-      setSession(s)
+      applyIdentity(s?.user?.id || null, s)
     })
     return () => { mounted = false; unsub?.() }
   }, [])

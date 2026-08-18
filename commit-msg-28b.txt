@@ -1,0 +1,30 @@
+fix(auth): close identity-race and IndexedDB-deletion gaps from review
+
+Cross-model review (codex + agy) on the #28 fix found four real gaps beyond
+the original scope:
+
+- The in-memory ref only tracked identity within one mount, so a reload/
+  navigation into a different account (e.g. an OAuth redirect) was invisible
+  to it. Identity is now also persisted across reloads (tattoo_last_user_id,
+  deliberately outside purge's own key list).
+- The new session was published before its purge settled, so an old-user
+  read still in flight could populate the new user's freshly-rendered state.
+  Publishing now waits on purge.
+- A slow getSession() resolving after a real auth event had already won the
+  race could stomp the identity back to stale data; the first real signal
+  (whichever source) now establishes the baseline and later ones are ignored.
+- onblocked resolved purge as if the deletion had happened — but a blocked
+  delete request stays queued and can fire later, silently wiping whatever a
+  new user has since written to a recreated database. Connections opened by
+  this app now auto-close on versionchange so a purge's deleteDatabase
+  essentially never blocks in the first place.
+
+Also fixed: the local backend's storage-key rename (from #28's own
+namespacing change) would have made an existing local/demo installation's
+data appear wiped — added a one-time migration from the legacy key.
+
+Two other review findings were checked against the code and rejected: a
+claimed shared module-scoped IndexedDB connection (each helper opens its own
+per-call connection, always did) and a claimed Supabase-path failure in
+localStore.js's session lookup (that module is never reachable when
+VITE_BACKEND=supabase — a different store implementation handles that path).

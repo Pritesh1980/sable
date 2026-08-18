@@ -30,4 +30,21 @@ describe('local store per-user isolation (#28)', () => {
     await backend.store.upsert('ideas', [{ id: '1', title: 'anon idea', updatedAt: '2026-01-01T00:00:00Z' }])
     expect((await backend.store.list('ideas')).map((r) => r.id)).toEqual(['1'])
   })
+
+  // #28 review (codex + agy): namespacing changed the storage key from
+  // `tattoo_remote_<collection>` to `tattoo_remote_<namespace>_<collection>` —
+  // an existing local/demo installation's data would otherwise appear wiped.
+  it('migrates data from the pre-namespacing legacy key on first read', async () => {
+    localStorage.setItem(
+      'tattoo_remote_ideas',
+      JSON.stringify([{ id: 'legacy', title: 'pre-existing demo idea', updatedAt: '2026-01-01T00:00:00Z' }])
+    )
+
+    const backend = createBackend('local')
+    expect((await backend.store.list('ideas')).map((r) => r.id)).toEqual(['legacy'])
+
+    // And it's genuinely migrated, not re-read from the legacy key each time.
+    localStorage.removeItem('tattoo_remote_ideas')
+    expect((await backend.store.list('ideas')).map((r) => r.id)).toEqual(['legacy'])
+  })
 })

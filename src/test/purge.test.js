@@ -99,4 +99,25 @@ describe('purgeLocalUserData', () => {
     blockingDb.close()
     errSpy.mockRestore()
   })
+
+  // #28 review (codex + agy): onblocked resolving early is a safety net for a
+  // non-cooperating connection, but a *cooperating* one (this app's own
+  // openDB(), wired to auto-close on versionchange) should never block purge
+  // at all — otherwise the queued deletion can fire later and silently wipe
+  // whatever a newly signed-in user has since written to a recreated DB.
+  it('does not block at all when a lingering connection auto-closes on versionchange', async () => {
+    const openReq = indexedDB.open('tattoo-images-v1', 1)
+    openReq.onupgradeneeded = (e) => e.target.result.createObjectStore('artist-images')
+    const cooperatingDb = await new Promise((resolve, reject) => {
+      openReq.onsuccess = () => resolve(openReq.result)
+      openReq.onerror = () => reject(openReq.error)
+    })
+    cooperatingDb.onversionchange = () => cooperatingDb.close()
+
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    await purgeLocalUserData()
+    // No "blocked by an open connection" log means onblocked never fired.
+    expect(errSpy).not.toHaveBeenCalledWith(expect.stringContaining('blocked'))
+    errSpy.mockRestore()
+  })
 })

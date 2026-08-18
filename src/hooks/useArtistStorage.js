@@ -29,7 +29,16 @@ function openDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, 1)
     req.onupgradeneeded = (e) => e.target.result.createObjectStore(STORE)
-    req.onsuccess = (e) => resolve(e.target.result)
+    req.onsuccess = (e) => {
+      const db = e.target.result
+      // If this connection outlives its own operation (an in-flight write
+      // racing a sign-out), auto-close on versionchange so a purge's
+      // deleteDatabase never blocks — a blocked delete stays queued and can
+      // silently fire later, wiping whatever a new user has since written to
+      // a recreated DB (#28 review, codex + agy).
+      db.onversionchange = () => db.close()
+      resolve(db)
+    }
     req.onerror = () => reject(req.error)
   })
 }

@@ -10,7 +10,13 @@ function openDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, 1)
     req.onupgradeneeded = (e) => e.target.result.createObjectStore(STORE)
-    req.onsuccess = (e) => resolve(e.target.result)
+    req.onsuccess = (e) => {
+      const db = e.target.result
+      // See the matching comment in useArtistStorage.js's openDB() — auto-close
+      // on versionchange so a purge's deleteDatabase never blocks (#28 review).
+      db.onversionchange = () => db.close()
+      resolve(db)
+    }
     req.onerror = () => reject(req.error)
   })
 }

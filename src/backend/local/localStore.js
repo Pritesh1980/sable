@@ -25,9 +25,29 @@ function storageKey(collection) {
   return `${PREFIX}${currentUserNamespace()}_${collection}`
 }
 
-function load(collection) {
+// #28 review (codex + agy): before namespacing, every collection lived under
+// one global `tattoo_remote_<collection>` key. Reading only the new namespaced
+// key would make an existing local/demo installation's data appear wiped —
+// migrate it forward, once, on first read.
+function migrateLegacy(collection, key) {
+  const legacyKey = PREFIX + collection
+  const legacy = localStorage.getItem(legacyKey)
+  if (legacy === null) return null
   try {
-    return JSON.parse(localStorage.getItem(storageKey(collection))) || []
+    localStorage.setItem(key, legacy)
+    localStorage.removeItem(legacyKey)
+    return JSON.parse(legacy) || []
+  } catch {
+    return null
+  }
+}
+
+function load(collection) {
+  const key = storageKey(collection)
+  try {
+    const raw = localStorage.getItem(key)
+    if (raw !== null) return JSON.parse(raw) || []
+    return migrateLegacy(collection, key) || []
   } catch {
     return []
   }
