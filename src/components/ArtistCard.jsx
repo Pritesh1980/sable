@@ -33,45 +33,39 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
     }
   }
 
-  // Not a real <button>: editing mode nests genuinely interactive controls
-  // (drag handle, quick-upload buttons, a file input), and a <button>
-  // containing other interactive controls is invalid, broken semantics.
-  // role="button" + tabIndex + a real keydown handler is the WAI-ARIA
-  // authoring practice for that shape (#30). Guarded by e.target ===
-  // e.currentTarget so Enter/Space activating a nested control (which
-  // already stops propagation on click, but keydown still bubbles natively)
-  // doesn't also open the artist.
+  // The card's root is a plain div, not role="button": while editing, it
+  // genuinely contains other interactive controls (drag handle, quick-upload
+  // buttons, a file input), and role="button" is not supposed to have
+  // focusable descendants — a conforming AT combination isn't guaranteed to
+  // expose them correctly while the whole card reads as one button widget
+  // (#83, cross-model review of #30). Its onClick still opens the artist for
+  // mouse/touch, exactly as before — including the drag handle's tap-that-
+  // never-became-a-drag (#54), which relies on the click bubbling here since
+  // the handle deliberately doesn't stop it.
   //
-  // Known trade-off (cross-model review, #83): role="button" technically
-  // shouldn't have focusable descendants, and while editing the drag handle
-  // and upload buttons are exactly that — a conforming AT combination isn't
-  // guaranteed to expose them correctly while the card reads as a button
-  // widget. In the default browsing view (editing off) this doesn't apply at
-  // all: every one of those controls is gated behind `editing`, so there are
-  // no interactive descendants to begin with. A fully correct fix needs an
-  // overlay-button restructure, tracked in #83 rather than done here.
-  function handleKeyDown(e) {
-    if (e.target !== e.currentTarget) return
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault()
-      onOpen(artist)
-    }
-  }
-
+  // Keyboard/AT access to "open this artist" instead comes from a dedicated
+  // invisible <button> below, absolutely positioned over the card as a
+  // *sibling* of the aspect-ratio box rather than an ancestor of anything
+  // inside it — so it has zero descendants of its own and the ACT rule does
+  // not apply. It sits underneath that box in paint order (first in the DOM,
+  // no competing z-index), so with a mouse it is fully occluded and inert;
+  // Tab and Enter/Space reach it regardless of paint order, which is all it
+  // exists for.
   return (
     <div
-      role="button"
-      tabIndex={0}
-      aria-label={displayName}
       style={{ animationDelay: `${index * 0.04}s` }}
-      className={`animate-slide-up opacity-0 [animation-fill-mode:forwards] bg-ink-card border border-ink-border rounded-xs overflow-hidden cursor-pointer
+      className={`relative animate-slide-up opacity-0 [animation-fill-mode:forwards] bg-ink-card border border-ink-border rounded-xs overflow-hidden cursor-pointer
         transition-all duration-300
         hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-black/70 hover:border-cream-muted/30
-        focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent
         group ${isDragging ? 'opacity-40 scale-95 shadow-2xl' : ''}`}
       onClick={() => onOpen(artist)}
-      onKeyDown={handleKeyDown}
     >
+      <button
+        type="button"
+        aria-label={displayName}
+        onClick={() => onOpen(artist)}
+        className="absolute inset-0 z-0 w-full h-full appearance-none bg-transparent border-0 p-0 m-0 text-left rounded-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+      />
       <div className={`${featured ? 'aspect-[3/4]' : 'aspect-[4/5]'} bg-ink-muted relative overflow-hidden`}>
         {hasImages && !imgError ? (
           <img

@@ -66,14 +66,14 @@ describe('grid card in the default browsing view (#70)', () => {
   })
 
   // The promise this whole change rests on: nothing inside the card competes
-  // with opening the artist. The card's own root carries role="button" for
-  // "open this artist" itself (#30, keyboard accessibility) — that's the one
-  // role="button" this asserts stays alone; a second one would mean some
-  // nested control is competing with it again.
+  // with opening the artist. The card exposes exactly one button — the
+  // dedicated "open this artist" control (#30, keyboard accessibility; #83,
+  // restructured so it has no nested descendants of its own) — a second one
+  // would mean some other control is competing with it again.
   it('leaves nothing on the card that is not "open this artist"', () => {
     const { container } = renderCard()
-    expect(container.querySelectorAll('button')).toHaveLength(0)
-    expect(container.querySelectorAll('[role="button"]')).toHaveLength(1)
+    expect(container.querySelectorAll('button')).toHaveLength(1)
+    expect(screen.getByRole('button', { name: artist.name })).toBeTruthy()
   })
 
   // The buttons are gated; the input behind them deliberately is not. Toggling

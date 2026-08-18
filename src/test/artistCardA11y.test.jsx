@@ -1,15 +1,19 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, within } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import ArtistCard from '../components/ArtistCard'
 
-// #30. The card's primary "open artist" action was a plain div onClick, with
-// no button/link semantics, no keyboard activation, and no focus affordance —
-// unreachable and inoperable from keyboard/AT. It can't become a real
-// <button>: it hosts genuinely nested interactive controls in editing mode
-// (a drag handle, quick-upload buttons, a hidden file input), and a <button>
-// containing other interactive controls is invalid, broken semantics. So it
-// stays a non-button container with role="button" + tabIndex + a real
-// keydown handler, matching WAI-ARIA's authoring practice for that shape.
+// #30 gave the card's "open artist" action keyboard/AT operability. #83 then
+// found that the original shape — role="button" wrapping the whole card,
+// including the drag handle and quick-upload buttons while editing — put
+// focusable descendants inside a button-role element, which role="button"
+// is not supposed to have (a conforming AT combination isn't guaranteed to
+// expose them). The fix: the "open artist" control is a real, empty
+// <button> laid out as a sibling of everything else, not an ancestor of it.
+// A native <button> needs no bespoke keydown handling to be Enter/Space
+// operable — that's the browser's own default action for the element, not
+// application logic, so it isn't re-tested here (confirmed empirically that
+// jsdom's fireEvent doesn't simulate it, unlike a real browser: testing it
+// would only be testing jsdom, not this component).
 
 const artist = {
   id: 'a1',
@@ -23,48 +27,41 @@ const artist = {
   studio: null,
 }
 
-describe('ArtistCard keyboard accessibility (#30)', () => {
-  it('exposes the card as a focusable, labeled button', () => {
+describe('ArtistCard keyboard accessibility (#30, #83)', () => {
+  it('exposes the card as a real, labeled <button>', () => {
     render(<ArtistCard artist={artist} onOpen={vi.fn()} onSaveImages={vi.fn()} />)
     const card = screen.getByRole('button', { name: 'Zoia' })
-    expect(card).toHaveAttribute('tabIndex', '0')
+    expect(card.tagName).toBe('BUTTON')
   })
 
-  it('opens the artist on Enter', () => {
-    const onOpen = vi.fn()
-    render(<ArtistCard artist={artist} onOpen={onOpen} onSaveImages={vi.fn()} />)
-    fireEvent.keyDown(screen.getByRole('button', { name: 'Zoia' }), { key: 'Enter' })
-    expect(onOpen).toHaveBeenCalledWith(artist)
-  })
-
-  it('opens the artist on Space', () => {
-    const onOpen = vi.fn()
-    render(<ArtistCard artist={artist} onOpen={onOpen} onSaveImages={vi.fn()} />)
-    fireEvent.keyDown(screen.getByRole('button', { name: 'Zoia' }), { key: ' ' })
-    expect(onOpen).toHaveBeenCalledWith(artist)
-  })
-
-  it('still opens the artist on click', () => {
+  it('opens the artist on click', () => {
     const onOpen = vi.fn()
     render(<ArtistCard artist={artist} onOpen={onOpen} onSaveImages={vi.fn()} />)
     fireEvent.click(screen.getByRole('button', { name: 'Zoia' }))
     expect(onOpen).toHaveBeenCalledWith(artist)
   })
 
-  it('does not also open the artist when Enter is pressed on the nested quick-upload button', () => {
-    const onOpen = vi.fn()
-    render(<ArtistCard artist={artist} onOpen={onOpen} onSaveImages={vi.fn()} editing />)
+  // The point of #83: while editing nests genuinely interactive controls
+  // (drag handle, quick-upload buttons) elsewhere in the card, none of them
+  // may be descendants of the "open artist" button itself.
+  it('has zero descendants of the "open artist" button, even while editing', () => {
+    render(<ArtistCard artist={artist} onOpen={vi.fn()} onSaveImages={vi.fn()} editing />)
     const card = screen.getByRole('button', { name: 'Zoia' })
-    const addPhotos = within(card).getByRole('button', { name: 'Add photos' })
-    fireEvent.keyDown(addPhotos, { key: 'Enter' })
-    expect(onOpen).not.toHaveBeenCalled()
+    expect(card.children).toHaveLength(0)
   })
 
   it('does not also open the artist when the nested quick-upload button is clicked', () => {
     const onOpen = vi.fn()
     render(<ArtistCard artist={artist} onOpen={onOpen} onSaveImages={vi.fn()} editing />)
-    const card = screen.getByRole('button', { name: 'Zoia' })
-    fireEvent.click(within(card).getByRole('button', { name: 'Add photos' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add photos' }))
     expect(onOpen).not.toHaveBeenCalled()
+  })
+
+  it('still opens the artist on click when editing is off, with no interactive descendants to compete', () => {
+    const onOpen = vi.fn()
+    render(<ArtistCard artist={artist} onOpen={onOpen} onSaveImages={vi.fn()} />)
+    expect(screen.queryAllByRole('button')).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Zoia' }))
+    expect(onOpen).toHaveBeenCalledWith(artist)
   })
 })
