@@ -126,7 +126,20 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
         <div className="flex gap-4">
           {editing ? (
             <>
-              <button onClick={() => { setDraft({ ...artist, images }); setEditing(false) }} className="text-cream-muted hover:text-cream text-sm transition-colors">
+              <button
+                onClick={() => {
+                  setDraft({ ...artist, images })
+                  // Otherwise a field touched, then abandoned via Cancel,
+                  // stays in the touched set — a later save from a fresh
+                  // edit session would still patch it, back to whatever
+                  // draft now holds (artist's own value, a no-op most of the
+                  // time, but a stale one if something external changed
+                  // that same field again in between).
+                  touchedRef.current = new Set()
+                  setEditing(false)
+                }}
+                className="text-cream-muted hover:text-cream text-sm transition-colors"
+              >
                 Cancel
               </button>
               <button onClick={save} className="text-accent hover:text-accent-hover text-sm font-body transition-colors">

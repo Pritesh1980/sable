@@ -90,4 +90,33 @@ describe('the explicit edit-form Save does not clobber a field synced in while e
     expect(lastArtists[0].studio).toBe('no-regrets-london')
     expect(lastArtists[0].status).toBe('shortlisted')
   })
+
+  it('does not still patch a field that was touched, then abandoned via Cancel', () => {
+    render(<Harness />)
+    fireEvent.click(screen.getByText('Zoia'))
+    fireEvent.click(within(detailSheet()).getByText('Edit details'))
+
+    // Touch name, then back out — this edit is abandoned, not saved.
+    fireEvent.change(within(detailSheet()).getByPlaceholderText('Display name (optional)'), {
+      target: { value: 'Abandoned edit' },
+    })
+    fireEvent.click(within(detailSheet()).getByText('Cancel'))
+
+    // A sync lands a name change while the sheet is still open, unedited.
+    act(() => {
+      lastSetArtists((prev) =>
+        prev.map((a) => (a.id === 'a1' ? { ...a, name: 'Synced name' } : a))
+      )
+    })
+
+    // A fresh edit session touches only notes.
+    fireEvent.click(within(detailSheet()).getByText('Edit details'))
+    fireEvent.change(within(detailSheet()).getByPlaceholderText('Personal notes about this artist…'), {
+      target: { value: 'A fresh note' },
+    })
+    fireEvent.click(within(detailSheet()).getByText('Save'))
+
+    expect(lastArtists[0].notes).toBe('A fresh note')
+    expect(lastArtists[0].name).toBe('Synced name')
+  })
 })
