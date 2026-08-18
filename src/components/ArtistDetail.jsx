@@ -86,7 +86,16 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
   }
 
   function toggleTag(tag) {
-    touch('tags')
+    // Only mark 'tags' touched when this toggle is deferred to the explicit
+    // Save below (#81 review) — the !editing branch already auto-saves tags
+    // on its own, independently correct the moment it fires. Touching it
+    // unconditionally left a stale entry in touchedRef that only save()/
+    // Cancel ever clear, neither of which this branch goes through: a tag
+    // toggled outside editing, followed later by an edit session that never
+    // touches tags again, would still carry this session's now-stale
+    // draft.tags into that later save, clobbering whatever landed via sync
+    // in between.
+    if (editing) touch('tags')
     setDraft((d) => {
       const tags = d.tags.includes(tag) ? d.tags.filter((t) => t !== tag) : [...d.tags, tag]
       const next = { ...d, tags }

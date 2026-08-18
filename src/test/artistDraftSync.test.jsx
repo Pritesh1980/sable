@@ -119,4 +119,36 @@ describe('the explicit edit-form Save does not clobber a field synced in while e
     expect(lastArtists[0].notes).toBe('A fresh note')
     expect(lastArtists[0].name).toBe('Synced name')
   })
+
+  // codex review: toggleTag's out-of-editing branch auto-saves tags on its
+  // own, independently of touchedRef — but it was still marking 'tags' as
+  // touched, and nothing outside an edit session's save()/Cancel ever clears
+  // that. A later edit session touching something else entirely would still
+  // carry that stale entry into its patch.
+  it('does not let an out-of-editing tag toggle leave a stale tags touch for a later edit session', () => {
+    render(<Harness />)
+    fireEvent.click(screen.getByText('Zoia'))
+
+    // Toggle a tag while not editing — auto-saves immediately via its own
+    // independent patch, nothing to do with a later explicit Save.
+    fireEvent.click(within(detailSheet()).getByText('blackwork'))
+    expect(lastArtists[0].tags).toEqual(expect.arrayContaining(['fine-line', 'blackwork']))
+
+    // Another device syncs in a different tags set afterwards.
+    act(() => {
+      lastSetArtists((prev) =>
+        prev.map((a) => (a.id === 'a1' ? { ...a, tags: ['surrealism'] } : a))
+      )
+    })
+
+    // A later edit session touches only notes.
+    fireEvent.click(within(detailSheet()).getByText('Edit details'))
+    fireEvent.change(within(detailSheet()).getByPlaceholderText('Personal notes about this artist…'), {
+      target: { value: 'Another note' },
+    })
+    fireEvent.click(within(detailSheet()).getByText('Save'))
+
+    expect(lastArtists[0].notes).toBe('Another note')
+    expect(lastArtists[0].tags).toEqual(['surrealism'])
+  })
 })
