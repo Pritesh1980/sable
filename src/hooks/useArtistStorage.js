@@ -134,6 +134,60 @@ function canonicalizeArtist(a) {
   return { ...a, images: canonicalizeImages(a.images) }
 }
 
+// Stable string identity for a canonical image ref, used only to compare
+// refs for tombstone bookkeeping (#55) — never persisted or displayed.
+function refIdentity(ref) {
+  if (typeof ref === 'string') return resolveAssetPath(ref)
+  if (ref?.key) return `key:${ref.key}`
+  if (ref?.url) return `url:${ref.url}`
+  return null
+}
+
+// Every canonical ref present before but missing after becomes a tombstone,
+// so a removal survives even if the whole record it's part of later loses a
+// whole-record LWW comparison to a stale copy that still has the photo (#55).
+export function removedImageTombstones(prevImages, nextImages, at) {
+  const prevCanonical = canonicalizeImages(prevImages || [])
+  const nextIds = new Set(canonicalizeImages(nextImages || []).map(refIdentity).filter(Boolean))
+  return prevCanonical
+    .filter((ref) => {
+      const id = refIdentity(ref)
+      return id && !nextIds.has(id)
+    })
+    .map((ref) => ({ ref, removedAt: at }))
+}
+
+// Union two tombstone lists, keeping the later removedAt when both sides
+// tombstone the same ref.
+function mergeTombstones(a, b) {
+  const byId = new Map()
+  for (const t of [...(a || []), ...(b || [])]) {
+    const id = refIdentity(t.ref)
+    if (!id) continue
+    const existing = byId.get(id)
+    if (!existing || String(t.removedAt || '') > String(existing.removedAt || '')) byId.set(id, t)
+  }
+  return Array.from(byId.values())
+}
+
+// Applied after whole-record reconciliation picks a winner by LWW: an image
+// tombstoned on *either* side stays out of the winning record's images, even
+// when that record's whole-record content came from the other, stale side —
+// e.g. device A removes a photo; device B, holding a stale copy, later edits
+// only a note, and its newer-but-unrelated whole-record write would otherwise
+// resurrect the removed photo (#55).
+export function applyImageTombstones(mergedRecords, localRecords, remoteRecords) {
+  const localById = new Map((localRecords || []).map((r) => [r.id, r]))
+  const remoteById = new Map((remoteRecords || []).map((r) => [r.id, r]))
+  return mergedRecords.map((rec) => {
+    const tombstones = mergeTombstones(localById.get(rec.id)?.removedImages, remoteById.get(rec.id)?.removedImages)
+    if (!tombstones.length) return rec
+    const doomed = new Set(tombstones.map((t) => refIdentity(t.ref)))
+    const images = Array.isArray(rec.images) ? rec.images.filter((ref) => !doomed.has(refIdentity(ref))) : rec.images
+    return { ...rec, images, removedImages: tombstones }
+  })
+}
+
 function saveMeta(artists) {
   try {
     localStorage.setItem(META_KEY, JSON.stringify(artists.map(canonicalizeArtist)))
@@ -171,24 +225,37 @@ export function mergeStaticImages(idbImages = [], staticImages = []) {
   return [...idbImages, ...staticImages.filter((s) => !cached.has(resolveAssetPath(s)))]
 }
 
-// Build display-ready artists from metadata + the IndexedDB image map. Prefer the
-// local IndexedDB cache (instant, offline); otherwise resolve canonical refs from
-// the record (cross-device). DEFAULT_ARTISTS static paths are merged in — but
-// only on a build that ships them: with seeding off (the public demo) the
-// curated images are absent, and falling back to them would produce exactly the
-// broken requests the gate exists to prevent.
-async function buildArtists(metaList, imageMap, withDefaults = true) {
+// Build display-ready artists from metadata + the IndexedDB image map.
+// Canonical (reconciled) `a.images` is always the source of *membership* for
+// the artist's own photos. The IndexedDB cache is *not* trusted for
+// membership: a device that hasn't reloaded since another device removed a
+// photo would otherwise keep rendering (and could re-push) an image the
+// reconciled record no longer has (#55). The one exception is a legacy
+// un-migrated local upload — a raw data-URL with no registered blob key yet,
+// because canonicalizeImages deliberately drops those until the one-time
+// migration uploads them — which must still display locally in that window.
+// `keyForUrl`, not merely "starts with data:", is what tells the two apart:
+// the local backend resolves *every* blob (migrated or not) to a data-URL,
+// so a stale-but-already-migrated image would otherwise be misidentified as
+// legacy and resurrected right back in.
+//
+// DEFAULT_ARTISTS static paths are then appended (deduped by resolved path,
+// mergeStaticImages) as a starter gallery on top of whatever the artist's own
+// photos resolve to — never instead of them — but only on a build that ships
+// them: with seeding off (the public demo) the curated images are absent,
+// and falling back to them would produce exactly the broken requests the
+// gate exists to prevent.
+export async function buildArtists(metaList, imageMap, withDefaults = true) {
   return Promise.all(
     metaList.map(async (a) => {
       const def = withDefaults ? DEFAULT_ARTISTS.find((d) => d.id === a.id) : undefined
       const idbImages = imageMap[a.id]
-      let display
-      if (Array.isArray(idbImages) && idbImages.length) {
-        display = mergeStaticImages(idbImages, def?.images || [])
-      } else {
-        const canonical = Array.isArray(a.images) && a.images.length ? a.images : (def?.images || [])
-        display = await displayFromCanonical(canonical)
-      }
+      const resolved = await displayFromCanonical(Array.isArray(a.images) ? a.images : [])
+      const legacyLocalOnly = Array.isArray(idbImages)
+        ? idbImages.filter((s) => typeof s === 'string' && s.startsWith('data:') && !keyForUrl(s))
+        : []
+      const own = legacyLocalOnly.length ? [...legacyLocalOnly, ...resolved] : resolved
+      const display = mergeStaticImages(own, def?.images || [])
       return { ...a, images: display }
     })
   )
@@ -197,7 +264,14 @@ async function buildArtists(metaList, imageMap, withDefaults = true) {
 // One-time migration: upload every legacy data-URL sitting in IndexedDB to the
 // blob store and register key↔url so canonicalizeImages can map them to { key }.
 // Local data-URLs are left in IndexedDB (display cache) and not deleted here.
+// Returns the { artistId, key } pairs it actually uploaded, so the caller can
+// fold them into canonical `images` before the next buildArtists — otherwise
+// a freshly-migrated image is registered (has a key) but not yet represented
+// in any artist's canonical images, and buildArtists's #55 fix (which no
+// longer trusts the IndexedDB cache for anything already registered) would
+// drop it from display and from the metadata pushed right after.
 async function migrateLegacyImages(userId, imageMap) {
+  const migrated = []
   for (const [artistId, images] of Object.entries(imageMap)) {
     if (!Array.isArray(images)) continue
     for (const img of images) {
@@ -207,11 +281,13 @@ async function migrateLegacyImages(userId, imageMap) {
       try {
         await backend.blobs.upload(userId, key, img, 'image/jpeg')
         registerBlobUrl(key, img)
+        migrated.push({ artistId, key })
       } catch (e) {
         console.error('[tattoo] image migration failed for', artistId, e)
       }
     }
   }
+  return migrated
 }
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
@@ -320,8 +396,9 @@ export function useArtistStorage() {
         const imageMap = await dbGetAll()
         imageMapRef.current = imageMap
         let didMigrate = false
+        let migratedRefs = []
         if (!localStorage.getItem(MIGRATED_FLAG)) {
-          await migrateLegacyImages(user.id, imageMap)
+          migratedRefs = await migrateLegacyImages(user.id, imageMap)
           localStorage.setItem(MIGRATED_FLAG, '1')
           didMigrate = true
         }
@@ -346,11 +423,12 @@ export function useArtistStorage() {
         let nextMeta
 
         if (remote.length > 0) {
-          const merged = reconcileRecords(
-            localMeta.map((a) => ({ ...a, updatedAt: a.updatedAt || '' })),
-            remote
-          )
-          nextMeta = owner ? applyDefaults(merged) : merged
+          const localForReconcile = localMeta.map((a) => ({ ...a, updatedAt: a.updatedAt || '' }))
+          const merged = reconcileRecords(localForReconcile, remote)
+          // A photo removed on one side must stay removed even when the
+          // other side's whole record wins LWW on an unrelated field (#55).
+          const withTombstones = applyImageTombstones(merged, localForReconcile, remote)
+          nextMeta = owner ? applyDefaults(withTombstones) : withTombstones
         } else {
           // Remote empty → seed/migrate local data up. Owner seeds the curated
           // defaults (preserving any local edits); a non-owner keeps only their
@@ -366,6 +444,23 @@ export function useArtistStorage() {
         // rows, outranking genuine cross-device edits.
         const seedAt = nowStamp()
         nextMeta = nextMeta.map((a) => (a.updatedAt ? a : { ...a, updatedAt: seedAt }))
+        // Fold in refs migrateLegacyImages just uploaded, before buildArtists
+        // runs — otherwise they're registered (have a key) but not yet in any
+        // artist's canonical images, and would be dropped rather than shown.
+        // Prepended, not appended: for an owner-seeded artist, `a.images` at
+        // this point may already hold DEFAULT_ARTISTS' own static paths
+        // (applyDefaults spreads them straight in) — the migrated upload is
+        // the artist's own photo and belongs ahead of the curated starter set.
+        if (migratedRefs.length) {
+          const byArtist = new Map()
+          for (const { artistId, key } of migratedRefs) {
+            if (!byArtist.has(artistId)) byArtist.set(artistId, [])
+            byArtist.get(artistId).push({ key })
+          }
+          nextMeta = nextMeta.map((a) =>
+            byArtist.has(a.id) ? { ...a, images: [...byArtist.get(a.id), ...(a.images || [])] } : a
+          )
+        }
         if (remote.length === 0 && nextMeta.length) {
           await backend.store.upsert(COLLECTION, nextMeta)
         }
@@ -487,7 +582,17 @@ export function useArtistStorage() {
       // Stamp what changed at edit time — saveMeta persists the stamp
       // immediately, so the edit survives a reload and wins last-write-wins
       // against older remote rows even if no push succeeds.
-      const stamped = stampChangedRows(prev, next, at)
+      let stamped = stampChangedRows(prev, next, at)
+      // A removed photo becomes a durable tombstone at the edit too, so a
+      // stale whole-record write from another device can't resurrect it
+      // during reconciliation even if it otherwise wins LWW (#55).
+      stamped = stamped.map((a) => {
+        const prevA = prev.find((p) => p.id === a.id)
+        if (!prevA || prevA.images === a.images) return a
+        const tombstones = removedImageTombstones(prevA.images, a.images, at)
+        if (!tombstones.length) return a
+        return { ...a, removedImages: [...(a.removedImages || []), ...tombstones] }
+      })
       // Tombstones become durable at the edit, not at the flush 500ms later —
       // a tab closed inside the debounce window must not lose the delete.
       const liveIds = new Set(stamped.map((a) => a?.id))
