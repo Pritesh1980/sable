@@ -30,9 +30,15 @@ import ArtistTable from '../components/ArtistTable'
 import QuickAddArtist from '../components/QuickAddArtist'
 import { STYLE_TAGS, createArtist } from '../data/artists'
 
-function ArtistGrid({ items, sensors, onDragEnd, onOpen, onSaveImages, editing }) {
+function ArtistGrid({ items, sensors, onDragStart, onDragEnd, onDragCancel, onOpen, onSaveImages, editing }) {
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onDragCancel={onDragCancel}
+    >
       <SortableContext items={items.map((a) => a.id)} strategy={rectSortingStrategy}>
         {/* Top 3 — featured trio */}
         {items.filter((a) => a.rank <= 3).length > 0 && (
@@ -132,7 +138,19 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
     .filter((a) => !activeTag || a.tags.includes(activeTag))
     .sort((a, b) => a.rank - b.rank)
 
+  // A live drag — keyboard most of all — must not let any of these
+  // transitions fire underneath it (#74): dnd-kit's KeyboardSensor installs
+  // document-level listeners on activation that are only torn down in the
+  // drag's own handleEnd/handleCancel, not on unmount. Switching view or
+  // opening Manage would unmount the grid mid-drag with that listener still
+  // live; turning Reorder off or picking a filter can hide or unmount the
+  // very card being dragged. Disabling those controls while a drag is live is
+  // the smaller, more predictable fix over trying to cancel dnd-kit's own
+  // drag from the outside.
+  const [dragActive, setDragActive] = useState(false)
+
   function handleDragEnd(event) {
+    setDragActive(false)
     const { active, over } = event
     if (!over || active.id === over.id) return
 
@@ -246,7 +264,8 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
           </button>
           <button
             onClick={() => changeManage(!manageMode)}
-            className={`font-mono text-xs px-3 py-2 rounded-xs transition-colors tracking-widest uppercase border ${
+            disabled={dragActive}
+            className={`font-mono text-xs px-3 py-2 rounded-xs transition-colors tracking-widest uppercase border disabled:opacity-40 disabled:cursor-not-allowed ${
               manageMode
                 ? 'text-cream border-accent/50 bg-accent/10'
                 : 'text-cream-muted hover:text-cream border-ink-border hover:border-cream-muted/40'
@@ -288,6 +307,7 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
               tag="All"
               active={!activeTag}
               onClick={() => setActiveTag(null)}
+              disabled={dragActive}
             />
             {STYLE_TAGS.map((tag) => (
               <TagPill
@@ -295,6 +315,7 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
                 tag={tag}
                 active={activeTag === tag}
                 onClick={() => setActiveTag(activeTag === tag ? null : tag)}
+                disabled={dragActive}
               />
             ))}
           </div>
@@ -311,6 +332,7 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
               <button
                 key={mode}
                 onClick={() => changeView(mode)}
+                disabled={dragActive}
                 title={title}
                 // Not decoration: accessible-name computation prefers element
                 // content over `title`, so without this these announce as
@@ -321,7 +343,7 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
                 // highlight smaller than the target reads as a badge floating in
                 // an empty square, and stops showing what is actually tappable
                 // (agy review).
-                className={`w-11 h-11 flex items-center justify-center rounded-xs transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
+                className={`w-11 h-11 flex items-center justify-center rounded-xs transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40 disabled:cursor-not-allowed ${
                   viewMode === mode ? 'text-cream bg-ink-card' : 'text-cream-muted/50 hover:text-cream-muted'
                 }`}
               >
@@ -335,6 +357,7 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
             {viewMode === 'grid' && (
               <button
                 onClick={() => setEditing((v) => !v)}
+                disabled={dragActive}
                 aria-pressed={editing}
                 // Names both jobs: the mode reveals the quick-upload + as well
                 // as the drag handle, and "Reorder" alone does not imply
@@ -343,7 +366,7 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
                 title={editing ? 'Done — back to browsing' : 'Reorder and add photos'}
                 // Divided off from the view switcher: those four are mutually
                 // exclusive views, this is a toggle on top of one of them.
-                className={`ml-1 w-11 h-11 flex items-center justify-center rounded-xs border-l border-ink-border transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
+                className={`ml-1 w-11 h-11 flex items-center justify-center rounded-xs border-l border-ink-border transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40 disabled:cursor-not-allowed ${
                   editing ? 'text-cream bg-accent/20' : 'text-cream-muted/50 hover:text-cream-muted'
                 }`}
               >
@@ -365,7 +388,9 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
           <ArtistGrid
             items={sorted}
             sensors={sensors}
+            onDragStart={() => setDragActive(true)}
             onDragEnd={handleDragEnd}
+            onDragCancel={() => setDragActive(false)}
             onOpen={setSelected}
             onSaveImages={saveImages}
             editing={editing}
