@@ -86,6 +86,24 @@ export async function resolveBlobKey(key) {
   return p
 }
 
+// A resolved URL already baked into long-lived React state (#82) can go
+// stale even though the cache above stays TTL-honest (#29) — nothing
+// re-derives a value already sitting in state, so an hour-plus-idle session
+// can end up rendering an <img> whose src is a genuinely expired signed URL.
+// Call this from that <img>'s onError: given the URL that just failed, hand
+// back a fresh one if the underlying key can actually produce a different
+// one (whether that's an already-refreshed cache entry or a real refetch),
+// or null if there's nothing more to try — a url with no known key, or one
+// the cache still considers fresh, is a genuinely broken image, not an
+// expiry, and the caller should fall through to its normal broken-image
+// handling rather than retry forever.
+export async function refreshedBlobUrl(failedUrl) {
+  const key = keyForUrl(failedUrl)
+  if (!key) return null
+  const fresh = await resolveBlobKey(key)
+  return fresh && fresh !== failedUrl ? fresh : null
+}
+
 export function clearBlobUrls() {
   keyToEntry.clear()
   urlToKey.clear()

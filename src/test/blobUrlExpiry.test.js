@@ -13,7 +13,7 @@ vi.mock('../backend', () => ({
 }))
 
 const { backend } = await import('../backend')
-const { resolveBlobKey, getCachedBlobUrl, keyForUrl, registerBlobUrl, clearBlobUrls } =
+const { resolveBlobKey, getCachedBlobUrl, keyForUrl, registerBlobUrl, clearBlobUrls, refreshedBlobUrl } =
   await import('../data/blobUrls')
 
 beforeEach(() => {
@@ -119,5 +119,75 @@ describe('review follow-ups (#29)', () => {
 
     const result = await resolveBlobKey('k1')
     expect(result).toBe('https://signed.example/first')
+  })
+})
+
+// #82. Resolving a key into a display URL happens once, at hydration — the
+// result is baked into long-lived React state (useArtistStorage's
+// buildArtists, imageCodec.js for ideas/concepts). #29 keeps the *cache*
+// honest about TTL, but nothing re-derives a value already sitting in state
+// from it, so an hour-plus-idle session can end up rendering an <img> whose
+// src is a genuinely expired signed URL. refreshedBlobUrl is the recovery
+// path an <img>'s onError calls into: given the URL that just failed, hand
+// back a fresh one if the underlying key can actually produce a different
+// one, or null if there's nothing more to try (so the caller falls through
+// to its normal broken-image handling instead of retrying forever). Because
+// keyForUrl only ever tracks a key's *current* url (older ones are dropped
+// on purpose, #29), this can only recover a url that's still the most
+// recently resolved one for its key — see the "superseded" test below for
+// the one case that's a known, accepted gap rather than a bug.
+describe('refreshedBlobUrl (#82)', () => {
+  it('returns a fresh url when the failed url maps to a key whose cache entry has expired', async () => {
+    backend.blobs.urlTtlMs = 3600_000
+    vi.useFakeTimers()
+    getUrl.mockResolvedValueOnce('https://signed.example/first')
+    const first = await resolveBlobKey('k1')
+
+    vi.setSystemTime(Date.now() + 3600_000 - 30_000)
+    getUrl.mockResolvedValueOnce('https://signed.example/second')
+
+    const refreshed = await refreshedBlobUrl(first)
+    expect(refreshed).toBe('https://signed.example/second')
+  })
+
+  // registerBlobUrl deliberately drops a superseded url's reverse mapping
+  // once a key resolves to something new (#29 — otherwise it leaks an entry
+  // per refresh over a long session). That means a url this component never
+  // even displayed the *most recent* resolution of can't be traced back to
+  // its key any more by the time onError fires — a known, accepted gap this
+  // is not attempting to close, since doing so would mean never cleaning up
+  // the reverse map at all. It degrades safely: null, same as a genuinely
+  // broken image, not a crash or a wrong result.
+  it('returns null for a url that was superseded before it ever failed to load', async () => {
+    backend.blobs.urlTtlMs = 3600_000
+    vi.useFakeTimers()
+    getUrl.mockResolvedValueOnce('https://signed.example/first')
+    const first = await resolveBlobKey('k1')
+
+    vi.setSystemTime(Date.now() + 3600_000 - 30_000)
+    getUrl.mockResolvedValueOnce('https://signed.example/second')
+    await resolveBlobKey('k1')
+
+    // A stale <img> still showing `first` finally errors — but `first`'s
+    // reverse mapping is already gone, superseded by `second` above.
+    const refreshed = await refreshedBlobUrl(first)
+    expect(refreshed).toBeNull()
+  })
+
+  it('returns null for a url with no known key (a static path, or never uploaded)', async () => {
+    const refreshed = await refreshedBlobUrl('/images/artists/zoia.ink/1.jpg')
+    expect(refreshed).toBeNull()
+    expect(getUrl).not.toHaveBeenCalled()
+  })
+
+  it('returns null when the cache still considers the url fresh (a genuinely broken image, not an expiry)', async () => {
+    backend.blobs.urlTtlMs = 3600_000
+    getUrl.mockResolvedValueOnce('https://signed.example/first')
+    const first = await resolveBlobKey('k1')
+
+    // No time has passed — the cache has no reason to think this is stale.
+    const refreshed = await refreshedBlobUrl(first)
+    expect(refreshed).toBeNull()
+    expect(getUrl).toHaveBeenCalledTimes(1)
   })
 })
