@@ -14,6 +14,13 @@ import ArtistCard from '../components/ArtistCard'
 // application logic, so it isn't re-tested here (confirmed empirically that
 // jsdom's fireEvent doesn't simulate it, unlike a real browser: testing it
 // would only be testing jsdom, not this component).
+//
+// Cross-model review of the first version of this fix (codex + agy,
+// independently, same two findings): the button is still a DOM child of the
+// outer div, so a click on it bubbles into the outer div's own onClick —
+// onOpen fired twice per keyboard/AT activation — and its focus-visible ring
+// was invisible, painted underneath the opaque aspect-ratio box occluding it
+// for mouse purposes. Both are covered below.
 
 const artist = {
   id: 'a1',
@@ -34,11 +41,26 @@ describe('ArtistCard keyboard accessibility (#30, #83)', () => {
     expect(card.tagName).toBe('BUTTON')
   })
 
-  it('opens the artist on click', () => {
+  // Not just toHaveBeenCalledWith: that passes even if onOpen fired twice,
+  // which is exactly the bubbling bug the review caught (the button is a
+  // DOM child of the div that also calls onOpen on click).
+  it('opens the artist exactly once on click, not twice via bubbling to the outer div', () => {
     const onOpen = vi.fn()
     render(<ArtistCard artist={artist} onOpen={onOpen} onSaveImages={vi.fn()} />)
     fireEvent.click(screen.getByRole('button', { name: 'Zoia' }))
+    expect(onOpen).toHaveBeenCalledTimes(1)
     expect(onOpen).toHaveBeenCalledWith(artist)
+  })
+
+  // The button paints underneath the opaque aspect-ratio box (so a mouse
+  // can't reach it), which means a ring drawn on the button itself would be
+  // invisible when it's focused. The ring has to live on the outer div,
+  // reacting via :focus-within to the same focus event.
+  it('gives the outer card a focus-within ring, since a ring on the occluded button would be invisible', () => {
+    const { container } = render(<ArtistCard artist={artist} onOpen={vi.fn()} onSaveImages={vi.fn()} />)
+    const outer = container.firstChild
+    expect(outer.className).toMatch(/focus-within:ring-2/)
+    expect(outer).not.toBe(screen.getByRole('button', { name: 'Zoia' }))
   })
 
   // The point of #83: while editing nests genuinely interactive controls

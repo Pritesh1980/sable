@@ -50,21 +50,29 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
   // not apply. It sits underneath that box in paint order (first in the DOM,
   // no competing z-index), so with a mouse it is fully occluded and inert;
   // Tab and Enter/Space reach it regardless of paint order, which is all it
-  // exists for.
+  // exists for. It stops propagation on click (cross-model review): it is
+  // still a DOM child of the outer div, so without that, its own onClick and
+  // the outer div's bubbled-into onClick would both fire — onOpen called
+  // twice per keyboard/AT activation. The focus ring lives on the outer div
+  // via focus-within, not on the button itself: the button paints *under*
+  // the opaque aspect-ratio box, so a ring drawn on the button would be
+  // invisible there — focus-within reacts to the same focus from a div that
+  // is actually on top, unclipped by nothing of its own overflow-hidden.
   return (
     <div
       style={{ animationDelay: `${index * 0.04}s` }}
       className={`relative animate-slide-up opacity-0 [animation-fill-mode:forwards] bg-ink-card border border-ink-border rounded-xs overflow-hidden cursor-pointer
         transition-all duration-300
         hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-black/70 hover:border-cream-muted/30
+        focus-within:outline-hidden focus-within:ring-2 focus-within:ring-accent
         group ${isDragging ? 'opacity-40 scale-95 shadow-2xl' : ''}`}
       onClick={() => onOpen(artist)}
     >
       <button
         type="button"
         aria-label={displayName}
-        onClick={() => onOpen(artist)}
-        className="absolute inset-0 z-0 w-full h-full appearance-none bg-transparent border-0 p-0 m-0 text-left rounded-xs focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+        onClick={(e) => { e.stopPropagation(); onOpen(artist) }}
+        className="absolute inset-0 z-0 w-full h-full appearance-none bg-transparent border-0 p-0 m-0 text-left rounded-xs focus:outline-hidden"
       />
       <div className={`${featured ? 'aspect-[3/4]' : 'aspect-[4/5]'} bg-ink-muted relative overflow-hidden`}>
         {hasImages && !imgError ? (

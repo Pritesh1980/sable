@@ -219,8 +219,17 @@ describe('focus affordances (#50)', () => {
 
     for (const { rel, src } of uiFiles()) {
       if (exempt.has(rel)) continue
+      // A control that's deliberately occluded for pointer purposes (#83:
+      // an invisible overlay button, painted under an opaque sibling so a
+      // mouse can't reach it) would have its own ring hidden behind that
+      // sibling too — so its ring lives on the ancestor instead, applied via
+      // focus-within to that same focus. That's a real, visible affordance;
+      // it's just not on the same className as the suppression, so it's
+      // checked file-wide rather than expression-by-expression like the rest.
+      const hasAncestorFocusWithinRing = /focus-within:ring-[\w./[\]-]+/.test(src)
       for (const { line, text } of classNameExpressions(src)) {
         if (!/outline-hidden/.test(text)) continue
+        if (hasAncestorFocusWithinRing) continue
         const affordances = text.match(/(?:focus-visible:ring|focus:border|focus:bg)-[\w./[\]-]+/g) || []
         const real = affordances.filter((a) => !NULL_AFFORDANCE.test(a))
         if (real.length === 0) {
