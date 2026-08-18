@@ -4,7 +4,7 @@ import { AuthProvider } from '../context/AuthContext'
 import { useAuth } from '../context/useAuth'
 import { useStorage } from '../hooks/useStorage'
 import { backend } from '../backend'
-import { isDirty, setDirty, writeStamp } from '../backend/dirty'
+import { isDirty, setDirty, writeGeneration } from '../backend/dirty'
 
 const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>
 
@@ -163,10 +163,10 @@ describe('useStorage dirty-state handling', () => {
     const realUpsert = backend.store.upsert.bind(backend.store)
     const upsert = vi.spyOn(backend.store, 'upsert').mockImplementation(async (...args) => {
       // Simulate another tab's hook instance writing its own edit's shared
-      // sidecars (setDirty/writeStamp) while this tab's flush is in flight —
-      // exactly what setValueAndSync in that other tab would do.
+      // sidecars (setDirty/writeGeneration) while this tab's flush is in
+      // flight — exactly what setValueAndSync in that other tab would do.
       setDirty('tattoo_ideas')
-      writeStamp('tattoo_ideas', '2027-01-01T00:00:00.000Z')
+      writeGeneration('tattoo_ideas')
       return realUpsert(...args)
     })
 

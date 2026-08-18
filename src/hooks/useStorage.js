@@ -18,6 +18,8 @@ import {
   clearPendingDeletes,
   writeStamp,
   readStamp,
+  writeGeneration,
+  readGeneration,
 } from '../backend/dirty'
 
 // Identity codec: in-memory value === stored value (collections without images).
@@ -154,10 +156,10 @@ export function useStorage(key, defaultValue, codecArg) {
 
   const runFlush = useCallback(async () => {
     if (!user || !collection) return
-    // Snapshot the shared edit stamp before doing any async work. It's a
-    // localStorage sidecar, so another tab editing the same key mid-flush
-    // will have moved it by the time we check again (#35).
-    const stampAtStart = readStamp(key)
+    // Snapshot the shared, opaque edit generation before doing any async
+    // work. It's a localStorage sidecar, so another tab editing the same key
+    // mid-flush will have moved it by the time we check again (#35).
+    const genAtStart = readGeneration(key)
     const next = valueRef.current
     await codec.ensureUploaded(next, { userId: user.id })
     const canonical = codec.toCanonical(next)
@@ -200,10 +202,10 @@ export function useStorage(key, defaultValue, codecArg) {
     clearPendingDeletes(key, pendingDeletes)
     // A newer edit may have arrived while the writes were in flight — either
     // this tab's own (editSeq) or another tab's on the same key (the shared
-    // stamp sidecar, #35) — so only clear dirty if neither moved. Otherwise
-    // the edit that landed mid-flush is silently marked "synced" without ever
-    // having been pushed.
-    if (editSeq.current === seq && readStamp(key) === stampAtStart) clearDirty(key)
+    // generation sidecar, #35) — so only clear dirty if neither moved.
+    // Otherwise the edit that landed mid-flush is silently marked "synced"
+    // without ever having been pushed.
+    if (editSeq.current === seq && readGeneration(key) === genAtStart) clearDirty(key)
   }, [user, collection, codec, key])
 
   const flush = useCallback(() => {
@@ -239,11 +241,16 @@ export function useStorage(key, defaultValue, codecArg) {
       if (collection) {
         editSeq.current += 1
         setDirty(key)
-        // Shared across tabs (unlike editSeq) — lets a flush detect an edit
-        // that landed in *another* tab while it was in flight (#35).
-        writeStamp(key, at)
+        // Opaque, collision-resistant, shared across tabs (unlike editSeq) —
+        // lets a flush detect an edit that landed in *another* tab while it
+        // was in flight (#35). Deliberately not writeStamp/readStamp: that
+        // sidecar carries a real orderable timestamp consumed as `updatedAt`
+        // for singleton LWW and can be persisted verbatim to the backend, so
+        // it must not be reused as an opaque token here.
+        writeGeneration(key)
         if (SINGLETON_COLLECTIONS.has(collection)) {
           singletonStamp.current = at
+          writeStamp(key, at)
         }
       }
       if (user && collection) {

@@ -4,7 +4,7 @@ import { AuthProvider } from '../context/AuthContext'
 import { useAuth } from '../context/useAuth'
 import { useArtistStorage } from '../hooks/useArtistStorage'
 import { backend } from '../backend'
-import { isDirty, setDirty, writeStamp } from '../backend/dirty'
+import { isDirty, setDirty, writeGeneration } from '../backend/dirty'
 
 const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>
 
@@ -102,7 +102,7 @@ describe('useArtistStorage dirty-state handling', () => {
       // Simulate another tab's own edit landing while this tab's flush is in
       // flight — exactly what setArtists in that other tab would do.
       setDirty('tattoo_artists_meta')
-      writeStamp('tattoo_artists_meta', '2027-01-01T00:00:00.000Z')
+      writeGeneration('tattoo_artists_meta')
       return realUpsert(...args)
     })
 

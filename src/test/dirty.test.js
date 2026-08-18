@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import {
   stampChangedRows,
   setDirty,
@@ -9,6 +9,8 @@ import {
   clearPendingDeletes,
   writeStamp,
   readStamp,
+  writeGeneration,
+  readGeneration,
   purgeDirtySidecars,
 } from '../backend/dirty'
 
@@ -66,11 +68,49 @@ describe('dirty flag + pending deletes + singleton stamp', () => {
     setDirty('tattoo_ideas')
     addPendingDeletes('tattoo_boards', ['x'])
     writeStamp('tattoo_convention_attending')
+    writeGeneration('tattoo_ideas')
     localStorage.setItem('tattoo_theme', 'dark')
     purgeDirtySidecars()
     expect(isDirty('tattoo_ideas')).toBe(false)
     expect(readPendingDeletes('tattoo_boards')).toEqual([])
     expect(readStamp('tattoo_convention_attending')).toBe('')
+    expect(readGeneration('tattoo_ideas')).toBe('')
     expect(localStorage.getItem('tattoo_theme')).toBe('dark')
+  })
+
+  // #35 review (codex + agy): the cross-tab generation marker must never
+  // collide, or a flush could wrongly conclude "nothing changed since I
+  // started" for a genuinely different, still-unsynced edit from another tab.
+  it('generation round-trips', () => {
+    expect(readGeneration('tattoo_ideas')).toBe('')
+    writeGeneration('tattoo_ideas')
+    expect(readGeneration('tattoo_ideas')).not.toBe('')
+  })
+
+  it('generation is collision-resistant even for two writes in the same millisecond', () => {
+    // Two tabs can genuinely edit within the same millisecond — freeze time
+    // so this proves the token itself is collision-resistant, not just that
+    // wall-clock time happened to advance between the two calls.
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime(new Date('2026-07-19T10:00:00.000Z'))
+      writeGeneration('tattoo_ideas')
+      const first = readGeneration('tattoo_ideas')
+      writeGeneration('tattoo_ideas')
+      const second = readGeneration('tattoo_ideas')
+      expect(first).not.toBe('')
+      expect(second).not.toBe('')
+      expect(second).not.toBe(first)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('generation is a separate sidecar from the singleton stamp — never persisted as updatedAt', () => {
+    writeStamp('tattoo_convention_attending', '2026-07-19T10:00:00.000Z')
+    writeGeneration('tattoo_convention_attending')
+    // The generation token must not leak into or overwrite the real,
+    // orderable timestamp consumed as `updatedAt` for singleton LWW.
+    expect(readStamp('tattoo_convention_attending')).toBe('2026-07-19T10:00:00.000Z')
   })
 })

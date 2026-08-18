@@ -1,9 +1,10 @@
-// Durable dirty-state sidecars for the local-first sync path (#31). Three
+// Durable dirty-state sidecars for the local-first sync path (#31). Four
 // small localStorage records per synced key, all outliving a reload:
 //   tattoo_dirty_<key>          — '1' while a user edit has not fully synced
 //   tattoo_pending_delete_<key> — ids removed locally but not yet remotely
 //   tattoo_stamp_<key>          — updatedAt for singleton (map) collections,
 //                                 which have no per-row stamp to carry one
+//   tattoo_gen_<key>            — opaque cross-tab edit generation (#35)
 // The hooks set them at edit time (before any remote write is attempted) and
 // clear them only after the corresponding remote write succeeds, so a failed
 // or interrupted push is always visible to the next flush or mount.
@@ -13,6 +14,7 @@ import { nowStamp } from './sync'
 const DIRTY_PREFIX = 'tattoo_dirty_'
 const PENDING_DELETE_PREFIX = 'tattoo_pending_delete_'
 const STAMP_PREFIX = 'tattoo_stamp_'
+const GENERATION_PREFIX = 'tattoo_gen_'
 
 // Stamp rows the edit actually touched (new id, or a new object for an id —
 // the React-updater idiom guarantees changed rows are fresh references) so the
@@ -79,6 +81,27 @@ export function readStamp(key) {
   try { return localStorage.getItem(STAMP_PREFIX + key) || '' } catch { return '' }
 }
 
+function randomToken() {
+  return globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
+// A collision-resistant, opaque cross-tab edit marker — deliberately separate
+// from writeStamp/readStamp above, which carry a real, orderable timestamp
+// consumed as `updatedAt` for singleton LWW reconciliation (and, via
+// valueToRecords, can be persisted verbatim to the backend). Two tabs editing
+// within the same millisecond must never produce equal generations, or a
+// flush could wrongly conclude "nothing changed since I started" and clear
+// dirty for an edit it never actually confirmed was pushed (#35 review,
+// codex + agy) — and a compound/non-timestamp value must never leak into a
+// stored `updatedAt` column.
+export function writeGeneration(key) {
+  try { localStorage.setItem(GENERATION_PREFIX + key, randomToken()) } catch { /* ignore */ }
+}
+
+export function readGeneration(key) {
+  try { return localStorage.getItem(GENERATION_PREFIX + key) || '' } catch { return '' }
+}
+
 // Sign-out purge: sidecars describe the signed-out user's unsynced state and
 // must never leak into the next account on a shared device.
 export function purgeDirtySidecars(storage = localStorage) {
@@ -88,6 +111,7 @@ export function purgeDirtySidecars(storage = localStorage) {
     if (
       k &&
       (k.startsWith(DIRTY_PREFIX) ||
+        k.startsWith(GENERATION_PREFIX) ||
         k.startsWith(PENDING_DELETE_PREFIX) ||
         k.startsWith(STAMP_PREFIX))
     ) {
