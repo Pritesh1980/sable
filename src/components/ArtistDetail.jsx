@@ -12,6 +12,17 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
   const [images, setImages] = useState(artist.images || [])
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState({ ...artist })
+  // Which fields this session has actually edited (#81). `draft` is a
+  // one-time snapshot of `artist` taken at mount, never re-synced — a
+  // cross-device sync landing a change to (say) status or notes while this
+  // sheet is open is invisible to it. save() used to spread the whole draft
+  // back, so it would silently revert that change even though the user never
+  // touched the field. Same fix shape as #63/#79: patch only what the user
+  // actually edited, resolved by Gallery.saveArtist against whatever is
+  // latest at commit time, so an untouched field can't be clobbered by a
+  // stale snapshot of itself.
+  const touchedRef = useRef(new Set())
+  const touch = (field) => touchedRef.current.add(field)
   const [uploading, setUploading] = useState(false)
   const [lightbox, setLightbox] = useState(null)
   const [currentIdx, setCurrentIdx] = useState(0)
@@ -75,6 +86,7 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
   }
 
   function toggleTag(tag) {
+    touch('tags')
     setDraft((d) => {
       const tags = d.tags.includes(tag) ? d.tags.filter((t) => t !== tag) : [...d.tags, tag]
       const next = { ...d, tags }
@@ -90,12 +102,16 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
 
   // The explicit multi-field form save. Deliberately excludes images: they
   // auto-save immediately through their own controls above (#79), so by the
-  // time this fires the store already has the latest ones, and resolving
-  // against `current` rather than a snapshot means this can't win a race
-  // against an image change still in flight either.
+  // time this fires the store already has the latest ones. Only patches
+  // fields this session actually touched (#81) — an untouched field resolves
+  // against whatever is latest at commit time, not this stale snapshot of it.
   function save() {
-    const { images: _images, ...editedFields } = draft
-    onSave(artist.id, (current) => ({ ...current, ...editedFields }))
+    const patch = {}
+    for (const field of touchedRef.current) {
+      patch[field] = draft[field]
+    }
+    onSave(artist.id, (current) => ({ ...current, ...patch }))
+    touchedRef.current = new Set()
     setEditing(false)
   }
 
@@ -134,7 +150,7 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
               <input
                 className="bg-transparent border-b border-ink-border text-cream font-display text-2xl w-full outline-hidden focus-visible:ring-2 focus-visible:ring-accent pb-1 mb-2 placeholder-cream-muted/60"
                 value={draft.name}
-                onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+                onChange={(e) => { touch('name'); setDraft((d) => ({ ...d, name: e.target.value })) }}
                 placeholder="Display name (optional)"
               />
             ) : (
@@ -294,7 +310,7 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
                 <select
                   className="w-full bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/50 font-body"
                   value={normalizeArtistStatus(draft.status)}
-                  onChange={(e) => setDraft((d) => ({ ...d, status: e.target.value }))}
+                  onChange={(e) => { touch('status'); setDraft((d) => ({ ...d, status: e.target.value })) }}
                 >
                   {ARTIST_STATUSES.map((s) => (
                     <option key={s.value} value={s.value}>{s.label}</option>
@@ -307,7 +323,7 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
                 <select
                   className="w-full bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/50 font-body"
                   value={draft.studio || ''}
-                  onChange={(e) => setDraft((d) => ({ ...d, studio: e.target.value || null }))}
+                  onChange={(e) => { touch('studio'); setDraft((d) => ({ ...d, studio: e.target.value || null })) }}
                 >
                   <option value="">— None —</option>
                   {DEFAULT_STUDIOS.map((s) => (
@@ -355,7 +371,7 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
                 rows={4}
                 placeholder="Personal notes about this artist…"
                 value={draft.notes || ''}
-                onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))}
+                onChange={(e) => { touch('notes'); setDraft((d) => ({ ...d, notes: e.target.value })) }}
               />
             ) : (
               <p className="text-cream-muted text-sm font-body leading-relaxed">
