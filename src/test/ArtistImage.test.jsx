@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import ArtistImage from '../components/ArtistImage'
 
 // #82: a resolved blob URL baked into React state can go stale (its
@@ -11,6 +11,14 @@ const refreshedBlobUrl = vi.fn()
 vi.mock('../data/blobUrls', () => ({
   refreshedBlobUrl: (...args) => refreshedBlobUrl(...args),
 }))
+
+// A controllable promise, for tests that need to observe state *while* a
+// retry is still in flight rather than only after it settles.
+function deferred() {
+  let resolve
+  const promise = new Promise((r) => { resolve = r })
+  return { promise, resolve }
+}
 
 describe('ArtistImage', () => {
   beforeEach(() => {
@@ -65,6 +73,66 @@ describe('ArtistImage', () => {
     expect(screen.getByText('Z')).toBeInTheDocument()
     // Only the first error should have triggered a refresh attempt.
     expect(refreshedBlobUrl).toHaveBeenCalledTimes(1)
+  })
+
+  // Cross-model review (codex): React can re-render and reattach the same
+  // still-failing src before the first retry resolves, firing a second
+  // error for the exact same image. That must wait for the in-flight
+  // attempt rather than racing ahead to the monogram before it even had a
+  // chance to succeed.
+  it('waits for an in-flight retry instead of failing early on a duplicate error for the same image', async () => {
+    const first = deferred()
+    refreshedBlobUrl.mockReturnValue(first.promise)
+    render(<ArtistImage src="https://signed.example/expired" label="@zoia.ink" />)
+
+    fireEvent.error(screen.getByRole('img'))
+    fireEvent.error(screen.getByRole('img')) // duplicate, while the retry is still pending
+
+    // Neither error should have resolved anything yet — still showing the
+    // (broken, but not yet given up on) original image, not the monogram.
+    expect(screen.getByRole('img')).toHaveAttribute('src', 'https://signed.example/expired')
+    expect(refreshedBlobUrl).toHaveBeenCalledTimes(1)
+
+    first.resolve('https://signed.example/fresh')
+    await waitFor(() =>
+      expect(screen.getByRole('img')).toHaveAttribute('src', 'https://signed.example/fresh')
+    )
+    // The duplicate must not have triggered its own refresh attempt.
+    expect(refreshedBlobUrl).toHaveBeenCalledTimes(1)
+  })
+
+  // Cross-model review (codex): a slow retry for a previous image (the src
+  // prop changed while it was in flight — a reused component instance, e.g.
+  // a table row) must not clobber a newer image that's *already recovered
+  // from its own, separate failure* by the time the stale retry settles.
+  it('discards a stale retry result for a previous image once a newer image has already recovered from its own failure', async () => {
+    const forA = deferred()
+    refreshedBlobUrl.mockImplementation((failedUrl) =>
+      failedUrl === 'https://signed.example/a-expired'
+        ? forA.promise
+        : Promise.resolve('https://signed.example/b-fresh')
+    )
+    const { rerender } = render(<ArtistImage src="https://signed.example/a-expired" label="@zoia.ink" />)
+    fireEvent.error(screen.getByRole('img')) // A's retry starts, stays pending on forA
+
+    // Move on to a different image before A's retry settles — one that also
+    // fails, and (unlike A) recovers quickly.
+    rerender(<ArtistImage src="https://signed.example/b-expired" label="@vesper_noctis" />)
+    fireEvent.error(screen.getByRole('img'))
+    await waitFor(() =>
+      expect(screen.getByRole('img')).toHaveAttribute('src', 'https://signed.example/b-fresh')
+    )
+
+    // A's retry finally resolves — it must not overwrite B's already-fixed display.
+    await act(async () => {
+      forA.resolve('https://signed.example/a-fresh')
+      await forA.promise
+      // Let the resolved handleError's own continuation (the code after the
+      // await) actually run and commit any resulting state update.
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    expect(screen.getByRole('img')).toHaveAttribute('src', 'https://signed.example/b-fresh')
   })
 
   it('resets the retry and any prior failure when the src prop changes to a new image', async () => {
