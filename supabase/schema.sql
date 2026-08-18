@@ -26,6 +26,35 @@ create policy "own rows - update" on public.collections
 create policy "own rows - delete" on public.collections
   for delete using (auth.uid() = user_id);
 
+-- A bare `upsert()` is arrival-order, not last-write-wins: a delayed older
+-- write that lands after a newer one has already been stored would silently
+-- overwrite it (#56). This enforces the recency comparison atomically on the
+-- database side — the row is only touched when the incoming write is newer
+-- than what's stored, so out-of-order arrival can never move updated_at
+-- backwards. security invoker (the default, made explicit) so the insert/
+-- update below still runs as the calling role — RLS on `collections` keeps
+-- applying, and a caller cannot pass someone else's p_user_id and have it
+-- silently succeed; `with check (auth.uid() = user_id)` on the existing
+-- policies rejects it. The fixed search_path is still worth pinning even
+-- under invoker rights, so an unqualified reference here can't be shadowed.
+create or replace function public.upsert_if_newer(
+  p_user_id uuid,
+  p_kind text,
+  p_id text,
+  p_data jsonb,
+  p_updated_at timestamptz
+) returns void
+language sql
+security invoker
+set search_path = public
+as $$
+  insert into public.collections (user_id, kind, id, data, updated_at)
+  values (p_user_id, p_kind, p_id, p_data, p_updated_at)
+  on conflict (user_id, kind, id) do update
+    set data = excluded.data, updated_at = excluded.updated_at
+    where collections.updated_at < excluded.updated_at;
+$$;
+
 -- Private image bucket. Keys are user/<uid>/<scope>/<id>/<uuid>.jpg, so the first
 -- path segment after `user/` is the owner uid — used to scope storage policies.
 insert into storage.buckets (id, name, public)

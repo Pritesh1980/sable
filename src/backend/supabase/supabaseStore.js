@@ -41,15 +41,24 @@ export function createSupabaseStore() {
     async upsert(collection, rows = []) {
       if (!rows.length) return rows
       const userId = await currentUserId()
-      const payload = rows.map((r) => ({
-        user_id: userId,
-        kind: kindFor(collection),
-        id: r.id,
-        data: r,
-        updated_at: r.updatedAt || new Date().toISOString(),
-      }))
-      const { error } = await sb.from(TABLE).upsert(payload, { onConflict: 'user_id,kind,id' })
-      if (error) throw new Error(error.message)
+      // A bare upsert is arrival-order, not last-write-wins: nothing compares
+      // the incoming updated_at against the stored one, so a delayed older
+      // write can overwrite a newer row and walk updated_at backwards (#56).
+      // upsert_if_newer (supabase/schema.sql) enforces the comparison
+      // atomically on the database side; a resolved call with no error may
+      // still be a legitimate no-op if the stored row was already newer.
+      await Promise.all(
+        rows.map(async (r) => {
+          const { error } = await sb.rpc('upsert_if_newer', {
+            p_user_id: userId,
+            p_kind: kindFor(collection),
+            p_id: r.id,
+            p_data: r,
+            p_updated_at: r.updatedAt || new Date().toISOString(),
+          })
+          if (error) throw new Error(error.message)
+        })
+      )
       return rows
     },
     async remove(collection, ids = []) {
