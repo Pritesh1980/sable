@@ -47,6 +47,18 @@ export function reconcileRecords(localRows = [], remoteRows = []) {
   return Array.from(byId.values())
 }
 
+// editGen (dirty.js's per-row cross-tab bookkeeping, #84) is pure local
+// state — it must never reach the remote store or leak into reconciliation
+// data another device sees. A helper rather than a destructure-to-omit
+// (`{ editGen, ...rest }`) because the unused `editGen` binding that pattern
+// requires trips this project's no-unused-vars rule.
+export function stripEditGen(row) {
+  if (!row || typeof row !== 'object' || !('editGen' in row)) return row
+  const clean = { ...row }
+  delete clean.editGen
+  return clean
+}
+
 // Turn a useStorage value into stamped records ready for upsert.
 // For singleton collections the whole map becomes one record's `data`.
 // Rows keep the updatedAt they were given when the edit happened (see
@@ -57,7 +69,7 @@ export function valueToRecords(collection, value, at = nowStamp()) {
   if (SINGLETON_COLLECTIONS.has(collection)) {
     return [{ id: SINGLETON_ID, updatedAt: at, data: value ?? {} }]
   }
-  return (value || []).map((row) => ({ ...row, updatedAt: row.updatedAt || at }))
+  return (value || []).map((row) => stripEditGen({ ...row, updatedAt: row.updatedAt || at }))
 }
 
 // Inverse of valueToRecords: turn stored records back into a useStorage value.

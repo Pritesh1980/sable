@@ -20,6 +20,10 @@ import {
   readStamp,
   writeGeneration,
   readGeneration,
+  writeRowGenerations,
+  hasDirtyRows,
+  confirmRowGenerations,
+  dropRowGenerations,
 } from '../backend/dirty'
 
 // Identity codec: in-memory value === stored value (collections without images).
@@ -140,9 +144,12 @@ export function useStorage(key, defaultValue, codecArg) {
             .catch((e) => console.error(`[tattoo] retry delete failed for ${collection}:`, e))
         }
         const moved = await codec.ensureUploaded(display, { userId: user.id })
-        // A dirty flag means an edit never fully reached the remote (failed
-        // push, killed tab) — push the reconciled state up now.
-        if (!cancelled && (moved > 0 || isDirty(key))) {
+        // A dirty flag/row means an edit never fully reached the remote
+        // (failed push, killed tab) — push the reconciled state up now.
+        // Singletons still use the per-key flag; list collections use the
+        // per-row generation sidecar instead (#84).
+        const stillDirty = SINGLETON_COLLECTIONS.has(collection) ? isDirty(key) : hasDirtyRows(key)
+        if (!cancelled && (moved > 0 || stillDirty)) {
           flushRef.current?.().catch((e) =>
             console.error(`[tattoo] sync push failed for ${collection}:`, e)
           )
@@ -156,19 +163,24 @@ export function useStorage(key, defaultValue, codecArg) {
 
   const runFlush = useCallback(async () => {
     if (!user || !collection) return
+    const isSingleton = SINGLETON_COLLECTIONS.has(collection)
     // Snapshot the shared, opaque edit generation before doing any async
     // work. It's a localStorage sidecar, so another tab editing the same key
-    // mid-flush will have moved it by the time we check again (#35).
-    const genAtStart = readGeneration(key)
+    // mid-flush will have moved it by the time we check again (#35). Only
+    // meaningful for singletons — list collections confirm per row instead
+    // (#84), via confirmRowGenerations below.
+    const genAtStart = isSingleton ? readGeneration(key) : null
     const next = valueRef.current
     await codec.ensureUploaded(next, { userId: user.id })
+    // Kept un-stripped (still carries each row's editGen) so it can be handed
+    // to confirmRowGenerations after a successful push — valueToRecords
+    // strips editGen from what's actually sent to the remote store.
     const canonical = codec.toCanonical(next)
     try {
       localStorage.setItem(key, JSON.stringify(canonical))
     } catch {
       // quota exceeded — silent fail
     }
-    const isSingleton = SINGLETON_COLLECTIONS.has(collection)
     const rows = valueToRecords(
       collection,
       canonical,
@@ -200,12 +212,20 @@ export function useStorage(key, defaultValue, codecArg) {
 
     syncedRef.current = rows
     clearPendingDeletes(key, pendingDeletes)
-    // A newer edit may have arrived while the writes were in flight — either
-    // this tab's own (editSeq) or another tab's on the same key (the shared
-    // generation sidecar, #35) — so only clear dirty if neither moved.
-    // Otherwise the edit that landed mid-flush is silently marked "synced"
-    // without ever having been pushed.
-    if (editSeq.current === seq && readGeneration(key) === genAtStart) clearDirty(key)
+    if (isSingleton) {
+      // A newer edit may have arrived while the writes were in flight —
+      // either this tab's own (editSeq) or another tab's on the same key
+      // (the shared generation sidecar, #35) — so only clear dirty if
+      // neither moved. Otherwise the edit that landed mid-flush is silently
+      // marked "synced" without ever having been pushed.
+      if (editSeq.current === seq && readGeneration(key) === genAtStart) clearDirty(key)
+    } else {
+      // Per row instead of per key (#84): each row in `canonical` carries the
+      // editGen it had when *this tab* built this push. A row confirms only
+      // if the shared sidecar's current value for it still matches — proof
+      // this exact edit, not some other tab's, is what's now confirmed.
+      confirmRowGenerations(key, canonical)
+    }
   }, [user, collection, codec, key])
 
   const flush = useCallback(() => {
@@ -219,12 +239,13 @@ export function useStorage(key, defaultValue, codecArg) {
   const setValueAndSync = useCallback(
     (updater) => {
       const at = nowStamp()
+      const isSingleton = collection && SINGLETON_COLLECTIONS.has(collection)
       setValue((prev) => {
         const next = typeof updater === 'function' ? updater(prev) : updater
         // Stamp what changed at edit time — the offline-cache effect persists
         // the stamp immediately, so the edit survives a reload and wins
         // last-write-wins against older remote rows even if no push succeeds.
-        if (!collection || SINGLETON_COLLECTIONS.has(collection)) return next
+        if (!collection || isSingleton) return next
         const stamped = stampChangedRows(prev, next, at)
         // Tombstones become durable at the edit, not at the flush 500ms later
         // — a tab closed inside the debounce window must not lose the delete.
@@ -234,24 +255,36 @@ export function useStorage(key, defaultValue, codecArg) {
           const removed = prev
             .map((r) => (r && typeof r === 'object' ? r.id : undefined))
             .filter((id) => id !== undefined && !liveIds.has(id))
-          if (removed.length) addPendingDeletes(key, removed)
+          if (removed.length) {
+            addPendingDeletes(key, removed)
+            // A deleted row's tracked generation would otherwise linger
+            // forever — nothing will ever push it again to confirm it (#84).
+            dropRowGenerations(key, removed)
+          }
         }
+        // Durable at edit time, same reasoning as the tombstones above — a
+        // tab closed inside the debounce window must not lose track of which
+        // rows still need confirming (#84, replacing the per-key generation
+        // for list collections; see confirmRowGenerations in dirty.js).
+        writeRowGenerations(key, stamped)
         return stamped
       })
       if (collection) {
         editSeq.current += 1
-        setDirty(key)
-        // Opaque, collision-resistant, shared across tabs (unlike editSeq) —
-        // lets a flush detect an edit that landed in *another* tab while it
-        // was in flight (#35). Deliberately not writeStamp/readStamp: that
-        // sidecar carries a real orderable timestamp consumed as `updatedAt`
-        // for singleton LWW and can be persisted verbatim to the backend, so
-        // it must not be reused as an opaque token here.
-        writeGeneration(key)
-        if (SINGLETON_COLLECTIONS.has(collection)) {
+        if (isSingleton) {
+          setDirty(key)
+          // Opaque, collision-resistant, shared across tabs (unlike editSeq)
+          // — lets a flush detect an edit that landed in *another* tab while
+          // it was in flight (#35). Deliberately not writeStamp/readStamp:
+          // that sidecar carries a real orderable timestamp consumed as
+          // `updatedAt` for singleton LWW and can be persisted verbatim to
+          // the backend, so it must not be reused as an opaque token here.
+          writeGeneration(key)
           singletonStamp.current = at
           writeStamp(key, at)
         }
+        // List collections: dirty/generation tracking already happened per
+        // row, above, inside the setValue updater (writeRowGenerations).
       }
       if (user && collection) {
         clearTimeout(pushTimer.current)

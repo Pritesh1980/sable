@@ -87,6 +87,17 @@ describe('valueToRecords / recordsToValue', () => {
   it('recordsToValue defaults a missing singleton to an empty map', () => {
     expect(recordsToValue('conventionOverrides', [])).toEqual({})
   })
+
+  // #84: editGen is pure local bookkeeping for per-row dirty tracking
+  // (dirty.js's stampChangedRows/confirmRowGenerations) — it must never
+  // reach the remote store, or leak into reconciliation data other devices
+  // see.
+  it('strips editGen before building rows to push, but leaves other fields intact', () => {
+    const value = [{ id: '1', title: 'x', editGen: 'g1' }]
+    const rows = valueToRecords('ideas', value, '2026-06-08T00:00:00Z')
+    expect(rows[0]).not.toHaveProperty('editGen')
+    expect(rows[0]).toMatchObject({ id: '1', title: 'x' })
+  })
 })
 
 describe('reconcileValue', () => {

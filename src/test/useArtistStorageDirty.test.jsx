@@ -4,7 +4,7 @@ import { AuthProvider } from '../context/AuthContext'
 import { useAuth } from '../context/useAuth'
 import { useArtistStorage } from '../hooks/useArtistStorage'
 import { backend } from '../backend'
-import { isDirty, setDirty, writeGeneration } from '../backend/dirty'
+import { writeRowGenerations, hasDirtyRows } from '../backend/dirty'
 
 const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>
 
@@ -87,10 +87,11 @@ describe('useArtistStorage dirty-state handling', () => {
     }, { timeout: 3000 })
   })
 
-  // #35: the dirty flag is a shared localStorage sidecar, but editSeq (the
-  // guard on clearing it) is tab-local. A second tab's edit landing while this
-  // tab's flush is in flight must not have its dirty bit cleared by a flush
-  // that never actually pushed it.
+  // #35, updated for #84's per-row redesign: a second tab's edit to a
+  // *different* artist landing while this tab's flush is in flight must not
+  // be marked synced by a flush that never actually pushed it. Under
+  // per-row tracking this is structurally guaranteed — a tab can only ever
+  // confirm rows it itself pushed with a matching editGen.
   it('an artist edit from another tab mid-flush is not marked synced by this flush', async () => {
     seedSession()
     await backend.store.upsert('artistsMeta', [remoteArtist('x')])
@@ -99,10 +100,10 @@ describe('useArtistStorage dirty-state handling', () => {
 
     const realUpsert = backend.store.upsert.bind(backend.store)
     const upsert = vi.spyOn(backend.store, 'upsert').mockImplementation(async (...args) => {
-      // Simulate another tab's own edit landing while this tab's flush is in
-      // flight — exactly what setArtists in that other tab would do.
-      setDirty('tattoo_artists_meta')
-      writeGeneration('tattoo_artists_meta')
+      // Simulate another tab's own edit to a *different* artist landing
+      // while this tab's flush is in flight — exactly what setArtists in
+      // that other tab would do.
+      writeRowGenerations('tattoo_artists_meta', [{ id: 'other-artist', editGen: 'g-other' }])
       return realUpsert(...args)
     })
 
@@ -117,7 +118,63 @@ describe('useArtistStorage dirty-state handling', () => {
       expect(rows.find((r) => r.id === 'x')?.status).toBe('shortlisted')
     }, { timeout: 3000 })
 
-    expect(isDirty('tattoo_artists_meta')).toBe(true)
+    // This tab's own artist is confirmed, but the other tab's artist
+    // (simulated above) never got its own push — must still read as dirty.
+    expect(hasDirtyRows('tattoo_artists_meta')).toBe(true)
+  })
+
+  // #84: the residual gap #35's per-key generation didn't close. Another
+  // tab's edit to a different artist already landed — durably tracked —
+  // *before* this tab's own, unrelated flush even starts (not merely
+  // "during" it). A per-key token would see its own snapshot already
+  // reflecting that edit and wrongly conclude "nothing changed since I
+  // started," clearing the whole key's dirty state including the still-
+  // unpushed edit. Per-row tracking must not have this gap.
+  it('an artist edit from another tab that already landed before this flush started stays dirty', async () => {
+    seedSession()
+    await backend.store.upsert('artistsMeta', [remoteArtist('x')])
+    const { result } = renderSynced()
+    await waitFor(() => expect(result.current.store[0]).toHaveLength(1))
+
+    // Another tab's edit to a different artist, already durably tracked —
+    // done and settled before this tab's own edit/flush cycle begins at all.
+    writeRowGenerations('tattoo_artists_meta', [{ id: 'other-artist', editGen: 'g-other' }])
+    expect(hasDirtyRows('tattoo_artists_meta')).toBe(true)
+
+    act(() =>
+      result.current.store[1]((prev) =>
+        prev.map((a) => (a.id === 'x' ? { ...a, status: 'shortlisted' } : a))
+      )
+    )
+    await waitFor(async () => {
+      const rows = await backend.store.list('artistsMeta')
+      expect(rows.find((r) => r.id === 'x')?.status).toBe('shortlisted')
+    }, { timeout: 3000 })
+
+    // The other tab's artist was never pushed by this tab and must still
+    // read as pending.
+    expect(hasDirtyRows('tattoo_artists_meta')).toBe(true)
+  })
+
+  // #84: the basic, single-tab case a per-row redesign must not regress — a
+  // normal edit that pushes successfully must actually clear its own
+  // tracked generation, not just leave every artist's marker untouched.
+  it('a successful push clears its own artist generation, so the collection reads clean', async () => {
+    seedSession()
+    await backend.store.upsert('artistsMeta', [remoteArtist('x')])
+    const { result } = renderSynced()
+    await waitFor(() => expect(result.current.store[0]).toHaveLength(1))
+
+    act(() =>
+      result.current.store[1]((prev) =>
+        prev.map((a) => (a.id === 'x' ? { ...a, status: 'shortlisted' } : a))
+      )
+    )
+    await waitFor(async () => {
+      const rows = await backend.store.list('artistsMeta')
+      expect(rows.find((r) => r.id === 'x')?.status).toBe('shortlisted')
+    }, { timeout: 3000 })
+    await waitFor(() => expect(hasDirtyRows('tattoo_artists_meta')).toBe(false))
   })
 
   it('the one-time migration push preserves stamps of unchanged artists', async () => {

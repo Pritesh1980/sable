@@ -4,7 +4,7 @@ import { AuthProvider } from '../context/AuthContext'
 import { useAuth } from '../context/useAuth'
 import { useStorage } from '../hooks/useStorage'
 import { backend } from '../backend'
-import { isDirty, setDirty, writeGeneration } from '../backend/dirty'
+import { writeRowGenerations, hasDirtyRows } from '../backend/dirty'
 
 const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>
 
@@ -46,6 +46,22 @@ describe('useStorage dirty-state handling', () => {
       const ids = (await backend.store.list('ideas')).map((r) => r.id).sort()
       expect(ids).toEqual(['i1', 'i2'])
     }, { timeout: 3000 })
+  })
+
+  // #84: the basic, single-tab case a per-row redesign must not regress —
+  // a normal edit that pushes successfully must actually clear its own
+  // tracked generation, not just leave every row's marker untouched.
+  it('a successful push clears its own row generation, so the collection reads clean', async () => {
+    seedSession()
+    const { result } = renderSynced('tattoo_ideas', [])
+    await waitFor(() => expect(result.current.auth.user).toBeTruthy())
+
+    act(() => result.current.store[1]([{ id: 'a', title: 'Dragon' }]))
+    await waitFor(async () => {
+      const rows = await backend.store.list('ideas')
+      expect(rows.find((r) => r.id === 'a')?.title).toBe('Dragon')
+    }, { timeout: 3000 })
+    await waitFor(() => expect(hasDirtyRows('tattoo_ideas')).toBe(false))
   })
 
   it('an edit that never synced survives a reload and wins over older remote data', async () => {
@@ -151,10 +167,13 @@ describe('useStorage dirty-state handling', () => {
     expect(rows[0].updatedAt).not.toBe('2027-01-01T00:00:00.000Z')
   })
 
-  // #35: the dirty flag is a shared localStorage sidecar, but editSeq (the
-  // guard on clearing it) is tab-local. A second tab's edit landing while this
-  // tab's flush is in flight must not have its dirty bit cleared by a flush
-  // that never actually pushed it.
+  // #35, updated for #84's per-row redesign: a second tab's edit to a
+  // *different* row landing while this tab's flush is in flight must not be
+  // marked synced by a flush that never actually pushed it. Under per-row
+  // tracking this is now structurally guaranteed — this tab can only ever
+  // confirm rows it itself pushed with a matching editGen — but the
+  // regression coverage is worth keeping: it's the same user-visible
+  // guarantee #35 shipped, now via a different mechanism.
   it('a list edit from another tab mid-flush is not marked synced by this flush', async () => {
     seedSession()
     const { result } = renderSynced('tattoo_ideas', [])
@@ -162,11 +181,10 @@ describe('useStorage dirty-state handling', () => {
 
     const realUpsert = backend.store.upsert.bind(backend.store)
     const upsert = vi.spyOn(backend.store, 'upsert').mockImplementation(async (...args) => {
-      // Simulate another tab's hook instance writing its own edit's shared
-      // sidecars (setDirty/writeGeneration) while this tab's flush is in
-      // flight — exactly what setValueAndSync in that other tab would do.
-      setDirty('tattoo_ideas')
-      writeGeneration('tattoo_ideas')
+      // Simulate another tab's hook instance stamping and tracking its own
+      // edit to a *different* row while this tab's flush is in flight —
+      // exactly what setValueAndSync in that other tab would do.
+      writeRowGenerations('tattoo_ideas', [{ id: 'other-row', editGen: 'g-other' }])
       return realUpsert(...args)
     })
 
@@ -177,10 +195,40 @@ describe('useStorage dirty-state handling', () => {
       expect(rows.find((r) => r.id === 'a')?.title).toBe('from this tab')
     }, { timeout: 3000 })
 
-    // This tab's write landed, but the other tab's edit (simulated above)
-    // never got its own push — dirty must still be set so a later flush or
-    // reload retries it, not silently dropped.
-    expect(isDirty('tattoo_ideas')).toBe(true)
+    // This tab's write landed and its own row is confirmed, but the other
+    // tab's row (simulated above) never got its own push — the collection
+    // must still read as dirty so a later flush or reload retries it.
+    expect(hasDirtyRows('tattoo_ideas')).toBe(true)
+  })
+
+  // #84: the residual gap #35's per-key generation didn't close. Tab B's
+  // edit to a *different* row already landed — durably tracked — *before*
+  // this tab's own, unrelated flush even starts (not merely "during" it, the
+  // #35 scenario above). A per-key token would see its own snapshot already
+  // reflecting B's generation and wrongly conclude "nothing changed since I
+  // started," clearing the whole key's dirty state including B's still-
+  // unpushed edit. Per-row tracking must not have this gap: this tab's own
+  // successful push must never affect a row it never touched.
+  it('an edit from another tab that already landed before this flush started stays dirty', async () => {
+    seedSession()
+    const { result } = renderSynced('tattoo_ideas', [])
+    await waitFor(() => expect(result.current.auth.user).toBeTruthy())
+
+    // Tab B's edit to a different row, already durably tracked — done and
+    // settled before this tab's own edit/flush cycle begins at all.
+    writeRowGenerations('tattoo_ideas', [{ id: 'other-row', editGen: 'g-other' }])
+    expect(hasDirtyRows('tattoo_ideas')).toBe(true)
+
+    // This tab's own, entirely unrelated edit — flushes and succeeds.
+    act(() => result.current.store[1]([{ id: 'a', title: 'my own edit' }]))
+    await waitFor(async () => {
+      const rows = await backend.store.list('ideas')
+      expect(rows.find((r) => r.id === 'a')?.title).toBe('my own edit')
+    }, { timeout: 3000 })
+
+    // Tab B's row was never pushed by this tab and must still read as
+    // pending — this tab had no business confirming a row it never edited.
+    expect(hasDirtyRows('tattoo_ideas')).toBe(true)
   })
 
   it('re-adding a row supersedes its pending delete (the delete must not win)', async () => {
@@ -210,11 +258,16 @@ describe('useStorage dirty-state handling', () => {
     seedSession()
     // Crash-recovery state: the row was deleted (pending), then re-added
     // offline with a newer stamp; the app died before any push succeeded.
+    // The row carries the editGen stampChangedRows would have stamped at
+    // that edit, matching the token tracked in the rowgen sidecar (#84) —
+    // otherwise the flush would push it but never recognize it as confirmed.
     localStorage.setItem('tattoo_ideas', JSON.stringify([
-      { id: 'a', title: 'recreated offline', updatedAt: '2026-07-19T09:00:00Z' },
+      { id: 'a', title: 'recreated offline', updatedAt: '2026-07-19T09:00:00Z', editGen: 'crash-recovery-gen' },
     ]))
     localStorage.setItem('tattoo_pending_delete_tattoo_ideas', JSON.stringify(['a']))
-    localStorage.setItem('tattoo_dirty_tattoo_ideas', '1')
+    // List collections track dirty per row (#84), not via the old per-key
+    // flag — the crash-recovery signal is a tracked generation for the row.
+    writeRowGenerations('tattoo_ideas', [{ id: 'a', editGen: 'crash-recovery-gen' }])
     await backend.store.upsert('ideas', [
       { id: 'a', title: 'original', updatedAt: '2026-06-01T00:00:00Z' },
     ])

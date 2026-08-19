@@ -4,17 +4,16 @@ import { resolveAssetPath } from '../data/assetPath'
 import { backend } from '../backend'
 import { useAuth } from '../context/useAuth'
 import { seedsOwnerData } from '../backend/owner'
-import { reconcileRecords, nowStamp } from '../backend/sync'
+import { reconcileRecords, nowStamp, stripEditGen } from '../backend/sync'
 import {
   stampChangedRows,
-  setDirty,
-  isDirty,
-  clearDirty,
   readPendingDeletes,
   addPendingDeletes,
   clearPendingDeletes,
-  writeGeneration,
-  readGeneration,
+  writeRowGenerations,
+  hasDirtyRows,
+  confirmRowGenerations,
+  dropRowGenerations,
 } from '../backend/dirty'
 import { resolveBlobKey, keyForUrl, registerBlobUrl } from '../data/blobUrls'
 
@@ -342,7 +341,6 @@ export function useArtistStorage() {
   const imageMapRef = useRef({})
   const syncedRef = useRef(null) // last metadata list known in sync with remote
   const pushTimer = useRef(null)
-  const editSeq = useRef(0)
   // Flushes are chained so two can never be in flight at once — with a real
   // async backend an older flush completing last would overwrite newer remote
   // rows and regress the synced baseline.
@@ -502,10 +500,11 @@ export function useArtistStorage() {
             .then(() => clearPendingDeletes(META_KEY, pendingDeletes))
             .catch((e) => console.error('[tattoo] retry artist delete failed:', e))
         }
-        // A dirty flag means an edit never fully reached the remote (failed
+        // A tracked row means an edit never fully reached the remote (failed
         // push, killed tab) — push the reconciled state up once it has
-        // committed to artistsRef via the debounce window.
-        if (!cancelled && isDirty(META_KEY)) {
+        // committed to artistsRef via the debounce window (#84: per-row,
+        // not a single per-key flag).
+        if (!cancelled && hasDirtyRows(META_KEY)) {
           clearTimeout(pushTimer.current)
           pushTimer.current = setTimeout(() => {
             flushMetaRef.current?.().catch((e) =>
@@ -527,16 +526,15 @@ export function useArtistStorage() {
 
   const runFlushMeta = useCallback(async () => {
     if (!user) return
-    // Snapshot the shared, opaque edit generation before doing any async
-    // work. It's a localStorage sidecar, so another tab editing artist meta
-    // mid-flush will have moved it by the time we check again (#35).
-    const genAtStart = readGeneration(META_KEY)
     const meta = artistsRef.current.map(canonicalizeArtist)
     const at = nowStamp()
-    // Rows keep the stamp set when the edit happened; `at` only fills rows
-    // that never got one (restamping all would outrank other devices' edits).
-    const rows = meta.map((a) => ({ ...a, updatedAt: a.updatedAt || at }))
-    const seq = editSeq.current
+    // Rows keep the stamp (and editGen) set when the edit happened; `at` only
+    // fills rows that never got one (restamping all would outrank other
+    // devices' edits). Kept un-stripped here so confirmRowGenerations below
+    // can compare each row's own editGen against the shared sidecar —
+    // editGen itself never reaches the remote store (stripped just below).
+    const stampedMeta = meta.map((a) => ({ ...a, updatedAt: a.updatedAt || at }))
+    const rows = stampedMeta.map(stripEditGen)
 
     // Record deletions durably BEFORE attempting them, and retry any that a
     // previous flush failed to land; syncedRef advances only on success, so a
@@ -559,10 +557,13 @@ export function useArtistStorage() {
 
     syncedRef.current = meta
     clearPendingDeletes(META_KEY, pendingDeletes)
-    // A newer edit may have arrived while the writes were in flight — either
-    // this tab's own (editSeq) or another tab's on the same key (the shared
-    // generation sidecar, #35) — so only clear dirty if neither moved.
-    if (editSeq.current === seq && readGeneration(META_KEY) === genAtStart) clearDirty(META_KEY)
+    // Per row instead of per key (#84): each row in `stampedMeta` carries the
+    // editGen it had when *this tab* built this push. A row confirms only if
+    // the shared sidecar's current value for it still matches — proof this
+    // exact edit, not some other tab's, is what's now confirmed. A row this
+    // tab never edited (no editGen) is skipped outright — confirming it
+    // isn't this tab's call to make.
+    confirmRowGenerations(META_KEY, stampedMeta)
   }, [user])
 
   const flushMeta = useCallback(() => {
@@ -612,7 +613,12 @@ export function useArtistStorage() {
       const removed = prev
         .map((a) => (a && typeof a === 'object' ? a.id : undefined))
         .filter((id) => id !== undefined && !liveIds.has(id))
-      if (removed.length) addPendingDeletes(META_KEY, removed)
+      if (removed.length) {
+        addPendingDeletes(META_KEY, removed)
+        // A deleted artist's tracked generation would otherwise linger
+        // forever — nothing will ever push it again to confirm it (#84).
+        dropRowGenerations(META_KEY, removed)
+      }
       // Save any changed image arrays to IndexedDB (the stamping spread keeps
       // image array references, so this comparison still sees real changes).
       for (const a of stamped) {
@@ -623,14 +629,13 @@ export function useArtistStorage() {
           )
         }
       }
+      // Durable at edit time, same reasoning as the tombstones above — a tab
+      // closed inside the debounce window must not lose track of which
+      // artists still need confirming (#84, replacing the per-key generation;
+      // see confirmRowGenerations in runFlushMeta).
+      writeRowGenerations(META_KEY, stamped)
       return stamped
     })
-    editSeq.current += 1
-    setDirty(META_KEY)
-    // Opaque, collision-resistant, shared across tabs (unlike editSeq) — lets
-    // a flush detect an edit that landed in *another* tab while it was in
-    // flight (#35).
-    writeGeneration(META_KEY)
     if (user) {
       clearTimeout(pushTimer.current)
       pushTimer.current = setTimeout(() => {
