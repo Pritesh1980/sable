@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useLayoutEffect } from 'react'
 import { imageSrc } from '../data/wall'
 import { refreshedBlobUrl } from '../data/blobUrls'
 
@@ -20,36 +20,44 @@ export default function ArtistImage({
   const trimmed = label.startsWith('@') ? label.slice(1) : label
   const initial = (trimmed.trim()[0] || '?').toUpperCase()
 
-  // Retry/failure state is tagged with the resolved src it applies to,
-  // rather than reset imperatively when the src prop changes: a component
-  // instance reused for a different image (e.g. a table row) then naturally
-  // stops applying a previous image's retry or failure the moment `resolved`
-  // moves on — no effect, no ref read/write during render.
-  const [retried, setRetried] = useState(null) // { forSrc, freshSrc }
-  const [failedFor, setFailedFor] = useState(null)
+  // Retry/failure state is scoped to whichever resolved src it was computed
+  // for, via `trackedSrc`. Comparing *state* (not a ref) during render and
+  // resetting when it's stale is React's own documented "adjusting state
+  // during render" pattern — safe under concurrent rendering. It matters
+  // here because the same component instance can genuinely revisit an
+  // earlier src: "Set cover" reorders images[0], so a real user action can
+  // cycle a card's own display url A -> B -> A (review, round 2) — without
+  // this, a src that once failed (or has a retry still pending) would stay
+  // stuck that way forever, even long after returning to it.
+  const [trackedSrc, setTrackedSrc] = useState(resolved)
+  const [retriedSrc, setRetriedSrc] = useState(null)
+  const [failed, setFailed] = useState(false)
+  if (trackedSrc !== resolved) {
+    setTrackedSrc(resolved)
+    setRetriedSrc(null)
+    setFailed(false)
+  }
+  const displaySrc = retriedSrc || resolved
 
-  // Two races a single boolean/ref can't tell apart on its own (cross-model
-  // review): (1) this image's own retry is still in flight when a second
-  // onError fires for the same still-broken src (React can re-render and
-  // reattach the same failing src before the first retry resolves) — that
-  // must wait for the first attempt, not jump straight to the monogram; (2)
-  // a *slow* retry for a previous image (src changed mid-flight, e.g. a
-  // reused table-row instance) resolves after a newer image has already
-  // rendered correctly — that stale result must be discarded, not clobber
-  // the current one. retryStateRef tracks (1) — forSrc + pending/done — and
-  // is only ever touched inside handleError, an event handler, never during
-  // render. latestResolvedRef tracks (2): a plain ref kept in sync with the
-  // current prop via an effect (writing, never reading, during render — the
-  // standard, sanctioned way to hand an async callback the latest props),
-  // so a stale completion can tell it's stale and bail out.
-  const retryStateRef = useRef({ forSrc: null, status: 'idle' })
+  // Only ever touched inside handleError/handleLoad (event handlers) or this
+  // layout effect — never read or written during render. retryStatusRef
+  // guards against a duplicate onError for the same still-failing src (React
+  // can reattach the same src before the first retry resolves) being
+  // mistaken for "the retry itself also failed." latestResolvedRef lets a
+  // slow completion tell whether the src it was for is still current before
+  // ever touching state, so it can discard itself instead of clobbering a
+  // newer, already-correct display. Synced via useLayoutEffect rather than
+  // useEffect: a passive effect runs after paint, which can be *later* than
+  // an already-pending promise's own microtask continuation, leaving a
+  // narrow window where a stale completion could still pass the check
+  // (review, round 2) — a layout effect commits synchronously, before the
+  // JS engine yields to that microtask queue, closing it.
+  const retryStatusRef = useRef('idle') // 'idle' | 'pending' | 'done'
   const latestResolvedRef = useRef(resolved)
-  useEffect(() => {
+  useLayoutEffect(() => {
+    retryStatusRef.current = 'idle'
     latestResolvedRef.current = resolved
   }, [resolved])
-
-  const displaySrc = retried?.forSrc === resolved && retried.freshSrc ? retried.freshSrc : resolved
-  const failed = failedFor === resolved
 
   // A resolved blob URL already baked into state can go stale once its
   // backend's TTL passes with nothing re-deriving it (#82) — try exactly
@@ -60,29 +68,48 @@ export default function ArtistImage({
   // so this is a no-op fallthrough for every non-blob image.
   async function handleError() {
     const forSrc = resolved
-
-    if (retryStateRef.current.forSrc !== forSrc) {
-      retryStateRef.current = { forSrc, status: 'pending' }
-      const fresh = await refreshedBlobUrl(displaySrc)
+    if (retryStatusRef.current === 'idle') {
+      retryStatusRef.current = 'pending'
+      let fresh
+      try {
+        // resolveBlobKey (which this calls into) never itself rejects — a
+        // failed refetch resolves to the last-known url instead — but a
+        // defensive catch here costs nothing and means a future change to
+        // that contract can't silently deadlock this component instead of
+        // degrading to the monogram (review).
+        fresh = await refreshedBlobUrl(displaySrc)
+      } catch {
+        fresh = null
+      }
       // The image may have moved on to a different src while this was in
-      // flight (a reused component instance) — a stale completion must not
-      // apply to whatever's showing now.
+      // flight — a stale completion must not apply to whatever's showing
+      // now (its own layout effect already reset retryStatusRef for the
+      // src that's actually current, so there's nothing to undo here).
       if (latestResolvedRef.current !== forSrc) return
-      retryStateRef.current = { forSrc, status: 'done' }
+      retryStatusRef.current = 'done'
       if (fresh) {
-        setRetried({ forSrc, freshSrc: fresh })
+        setRetriedSrc(fresh)
         return
       }
-      setFailedFor(forSrc)
+      setFailed(true)
       return
     }
 
-    // A retry for this exact image is already in flight (or already
-    // resolved to a still-broken retried src) — a second error for the same
-    // src while one's pending just waits for it, rather than racing ahead
-    // to the monogram before the first attempt even had a chance.
-    if (retryStateRef.current.status === 'pending') return
-    setFailedFor(forSrc)
+    // A retry for this exact image is already in flight — a second error
+    // for the same src while one's pending just waits for it, rather than
+    // racing ahead to the monogram before the first attempt even had a
+    // chance to succeed.
+    if (retryStatusRef.current === 'pending') return
+    setFailed(true)
+  }
+
+  // A successful load (first try, or after a retry) re-arms the one-shot
+  // retry for this src: if it expires again later in a long session, it
+  // gets another chance rather than jumping straight to the monogram just
+  // because an earlier attempt for the same src already used its one try
+  // (review, round 2).
+  function handleLoad() {
+    retryStatusRef.current = 'idle'
   }
 
   if (!displaySrc || failed) {
@@ -104,6 +131,7 @@ export default function ArtistImage({
       alt={label}
       className={className}
       onError={handleError}
+      onLoad={handleLoad}
       {...imgProps}
     />
   )

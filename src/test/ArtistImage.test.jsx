@@ -101,6 +101,20 @@ describe('ArtistImage', () => {
     expect(refreshedBlobUrl).toHaveBeenCalledTimes(1)
   })
 
+  // Cross-model review (agy): refreshedBlobUrl -> resolveBlobKey never
+  // itself rejects today (a failed refetch resolves to the last-known url
+  // instead), but nothing in this component's contract with it guarantees
+  // that stays true forever — an uncaught rejection here would otherwise
+  // skip the monogram fallback and leave the tracking ref stuck 'pending'.
+  it('falls back to the monogram, without deadlocking, if the retry itself rejects', async () => {
+    refreshedBlobUrl.mockRejectedValue(new Error('network blip'))
+    render(<ArtistImage src="https://signed.example/expired" label="@zoia.ink" />)
+
+    fireEvent.error(screen.getByRole('img'))
+    await waitFor(() => expect(screen.queryByRole('img')).toBeNull())
+    expect(screen.getByText('Z')).toBeInTheDocument()
+  })
+
   // Cross-model review (codex): a slow retry for a previous image (the src
   // prop changed while it was in flight — a reused component instance, e.g.
   // a table row) must not clobber a newer image that's *already recovered
@@ -135,6 +149,45 @@ describe('ArtistImage', () => {
     expect(screen.getByRole('img')).toHaveAttribute('src', 'https://signed.example/b-fresh')
   })
 
+  // Cross-model review (agy): a stale, discarded completion left its own
+  // tracking ref permanently claimed for that src at 'pending' — so if the
+  // component ever returned to that exact same src later, the pending-guard
+  // above mistook it for "still waiting on the old attempt" and did nothing
+  // at all: no retry, no monogram, a silently broken image forever.
+  it('does not permanently deadlock a src whose stale retry was discarded, if the component returns to it later', async () => {
+    const forA = deferred()
+    // The first call for A's url returns the controllable promise; any
+    // later call (the second attempt, after returning to A) resolves
+    // immediately on its own — forA itself only ever settles once.
+    refreshedBlobUrl.mockImplementationOnce(() => forA.promise)
+    refreshedBlobUrl.mockImplementation(() => Promise.resolve('https://signed.example/a-fresh-2'))
+    const { rerender } = render(<ArtistImage src="https://signed.example/a-expired" label="@zoia.ink" />)
+    fireEvent.error(screen.getByRole('img')) // A's retry starts (1st refreshedBlobUrl call), stays pending
+
+    // Move away before it settles — B loads fine, never errors, so nothing
+    // else ever touches the tracking ref for A.
+    rerender(<ArtistImage src="https://signed.example/b-fine" label="@vesper_noctis" />)
+
+    // A's stale retry finally resolves and gets discarded (B is current).
+    await act(async () => {
+      forA.resolve('https://signed.example/a-fresh')
+      await forA.promise
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    // Back to A — it fails again. Without the fix this deadlocks silently:
+    // no second refreshedBlobUrl call, no monogram, the broken <img> just
+    // sits there.
+    rerender(<ArtistImage src="https://signed.example/a-expired" label="@zoia.ink" />)
+    fireEvent.error(screen.getByRole('img'))
+
+    await waitFor(() =>
+      expect(screen.getByRole('img')).toHaveAttribute('src', 'https://signed.example/a-fresh-2')
+    )
+    expect(refreshedBlobUrl).toHaveBeenCalledTimes(2)
+  })
+
   it('resets the retry and any prior failure when the src prop changes to a new image', async () => {
     const { rerender } = render(<ArtistImage src="https://signed.example/a-expired" label="@zoia.ink" />)
     fireEvent.error(screen.getByRole('img'))
@@ -145,6 +198,52 @@ describe('ArtistImage', () => {
     // A different, never-failed image must render normally, not stay stuck
     // showing the previous image's monogram fallback.
     expect(screen.getByRole('img')).toHaveAttribute('src', 'https://signed.example/b-fine')
+  })
+
+  // Cross-model review (codex, round 2): a real user action ("Set cover" on
+  // ArtistDetail reorders images[0]) can cycle the *same* component
+  // instance's src A -> B -> A. A src that failed on an earlier visit must
+  // get a genuine fresh chance on a later one, not stay permanently stuck
+  // showing the monogram just because it once failed.
+  it('gives a previously-failed src a fresh chance if the component returns to it later', async () => {
+    refreshedBlobUrl.mockResolvedValue(null) // no recovery available either time
+    const { rerender } = render(<ArtistImage src="https://signed.example/a-broken" label="@zoia.ink" />)
+    fireEvent.error(screen.getByRole('img'))
+    await waitFor(() => expect(screen.queryByRole('img')).toBeNull())
+
+    rerender(<ArtistImage src="https://signed.example/b-fine" label="@vesper_noctis" />)
+    expect(screen.getByRole('img')).toHaveAttribute('src', 'https://signed.example/b-fine')
+
+    rerender(<ArtistImage src="https://signed.example/a-broken" label="@zoia.ink" />)
+    // A real <img> again, not stuck showing the old monogram — it gets to
+    // actually attempt loading, which is the whole point of "another chance".
+    expect(screen.getByRole('img')).toHaveAttribute('src', 'https://signed.example/a-broken')
+  })
+
+  // Cross-model review (codex, round 2): the one-shot retry guard must not
+  // stay permanently spent after it *succeeds* — otherwise a long enough
+  // session hits #82's exact bug again the next time that same (now
+  // retried) URL itself expires, having used its only attempt the first time.
+  it('re-arms the one-shot retry after a successful load, so a later expiry of the same src gets another chance', async () => {
+    refreshedBlobUrl.mockResolvedValueOnce('https://signed.example/fresh-1')
+    render(<ArtistImage src="https://signed.example/expired" label="@zoia.ink" />)
+
+    fireEvent.error(screen.getByRole('img'))
+    await waitFor(() =>
+      expect(screen.getByRole('img')).toHaveAttribute('src', 'https://signed.example/fresh-1')
+    )
+
+    // The retried image actually loads...
+    fireEvent.load(screen.getByRole('img'))
+
+    // ...and later *that* url itself expires too.
+    refreshedBlobUrl.mockResolvedValueOnce('https://signed.example/fresh-2')
+    fireEvent.error(screen.getByRole('img'))
+
+    await waitFor(() =>
+      expect(screen.getByRole('img')).toHaveAttribute('src', 'https://signed.example/fresh-2')
+    )
+    expect(refreshedBlobUrl).toHaveBeenCalledTimes(2)
   })
 
   it('renders the monogram immediately when no src is provided', () => {
