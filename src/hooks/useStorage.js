@@ -266,7 +266,21 @@ export function useStorage(key, defaultValue, codecArg) {
         // tab closed inside the debounce window must not lose track of which
         // rows still need confirming (#84, replacing the per-key generation
         // for list collections; see confirmRowGenerations in dirty.js).
-        writeRowGenerations(key, stamped)
+        // Only rows this edit actually touched: a confirmed row keeps its
+        // stale editGen on the object forever (confirmRowGenerations clears
+        // only the sidecar, never the row), so writing the full `stamped`
+        // array here would re-broadcast that stale token on every later,
+        // unrelated edit and clobber a newer generation another tab wrote
+        // for that same row in the interim (#84 cross-model review).
+        const prevById = new Map(
+          Array.isArray(prev)
+            ? prev.filter((r) => r && typeof r === 'object').map((r) => [r.id, r])
+            : []
+        )
+        const changedRows = stamped.filter(
+          (r) => r && typeof r === 'object' && prevById.get(r.id) !== r
+        )
+        writeRowGenerations(key, changedRows)
         return stamped
       })
       if (collection) {

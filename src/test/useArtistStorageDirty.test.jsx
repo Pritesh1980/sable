@@ -4,7 +4,7 @@ import { AuthProvider } from '../context/AuthContext'
 import { useAuth } from '../context/useAuth'
 import { useArtistStorage } from '../hooks/useArtistStorage'
 import { backend } from '../backend'
-import { writeRowGenerations, hasDirtyRows } from '../backend/dirty'
+import { writeRowGenerations, hasDirtyRows, readRowGenerations } from '../backend/dirty'
 
 const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>
 
@@ -175,6 +175,52 @@ describe('useArtistStorage dirty-state handling', () => {
       expect(rows.find((r) => r.id === 'x')?.status).toBe('shortlisted')
     }, { timeout: 3000 })
     await waitFor(() => expect(hasDirtyRows('tattoo_artists_meta')).toBe(false))
+  })
+
+  // #84 cross-model review: an artist's `editGen` lives on the row itself and
+  // is never cleared once confirmed — only the shared sidecar entry is. An
+  // unrelated edit rebuilds the whole array and must not re-broadcast that
+  // stale, already-confirmed value for an artist it didn't touch — doing so
+  // clobbers a newer generation another tab wrote for that same artist.
+  it("an unrelated edit does not rewrite another artist's tracked generation with its own stale value", async () => {
+    seedSession()
+    await backend.store.upsert('artistsMeta', [remoteArtist('y'), remoteArtist('x')])
+    const { result } = renderSynced()
+    await waitFor(() => expect(result.current.store[0]).toHaveLength(2))
+
+    // This tab edits and pushes artist 'y' itself; it gets confirmed, but
+    // the row in state still carries that now-stale editGen forever.
+    act(() =>
+      result.current.store[1]((prev) =>
+        prev.map((a) => (a.id === 'y' ? { ...a, status: 'shortlisted' } : a))
+      )
+    )
+    await waitFor(async () => {
+      const rows = await backend.store.list('artistsMeta')
+      expect(rows.find((r) => r.id === 'y')?.status).toBe('shortlisted')
+    }, { timeout: 3000 })
+    await waitFor(() => expect(hasDirtyRows('tattoo_artists_meta')).toBe(false))
+
+    // Another tab now edits the same artist independently — its own
+    // generation lands in the shared sidecar.
+    writeRowGenerations('tattoo_artists_meta', [{ id: 'y', editGen: 'g-tabB' }])
+    expect(readRowGenerations('tattoo_artists_meta').y).toBe('g-tabB')
+
+    // This tab edits a different, unrelated artist — the updater rebuilds
+    // the whole array, including the untouched 'y' row and its stale
+    // editGen.
+    act(() =>
+      result.current.store[1]((prev) =>
+        prev.map((a) => (a.id === 'x' ? { ...a, status: 'contacted' } : a))
+      )
+    )
+    await waitFor(async () => {
+      const rows = await backend.store.list('artistsMeta')
+      expect(rows.find((r) => r.id === 'x')?.status).toBe('contacted')
+    }, { timeout: 3000 })
+
+    // The other tab's tracked generation for 'y' must survive untouched.
+    expect(readRowGenerations('tattoo_artists_meta').y).toBe('g-tabB')
   })
 
   it('the one-time migration push preserves stamps of unchanged artists', async () => {

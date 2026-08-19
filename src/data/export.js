@@ -1,6 +1,14 @@
 import { getImageNote, getImageUrl } from './planning'
+import { stripEditGen } from '../backend/sync'
 
 const BACKUP_VERSION = 1
+
+// editGen is internal sync bookkeeping (#84) that must never leak into a
+// user-facing artifact — a backup export reads straight from in-memory
+// state, which still carries it until confirmRowGenerations clears it.
+function stripRows(rows) {
+  return rows.map(stripEditGen)
+}
 
 function compactList(items) {
   return items.filter(Boolean).join('\n')
@@ -30,10 +38,10 @@ export function createBackup({ artists = [], ideas = [], boards = [], concepts =
     version: BACKUP_VERSION,
     exportedAt,
     data: {
-      artists,
-      ideas,
-      boards,
-      concepts,
+      artists: stripRows(artists),
+      ideas: stripRows(ideas),
+      boards: stripRows(boards),
+      concepts: stripRows(concepts),
       conventionOverrides,
     },
   }

@@ -466,7 +466,10 @@ export function useArtistStorage() {
           )
         }
         if (remote.length === 0 && nextMeta.length) {
-          await backend.store.upsert(COLLECTION, nextMeta)
+          // The raw cache being seeded up can carry a leftover editGen from a
+          // crash-recovered edit — pure local bookkeeping that must never
+          // reach the remote store (#84 cross-model review).
+          await backend.store.upsert(COLLECTION, nextMeta.map(stripEditGen))
         }
 
         if (cancelled) return
@@ -490,7 +493,10 @@ export function useArtistStorage() {
             const imagesChanged = JSON.stringify(a.images) !== beforeImages.get(a.id)
             return imagesChanged || !a.updatedAt ? { ...a, updatedAt: at } : a
           })
-          await backend.store.upsert(COLLECTION, rows)
+          // `rows` can still carry a local editGen (#84 cross-model review) —
+          // strip it for the push, but keep the unstripped rows as the
+          // in-memory baseline (syncedRef participates in reconciliation).
+          await backend.store.upsert(COLLECTION, rows.map(stripEditGen))
           syncedRef.current = rows
         }
 
@@ -633,7 +639,21 @@ export function useArtistStorage() {
       // closed inside the debounce window must not lose track of which
       // artists still need confirming (#84, replacing the per-key generation;
       // see confirmRowGenerations in runFlushMeta).
-      writeRowGenerations(META_KEY, stamped)
+      // Only artists this edit actually touched: a confirmed row keeps its
+      // stale editGen on the object forever (confirmRowGenerations clears
+      // only the sidecar, never the row), so writing the full `stamped`
+      // array here would re-broadcast that stale token on every later,
+      // unrelated edit and clobber a newer generation another tab wrote
+      // for that same artist in the interim (#84 cross-model review).
+      const prevById = new Map(
+        Array.isArray(prev)
+          ? prev.filter((a) => a && typeof a === 'object').map((a) => [a.id, a])
+          : []
+      )
+      const changedRows = stamped.filter(
+        (a) => a && typeof a === 'object' && prevById.get(a.id) !== a
+      )
+      writeRowGenerations(META_KEY, changedRows)
       return stamped
     })
     if (user) {

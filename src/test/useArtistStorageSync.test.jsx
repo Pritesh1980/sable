@@ -65,6 +65,53 @@ describe('useArtistStorage owner seeding + sync', () => {
     expect(rows.find((r) => r.id === DEFAULT_ARTISTS[0].id).notes).toBe('my private note')
   })
 
+  // #84 cross-model review: this seeding push (an empty remote, a populated
+  // local cache) bypasses the flush path's stripEditGen call entirely — a
+  // crash-recovered cache row can still carry an internal editGen token,
+  // and it must not reach the remote store. The one-time image migration
+  // (a separate, already-covered upsert) is pre-marked done so it can't
+  // paper over a regression in *this* call site specifically.
+  it('strips any editGen carried in the local cache when seeding an empty remote', async () => {
+    localStorage.setItem('tattoo_img_migrated_v1', '1')
+    localStorage.setItem(
+      'tattoo_artists_meta',
+      JSON.stringify([{ ...DEFAULT_ARTISTS[0], notes: 'my private note', editGen: 'stale-token' }])
+    )
+    seedSession('owner@example.com')
+
+    const { result } = renderSynced()
+    await waitFor(() => expect(result.current.auth.user).toBeTruthy())
+
+    await waitFor(async () => {
+      const rows = await backend.store.list('artistsMeta')
+      expect(rows).toHaveLength(DEFAULT_ARTISTS.length)
+    })
+    const rows = await backend.store.list('artistsMeta')
+    expect(rows.find((r) => r.id === DEFAULT_ARTISTS[0].id).editGen).toBeUndefined()
+  })
+
+  // #84 cross-model review: a second, independent upsert follows the one-time
+  // image migration (which always runs here — the flag starts cleared) and
+  // must strip editGen itself rather than relying on the seed-path upsert
+  // above having already done it.
+  it('strips editGen from the post-migration push as well as the seed push', async () => {
+    localStorage.setItem(
+      'tattoo_artists_meta',
+      JSON.stringify([{ ...DEFAULT_ARTISTS[0], notes: 'my private note', editGen: 'stale-token' }])
+    )
+    seedSession('owner@example.com')
+
+    const { result } = renderSynced()
+    await waitFor(() => expect(result.current.auth.user).toBeTruthy())
+
+    await waitFor(async () => {
+      const rows = await backend.store.list('artistsMeta')
+      expect(rows).toHaveLength(DEFAULT_ARTISTS.length)
+    })
+    const rows = await backend.store.list('artistsMeta')
+    expect(rows.find((r) => r.id === DEFAULT_ARTISTS[0].id).editGen).toBeUndefined()
+  })
+
   it('hydrates a non-owner from their own remote rows (no default seeding)', async () => {
     // The remote row must be written under the same signed-in identity that
     // will later read it back (#28 namespaces the local backend's simulated

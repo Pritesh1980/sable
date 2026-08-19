@@ -27,6 +27,25 @@ describe('createBackup', () => {
   })
 })
 
+// #84 cross-model review: `editGen` is internal sync bookkeeping (#84) that
+// must never leak into a user-facing artifact — a backup export reads
+// straight from in-memory state, which still carries it until confirmed.
+describe('createBackup (editGen stripping, #84 review)', () => {
+  it('strips editGen from every collection before it reaches the backup', () => {
+    const backup = createBackup({
+      artists: [{ id: 'artist-1', editGen: 'g1' }],
+      ideas: [{ id: 'idea-1', editGen: 'g2' }],
+      boards: [{ id: 'board-1', editGen: 'g3' }],
+      concepts: [{ id: 'concept-1', editGen: 'g4' }],
+    })
+
+    expect(backup.data.artists).toEqual([{ id: 'artist-1' }])
+    expect(backup.data.ideas).toEqual([{ id: 'idea-1' }])
+    expect(backup.data.boards).toEqual([{ id: 'board-1' }])
+    expect(backup.data.concepts).toEqual([{ id: 'concept-1' }])
+  })
+})
+
 describe('parseBackup', () => {
   it('accepts current backup shape', () => {
     const result = parseBackup(JSON.stringify(createBackup({ artists: [{ id: 'a' }] })))

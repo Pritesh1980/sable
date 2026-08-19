@@ -4,7 +4,7 @@ import { AuthProvider } from '../context/AuthContext'
 import { useAuth } from '../context/useAuth'
 import { useStorage } from '../hooks/useStorage'
 import { backend } from '../backend'
-import { writeRowGenerations, hasDirtyRows } from '../backend/dirty'
+import { writeRowGenerations, hasDirtyRows, readRowGenerations } from '../backend/dirty'
 
 const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>
 
@@ -229,6 +229,43 @@ describe('useStorage dirty-state handling', () => {
     // Tab B's row was never pushed by this tab and must still read as
     // pending — this tab had no business confirming a row it never edited.
     expect(hasDirtyRows('tattoo_ideas')).toBe(true)
+  })
+
+  // #84 cross-model review: a row's `editGen` field lives on the row itself
+  // and is never cleared once confirmed — only the shared sidecar entry is.
+  // An unrelated edit rebuilds the whole array and must not re-broadcast
+  // that stale, already-confirmed value for a row it didn't touch — doing so
+  // clobbers a newer generation another tab wrote for that same row in the
+  // meantime, silently erasing its retry signal.
+  it("an unrelated edit does not rewrite another row's tracked generation with its own stale value", async () => {
+    seedSession()
+    const { result } = renderSynced('tattoo_ideas', [])
+    await waitFor(() => expect(result.current.auth.user).toBeTruthy())
+
+    // This tab edits and pushes row 'y' itself; it gets confirmed, but the
+    // row object in state still carries that now-stale editGen forever.
+    act(() => result.current.store[1]([{ id: 'y', title: 'from this tab' }]))
+    await waitFor(async () => {
+      const rows = await backend.store.list('ideas')
+      expect(rows.find((r) => r.id === 'y')?.title).toBe('from this tab')
+    }, { timeout: 3000 })
+    await waitFor(() => expect(hasDirtyRows('tattoo_ideas')).toBe(false))
+
+    // Tab B now edits the same row independently — its own generation lands
+    // in the shared sidecar.
+    writeRowGenerations('tattoo_ideas', [{ id: 'y', editGen: 'g-tabB' }])
+    expect(readRowGenerations('tattoo_ideas').y).toBe('g-tabB')
+
+    // This tab edits a different, unrelated row — the updater rebuilds the
+    // whole array, including the untouched 'y' row and its stale editGen.
+    act(() => result.current.store[1]((prev) => [...prev, { id: 'x', title: 'unrelated' }]))
+    await waitFor(async () => {
+      const rows = await backend.store.list('ideas')
+      expect(rows.find((r) => r.id === 'x')?.title).toBe('unrelated')
+    }, { timeout: 3000 })
+
+    // Tab B's tracked generation for 'y' must survive untouched.
+    expect(readRowGenerations('tattoo_ideas').y).toBe('g-tabB')
   })
 
   it('re-adding a row supersedes its pending delete (the delete must not win)', async () => {
