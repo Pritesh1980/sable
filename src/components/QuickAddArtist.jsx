@@ -48,6 +48,9 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
   // Reading, cropping and scoring are in flight: saving now would store the
   // screenshot the crop was meant to replace.
   const [intakeBusy, setIntakeBusy] = useState(false)
+  // #46: a screenshot dropped onto the form takes the same path as one
+  // pasted or picked — handleScreenshot is the one intake entry point.
+  const [dragOver, setDragOver] = useState(false)
 
   function toggleTag(tag) {
     setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]))
@@ -114,6 +117,22 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
     if (seq === shotSeq.current) setIntakeBusy(false)
   }
 
+  function handleDragOver(e) {
+    e.preventDefault()
+    setDragOver(true)
+  }
+
+  function handleDragLeave() {
+    setDragOver(false)
+  }
+
+  function handleDrop(e) {
+    e.preventDefault()
+    setDragOver(false)
+    const file = [...(e.dataTransfer?.files || [])].find((f) => f.type?.startsWith('image/'))
+    if (file) handleScreenshot(file)
+  }
+
   function useWholeScreenshot() {
     if (!uncropped) return
     setShot(uncropped)
@@ -158,13 +177,19 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
   return (
     <div className="fixed inset-0 z-50 bg-ink-black/95 flex items-start sm:items-center justify-center animate-fade-in overflow-y-auto" onClick={onClose}>
       <form
+        data-testid="quickadd-form"
         onSubmit={submit}
         onClick={(e) => e.stopPropagation()}
         onPaste={(e) => {
           const file = [...(e.clipboardData?.files || [])].find((f) => f.type.startsWith('image/'))
           if (file) { e.preventDefault(); handleScreenshot(file) }
         }}
-        className="w-full max-w-md bg-ink-card border border-ink-border rounded-xs p-5 m-4 mt-16 sm:mt-4 animate-slide-up"
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`w-full max-w-md bg-ink-card border rounded-xs p-5 m-4 mt-16 sm:mt-4 animate-slide-up transition-colors ${
+          dragOver ? 'border-accent bg-accent/5' : 'border-ink-border'
+        }`}
       >
         <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-4">Add an artist</p>
 
@@ -211,7 +236,7 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
               onClick={() => fileRef.current?.click()}
               className="w-full border border-dashed border-ink-border rounded-xs px-3 py-3 text-left font-body text-sm text-cream-muted hover:border-cream-muted/40 transition-colors"
             >
-              From a screenshot — choose or paste an Instagram screenshot to auto-fill
+              From a screenshot — choose, paste, or drag an Instagram screenshot in to auto-fill
             </button>
           )}
         </div>

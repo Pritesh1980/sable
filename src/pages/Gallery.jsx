@@ -123,6 +123,27 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
     return () => { cancelled = true }
   }, [searchParams])
 
+  // #46: paste anywhere on the page, not just inside the quick-add form —
+  // the same entry point the share-target flow uses (initialFile), so the
+  // screenshot pipeline has exactly one way in. Skipped while quick-add is
+  // already open (its own form-level onPaste handles that case) and while a
+  // text input/textarea has focus, so pasting a handle into a field is
+  // unaffected.
+  useEffect(() => {
+    if (quickAdding) return undefined
+    function handlePagePaste(e) {
+      const active = document.activeElement
+      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return
+      const file = [...(e.clipboardData?.files || [])].find((f) => f.type?.startsWith('image/'))
+      if (!file) return
+      e.preventDefault()
+      setSharedFile(file)
+      setQuickAdding(true)
+    }
+    document.addEventListener('paste', handlePagePaste)
+    return () => document.removeEventListener('paste', handlePagePaste)
+  }, [quickAdding])
+
   const artistsWithImages = artists.filter((a) => a.images?.length > 0)
 
   const sensors = useSensors(

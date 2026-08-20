@@ -256,6 +256,61 @@ describe('QuickAddArtist artwork crop (#24)', () => {
   })
 })
 
+// #46: the form only offered a file picker and paste; dragging a screenshot
+// in (the natural macOS gesture after Cmd+Shift+4) had no affordance at all.
+describe('QuickAddArtist drag-and-drop (#46)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+  })
+
+  function dropFile(file) {
+    fireEvent.drop(screen.getByTestId('quickadd-form'), {
+      dataTransfer: { files: [file] },
+    })
+  }
+
+  it('attaches a dropped screenshot the same way as a pasted one', async () => {
+    localStorage.setItem('gemini_api_key', 'test-key')
+    analyzeScreenshotWithGemini.mockResolvedValue({
+      handle: 'dropped_artist', name: '', tags: [], styleNote: '',
+    })
+    renderModal()
+    dropFile(new File(['x'], 'shot.png', { type: 'image/png' }))
+
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText(/handle or instagram url/i)).toHaveValue('dropped_artist'))
+    expect(analyzeScreenshotWithGemini).toHaveBeenCalledWith('test-key', 'data:image/jpeg;base64,SHOT')
+  })
+
+  it('ignores a dropped file that is not an image', async () => {
+    renderModal()
+    dropFile(new File(['x'], 'note.txt', { type: 'text/plain' }))
+    await new Promise((r) => setTimeout(r, 20))
+    expect(screen.queryByAltText('Screenshot')).not.toBeInTheDocument()
+  })
+
+  it('highlights the form while dragging over it, and clears on drop', () => {
+    renderModal()
+    const form = screen.getByTestId('quickadd-form')
+    expect(form.className).not.toMatch(/border-accent/)
+
+    fireEvent.dragOver(form)
+    expect(form.className).toMatch(/border-accent/)
+
+    fireEvent.dragLeave(form)
+    expect(form.className).not.toMatch(/border-accent/)
+  })
+
+  it('clears the drag highlight after a drop', async () => {
+    renderModal()
+    const form = screen.getByTestId('quickadd-form')
+    fireEvent.dragOver(form)
+    dropFile(new File(['x'], 'shot.png', { type: 'image/png' }))
+    await waitFor(() => expect(form.className).not.toMatch(/border-accent/))
+  })
+})
+
 // Both reviewers landed on the same point: silently swapping the user's image
 // for a machine-chosen crop needs to be visible and reversible — a bounding box
 // can clip the artwork, and an injected one could be deliberately wrong.
