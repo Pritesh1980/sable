@@ -104,12 +104,17 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onSetStatus, isFirst, 
         onClick={() => onOpen(artist)}
       >
         <h3 className="font-display text-cream text-base leading-tight truncate mb-0.5">{displayName}</h3>
+        {/* #76: audited at 79-106 wide but only 17 tall. A negative margin to
+            cancel the growth was tried and reverted (guarded by
+            a11yAffordances.spec.js) — it pulled the enlarged box over the
+            artist name above, swallowing taps meant to open the artist. Real
+            layout growth instead: the row gets a little taller. */}
         <a
           href={instagramUrl}
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="font-mono text-[0.6875rem] text-cream-muted/60 hover:text-accent transition-colors mb-1.5 w-fit"
+          className="font-mono text-[0.6875rem] text-cream-muted/60 hover:text-accent transition-colors mb-1.5 w-fit inline-flex items-center min-h-11"
         >
           @{artist.handle}
         </a>

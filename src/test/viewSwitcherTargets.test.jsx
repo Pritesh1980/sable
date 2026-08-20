@@ -70,6 +70,15 @@ describe('view switcher touch targets (#73)', () => {
     expect(declares44pt(chip.className)).toBe(false)
   })
 
+  // #76: audited at 43-161 wide (already fine) but only 26 tall. The row is
+  // already 44pt tall because of the view switcher beside it (#77), so this
+  // height is absorbed invisibly rather than growing the bar.
+  it('gives each style filter pill a 44pt hit area', () => {
+    renderGallery()
+    const pill = screen.getByRole('button', { name: 'All' })
+    expect(declares44pt(pill.className)).toBe(true)
+  })
+
   it('still switches view when clicked', () => {
     renderGallery()
     fireEvent.click(screen.getByTitle('Grid view'))

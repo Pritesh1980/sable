@@ -336,23 +336,26 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
             single ~44pt line regardless of how many style tags exist. */}
         <div className="flex items-center gap-2">
           <div className="flex gap-2 overflow-x-auto scrollbar-thin flex-1 min-w-0">
-            <div className="shrink-0">
-              <TagPill
-                tag="All"
-                active={!activeTag}
-                onClick={() => setActiveTag(null)}
-                disabled={dragActive}
-              />
-            </div>
+            {/* #76: minTapHeight grows each pill's own hit box to 44pt — the
+                row is already that tall because of the view switcher beside
+                it (#77), so this is absorbed invisibly rather than growing
+                the bar. */}
+            <TagPill
+              tag="All"
+              active={!activeTag}
+              onClick={() => setActiveTag(null)}
+              disabled={dragActive}
+              minTapHeight
+            />
             {STYLE_TAGS.map((tag) => (
-              <div key={tag} className="shrink-0">
-                <TagPill
-                  tag={tag}
-                  active={activeTag === tag}
-                  onClick={() => setActiveTag(activeTag === tag ? null : tag)}
-                  disabled={dragActive}
-                />
-              </div>
+              <TagPill
+                key={tag}
+                tag={tag}
+                active={activeTag === tag}
+                onClick={() => setActiveTag(activeTag === tag ? null : tag)}
+                disabled={dragActive}
+                minTapHeight
+              />
             ))}
           </div>
           {/* View toggle. The button is the 44pt target (#73); the chip inside
