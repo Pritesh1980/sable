@@ -77,13 +77,19 @@ describe('view switcher touch targets (#73)', () => {
     expect(screen.getByRole('button', { name: /reorder/i })).toBeInTheDocument()
   })
 
-  // Five 44pt buttons plus gaps is ~236px. Sharing one flex line with the style
-  // filters squeezed them into single-file rows on a phone — the same failure
-  // #70's re-captured screenshot caught. The row has to be allowed to wrap.
-  it('lets the switcher take its own line rather than crushing the filters', () => {
+  // #77: five 44pt buttons plus gaps is ~236px. Sharing one flex line with the
+  // style filters used to squeeze them into single-file rows on a phone (the
+  // same failure #70's re-captured screenshot caught), which #73 solved by
+  // forcing the switcher onto its own full-width line — but that made the bar
+  // 171px tall (three wrapped pill rows + a switcher row). The fix now is a
+  // horizontally-scrolling pill row instead: the switcher can share the line
+  // without crushing anything, because the pills scroll rather than wrap.
+  it('lets the filters scroll horizontally instead of wrapping or crushing the switcher', () => {
     renderGallery()
     const group = screen.getByTitle('Grid view').parentElement
-    expect(group.className).toMatch(/w-full/)
-    expect(group.parentElement.className).toMatch(/flex-wrap/)
+    expect(group.className).not.toMatch(/w-full/)
+    const pillsRow = group.previousElementSibling
+    expect(pillsRow.className).toMatch(/overflow-x-auto/)
+    expect(pillsRow.className).not.toMatch(/flex-wrap/)
   })
 })

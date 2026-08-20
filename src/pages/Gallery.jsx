@@ -306,32 +306,38 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
       <>
       {/* Sticky filter bar */}
       <div className="sticky top-0 z-20 bg-ink-black/80 backdrop-blur-md border-b border-ink-border px-4 py-3 mb-8">
-        {/* #73: five 44pt targets are ~236px, which crushed the filters onto
-            single-file rows when they shared a line on a phone. Wrap instead —
-            the switcher takes its own line until there is room beside them. */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex gap-2 flex-wrap flex-1">
-
-            <TagPill
-              tag="All"
-              active={!activeTag}
-              onClick={() => setActiveTag(null)}
-              disabled={dragActive}
-            />
-            {STYLE_TAGS.map((tag) => (
+        {/* #77: was three wrapped pill rows + a forced-onto-its-own-line
+            switcher row (171px on a phone, ~23% of the usable viewport).
+            #73 had the switcher claim its own full-width row specifically to
+            stop it crushing the pills into single-file wrapping when they
+            shared a line — but a horizontally-scrolling pill row sidesteps
+            that fight entirely, so both now share one row and the bar is a
+            single ~44pt line regardless of how many style tags exist. */}
+        <div className="flex items-center gap-2">
+          <div className="flex gap-2 overflow-x-auto scrollbar-thin flex-1 min-w-0">
+            <div className="shrink-0">
               <TagPill
-                key={tag}
-                tag={tag}
-                active={activeTag === tag}
-                onClick={() => setActiveTag(activeTag === tag ? null : tag)}
+                tag="All"
+                active={!activeTag}
+                onClick={() => setActiveTag(null)}
                 disabled={dragActive}
               />
+            </div>
+            {STYLE_TAGS.map((tag) => (
+              <div key={tag} className="shrink-0">
+                <TagPill
+                  tag={tag}
+                  active={activeTag === tag}
+                  onClick={() => setActiveTag(activeTag === tag ? null : tag)}
+                  disabled={dragActive}
+                />
+              </div>
             ))}
           </div>
           {/* View toggle. The button is the 44pt target (#73); the chip inside
               keeps the size the bar has always had (#51's pattern — grow the
               hit area, not the look). */}
-          <div className="flex gap-1 shrink-0 w-full justify-end sm:w-auto sm:ml-2">
+          <div className="flex gap-1 shrink-0 ml-2">
             {[
               { mode: 'filmstrip', label: '☰', title: 'Filmstrip view' },
               { mode: 'compare', label: '⊟', title: 'Compare artists' },
@@ -360,9 +366,8 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
               </button>
             ))}
             {/* #70: only grid has cards to drag, so the toggle only appears
-                there. A glyph rather than a text label — "⇅ Reorder" widened
-                this group enough to squeeze the filter pills into six
-                single-file rows on a phone. */}
+                there. A glyph rather than a text label keeps this group
+                narrow, leaving more of the row for the scrollable pills. */}
             {viewMode === 'grid' && (
               <button
                 onClick={() => setEditing((v) => !v)}
