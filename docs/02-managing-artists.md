@@ -49,15 +49,23 @@ running.
 
 **iPhone.** Safari doesn't support apps registering as share destinations
 ([WebKit bug 194593](https://bugs.webkit.org/show_bug.cgi?id=194593)), so iOS needs a
-one-off Shortcut instead. In the Shortcuts app:
+one-off Shortcut instead.
+
+The fastest way: open **Settings** inside Sable on your iPhone. If a one-tap install
+link has been published there, tapping it installs a working Shortcut directly —
+nothing to build by hand.
+
+If Settings only points back here (the link isn't published yet) or you'd rather build
+your own copy, do it manually in the Shortcuts app:
 
 1. New Shortcut → turn on **Show in Share Sheet**, and set *Accepted Types* to **Images**
 2. Add **Copy to Clipboard** (input: Shortcut Input)
 3. Add **Open URL** → `https://pritesh1980.github.io/sable/share`
 4. Name it **Sable**
 
-Now from Instagram: **Share → Sable**, then paste (long-press → Paste) into the form that
-opens. The screenshot is already on your clipboard, so it's one tap plus a paste.
+Either way, from Instagram: **Share → Sable**, then paste (long-press → Paste) into the
+form that opens. The screenshot is already on your clipboard, so it's one tap plus a
+paste.
 
 Either way the form opens ready — with a Gemini key set, auto-fill runs as soon as the
 screenshot is attached.
