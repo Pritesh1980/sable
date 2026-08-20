@@ -3,11 +3,12 @@ import { uploadImages } from '../hooks/useImageUpload'
 import { useAuth } from '../context/useAuth'
 import { DEFAULT_STUDIOS } from '../data/artists'
 import { imageSrc } from '../data/wall'
+import { useLongPress } from '../hooks/useLongPress'
 
 // `editing` gates every control that is not "open this artist" (#70). Off — the
 // default — the card is one undivided tap target; on, it grows the drag handle
 // and the quick-upload affordances.
-export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandleProps, isDragging, featured, index = 0, editing = false }) {
+export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandleProps, isDragging, featured, index = 0, editing = false, onLongPress }) {
   const displayName = artist.name || `@${artist.handle}`
   const studio = artist.studio ? DEFAULT_STUDIOS.find((s) => s.id === artist.studio) : null
   const hasImages = artist.images && artist.images.length > 0
@@ -15,6 +16,16 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef()
   const { user } = useAuth() || {}
+
+  // #71: long-press the card itself to enter Reorder (only while not already
+  // editing — once it is, the drag handle owns the gesture, on its own
+  // element, at dnd-kit's own 200ms). Same tap-vs-gesture split as the drag
+  // handle's isDragEcho (#54): the press's own click must not also open the
+  // artist. `enabled` covers both "already editing" and "no handler to call"
+  // (cross-model review) — the latter matters because a directly-rendered
+  // ArtistCard without onLongPress would otherwise still arm the recognizer
+  // and swallow a held press's click for nothing.
+  const longPress = useLongPress(() => onLongPress?.(), { delay: 500, enabled: !editing && !!onLongPress })
 
   async function handleFiles(e) {
     e.stopPropagation()
@@ -60,13 +71,27 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
   // is actually on top, unclipped by nothing of its own overflow-hidden.
   return (
     <div
-      style={{ animationDelay: `${index * 0.04}s` }}
+      style={{
+        animationDelay: `${index * 0.04}s`,
+        // #71 cross-model review: iOS's own long-press callout (image save/
+        // copy menu, text selection) can intercept the same hold this
+        // recognizer is listening for and eat the pointer stream before our
+        // click-suppression logic ever sees it.
+        WebkitTouchCallout: 'none',
+        WebkitUserSelect: 'none',
+        userSelect: 'none',
+      }}
       className={`relative animate-slide-up opacity-0 [animation-fill-mode:forwards] bg-ink-card border border-ink-border rounded-xs overflow-hidden cursor-pointer
         transition-all duration-300
         hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-black/70 hover:border-cream-muted/30
         focus-within:outline-hidden focus-within:ring-2 focus-within:ring-accent
         group ${isDragging ? 'opacity-40 scale-95 shadow-2xl' : ''}`}
-      onClick={() => onOpen(artist)}
+      onClick={() => { if (longPress.consumeIfFired()) return; onOpen(artist) }}
+      onPointerDown={longPress.onPointerDown}
+      onPointerMove={longPress.onPointerMove}
+      onPointerUp={longPress.onPointerUp}
+      onPointerLeave={longPress.onPointerLeave}
+      onContextMenu={(e) => { if (!editing && onLongPress) e.preventDefault() }}
     >
       <button
         type="button"
@@ -79,6 +104,7 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
           <img
             src={imageSrc(artist.images[0])}
             alt={displayName}
+            draggable={false}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
             onError={() => setImgError(true)}
           />

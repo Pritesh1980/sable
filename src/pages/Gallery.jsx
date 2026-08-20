@@ -30,7 +30,7 @@ import ArtistTable from '../components/ArtistTable'
 import QuickAddArtist from '../components/QuickAddArtist'
 import { STYLE_TAGS, createArtist } from '../data/artists'
 
-function ArtistGrid({ items, sensors, onDragStart, onDragEnd, onDragCancel, onOpen, onSaveImages, editing }) {
+function ArtistGrid({ items, sensors, onDragStart, onDragEnd, onDragCancel, onOpen, onSaveImages, editing, onLongPress }) {
   return (
     <DndContext
       sensors={sensors}
@@ -52,6 +52,7 @@ function ArtistGrid({ items, sensors, onDragStart, onDragEnd, onDragCancel, onOp
                 featured={true}
                 index={i}
                 editing={editing}
+                onLongPress={onLongPress}
               />
             ))}
           </div>
@@ -68,6 +69,7 @@ function ArtistGrid({ items, sensors, onDragStart, onDragEnd, onDragCancel, onOp
                 featured={false}
                 index={3 + i}
                 editing={editing}
+                onLongPress={onLongPress}
               />
             ))}
           </div>
@@ -432,6 +434,7 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
             onOpen={setSelected}
             onSaveImages={saveImages}
             editing={editing}
+            onLongPress={() => setEditing(true)}
           />
           {sorted.length === 0 && (
             <div className="py-10 text-center">

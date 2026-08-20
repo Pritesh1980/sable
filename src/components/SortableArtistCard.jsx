@@ -4,7 +4,7 @@ import { CSS } from '@dnd-kit/utilities'
 import ArtistCard from './ArtistCard'
 import { isDragEcho } from '../data/dragTap'
 
-export default function SortableArtistCard({ artist, onOpen, onSaveImages, index, featured, editing = false }) {
+export default function SortableArtistCard({ artist, onOpen, onSaveImages, index, featured, editing = false, onLongPress }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: artist.id,
   })
@@ -78,6 +78,7 @@ export default function SortableArtistCard({ artist, onOpen, onSaveImages, index
         featured={featured}
         index={index}
         editing={editing}
+        onLongPress={onLongPress}
       />
     </div>
   )

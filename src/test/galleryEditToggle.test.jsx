@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -91,6 +91,46 @@ describe('Gallery edit toggle (#70)', () => {
     fireEvent.click(screen.getByTitle('Filmstrip view'))
     toGrid()
     expect(handles()).toHaveLength(0)
+  })
+})
+
+// #71. iOS's universal "rearrange this grid" gesture is a long-press on a
+// tile — before this, the ⇅ toggle was the only way in.
+describe('long-press enters Reorder (#71)', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    vi.useFakeTimers()
+  })
+  afterEach(() => vi.useRealTimers())
+
+  function press(el) {
+    fireEvent.pointerDown(el, { pointerType: 'touch', button: 0, clientX: 0, clientY: 0 })
+  }
+
+  it('turns Reorder on after holding a card', () => {
+    renderGallery()
+    toGrid()
+    expect(editToggle()).toHaveAttribute('aria-pressed', 'false')
+
+    const card = screen.getByRole('button', { name: '@zoia.ink' }).parentElement
+    press(card)
+    act(() => vi.advanceTimersByTime(500))
+
+    expect(editToggle()).toHaveAttribute('aria-pressed', 'true')
+    expect(handles()).toHaveLength(baseArtists.length)
+  })
+
+  it('does not turn Reorder on for an ordinary quick tap', () => {
+    renderGallery()
+    toGrid()
+
+    const card = screen.getByRole('button', { name: '@zoia.ink' }).parentElement
+    press(card)
+    vi.advanceTimersByTime(100)
+    fireEvent.pointerUp(card)
+    fireEvent.click(card)
+
+    expect(editToggle()).toHaveAttribute('aria-pressed', 'false')
   })
 })
 
