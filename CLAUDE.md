@@ -105,7 +105,13 @@ A personal mood board / brief section.
   *evaluate the built bookmarklet* (the only honest way to test it) and assert the source is
   embedded verbatim, but **only a production build catches this class** — dev is unminified,
   so re-run `.e2e-prod` style checks against `vite preview` after touching the builder.
-  Stored device-local under `tattoo_convention_lineups`
+  **Big London 2026 ships with the app** (`src/data/lineups/bigLondon2026.js`, wired through
+  `src/data/lineupSeeds.js`): 466 artists with studio + booth, held as the same *text* the
+  import box takes so it goes through `parseLineup` rather than a second parallel code path.
+  A seed is a floor — user imports merge on top and win on conflicts, and `cleared: true` is
+  what keeps "Clear list" honest against a shipped list. The owner decided a published
+  exhibitor list is fine to commit to the public repo; that does not extend to portfolio
+  images. Only the user's own imports are stored under `tattoo_convention_lineups`
   — deliberately **not** a sync collection: it is bulky, re-importable in seconds, and what you
   keep from it syncs as gallery artists
 

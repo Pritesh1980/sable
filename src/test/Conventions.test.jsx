@@ -65,12 +65,26 @@ function bigLondonCard() {
   return screen.getByRole('heading', { name: bigLondon.name }).closest('div.animate-slide-up')
 }
 
+// Brighton ships no line-up, so it is where the from-empty import flow is
+// exercised; Big London now arrives with its list already in place.
+const brighton = CONVENTIONS.find((c) => c.id === 'brighton')
+
+function brightonCard() {
+  return screen.getByRole('heading', { name: brighton.name }).closest('div.animate-slide-up')
+}
+
 describe('Conventions artist index', () => {
+  it('ships the Big London line-up, so there is nothing to import', () => {
+    renderConventions()
+    const card = within(bigLondonCard())
+    expect(card.getByRole('button', { name: /artist index/i })).toHaveTextContent(/466 artists/)
+  })
+
   it('imports a pasted line-up and indexes it against the gallery', () => {
     const setConventionLineups = vi.fn()
     renderConventions({ setConventionLineups })
 
-    const card = within(bigLondonCard())
+    const card = within(brightonCard())
     fireEvent.click(card.getByRole('button', { name: /artist index/i }))
     fireEvent.change(card.getByLabelText(/paste the line-up/i), {
       target: { value: 'Oscar Akermo @oscarakermo\nMartin Kubala @kubalizmus' },
@@ -78,26 +92,26 @@ describe('Conventions artist index', () => {
     fireEvent.click(card.getByRole('button', { name: /^import/i }))
 
     const next = setConventionLineups.mock.calls[0][0]({})
-    expect(next['big-london'].entries.map((e) => e.handle)).toEqual(['oscarakermo', 'kubalizmus'])
-    expect(next['big-london'].updatedAt).toEqual(expect.any(String))
+    expect(next.brighton.entries.map((e) => e.handle)).toEqual(['oscarakermo', 'kubalizmus'])
+    expect(next.brighton.updatedAt).toEqual(expect.any(String))
   })
 
   it('merges a second import instead of dropping what was already there', () => {
     const setConventionLineups = vi.fn()
     renderConventions({
       setConventionLineups,
-      conventionLineups: { 'big-london': { entries: [{ name: '', handle: 'oscarakermo', note: '' }] } },
+      conventionLineups: { brighton: { entries: [{ name: '', handle: 'oscarakermo', note: '' }] } },
     })
 
-    const card = within(bigLondonCard())
+    const card = within(brightonCard())
     fireEvent.click(card.getByRole('button', { name: /artist index/i }))
     fireEvent.click(card.getByRole('button', { name: /update list/i }))
     fireEvent.change(card.getByLabelText(/paste the line-up/i), { target: { value: '@kubalizmus' } })
     fireEvent.click(card.getByRole('button', { name: /^import/i }))
 
-    const prev = { 'big-london': { entries: [{ name: '', handle: 'oscarakermo', note: '' }] } }
+    const prev = { brighton: { entries: [{ name: '', handle: 'oscarakermo', note: '' }] } }
     const next = setConventionLineups.mock.calls[0][0](prev)
-    expect(next['big-london'].entries.map((e) => e.handle)).toEqual(['oscarakermo', 'kubalizmus'])
+    expect(next.brighton.entries.map((e) => e.handle)).toEqual(['oscarakermo', 'kubalizmus'])
   })
 
   it('adds an artist from the index to the gallery and flags them attending', () => {
@@ -106,17 +120,17 @@ describe('Conventions artist index', () => {
     renderConventions({
       setArtists,
       setConventionOverrides,
-      conventionLineups: { 'big-london': { entries: [{ name: 'Martin Kubala', handle: 'kubalizmus', note: '' }] } },
+      conventionLineups: { brighton: { entries: [{ name: 'Martin Kubala', handle: 'kubalizmus', note: '' }] } },
     })
 
-    const card = within(bigLondonCard())
+    const card = within(brightonCard())
     fireEvent.click(card.getByRole('button', { name: /artist index/i }))
     fireEvent.click(within(card.getByTestId('lineup-row-kubalizmus')).getByRole('button', { name: /^add$/i }))
 
     const nextArtists = setArtists.mock.calls[0][0](artists)
     expect(nextArtists).toHaveLength(3)
     expect(nextArtists[2]).toMatchObject({ id: 'kubalizmus', handle: 'kubalizmus', name: 'Martin Kubala', status: 'researching' })
-    expect(setConventionOverrides.mock.calls[0][0]({})['big-london']).toEqual(['kubalizmus'])
+    expect(setConventionOverrides.mock.calls[0][0]({}).brighton).toEqual(['kubalizmus'])
   })
 
   it('imports a hand-off from the grabber and says what landed', () => {
@@ -157,10 +171,10 @@ describe('Conventions artist index', () => {
     const setArtists = vi.fn()
     renderConventions({
       setArtists,
-      conventionLineups: { 'big-london': { entries: [{ name: 'Oscar Akermo', handle: 'oscarakermo', note: '' }] } },
+      conventionLineups: { brighton: { entries: [{ name: 'Oscar Akermo', handle: 'oscarakermo', note: '' }] } },
     })
 
-    const card = within(bigLondonCard())
+    const card = within(brightonCard())
     fireEvent.click(card.getByRole('button', { name: /artist index/i }))
     const row = within(card.getByTestId('lineup-row-oscarakermo'))
     expect(row.queryByRole('button', { name: /^add$/i })).not.toBeInTheDocument()

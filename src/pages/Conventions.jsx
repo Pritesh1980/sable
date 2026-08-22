@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { CONVENTIONS, getConventionFavicon, mergeConventionOverrides, toggleConventionAttendee } from '../data/conventions'
 import { mergeLineupEntries, parseLineup } from '../data/lineup'
+import { mergeLineupSeeds } from '../data/lineupSeeds'
 import { parseLineupHash } from '../data/lineupGrabber'
 import { createArtist } from '../data/artists'
 import ConventionLineup from '../components/ConventionLineup'
@@ -208,22 +209,28 @@ export default function Conventions({
   // A re-import merges rather than replaces: shows add artists to the list in
   // the weeks before the doors open, and you should not lose the one you
   // already added to the gallery from an earlier paste.
+  // Only the user's own imports are stored; anything the app ships with is
+  // merged in at read time (see mergeLineupSeeds), so a shipped list is never
+  // copied into storage just to sit there. Importing also lifts `cleared`.
   function importLineup(conventionId, entries) {
     setConventionLineups((prev) => ({
       ...prev,
       [conventionId]: {
         entries: mergeLineupEntries(prev?.[conventionId]?.entries || [], entries),
         updatedAt: new Date().toISOString(),
+        cleared: false,
       },
     }))
   }
 
+  // Recorded rather than deleted: for a convention the app ships a line-up for,
+  // deleting the record would just bring the shipped one back, and "Clear list"
+  // would do nothing.
   function clearLineup(conventionId) {
-    setConventionLineups((prev) => {
-      const next = { ...prev }
-      delete next[conventionId]
-      return next
-    })
+    setConventionLineups((prev) => ({
+      ...prev,
+      [conventionId]: { entries: [], updatedAt: new Date().toISOString(), cleared: true },
+    }))
   }
 
   // Adding from the index does both halves of the job: the artist lands in the
@@ -264,7 +271,7 @@ export default function Conventions({
 
   function lineupPropsFor(conventionId) {
     return {
-      entries: conventionLineups?.[conventionId]?.entries || [],
+      entries: mergeLineupSeeds(conventionLineups, conventionId),
       onImport: (entries) => importLineup(conventionId, entries),
       onClear: () => clearLineup(conventionId),
       onAddArtist: (draft) => addFromLineup(conventionId, draft),

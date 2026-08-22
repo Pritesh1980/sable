@@ -26,14 +26,31 @@ on the backlog; for now you set this yourself.)
 
 ### Artist index
 
-A big show publishes hundreds of artists — the Big London Tattoo Show fields around 500 —
-as one long alphabetical list. **Artist index** on each convention card turns that list into
-something you can work from the sofa or the show floor.
+A big show publishes hundreds of artists as one long alphabetical list. **Artist index** on
+each convention card turns that list into something you can work from the sofa or the show
+floor.
 
-#### Grab it automatically (recommended)
+#### Big London 2026 is already there
 
-Show sites load their artist list *as you scroll*, so selecting it by hand means thumbing all
-500 artists into view first. The **grabber** does that for you — a bookmarklet that scrolls the
+The Big London Tattoo Show's published line-up ships with the app — **466 artists, with each
+one's studio and booth number**. Open **Artist index** on that card and it's ready: search it,
+filter to **In your gallery** to see who you already follow, or search a booth number to find
+out who's on it.
+
+Two things it does that a plain list can't:
+
+- The header counts your own artists in the line-up, so you know at a glance how many of your
+  shortlist will be in the room.
+- Searching matches the studio and booth as well as the name, so `No Regrets` or `Booth 315`
+  both work.
+
+The show was still adding artists when this snapshot was taken, so treat it as a floor. A
+later import merges into it rather than replacing it — see below.
+
+#### Grab it automatically (recommended for other shows)
+
+Show sites load their artist list *as you scroll*, so selecting it by hand means thumbing every
+artist into view first. The **grabber** does that for you — a bookmarklet that scrolls the
 page, reads every artist off it, and sends the list straight back to Sable.
 
 One-time setup:
@@ -81,8 +98,11 @@ sent anywhere — the list is parsed on the device.
   flag the *Your artists attending* line sets.
 
 A later import **merges** rather than replaces, so re-pasting an updated line-up keeps
-everything you'd already worked through. **Clear list** removes it. The line-up is stored on
-this device only (it's re-importable in seconds); the artists you add from it sync as normal.
+everything you'd already worked through — and an imported entry wins over a shipped one, so a
+moved booth gets corrected rather than duplicated. **Clear list** empties the index, including
+a shipped line-up, and it stays cleared until you import again. Anything you import is stored
+on this device only (it's re-importable in seconds); the artists you add from it sync as
+normal.
 
 ---
 

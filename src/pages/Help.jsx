@@ -76,7 +76,7 @@ const SECTIONS = [
       'Drawer → Radar lists conventions, nearest to Milton Keynes first, with dates, distance and a link to each event.',
       'On each convention card, tap Edit under "Your artists attending" to toggle which of your saved artists are appearing there.',
       'Where an artist is attending a convention, you will see it on their detail card and on the Pipeline page.',
-      'Artist index turns a show’s published line-up into something searchable, and the card tells you how many of them are already in your gallery.',
+      'Artist index turns a show’s published line-up into something searchable, and the card tells you how many of them are already in your gallery. Big London 2026 ships with the app — 466 artists with their studio and booth number, so you can search a booth or filter to the artists you already follow.',
       'Show sites load their artist list as you scroll, so tap Copy the grabber and save it as a Safari bookmark once. Then tap that bookmark on the show’s artist list: it scrolls the whole thing for you and sends the artists back into Sable. Pasting the list in by hand still works too.',
       'From the index you can search the line-up, filter to the artists you already follow, add a new one to your gallery in a tap, and flag who you want to find on the floor. A later paste merges into the list rather than replacing it.',
       'Drawer → Studios groups your saved artists by the studio they work at, sorted by distance, with links to Instagram and the studio site.',
