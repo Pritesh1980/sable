@@ -24,6 +24,41 @@ on the backlog; for now you set this yourself.)
 > Conventions recur annually — the dates shown are for the latest known edition, so follow
 > the link for the next one.
 
+### Artist index
+
+A big show publishes hundreds of artists — the Big London Tattoo Show fields around 500 —
+as one long alphabetical list. **Artist index** on each convention card turns that list into
+something you can work from the sofa or the show floor.
+
+**Import the line-up.** Tap **Artist index → the show's artist list**, select the names on
+the show's page and paste them into the box, one artist per line. Handles are optional; these
+all parse:
+
+```
+Oscar Akermo @oscarakermo
+@kubalizmus
+Carlos Valera (@carl245tattoo) — No Regrets, Cardiff
+https://instagram.com/zoia.ink
+Martin Kubala
+```
+
+Index letters, nav links and blank lines are ignored, and duplicates collapse. Nothing is
+sent anywhere — the list is parsed on the device.
+
+**Then work it.** The card header shows *N artists · M in your gallery*. Inside you can:
+
+- **Search** by name, handle or the studio/country detail.
+- Filter to **In your gallery** (who you already follow is going) or **New to you**.
+- **Add** an artist straight to your gallery — they land as *researching* and are flagged
+  as attending that show in one tap. Style tags stay empty: the show's list says nothing
+  about style, so you tag them yourself once you've looked at their work.
+- Tap **Attending?** on an artist you already have to flag them for that show — the same
+  flag the *Your artists attending* line sets.
+
+A later import **merges** rather than replaces, so re-pasting an updated line-up keeps
+everything you'd already worked through. **Clear list** removes it. The line-up is stored on
+this device only (it's re-importable in seconds); the artists you add from it sync as normal.
+
 ---
 
 ## Studios

@@ -82,6 +82,15 @@ A personal mood board / brief section.
 - Distance from **Milton Keynes** shown for each
 - Cross-reference: which saved artists are attending each convention (surfaced on the dashboard, artist detail, and idea editor)
 - Curated in `src/data/conventions.js`; ordered by distance (local show as hero, then nearest first)
+- **Artist index** per convention (`src/data/lineup.js`, `src/components/ConventionLineup.jsx`):
+  the show's published line-up (Big London fields ~500 names) pasted in and turned into a
+  searchable index — cross-referenced against the gallery, one-tap add (which also flags
+  attendance), A–Z grouping, re-import merges. The list arrives by **paste, not fetch**: the
+  shows' artist pages are client-rendered, and third-party portfolio data does not belong in
+  the repo. Parsing is strict like `screenshotIntake` (handles validated against Instagram's
+  alphabet, page chrome and prose dropped). Stored device-local under `tattoo_convention_lineups`
+  — deliberately **not** a sync collection: it is bulky, re-importable in seconds, and what you
+  keep from it syncs as gallery artists
 
 ### 4. AI Concept Generator (Concepts page)
 - Text prompt → copy a structured prompt into ChatGPT/Claude/Gemini and paste the result back, **or** generate an image directly with a user-supplied OpenAI or Gemini key
