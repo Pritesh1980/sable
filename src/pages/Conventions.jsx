@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CONVENTIONS, getConventionFavicon, mergeConventionOverrides, toggleConventionAttendee } from '../data/conventions'
-import { mergeLineupEntries } from '../data/lineup'
+import { mergeLineupEntries, parseLineup } from '../data/lineup'
+import { parseLineupHash } from '../data/lineupGrabber'
 import { createArtist } from '../data/artists'
 import ConventionLineup from '../components/ConventionLineup'
 import Logo from '../components/Logo'
@@ -107,7 +108,7 @@ function AttendeesEditor({ artists, attendingIds, onToggle }) {
 
 function HeroCard({ convention, artists, attendingIds, onToggle, lineupProps }) {
   return (
-    <div className="bg-gradient-to-br from-accent/10 to-ink-card border border-accent/40 rounded-xs p-6 animate-slide-up">
+    <div id={`convention-${convention.id}`} className="bg-gradient-to-br from-accent/10 to-ink-card border border-accent/40 rounded-xs p-6 animate-slide-up">
       <div className="flex items-start gap-4">
         <ConventionLogo convention={convention} size="w-14 h-14" />
         <div className="flex-1 min-w-0">
@@ -143,6 +144,7 @@ function HeroCard({ convention, artists, attendingIds, onToggle, lineupProps }) 
 function ConventionCard({ convention, artists, attendingIds, onToggle, lineupProps }) {
   return (
     <div
+      id={`convention-${convention.id}`}
       className={`flex flex-col bg-ink-card border rounded-xs p-5 animate-slide-up ${
         convention.popular ? 'border-accent/30' : 'border-ink-border'
       }`}
@@ -236,6 +238,30 @@ export default function Conventions({
     }
   }
 
+  // The grabber's hand-off: it sends the harvest back as
+  // `#lineup=<convention>&data=<text>`. Untrusted input, so it goes through the
+  // same strict parser a hand-paste does, and the hash is cleared either way so
+  // a reload cannot re-import it.
+  // Read once, at first render: parsing is pure, so it belongs here rather than
+  // in an effect that would have to set state to report what it found.
+  const [handoff] = useState(() => {
+    const incoming = parseLineupHash(globalThis.location?.hash || '')
+    if (!incoming) return null
+    const known = CONVENTIONS.some((c) => c.id === incoming.conventionId)
+    return { conventionId: incoming.conventionId, entries: known ? parseLineup(incoming.text) : [] }
+  })
+  const landed = handoff?.entries.length ? handoff : null
+  // The effect does only the things that touch the world outside React.
+  const handled = useRef(false)
+  useEffect(() => {
+    if (!handoff || handled.current) return
+    handled.current = true
+    const { pathname = '', search = '' } = globalThis.location || {}
+    globalThis.history?.replaceState?.(null, '', `${pathname}${search}`)
+    if (landed) importLineup(landed.conventionId, landed.entries)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   function lineupPropsFor(conventionId) {
     return {
       entries: conventionLineups?.[conventionId]?.entries || [],
@@ -243,6 +269,7 @@ export default function Conventions({
       onClear: () => clearLineup(conventionId),
       onAddArtist: (draft) => addFromLineup(conventionId, draft),
       onToggleAttending: (artistId) => toggle(conventionId, artistId),
+      defaultExpanded: landed?.conventionId === conventionId,
     }
   }
 
@@ -263,6 +290,31 @@ export default function Conventions({
             All recur annually; dates shown are the latest edition, so check the link for the next one.
           </p>
         </div>
+
+        {landed && (
+          <div
+            role="status"
+            className="bg-accent/10 border border-accent/40 rounded-xs px-4 py-3 mb-4 animate-slide-up"
+          >
+            <p className="text-cream text-sm font-mono">
+              Imported {landed.entries.length} artists into{' '}
+              {CONVENTIONS.find((c) => c.id === landed.conventionId)?.name}.
+            </p>
+            <p className="text-cream-muted/70 text-xs font-body mt-0.5">
+              Search the index, or filter it to the artists already in your gallery.
+            </p>
+            <button
+              onClick={() => {
+                globalThis.document
+                  ?.getElementById(`convention-${landed.conventionId}`)
+                  ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }}
+              className="min-h-11 flex items-center text-[0.625rem] font-mono text-accent tracking-widest uppercase hover:text-accent-hover transition-colors"
+            >
+              Take me to it →
+            </button>
+          </div>
+        )}
 
         {local.map((c) => (
           <HeroCard

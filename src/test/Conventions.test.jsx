@@ -119,6 +119,40 @@ describe('Conventions artist index', () => {
     expect(setConventionOverrides.mock.calls[0][0]({})['big-london']).toEqual(['kubalizmus'])
   })
 
+  it('imports a hand-off from the grabber and says what landed', () => {
+    const setConventionLineups = vi.fn()
+    window.location.hash = `#lineup=big-london&data=${encodeURIComponent('Ate Wamz @atewamz\n@kubalizmus')}`
+
+    renderConventions({ setConventionLineups })
+
+    const next = setConventionLineups.mock.calls[0][0]({})
+    expect(next['big-london'].entries.map((e) => e.handle)).toEqual(['atewamz', 'kubalizmus'])
+    expect(screen.getByRole('status')).toHaveTextContent(/imported 2 artists into big london/i)
+    // …and a way straight to the card it landed in, which is well down the page.
+    const jump = within(screen.getByRole('status')).getByRole('button', { name: /take me to it/i })
+    const scrollIntoView = vi.fn()
+    bigLondonCard().scrollIntoView = scrollIntoView
+    fireEvent.click(jump)
+    expect(scrollIntoView).toHaveBeenCalled()
+    // The index for that show opens on arrival rather than making you hunt for it.
+    // (The stored entries come back through props in the real app; here the
+    // setter is a spy, so what this proves is that the card is expanded.)
+    expect(within(bigLondonCard()).getByRole('button', { name: /artist index/i }))
+      .toHaveAttribute('aria-expanded', 'true')
+    // Cleared, so a reload does not import it a second time.
+    expect(window.location.hash).toBe('')
+  })
+
+  it('ignores a hand-off for a convention it does not have', () => {
+    const setConventionLineups = vi.fn()
+    window.location.hash = `#lineup=not-a-show&data=${encodeURIComponent('@atewamz')}`
+
+    renderConventions({ setConventionLineups })
+
+    expect(setConventionLineups).not.toHaveBeenCalled()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
   it('does not re-add an artist already in the gallery', () => {
     const setArtists = vi.fn()
     renderConventions({

@@ -88,7 +88,24 @@ A personal mood board / brief section.
   attendance), A–Z grouping, re-import merges. The list arrives by **paste, not fetch**: the
   shows' artist pages are client-rendered, and third-party portfolio data does not belong in
   the repo. Parsing is strict like `screenshotIntake` (handles validated against Instagram's
-  alphabet, page chrome and prose dropped). Stored device-local under `tattoo_convention_lineups`
+  alphabet, page chrome and prose dropped). The shows' pages lazy-load, so hand-copying only
+  ever gets the first screenful — hence the **grabber** (`src/data/lineupGrabber.js`): a
+  bookmarklet that scrolls the show's page, harvests Instagram links, and hands back to
+  `#lineup=<id>&data=<text>`, which `Conventions.jsx` re-parses through the same strict
+  parser. It is built by stringifying `grabberBody()` and **base64-encoding it**
+  (`javascript:eval(atob('…'))`), so that function must stay self-contained (no
+  module-scope refs) and ASCII-only (btoa). **Do not "simplify" this back to inlining the
+  source with its whitespace collapsed** — that was v1 and it is silently broken in
+  production only: the minifier rewrites `'\n'` as a template literal holding a *real*
+  newline, so collapsing whitespace turned every line break in the harvest into a space and
+  the whole line-up arrived as one unparseable line (the overlay reported 3× the true count
+  — the space-split token count — and the import landed nothing). The same pass folds
+  `String.fromCharCode(35)` back to a literal `#`, which truncates a saved bookmark URL.
+  Encoding sidesteps both by embedding the minifier's output byte-for-byte. Tests
+  *evaluate the built bookmarklet* (the only honest way to test it) and assert the source is
+  embedded verbatim, but **only a production build catches this class** — dev is unminified,
+  so re-run `.e2e-prod` style checks against `vite preview` after touching the builder.
+  Stored device-local under `tattoo_convention_lineups`
   — deliberately **not** a sync collection: it is bulky, re-importable in seconds, and what you
   keep from it syncs as gallery artists
 

@@ -73,7 +73,52 @@ describe('ConventionLineup — import', () => {
   })
 })
 
+describe('ConventionLineup — the grabber', () => {
+  it('copies a bookmarklet aimed at this convention', async () => {
+    const writeText = vi.fn(() => Promise.resolve())
+    Object.defineProperty(window.navigator, 'clipboard', { value: { writeText }, configurable: true })
+
+    renderLineup()
+    open()
+    fireEvent.click(screen.getByRole('button', { name: /copy the grabber/i }))
+    await screen.findByRole('button', { name: /grabber copied/i })
+
+    const code = writeText.mock.calls[0][0]
+    expect(code.startsWith('javascript:')).toBe(true)
+    // The payload is base64 (see lineupGrabber.js), so decode before reading it.
+    const decoded = atob(code.replace(/^javascript:eval\(atob\('/, '').replace(/'\)\)$/, ''))
+    expect(decoded).toMatch(/var SHOW = ['"]big-london['"]/)
+    expect(decoded).toContain('instagram.com/')
+  })
+
+  it('falls back to showing the code when the clipboard refuses', async () => {
+    Object.defineProperty(window.navigator, 'clipboard', {
+      value: { writeText: () => Promise.reject(new Error('denied')) },
+      configurable: true,
+    })
+
+    renderLineup()
+    open()
+    fireEvent.click(screen.getByRole('button', { name: /copy the grabber/i }))
+    const box = await screen.findByLabelText(/grabber code/i)
+    expect(box.value.startsWith('javascript:')).toBe(true)
+  })
+
+  it('explains how to use it on the phone, on demand', () => {
+    renderLineup()
+    open()
+    expect(screen.queryByText(/on iphone/i)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /how to use it/i }))
+    expect(screen.getByText(/on iphone/i)).toBeInTheDocument()
+  })
+})
+
 describe('ConventionLineup — index', () => {
+  it('can open already expanded, for a line-up that just arrived', () => {
+    renderLineup({ entries, defaultExpanded: true })
+    expect(screen.getByLabelText(/search the line-up/i)).toBeInTheDocument()
+  })
+
   it('summarises the line-up against your gallery without being opened', () => {
     renderLineup({ entries })
     expect(screen.getByText(/3 artists/i)).toBeInTheDocument()

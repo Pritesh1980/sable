@@ -8,6 +8,7 @@ import {
   lineupCounts,
   parseLineup,
 } from '../data/lineup'
+import { appBaseUrl, buildGrabber } from '../data/lineupGrabber'
 
 // The show's own artist list is 500 names in alphabetical order — useless on a
 // phone the week before the doors open. This turns it into an index: search it,
@@ -86,6 +87,86 @@ function LineupRow({ entry, convention, attending, onAddArtist, onToggleAttendin
   )
 }
 
+// The shows publish their line-ups as lazy-loading lists: copying one by hand
+// means thumbing 500 artists into existence first. The grabber is a bookmarklet
+// that does the scrolling, reads the page, and hands the result back here.
+function GrabberPanel({ convention }) {
+  const [state, setState] = useState('idle')
+  const [how, setHow] = useState(false)
+  const [fallback, setFallback] = useState('')
+
+  async function copyGrabber() {
+    const code = buildGrabber({ appUrl: appBaseUrl(), conventionId: convention.id })
+    try {
+      await navigator.clipboard.writeText(code)
+      setState('copied')
+    } catch {
+      // No clipboard permission (or no clipboard at all): show the text so it
+      // can be selected by hand rather than losing the action entirely.
+      setFallback(code)
+      setState('idle')
+    }
+  }
+
+  return (
+    <div className="mt-2 border border-ink-border rounded-xs p-3">
+      <p className="text-[0.625rem] font-mono text-accent tracking-widest uppercase">Grab it automatically</p>
+      <p className="text-cream-muted/70 text-xs font-body leading-relaxed mt-1">
+        The show&rsquo;s list loads as you scroll, so copying it by hand means scrolling every artist
+        into view first. The grabber does that for you and sends the list straight back here.
+      </p>
+      <div className="flex flex-wrap items-center gap-1">
+        <button
+          onClick={copyGrabber}
+          className="min-h-11 px-3 flex items-center text-[0.625rem] font-mono text-accent tracking-widest uppercase hover:text-accent-hover transition-colors"
+        >
+          {state === 'copied' ? '✓ Grabber copied' : 'Copy the grabber'}
+        </button>
+        <button
+          onClick={() => setHow((v) => !v)}
+          aria-expanded={how}
+          className="min-h-11 px-3 flex items-center text-[0.625rem] font-mono text-cream-muted/60 tracking-widest uppercase hover:text-cream transition-colors"
+        >
+          {how ? 'Hide steps' : 'How to use it'}
+        </button>
+      </div>
+
+      {fallback && (
+        <textarea
+          readOnly
+          value={fallback}
+          aria-label="Grabber code"
+          rows={3}
+          onFocus={(e) => e.target.select()}
+          className="w-full mt-1 bg-ink-black border border-ink-border rounded-xs px-3 py-2 text-cream-muted text-[0.6875rem] font-mono focus:border-accent outline-hidden"
+        />
+      )}
+
+      {how && (
+        <ol className="text-cream-muted/70 text-xs font-body leading-relaxed mt-1 space-y-1.5 list-decimal pl-4">
+          <li>
+            <span className="text-cream">On iPhone:</span> bookmark any page in Safari, then edit that
+            bookmark — rename it &ldquo;Grab line-up&rdquo; and replace its address with the copied
+            grabber.
+          </li>
+          <li>
+            Open the show&rsquo;s artist list, then tap the bookmark (Safari address bar &rarr; the
+            bookmark). It scrolls the whole list, which takes a few seconds.
+          </li>
+          <li>
+            Tap <span className="text-cream">Import … artists into Sable</span> when it finishes — the
+            list lands in this index.
+          </li>
+          <li>
+            <span className="text-cream">On a Mac:</span> same thing, or open the browser console on the
+            artist list and paste the grabber straight in.
+          </li>
+        </ol>
+      )}
+    </div>
+  )
+}
+
 function ImportPanel({ convention, onImport, hasEntries, onClear }) {
   const [text, setText] = useState('')
   const [error, setError] = useState('')
@@ -104,8 +185,9 @@ function ImportPanel({ convention, onImport, hasEntries, onClear }) {
 
   return (
     <div className="mt-3">
-      <p className="text-cream-muted/70 text-xs font-body leading-relaxed">
-        Open the show&rsquo;s{' '}
+      <GrabberPanel convention={convention} />
+      <p className="text-cream-muted/70 text-xs font-body leading-relaxed mt-3">
+        Or do it by hand — open the show&rsquo;s{' '}
         {sourceUrl ? (
           <a
             href={sourceUrl}
@@ -161,8 +243,15 @@ export default function ConventionLineup({
   onClear = () => {},
   onAddArtist = () => {},
   onToggleAttending = () => {},
+  defaultExpanded = false,
 }) {
-  const [expanded, setExpanded] = useState(false)
+  // A hand-off from the grabber resolves *after* this has mounted, so the flag
+  // arrives as a prop change rather than an initial value — hence derived state
+  // rather than an initial value or a syncing effect. Until the user touches it,
+  // the prop decides; after that, their choice wins for good.
+  const [toggled, setToggled] = useState(null)
+  const expanded = toggled === null ? defaultExpanded : toggled
+  const setExpanded = (next) => setToggled(typeof next === 'function' ? next(expanded) : next)
   const [importing, setImporting] = useState(false)
   const [query, setQuery] = useState('')
   const [view, setView] = useState('all')

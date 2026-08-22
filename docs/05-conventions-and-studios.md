@@ -30,9 +30,34 @@ A big show publishes hundreds of artists — the Big London Tattoo Show fields a
 as one long alphabetical list. **Artist index** on each convention card turns that list into
 something you can work from the sofa or the show floor.
 
-**Import the line-up.** Tap **Artist index → the show's artist list**, select the names on
-the show's page and paste them into the box, one artist per line. Handles are optional; these
-all parse:
+#### Grab it automatically (recommended)
+
+Show sites load their artist list *as you scroll*, so selecting it by hand means thumbing all
+500 artists into view first. The **grabber** does that for you — a bookmarklet that scrolls the
+page, reads every artist off it, and sends the list straight back to Sable.
+
+One-time setup:
+
+1. In the artist index, tap **Copy the grabber**.
+2. In Safari, bookmark any page — then edit that bookmark, rename it *Grab line-up*, and
+   replace its **address** with what you copied.
+
+Then, for any show:
+
+1. Open the show's artist list.
+2. Tap the **Grab line-up** bookmark. It scrolls the whole list (a few seconds) and shows
+   *Sable found N artists*.
+3. Tap **Import N artists into Sable** — the list lands in that show's index, and Sable
+   confirms what arrived.
+
+On a Mac you can skip the bookmark and paste the grabber into the browser console on the
+artist list page instead. The grabber only reads the page you run it on, and only ever hands
+data to Sable itself.
+
+#### Or paste it in
+
+Tap **Artist index → the show's artist list**, select the names on the show's page and paste
+them into the box, one artist per line. Handles are optional; these all parse:
 
 ```
 Oscar Akermo @oscarakermo
