@@ -55,3 +55,9 @@ public/images/artists/
 
 # Personal agent context — public repo ships CLAUDE.md only
 CLAUDE.local.md
+
+# Convention research artifacts — scraped organiser exhibitor lists and page
+# screenshots. Third-party content, same rule as public/images/artists/: kept
+# local, never redistributed in the public repo. The cross-referenced result
+# lands in src/data/conventions.js as attendingArtistIds.
+artifacts/

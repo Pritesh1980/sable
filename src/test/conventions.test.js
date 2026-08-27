@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { CONVENTIONS, getConventionFavicon, toggleConventionAttendee } from '../data/conventions'
+import { DEFAULT_ARTISTS } from '../data/artists'
 
 describe('CONVENTIONS', () => {
   it('is a tight curated list', () => {
@@ -33,6 +34,23 @@ describe('CONVENTIONS', () => {
   it('includes a Manchester show', () => {
     const manchester = CONVENTIONS.find((c) => c.location.toLowerCase().includes('manchester'))
     expect(manchester, 'expected a Manchester convention').toBeTruthy()
+  })
+
+  it('only lists attending artists that exist in DEFAULT_ARTISTS', () => {
+    // Soft foreign key: consumers filter on `attendingArtistIds.includes(artist.id)`,
+    // so a typo'd id fails silently (no badge, no error). Catch it here instead.
+    const known = new Set(DEFAULT_ARTISTS.map((a) => a.id))
+    CONVENTIONS.forEach((c) => {
+      const unknown = (c.attendingArtistIds ?? []).filter((id) => !known.has(id))
+      expect(unknown, `${c.id} lists unknown artist ids: ${unknown.join(', ')}`).toEqual([])
+    })
+  })
+
+  it('has no duplicate attending artists per convention', () => {
+    CONVENTIONS.forEach((c) => {
+      const ids = c.attendingArtistIds ?? []
+      expect(new Set(ids).size, `${c.id} has duplicate attending artist ids`).toBe(ids.length)
+    })
   })
 
   it('marks some as popular but not all', () => {

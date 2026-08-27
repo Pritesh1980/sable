@@ -34,7 +34,11 @@ export const CONVENTIONS = [
     popular: true,
     distanceMiles: 55,
     endDate: '2026-09-06',
-    attendingArtistIds: [],
+    // Cross-referenced 2026-08-25 against the official 2026 exhibitor list
+    // (biglondontattooshow.com). List was marked incomplete — a few artists
+    // had no Instagram handle listed, so `andro` was matched by name + studio
+    // (No Regrets) rather than handle; re-check if the organiser list updates.
+    attendingArtistIds: ['carlosvalera', 'berkbosveren', 'tattoo_amir', 'silas_balaio', 'johndarktattoo', 'andro'],
   },
   {
     id: 'london-international',
