@@ -170,11 +170,15 @@ them. Keep messages terse and conventional (e.g. `feat(home): …`, `docs: …`)
 - Use `@testing-library/react` for hooks and components
 - `npm test` is pinned to the **local** backend via `vite.config.js` (`test.env`), so a `VITE_BACKEND=supabase` in your `.env.local` won't leak in and fail the sync/owner specs.
 - Non-bundled files (e.g. `public/sw.js`) can't be imported: put the logic in a pure `src/` module with unit tests, plus a "contract test" that reads the file and asserts key invariants.
-- **Flaky under the full parallel run**: two specs fail intermittently on a loaded
-  machine yet always pass isolated and on CI — `useArtistStorage` (image migration)
-  and `ConceptsVariants` (tracked in issue #23). Both are fake-indexeddb cross-test
-  timing. Protocol: rerun the failing spec isolated; if green there and CI is green,
-  it's environment, not your change. CI is the arbiter.
+- **Flaky under the full parallel run**: several specs fail intermittently on a
+  loaded machine yet always pass isolated and on CI — `useArtistStorage` (image
+  migration) and `ConceptsVariants` (tracked in issue #23) are the long-standing
+  pair, but the set is **not fixed**: three consecutive full runs on 2026-08-27
+  each failed a *different* file (a Gallery spec, then `routes.test.jsx` +
+  `useArtistStorage`, then green), all passing isolated. Treat any single-file
+  failure in a full run as suspect, not just the two named. Protocol: rerun the
+  failing spec isolated; if green there and CI is green, it's environment, not
+  your change. CI is the arbiter.
 - **Worktrees double the suite**: agent worktrees live *inside* the repo
   (`.claude/worktrees/`, `.worktrees/`) and vitest globs their copies from the repo
   root — a full run with a worktree present reports ~2× files/tests. Run the suite
@@ -265,8 +269,9 @@ Before the repo went public (July 2026), three things were intentionally kept ou
 Project memory at .ijfw/memory/. Call `ijfw_memory_prelude` for full context.
 
 Recent decisions:
-**Why:** This keeps the first result-comparison slice close to the existing Concepts workflow while making external AI outputs comparable and reusable.
 **How to apply:** When implementing AI result comparison, extend concept records with optional variants. Preserve legacy concepts. Render the best variant first inside the concept card, with compact expandable cards for the rest. Do not add a separate Result Lab page yet.
+**Why:** A boolean cannot distinguish which file owns in-flight and derived state. Abort alone cannot prevent every late callback, and clearing whole fields would destroy user edits.
+**How to apply:** Increment/invalidate the generation whenever analysis ownership changes; guard every async boundary; keep staged files in a synchronous ref for exact replacement; clear field provenance when the user edits a field or toggles an AI-added tag.
 
 Last handoff: # Handoff: 2026-07-05
 ## Shipped: Sable v2 (merged to main, 7b8622d)
