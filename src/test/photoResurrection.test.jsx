@@ -241,11 +241,16 @@ describe('end-to-end: a removed photo survives a stale whole-record write from a
     // A stale device B pushes a newer whole-record write with both photos —
     // a blind upsert (today's actual backend semantics) wipes our pushed
     // tombstone server-side too, so recovery must come from A's own local
-    // cache alone.
+    // cache alone. Device B's `notes` must win LWW, so its `updatedAt` has to
+    // beat device A's — and A's remove-X write above is stamped with the real
+    // wall clock. A hard-coded date can't stay ahead of "now" forever (a
+    // literal 2026-09-01 started losing that race on 2026-09-01), so anchor it
+    // a day into the future relative to the run.
+    const deviceBUpdatedAt = new Date(Date.now() + 86_400_000).toISOString()
     await backend.store.upsert('artistsMeta', [
       {
         id: 'c1', handle: 'x', rank: 1, tags: [], notes: 'from device B',
-        images: [{ key: keyX }, { key: keyY }], updatedAt: '2026-09-01T00:00:00Z',
+        images: [{ key: keyX }, { key: keyY }], updatedAt: deviceBUpdatedAt,
       },
     ])
 
