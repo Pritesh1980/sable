@@ -37,6 +37,11 @@ jobs:
           # anyone who signs in as the owner a wall of broken monograms — and
           # OWNER_EMAIL's fallback is guessable. The demo is `?demo=1`.
           VITE_OWNER_SEED: '0'
+          # #45: the owner's published iCloud Shortcut for share-to-Sable on
+          # iOS. Not a secret — knowing this URL only installs the Shortcut,
+          # it grants no access to anything — so it lives in the workflow
+          # rather than repo/environment secrets, same as VITE_BASE above.
+          VITE_IOS_SHORTCUT_URL: https://www.icloud.com/shortcuts/3cd5c668db0144568bd236dcd30645ea
       # SPA deep-link fallback: GitHub Pages serves 404.html for unknown paths;
       # a copy of index.html lets React Router resolve the route client-side.
       - run: cp dist/index.html dist/404.html

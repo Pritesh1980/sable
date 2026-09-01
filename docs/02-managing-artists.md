@@ -51,12 +51,10 @@ running.
 ([WebKit bug 194593](https://bugs.webkit.org/show_bug.cgi?id=194593)), so iOS needs a
 one-off Shortcut instead.
 
-The fastest way: open **Settings** inside Sable on your iPhone. If a one-tap install
-link has been published there, tapping it installs a working Shortcut directly —
-nothing to build by hand.
+The fastest way: open **Settings** inside Sable on your iPhone and tap **Install Share
+to Sable** — installs a working Shortcut directly, nothing to build by hand.
 
-If Settings only points back here (the link isn't published yet) or you'd rather build
-your own copy, do it manually in the Shortcuts app:
+To build your own copy instead, do it manually in the Shortcuts app:
 
 1. New Shortcut → turn on **Show in Share Sheet**, and set *Accepted Types* to **Images**
 2. Add **Copy to Clipboard** (input: Shortcut Input)

@@ -38,6 +38,10 @@ function AppShell() {
   const [concepts, setConcepts] = useStorage('tattoo_concepts', [], conceptsCodec)
   const [boards, setBoards] = useStorage('tattoo_boards', [])
   const [conventionOverrides, setConventionOverrides] = useStorage('tattoo_convention_attending', {})
+  // Device-local on purpose (no sync collection): a show's line-up is hundreds
+  // of rows of someone else's data, re-imported from the source in seconds, and
+  // what you keep from it — the artists you add — syncs through the gallery.
+  const [conventionLineups, setConventionLineups] = useStorage('tattoo_convention_lineups', {})
   const mergedConventions = mergeConventionOverrides(conventionOverrides)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const navigate = useNavigate()
@@ -65,7 +69,7 @@ function AppShell() {
             <Route path="/pipeline" element={<Dashboard artists={artists} setArtists={setArtists} ideas={ideas} boards={boards} mergedConventions={mergedConventions} />} />
             <Route path="/gallery" element={<Gallery artists={artists} setArtists={setArtists} mergedConventions={mergedConventions} />} />
             <Route path="/brief" element={<Brief ideas={ideas} setIdeas={setIdeas} artists={artists} mergedConventions={mergedConventions} boards={boards} setBoards={setBoards} />} />
-            <Route path="/conventions" element={<Conventions artists={artists} conventionOverrides={conventionOverrides} setConventionOverrides={setConventionOverrides} />} />
+            <Route path="/conventions" element={<Conventions artists={artists} setArtists={setArtists} conventionOverrides={conventionOverrides} setConventionOverrides={setConventionOverrides} conventionLineups={conventionLineups} setConventionLineups={setConventionLineups} />} />
             <Route path="/studios" element={<Studios artists={artists} />} />
             <Route path="/concepts" element={<Concepts concepts={concepts} setConcepts={setConcepts} artists={artists} ideas={ideas} />} />
             <Route path="/boards" element={<Navigate to="/brief?tab=boards" replace />} />

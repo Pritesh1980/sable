@@ -24,6 +24,86 @@ on the backlog; for now you set this yourself.)
 > Conventions recur annually — the dates shown are for the latest known edition, so follow
 > the link for the next one.
 
+### Artist index
+
+A big show publishes hundreds of artists as one long alphabetical list. **Artist index** on
+each convention card turns that list into something you can work from the sofa or the show
+floor.
+
+#### Big London 2026 is already there
+
+The Big London Tattoo Show's published line-up ships with the app — **466 artists, with each
+one's studio and booth number**. Open **Artist index** on that card and it's ready: search it,
+filter to **In your gallery** to see who you already follow, or search a booth number to find
+out who's on it.
+
+Two things it does that a plain list can't:
+
+- The header counts your own artists in the line-up, so you know at a glance how many of your
+  shortlist will be in the room.
+- Searching matches the studio and booth as well as the name, so `No Regrets` or `Booth 315`
+  both work.
+
+The show was still adding artists when this snapshot was taken, so treat it as a floor. A
+later import merges into it rather than replacing it — see below.
+
+#### Grab it automatically (recommended for other shows)
+
+Show sites load their artist list *as you scroll*, so selecting it by hand means thumbing every
+artist into view first. The **grabber** does that for you — a bookmarklet that scrolls the
+page, reads every artist off it, and sends the list straight back to Sable.
+
+One-time setup:
+
+1. In the artist index, tap **Copy the grabber**.
+2. In Safari, bookmark any page — then edit that bookmark, rename it *Grab line-up*, and
+   replace its **address** with what you copied.
+
+Then, for any show:
+
+1. Open the show's artist list.
+2. Tap the **Grab line-up** bookmark. It scrolls the whole list (a few seconds) and shows
+   *Sable found N artists*.
+3. Tap **Import N artists into Sable** — the list lands in that show's index, and Sable
+   confirms what arrived.
+
+On a Mac you can skip the bookmark and paste the grabber into the browser console on the
+artist list page instead. The grabber only reads the page you run it on, and only ever hands
+data to Sable itself.
+
+#### Or paste it in
+
+Tap **Artist index → the show's artist list**, select the names on the show's page and paste
+them into the box, one artist per line. Handles are optional; these all parse:
+
+```
+Oscar Akermo @oscarakermo
+@kubalizmus
+Carlos Valera (@carl245tattoo) — No Regrets, Cardiff
+https://instagram.com/zoia.ink
+Martin Kubala
+```
+
+Index letters, nav links and blank lines are ignored, and duplicates collapse. Nothing is
+sent anywhere — the list is parsed on the device.
+
+**Then work it.** The card header shows *N artists · M in your gallery*. Inside you can:
+
+- **Search** by name, handle or the studio/country detail.
+- Filter to **In your gallery** (who you already follow is going) or **New to you**.
+- **Add** an artist straight to your gallery — they land as *researching* and are flagged
+  as attending that show in one tap. Style tags stay empty: the show's list says nothing
+  about style, so you tag them yourself once you've looked at their work.
+- Tap **Attending?** on an artist you already have to flag them for that show — the same
+  flag the *Your artists attending* line sets.
+
+A later import **merges** rather than replaces, so re-pasting an updated line-up keeps
+everything you'd already worked through — and an imported entry wins over a shipped one, so a
+moved booth gets corrected rather than duplicated. **Clear list** empties the index, including
+a shipped line-up, and it stays cleared until you import again. Anything you import is stored
+on this device only (it's re-importable in seconds); the artists you add from it sync as
+normal.
+
 ---
 
 ## Studios

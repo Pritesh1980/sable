@@ -82,6 +82,38 @@ A personal mood board / brief section.
 - Distance from **Milton Keynes** shown for each
 - Cross-reference: which saved artists are attending each convention (surfaced on the dashboard, artist detail, and idea editor)
 - Curated in `src/data/conventions.js`; ordered by distance (local show as hero, then nearest first)
+- **Artist index** per convention (`src/data/lineup.js`, `src/components/ConventionLineup.jsx`):
+  the show's published line-up (Big London fields ~500 names) pasted in and turned into a
+  searchable index — cross-referenced against the gallery, one-tap add (which also flags
+  attendance), A–Z grouping, re-import merges. The list arrives by **paste, not fetch**: the
+  shows' artist pages are client-rendered, and third-party portfolio data does not belong in
+  the repo. Parsing is strict like `screenshotIntake` (handles validated against Instagram's
+  alphabet, page chrome and prose dropped). The shows' pages lazy-load, so hand-copying only
+  ever gets the first screenful — hence the **grabber** (`src/data/lineupGrabber.js`): a
+  bookmarklet that scrolls the show's page, harvests Instagram links, and hands back to
+  `#lineup=<id>&data=<text>`, which `Conventions.jsx` re-parses through the same strict
+  parser. It is built by stringifying `grabberBody()` and **base64-encoding it**
+  (`javascript:eval(atob('…'))`), so that function must stay self-contained (no
+  module-scope refs) and ASCII-only (btoa). **Do not "simplify" this back to inlining the
+  source with its whitespace collapsed** — that was v1 and it is silently broken in
+  production only: the minifier rewrites `'\n'` as a template literal holding a *real*
+  newline, so collapsing whitespace turned every line break in the harvest into a space and
+  the whole line-up arrived as one unparseable line (the overlay reported 3× the true count
+  — the space-split token count — and the import landed nothing). The same pass folds
+  `String.fromCharCode(35)` back to a literal `#`, which truncates a saved bookmark URL.
+  Encoding sidesteps both by embedding the minifier's output byte-for-byte. Tests
+  *evaluate the built bookmarklet* (the only honest way to test it) and assert the source is
+  embedded verbatim, but **only a production build catches this class** — dev is unminified,
+  so re-run `.e2e-prod` style checks against `vite preview` after touching the builder.
+  **Big London 2026 ships with the app** (`src/data/lineups/bigLondon2026.js`, wired through
+  `src/data/lineupSeeds.js`): 466 artists with studio + booth, held as the same *text* the
+  import box takes so it goes through `parseLineup` rather than a second parallel code path.
+  A seed is a floor — user imports merge on top and win on conflicts, and `cleared: true` is
+  what keeps "Clear list" honest against a shipped list. The owner decided a published
+  exhibitor list is fine to commit to the public repo; that does not extend to portfolio
+  images. Only the user's own imports are stored under `tattoo_convention_lineups`
+  — deliberately **not** a sync collection: it is bulky, re-importable in seconds, and what you
+  keep from it syncs as gallery artists
 
 ### 4. AI Concept Generator (Concepts page)
 - Text prompt → copy a structured prompt into ChatGPT/Claude/Gemini and paste the result back, **or** generate an image directly with a user-supplied OpenAI or Gemini key

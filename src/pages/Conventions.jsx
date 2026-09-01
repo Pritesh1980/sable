@@ -1,5 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CONVENTIONS, getConventionFavicon, mergeConventionOverrides, toggleConventionAttendee } from '../data/conventions'
+import { mergeLineupEntries, parseLineup } from '../data/lineup'
+import { mergeLineupSeeds } from '../data/lineupSeeds'
+import { parseLineupHash } from '../data/lineupGrabber'
+import { createArtist } from '../data/artists'
+import ConventionLineup from '../components/ConventionLineup'
 import Logo from '../components/Logo'
 
 function DistanceBadge({ distanceMiles }) {
@@ -102,9 +107,9 @@ function AttendeesEditor({ artists, attendingIds, onToggle }) {
   )
 }
 
-function HeroCard({ convention, artists, attendingIds, onToggle }) {
+function HeroCard({ convention, artists, attendingIds, onToggle, lineupProps }) {
   return (
-    <div className="bg-gradient-to-br from-accent/10 to-ink-card border border-accent/40 rounded-xs p-6 animate-slide-up">
+    <div id={`convention-${convention.id}`} className="bg-gradient-to-br from-accent/10 to-ink-card border border-accent/40 rounded-xs p-6 animate-slide-up">
       <div className="flex items-start gap-4">
         <ConventionLogo convention={convention} size="w-14 h-14" />
         <div className="flex-1 min-w-0">
@@ -127,13 +132,20 @@ function HeroCard({ convention, artists, attendingIds, onToggle }) {
         More info →
       </a>
       <AttendeesEditor artists={artists} attendingIds={attendingIds} onToggle={onToggle} />
+      <ConventionLineup
+        convention={convention}
+        artists={artists}
+        attendingIds={attendingIds}
+        {...lineupProps}
+      />
     </div>
   )
 }
 
-function ConventionCard({ convention, artists, attendingIds, onToggle }) {
+function ConventionCard({ convention, artists, attendingIds, onToggle, lineupProps }) {
   return (
     <div
+      id={`convention-${convention.id}`}
       className={`flex flex-col bg-ink-card border rounded-xs p-5 animate-slide-up ${
         convention.popular ? 'border-accent/30' : 'border-ink-border'
       }`}
@@ -167,11 +179,24 @@ function ConventionCard({ convention, artists, attendingIds, onToggle }) {
         More info →
       </a>
       <AttendeesEditor artists={artists} attendingIds={attendingIds} onToggle={onToggle} />
+      <ConventionLineup
+        convention={convention}
+        artists={artists}
+        attendingIds={attendingIds}
+        {...lineupProps}
+      />
     </div>
   )
 }
 
-export default function Conventions({ artists = [], conventionOverrides = {}, setConventionOverrides = () => {} }) {
+export default function Conventions({
+  artists = [],
+  setArtists = () => {},
+  conventionOverrides = {},
+  setConventionOverrides = () => {},
+  conventionLineups = {},
+  setConventionLineups = () => {},
+}) {
   const merged = mergeConventionOverrides(conventionOverrides)
   const attendanceById = Object.fromEntries(merged.map((c) => [c.id, c.attendingArtistIds]))
 
@@ -179,6 +204,80 @@ export default function Conventions({ artists = [], conventionOverrides = {}, se
     setConventionOverrides((prev) =>
       toggleConventionAttendee(prev, conventionId, artistId, attendanceById[conventionId] || [])
     )
+  }
+
+  // A re-import merges rather than replaces: shows add artists to the list in
+  // the weeks before the doors open, and you should not lose the one you
+  // already added to the gallery from an earlier paste.
+  // Only the user's own imports are stored; anything the app ships with is
+  // merged in at read time (see mergeLineupSeeds), so a shipped list is never
+  // copied into storage just to sit there. Importing also lifts `cleared`.
+  function importLineup(conventionId, entries) {
+    setConventionLineups((prev) => ({
+      ...prev,
+      [conventionId]: {
+        entries: mergeLineupEntries(prev?.[conventionId]?.entries || [], entries),
+        updatedAt: new Date().toISOString(),
+        cleared: false,
+      },
+    }))
+  }
+
+  // Recorded rather than deleted: for a convention the app ships a line-up for,
+  // deleting the record would just bring the shipped one back, and "Clear list"
+  // would do nothing.
+  function clearLineup(conventionId) {
+    setConventionLineups((prev) => ({
+      ...prev,
+      [conventionId]: { entries: [], updatedAt: new Date().toISOString(), cleared: true },
+    }))
+  }
+
+  // Adding from the index does both halves of the job: the artist lands in the
+  // gallery to research later, and is flagged as attending this show so they
+  // show up on the floor plan you actually walk round with.
+  function addFromLineup(conventionId, draft) {
+    const artist = createArtist(draft, artists)
+    if (!artist) return
+    setArtists((prev) => [...prev, artist])
+    if (!(attendanceById[conventionId] || []).includes(artist.id)) {
+      toggle(conventionId, artist.id)
+    }
+  }
+
+  // The grabber's hand-off: it sends the harvest back as
+  // `#lineup=<convention>&data=<text>`. Untrusted input, so it goes through the
+  // same strict parser a hand-paste does, and the hash is cleared either way so
+  // a reload cannot re-import it.
+  // Read once, at first render: parsing is pure, so it belongs here rather than
+  // in an effect that would have to set state to report what it found.
+  const [handoff] = useState(() => {
+    const incoming = parseLineupHash(globalThis.location?.hash || '')
+    if (!incoming) return null
+    const known = CONVENTIONS.some((c) => c.id === incoming.conventionId)
+    return { conventionId: incoming.conventionId, entries: known ? parseLineup(incoming.text) : [] }
+  })
+  const landed = handoff?.entries.length ? handoff : null
+  // The effect does only the things that touch the world outside React.
+  const handled = useRef(false)
+  useEffect(() => {
+    if (!handoff || handled.current) return
+    handled.current = true
+    const { pathname = '', search = '' } = globalThis.location || {}
+    globalThis.history?.replaceState?.(null, '', `${pathname}${search}`)
+    if (landed) importLineup(landed.conventionId, landed.entries)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function lineupPropsFor(conventionId) {
+    return {
+      entries: mergeLineupSeeds(conventionLineups, conventionId),
+      onImport: (entries) => importLineup(conventionId, entries),
+      onClear: () => clearLineup(conventionId),
+      onAddArtist: (draft) => addFromLineup(conventionId, draft),
+      onToggleAttending: (artistId) => toggle(conventionId, artistId),
+      defaultExpanded: landed?.conventionId === conventionId,
+    }
   }
 
   // Local show first as the hero, then the rest by reachability (nearest first).
@@ -199,6 +298,31 @@ export default function Conventions({ artists = [], conventionOverrides = {}, se
           </p>
         </div>
 
+        {landed && (
+          <div
+            role="status"
+            className="bg-accent/10 border border-accent/40 rounded-xs px-4 py-3 mb-4 animate-slide-up"
+          >
+            <p className="text-cream text-sm font-mono">
+              Imported {landed.entries.length} artists into{' '}
+              {CONVENTIONS.find((c) => c.id === landed.conventionId)?.name}.
+            </p>
+            <p className="text-cream-muted/70 text-xs font-body mt-0.5">
+              Search the index, or filter it to the artists already in your gallery.
+            </p>
+            <button
+              onClick={() => {
+                globalThis.document
+                  ?.getElementById(`convention-${landed.conventionId}`)
+                  ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }}
+              className="min-h-11 flex items-center text-[0.625rem] font-mono text-accent tracking-widest uppercase hover:text-accent-hover transition-colors"
+            >
+              Take me to it →
+            </button>
+          </div>
+        )}
+
         {local.map((c) => (
           <HeroCard
             key={c.id}
@@ -206,6 +330,7 @@ export default function Conventions({ artists = [], conventionOverrides = {}, se
             artists={artists}
             attendingIds={attendanceById[c.id] || []}
             onToggle={(artistId) => toggle(c.id, artistId)}
+            lineupProps={lineupPropsFor(c.id)}
           />
         ))}
 
@@ -217,6 +342,7 @@ export default function Conventions({ artists = [], conventionOverrides = {}, se
               artists={artists}
               attendingIds={attendanceById[c.id] || []}
               onToggle={(artistId) => toggle(c.id, artistId)}
+              lineupProps={lineupPropsFor(c.id)}
             />
           ))}
         </div>
