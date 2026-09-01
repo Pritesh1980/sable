@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { computeSwipeRanking } from '../data/ranking'
 import ArtistImage from './ArtistImage'
+import TagPill from './TagPill'
+import { DEFAULT_STUDIOS } from '../data/artists'
 
 function GroupSection({ label, items, accent }) {
   if (items.length === 0) return null
@@ -91,10 +93,14 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
   const touchStartX = useRef(null)
   const touchStartY = useRef(null)
   const isDragging = useRef(false)
+  const imageRowRef = useRef(null)
+  // A touch starting inside the image row scrolls that row instead of
+  // driving the swipe-decide gesture — set in onTouchStart, checked by
+  // onTouchMove/onTouchEnd, and reset by onTouchEnd/onTouchCancel.
+  const touchOwnedByRow = useRef(false)
 
   const artist = queue[currentIdx]
   const images = artist?.images || []
-  const coverImage = images[0]
 
   function decide(bucket) {
     if (transitioning || !artist) return
@@ -119,13 +125,18 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
   }
 
   function onTouchStart(e) {
+    if (imageRowRef.current && imageRowRef.current.contains(e.target)) {
+      touchOwnedByRow.current = true
+      return
+    }
+    touchOwnedByRow.current = false
     touchStartX.current = e.touches[0].clientX
     touchStartY.current = e.touches[0].clientY
     isDragging.current = false
   }
 
   function onTouchMove(e) {
-    if (touchStartX.current === null) return
+    if (touchOwnedByRow.current || touchStartX.current === null) return
     const dx = e.touches[0].clientX - touchStartX.current
     isDragging.current = true
     setHasDragged(true)
@@ -133,6 +144,10 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
   }
 
   function onTouchEnd(e) {
+    if (touchOwnedByRow.current) {
+      touchOwnedByRow.current = false
+      return
+    }
     if (touchStartX.current === null) return
     const dx = e.changedTouches[0].clientX - touchStartX.current
     const dy = e.changedTouches[0].clientY - touchStartY.current
@@ -145,6 +160,16 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
       setDragX(0)
     }
     touchStartX.current = null
+  }
+
+  // Mirrors onTouchEnd's "no decision" cleanup — an interrupted gesture
+  // (e.g. the browser's own context menu) must not leave stale refs that
+  // would skew the next gesture's delta calculation.
+  function onTouchCancel() {
+    touchOwnedByRow.current = false
+    setDragX(0)
+    touchStartX.current = null
+    touchStartY.current = null
   }
 
   useEffect(() => {
@@ -178,6 +203,7 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
   if (!artist) return null
 
   const displayName = artist.name || `@${artist.handle}`
+  const studio = artist.studio ? DEFAULT_STUDIOS.find((s) => s.id === artist.studio) : null
   const dragLabel = dragX > 50 ? 'TOP' : dragX < -50 ? 'PASS' : null
   const labelOpacity = Math.min(Math.abs(dragX) / 80, 1)
 
@@ -187,6 +213,7 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
+      onTouchCancel={onTouchCancel}
     >
       {/* Progress bar */}
       <div className="absolute top-0 inset-x-0 h-0.5 bg-ink-border z-20">
@@ -219,24 +246,41 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
         </div>
       </div>
 
-      {/* Image */}
-      <div className="flex-1 relative overflow-hidden">
-        {coverImage ? (
-          <ArtistImage
-            key={currentIdx}
-            src={coverImage}
-            label={displayName}
-            monogramClassName="text-8xl"
-            className={`w-full h-full object-cover transition-all duration-200 ${transitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
-            style={{
-              transform: `rotate(${dragX * 0.025}deg) translateX(${dragX * 0.25}px)`,
-            }}
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-ink-card">
-            <span className="font-display text-8xl text-cream-muted/20">
-              {displayName.charAt(0).toUpperCase()}
-            </span>
+      {/* Content: name/handle/studio/tags + a horizontal row of every
+          reference image — a swipe/drag from anywhere in here except the
+          image row itself still decides. */}
+      <div
+        key={currentIdx}
+        className={`flex-1 relative overflow-hidden flex flex-col justify-center px-5 pt-16 transition-all duration-200 ${transitioning ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}
+        style={{
+          transform: `rotate(${dragX * 0.025}deg) translateX(${dragX * 0.25}px)`,
+        }}
+      >
+        <div className="mb-4">
+          <h2 className="font-display text-3xl text-cream leading-tight">{displayName}</h2>
+          {artist.name && (
+            <p className="font-mono text-[0.8125rem] text-cream-muted/50 mt-0.5">@{artist.handle}</p>
+          )}
+          {studio && (
+            <p className="font-mono text-[0.6875rem] text-cream-muted/40 tracking-widest mt-1">{studio.name}</p>
+          )}
+          {artist.tags?.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2.5">
+              {artist.tags.map((t) => <TagPill key={t} tag={t} active small />)}
+            </div>
+          )}
+        </div>
+
+        {images.length > 0 && (
+          <div
+            ref={imageRowRef}
+            className="flex items-center gap-2.5 overflow-x-auto scrollbar-thin -mx-5 px-5 py-1"
+          >
+            {images.map((src, i) => (
+              <div key={i} className="shrink-0 w-36 h-36 sm:w-44 sm:h-44 rounded-xs overflow-hidden bg-ink-muted">
+                <ArtistImage src={src} label={displayName} className="w-full h-full object-cover" monogramClassName="text-4xl" />
+              </div>
+            ))}
           </div>
         )}
 
@@ -260,7 +304,7 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
 
         {/* Swipe hint (first card only) */}
         {currentIdx === 0 && !hasDragged && (
-          <div className="absolute bottom-32 inset-x-0 flex justify-center pointer-events-none">
+          <div className="absolute bottom-2 inset-x-0 flex justify-center pointer-events-none">
             <p className="font-mono text-[0.6875rem] text-cream-muted/30 tracking-widest uppercase">
               swipe to rank
             </p>
@@ -268,15 +312,8 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
         )}
       </div>
 
-      {/* Bottom: artist info + action buttons */}
+      {/* Action buttons */}
       <div className="shrink-0 px-5 pt-5 pb-10 bg-gradient-to-t from-ink-black via-ink-black to-transparent border-t border-ink-border">
-        <div className="mb-4">
-          <h2 className="font-display text-2xl text-cream leading-tight">{displayName}</h2>
-          {artist.name && (
-            <p className="font-mono text-[0.8125rem] text-cream-muted/50 mt-0.5">@{artist.handle}</p>
-          )}
-        </div>
-
         <div className="grid grid-cols-3 gap-3">
           <button
             onClick={() => decide('pass')}

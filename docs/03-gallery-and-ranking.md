@@ -89,7 +89,8 @@ The Classic gallery keeps its own ranking tools for when you're already there or
 1. **Drag** in Grid view, with **⇅ Reorder** turned on.
 2. **Nudge** the rank number up/down in Filmstrip view.
 3. **Swipe-compare** — tap **Rank** (top-right of the Artists page) to judge artists one at
-   a time as **Pass / Maybe / Top**. Made a mistake? **Undo** reverses your last decision.
+   a time as **Pass / Maybe / Top**, with a scrollable row of all their reference images
+   to browse before you decide. Made a mistake? **Undo** reverses your last decision.
 
 ![Swipe-compare ranking](../public/guide/ranking-swipe.png)
 

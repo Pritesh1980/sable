@@ -48,7 +48,7 @@ const SECTIONS = [
       'Open Drawer → Classic gallery for structured browsing. Switch views with the toggle: ☰ Filmstrip, ⊟ Compare, ⊞ Grid, ▦ Style Wall.',
       'Tap a style tag in the filter bar to show only artists with that tag; tap All to clear it.',
       'The Classic gallery also ranks: in Grid view turn on ⇅ Reorder to get drag handles (and a + for photos) on each card, or nudge the rank number in Filmstrip. With Reorder off, a grid card is one big tap target that just opens the artist. Every method feeds the same single ranking.',
-      'Tap Rank to enter swipe-compare: pick the better of two artists repeatedly to build an order. Undo reverses your last choice.',
+      'Tap Rank to enter swipe-compare: judge artists one at a time as Pass / Maybe / Top, with a scrollable row of their reference images to browse first. Undo reverses your last choice.',
       'Tap any card to open the full artist detail — photos, tags, status, studio, notes and conventions they are attending.',
       'In the artist detail, Similar ink shows the three closest artists by how their work actually looks. Tap Build style index once — a small vision model downloads and all matching then runs on your device; your images never leave the browser.',
       'Similar ink also shows a taste line: how well the artist fits the taste learned from your ranking and statuses, and where the model would place them on images alone.',

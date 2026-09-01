@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import TagPill from './TagPill'
 import ArtistImage from './ArtistImage'
 import { DEFAULT_STUDIOS } from '../data/artists'
@@ -23,7 +23,7 @@ function StatusPicker({ artist, onSetStatus, onClose }) {
   )
 }
 
-function FilmstripRow({ artist, onOpen, index, onSetRank, onSetStatus, isFirst, isLast, totalArtists }) {
+function FilmstripRow({ artist, onOpen, index, onSetRank, onNudge, onSetStatus, isFirst, isLast, totalArtists, onRowMouseLeave }) {
   const scrollRef = useRef(null)
   const [editingRank, setEditingRank] = useState(false)
   const [rankInput, setRankInput] = useState('')
@@ -49,14 +49,16 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onSetStatus, isFirst, 
 
   return (
     <div
+      data-testid="filmstrip-row"
       style={{ animationDelay: `${index * 0.04}s` }}
       className="animate-slide-up opacity-0 [animation-fill-mode:forwards] flex border-b border-ink-border/50 hover:bg-ink-card/30 transition-colors group"
+      onMouseLeave={onRowMouseLeave}
     >
       {/* Rank controls */}
       <div className="w-12 shrink-0 flex flex-col items-center justify-center border-r border-ink-border/30 py-2">
         <button
-          onClick={() => !isFirst && onSetRank(artist.id, artist.rank - 1)}
-          aria-label="Move up one rank"
+          onClick={() => !isFirst && onNudge(artist, index, -1)}
+          aria-label={`Move ${displayName} up`}
           className={`text-[0.625rem] leading-none w-11 h-11 flex items-center justify-center transition-colors ${
             isFirst ? 'text-transparent cursor-default' : 'text-cream-muted/30 hover:text-cream can-hover:opacity-0 group-hover:opacity-100'
           }`}
@@ -88,8 +90,8 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onSetStatus, isFirst, 
           </button>
         )}
         <button
-          onClick={() => !isLast && onSetRank(artist.id, artist.rank + 1)}
-          aria-label="Move down one rank"
+          onClick={() => !isLast && onNudge(artist, index, 1)}
+          aria-label={`Move ${displayName} down`}
           className={`text-[0.625rem] leading-none w-11 h-11 flex items-center justify-center transition-colors ${
             isLast ? 'text-transparent cursor-default' : 'text-cream-muted/30 hover:text-cream can-hover:opacity-0 group-hover:opacity-100'
           }`}
@@ -168,19 +170,81 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onSetStatus, isFirst, 
   )
 }
 
+const NUDGE_IDLE_RELEASE_MS = 700
+
+// ▲/▼ nudge a rank, which reorders `artists` and moves the clicked row to a
+// new screen position — but the pointer doesn't move with it. Without this,
+// a second click at the same screen spot (rapid clicking, no mouse movement)
+// can land on a different artist's button. While a row is being actively
+// nudged, its screen position is pinned to where it started; only once
+// nudging stops (idle timeout, or the mouse leaves that row) does it settle
+// into its real sorted position. `pinnedId` must be React state — release
+// happens from a timeout or a mouse event outside any row's own render, and
+// only a state change (not a ref mutation) repaints to reflect it.
 export default function FilmstripView({ artists, onOpenArtist, onSetRank, onSetStatus }) {
+  const [pinnedId, setPinnedId] = useState(null)
+  const pinnedIndexRef = useRef(null)
+  const idleTimerRef = useRef(null)
+
+  useEffect(() => () => clearTimeout(idleTimerRef.current), [])
+
+  // The pinned artist can disappear from `artists` between renders (filtered
+  // out, removed). Adjusting state during render, same pattern already used
+  // in ArtistImage.jsx: comparing against the latest props and correcting
+  // before this render's output is used, rather than rendering stale then
+  // fixing it a tick later in an effect.
+  if (pinnedId && !artists.some((a) => a.id === pinnedId)) {
+    setPinnedId(null)
+    pinnedIndexRef.current = null
+  }
+
+  let displayArtists = artists
+  if (pinnedId) {
+    const rest = artists.slice()
+    const at = rest.findIndex((a) => a.id === pinnedId)
+    const [pinned] = rest.splice(at, 1)
+    const insertAt = Math.max(0, Math.min(rest.length, pinnedIndexRef.current ?? at))
+    rest.splice(insertAt, 0, pinned)
+    displayArtists = rest
+  }
+
+  function handleNudge(artist, displayIndex, delta) {
+    if (pinnedId !== artist.id) {
+      setPinnedId(artist.id)
+      pinnedIndexRef.current = displayIndex
+    }
+    clearTimeout(idleTimerRef.current)
+    idleTimerRef.current = setTimeout(() => {
+      setPinnedId(null)
+      pinnedIndexRef.current = null
+    }, NUDGE_IDLE_RELEASE_MS)
+    // Read from the live artist passed in this render, never a value
+    // captured when the pin started — otherwise rapid clicks would keep
+    // requesting the same rank instead of advancing.
+    onSetRank(artist.id, artist.rank + delta)
+  }
+
+  function releasePin(artistId) {
+    if (pinnedId !== artistId) return
+    clearTimeout(idleTimerRef.current)
+    setPinnedId(null)
+    pinnedIndexRef.current = null
+  }
+
   return (
     <div className="mx-4 border border-ink-border/50 rounded-xs overflow-hidden">
-      {artists.map((artist, i) => (
+      {displayArtists.map((artist, i) => (
         <FilmstripRow
           key={artist.id}
           artist={artist}
           onOpen={onOpenArtist}
           onSetRank={onSetRank}
+          onNudge={handleNudge}
           onSetStatus={onSetStatus}
+          onRowMouseLeave={() => releasePin(artist.id)}
           index={i}
-          isFirst={i === 0}
-          isLast={i === artists.length - 1}
+          isFirst={artist.rank <= 1}
+          isLast={artist.rank >= artists.length}
           totalArtists={artists.length}
         />
       ))}
