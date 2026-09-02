@@ -197,3 +197,22 @@ describe('ConventionLineup — index', () => {
     expect(within(row).getByRole('button', { name: /attending/i })).toHaveAttribute('aria-pressed', 'true')
   })
 })
+
+describe('ConventionLineup — Top picks', () => {
+  it('opens on Top picks and shows the saved artist under Must see, without a search box', () => {
+    renderLineup({ entries })
+    open()
+    fireEvent.click(screen.getByRole('button', { name: 'Top picks' }))
+    expect(screen.getByRole('heading', { name: /must see/i })).toBeInTheDocument()
+    expect(screen.getByText('Oscar Akermo')).toBeInTheDocument()
+    expect(screen.queryByLabelText(/search the line-up/i)).not.toBeInTheDocument()
+  })
+
+  it('switching back to All restores the search box and A–Z list', () => {
+    renderLineup({ entries })
+    open()
+    fireEvent.click(screen.getByRole('button', { name: 'Top picks' }))
+    fireEvent.click(screen.getByRole('button', { name: 'All' }))
+    expect(screen.getByLabelText(/search the line-up/i)).toBeInTheDocument()
+  })
+})

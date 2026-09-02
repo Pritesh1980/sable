@@ -1,7 +1,11 @@
 # Plan: convention route planner / top picks
 
-*Status: planned, not started. Written 2 Sep 2026 for the Big London Tattoo Show
-(4–6 Sep 2026), on top of the artist index shipped in `3a836d3`.*
+*Status: **Phase 1 shipped** (Top picks — `src/data/showPlan.js`,
+`src/components/ShowPlanView.jsx`, a fourth "Top picks" chip on the artist
+index). Phase 2 (route ordering over the floorplan coordinates in
+`src/data/lineups/bigLondon2026Floorplan.js`, shipped separately) is not
+started. Written 2 Sep 2026 for the Big London Tattoo Show (4–6 Sep 2026), on
+top of the artist index shipped in `3a836d3`.*
 
 ## What we're building
 

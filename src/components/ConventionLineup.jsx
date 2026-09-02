@@ -9,6 +9,8 @@ import {
   parseLineup,
 } from '../data/lineup'
 import { appBaseUrl, buildGrabber } from '../data/lineupGrabber'
+import { DEFAULT_STUDIOS } from '../data/artists'
+import ShowPlanView from './ShowPlanView'
 
 // The show's own artist list is 500 names in alphabetical order — useless on a
 // phone the week before the doors open. This turns it into an index: search it,
@@ -20,69 +22,73 @@ import { appBaseUrl, buildGrabber } from '../data/lineupGrabber'
 const VISIBLE_LIMIT = 120
 
 const VIEWS = [
+  { id: 'picks', label: 'Top picks' },
   { id: 'all', label: 'All' },
   { id: 'saved', label: 'In your gallery' },
   { id: 'new', label: 'New to you' },
 ]
 
-function LineupRow({ entry, convention, attending, onAddArtist, onToggleAttending }) {
+export function LineupRow({ entry, convention, attending, onAddArtist, onToggleAttending, footer = null }) {
   const saved = Boolean(entry.savedArtistId)
   return (
     <li
       data-testid={`lineup-row-${entry.handle || entry.label.toLowerCase().replace(/\s+/g, '-')}`}
-      className="flex items-center gap-2 py-1 border-b border-ink-border/40 last:border-b-0"
+      className="flex flex-col gap-1 py-1 border-b border-ink-border/40 last:border-b-0"
     >
-      <div className="flex-1 min-w-0">
-        <p data-testid="lineup-label" className="text-cream text-sm font-body truncate">
-          {entry.label}
-        </p>
-        <div className="flex items-center gap-2 min-w-0">
-          {entry.handle && (
-            <a
-              href={`https://instagram.com/${entry.handle}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[0.6875rem] font-mono text-cream-muted/70 hover:text-accent transition-colors truncate"
-            >
-              @{entry.handle}
-            </a>
-          )}
-          {entry.note && (
-            <span className="text-[0.6875rem] font-mono text-cream-muted/60 truncate">{entry.note}</span>
-          )}
+      <div className="flex items-center gap-2">
+        <div className="flex-1 min-w-0">
+          <p data-testid="lineup-label" className="text-cream text-sm font-body truncate">
+            {entry.label}
+          </p>
+          <div className="flex items-center gap-2 min-w-0">
+            {entry.handle && (
+              <a
+                href={`https://instagram.com/${entry.handle}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[0.6875rem] font-mono text-cream-muted/70 hover:text-accent transition-colors truncate"
+              >
+                @{entry.handle}
+              </a>
+            )}
+            {entry.note && (
+              <span className="text-[0.6875rem] font-mono text-cream-muted/60 truncate">{entry.note}</span>
+            )}
+          </div>
         </div>
+
+        {saved && entry.artist?.rank ? (
+          <span className="text-[0.6875rem] font-mono text-accent tracking-wide shrink-0">
+            #{entry.artist.rank}
+          </span>
+        ) : null}
+
+        {saved ? (
+          <button
+            onClick={() => onToggleAttending(entry.savedArtistId)}
+            aria-pressed={attending}
+            className={`min-h-11 px-2.5 flex items-center shrink-0 text-[0.625rem] font-mono tracking-widest uppercase transition-colors ${
+              attending ? 'text-accent' : 'text-cream-muted/50 hover:text-cream'
+            }`}
+          >
+            {attending ? '◎ Attending' : 'Attending?'}
+          </button>
+        ) : entry.handle ? (
+          <button
+            onClick={() => onAddArtist(lineupArtistDraft(entry, convention.name))}
+            className="min-h-11 px-2.5 flex items-center shrink-0 text-[0.625rem] font-mono text-cream-muted tracking-widest uppercase hover:text-accent transition-colors"
+          >
+            Add
+          </button>
+        ) : (
+          // No handle in the show's list means nothing to save the artist by —
+          // an invented one would be worse than none.
+          <span className="text-[0.625rem] font-mono text-cream-muted/60 tracking-widest uppercase shrink-0 px-2.5">
+            No handle
+          </span>
+        )}
       </div>
-
-      {saved && entry.artist?.rank ? (
-        <span className="text-[0.6875rem] font-mono text-accent tracking-wide shrink-0">
-          #{entry.artist.rank}
-        </span>
-      ) : null}
-
-      {saved ? (
-        <button
-          onClick={() => onToggleAttending(entry.savedArtistId)}
-          aria-pressed={attending}
-          className={`min-h-11 px-2.5 flex items-center shrink-0 text-[0.625rem] font-mono tracking-widest uppercase transition-colors ${
-            attending ? 'text-accent' : 'text-cream-muted/50 hover:text-cream'
-          }`}
-        >
-          {attending ? '◎ Attending' : 'Attending?'}
-        </button>
-      ) : entry.handle ? (
-        <button
-          onClick={() => onAddArtist(lineupArtistDraft(entry, convention.name))}
-          className="min-h-11 px-2.5 flex items-center shrink-0 text-[0.625rem] font-mono text-cream-muted tracking-widest uppercase hover:text-accent transition-colors"
-        >
-          Add
-        </button>
-      ) : (
-        // No handle in the show's list means nothing to save the artist by —
-        // an invented one would be worse than none.
-        <span className="text-[0.625rem] font-mono text-cream-muted/60 tracking-widest uppercase shrink-0 px-2.5">
-          No handle
-        </span>
-      )}
+      {footer}
     </li>
   )
 }
@@ -291,18 +297,7 @@ export default function ConventionLineup({
 
       {expanded && counts.total > 0 && (
         <div className="mt-2">
-          <label htmlFor={`lineup-search-${convention.id}`} className="sr-only">
-            Search the line-up
-          </label>
-          <input
-            id={`lineup-search-${convention.id}`}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search the line-up…"
-            className="w-full bg-ink-black border border-ink-border rounded-xs px-3 min-h-11 text-cream text-sm font-mono placeholder:text-cream-muted/60 focus:border-accent outline-hidden"
-          />
-
-          <div className="flex flex-wrap gap-1.5 mt-2">
+          <div className="flex flex-wrap gap-1.5">
             {VIEWS.map((v) => (
               <button
                 key={v.id}
@@ -319,36 +314,61 @@ export default function ConventionLineup({
             ))}
           </div>
 
-          {matches.length === 0 ? (
-            <p className="text-cream-muted/60 text-xs font-mono mt-3">Nobody in the list matches that.</p>
+          {view === 'picks' ? (
+            <ShowPlanView
+              convention={convention}
+              entries={entries}
+              artists={artists}
+              studios={DEFAULT_STUDIOS}
+              attendingIds={attendingIds}
+              onAddArtist={onAddArtist}
+              onToggleAttending={onToggleAttending}
+            />
           ) : (
-            <div className="mt-2 max-h-96 overflow-y-auto pr-1">
-              {groups.map((group) => (
-                <div key={group.letter}>
-                  <p className="text-[0.625rem] font-mono text-accent/60 tracking-[0.3em] uppercase mt-3 mb-1 sticky top-0 bg-ink-card py-1">
-                    {group.letter}
-                  </p>
-                  <ul>
-                    {group.entries.map((entry) => (
-                      <LineupRow
-                        key={entry.handle || entry.label}
-                        entry={entry}
-                        convention={convention}
-                        attending={attendingIds.includes(entry.savedArtistId)}
-                        onAddArtist={onAddArtist}
-                        onToggleAttending={onToggleAttending}
-                      />
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          )}
+            <>
+              <label htmlFor={`lineup-search-${convention.id}`} className="sr-only">
+                Search the line-up
+              </label>
+              <input
+                id={`lineup-search-${convention.id}`}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search the line-up…"
+                className="w-full bg-ink-black border border-ink-border rounded-xs px-3 min-h-11 text-cream text-sm font-mono placeholder:text-cream-muted/60 focus:border-accent outline-hidden mt-2"
+              />
 
-          {hidden > 0 && (
-            <p className="text-cream-muted/60 text-[0.6875rem] font-mono mt-2">
-              +{hidden} more — narrow it with search.
-            </p>
+              {matches.length === 0 ? (
+                <p className="text-cream-muted/60 text-xs font-mono mt-3">Nobody in the list matches that.</p>
+              ) : (
+                <div className="mt-2 max-h-96 overflow-y-auto pr-1">
+                  {groups.map((group) => (
+                    <div key={group.letter}>
+                      <p className="text-[0.625rem] font-mono text-accent/60 tracking-[0.3em] uppercase mt-3 mb-1 sticky top-0 bg-ink-card py-1">
+                        {group.letter}
+                      </p>
+                      <ul>
+                        {group.entries.map((entry) => (
+                          <LineupRow
+                            key={entry.handle || entry.label}
+                            entry={entry}
+                            convention={convention}
+                            attending={attendingIds.includes(entry.savedArtistId)}
+                            onAddArtist={onAddArtist}
+                            onToggleAttending={onToggleAttending}
+                          />
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {hidden > 0 && (
+                <p className="text-cream-muted/60 text-[0.6875rem] font-mono mt-2">
+                  +{hidden} more — narrow it with search.
+                </p>
+              )}
+            </>
           )}
 
           <button
