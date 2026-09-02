@@ -42,11 +42,25 @@ colour-mask the booth rectangles, then OCR each cell. **Threshold dark pixels
 directly (`gray < 110`); Otsu binarisation silently eats digits** (`276` reads
 as `28`). Result: **391 booths placed, 95.4% of the placeable ones.**
 
-**The plan does not cover the whole show.** 54 booths on the artist list have no
-position on it: the entire `521`–`556` block, all of `T1`–`T43`, and `P2`–`P4`.
-The highest booth drawn is 520. So ~12% of artists cannot be placed at all, and
-the feature must degrade gracefully for them — list them in a trailing
-"elsewhere in the hall" group rather than dropping them or guessing a position.
+**The plan does not cover the whole show.** The coordinates now ship in
+`src/data/lineups/bigLondon2026Floorplan.js` — **398 booths placed**, guarded by
+`src/test/floorplan.test.js`. What is *not* placed, and must degrade into a
+trailing "Elsewhere in the hall" group rather than be dropped or guessed:
+
+- **54 booths are not drawn on the plan at all** — the entire `521`–`556` block,
+  all of `T1`–`T43`, and `P2`–`P4`. The highest booth drawn is 520.
+- **The plan skips `122`, `233` and `322` entirely.** Verified by eye: the rows
+  run `…123, 121, 120…`, `…232, 234…` and `…323, 321…`. Artists are listed at
+  all three, so this is the plan being stale or those stands being added late —
+  don't go hunting for them, and don't interpolate a position.
+- **8 booths could not be read**: `78, 91, 117, 171, 261, 348, 375, 457` —
+  end-of-row stands and large corner-numbered blocks with no adjacent pair to
+  interpolate from. Placeable by hand if they ever matter.
+
+All six of the owner's artists at this show *are* placed (315 by interpolation).
+Booth 94 is drawn but deliberately absent from the map: its artist (Lucy
+Thompson, listed at both 94 and 340) dedupes to 340, so nothing in the app sits
+there — a data test enforces that every placed booth has an occupant.
 
 **3. The Taste Engine cannot help here.** `predictedRank`/`buildTasteVector`
 (`src/data/taste.js`) need a CLIP vector per artist, which needs images.
