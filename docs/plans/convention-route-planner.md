@@ -25,11 +25,28 @@ matching Brief and Concepts run on). So "match my preferred styles" can only run
 against artists we already hold tags for — the 6 in the gallery — unless new
 data is fetched. **Do not** start writing inferred tags into line-up entries.
 
-**2. There is no floor plan.** Booth numbers run 3–556, spread evenly (~40 per
-50-block), which makes numeric order a defensible proxy for walking order — but
-it *is* a proxy. 27 booths carry a zone prefix (`T39`, `P2`), 10 are ranges
-(`153 - 158`), a few numbers are shared by two artists. The UI must say "in
-booth order", never "the fastest route".
+**2. There IS a floor plan, and it kills the booth-order shortcut.**
+(Revised 2 Sep after the show's domain was allowlisted.) The plan is published
+as a PDF on the main domain —
+`/_files/ugd/32010e_0392b5c8a9164fd39cd893130240f4da.pdf`, one page, a single
+6400×4233 image. Do **not** bother with the `static.wixstatic.com` copy: it is
+only 1940×1284 and that host is blocked anyway.
+
+The numbering **serpentines**: on the right-hand island `209→220` runs along the
+top face and `208→197` back along the bottom. Sorting by booth number walks one
+face and then teleports across the aisle. Booth number order is *not* walking
+order, so the route must use real coordinates.
+
+Extracting them works — see `docs/plans/floorplan-extraction.md` for the method:
+colour-mask the booth rectangles, then OCR each cell. **Threshold dark pixels
+directly (`gray < 110`); Otsu binarisation silently eats digits** (`276` reads
+as `28`). Result: **391 booths placed, 95.4% of the placeable ones.**
+
+**The plan does not cover the whole show.** 54 booths on the artist list have no
+position on it: the entire `521`–`556` block, all of `T1`–`T43`, and `P2`–`P4`.
+The highest booth drawn is 520. So ~12% of artists cannot be placed at all, and
+the feature must degrade gracefully for them — list them in a trailing
+"elsewhere in the hall" group rather than dropping them or guessing a position.
 
 **3. The Taste Engine cannot help here.** `predictedRank`/`buildTasteVector`
 (`src/data/taste.js`) need a CLIP vector per artist, which needs images.
@@ -123,16 +140,28 @@ one-line rationale.
 
 ---
 
-## Phase 2 — Route
+## Phase 2 — Route (now geometry-based)
 
-- Sort picks by `parseBooth().number`, prefixed zones (`T`, `P`) as their own
-  trailing groups.
-- Group into zone headers by hundreds ("Booths 300–399").
-- **Neighbour pickups**: for each must-see at booth *B*, surface unpicked entries
-  within ±4 booths — "3 stands from Berk Bosveren". Cheap, spatial, needs no
-  style data, and is the thing that makes it feel like a route.
-- Header copy must be honest: *"In booth order — the show publishes no floor
-  plan, so this is a sensible walking sequence, not a measured one."*
+Ship the booth map as data: `src/data/lineups/bigLondon2026Floorplan.js`,
+`{ booth: { x, y } }` with x/y normalised 0–1 against the plan image, so it is
+resolution-independent. 391 entries; anything absent is simply unplaced.
+
+- Order the route by **nearest-neighbour walk** over the real coordinates,
+  starting from the entrance (bottom-right of the plan, near booths 1–12), not
+  by booth number.
+- **Neighbour pickups** become genuinely spatial: for each must-see, surface
+  unpicked entries within a small radius in x/y — "two stands along from Berk
+  Bosveren", which the plan confirms (356/362/368 are the same London's Glitch
+  block).
+- Artists whose booth is not on the plan (the 54 above) go in a trailing
+  **"Elsewhere in the hall"** group, explicitly labelled — never silently
+  dropped, never given a made-up position.
+- Header copy stays honest: *"Ordered across the floor from the entrance — based
+  on the show's published plan."* A nearest-neighbour walk is a good route, not a
+  provably optimal one; don't claim "shortest".
+- Stretch, only if it earns its place: render the picks as dots on a simplified
+  SVG of the hall. The coordinates support it. Do not ship the show's floorplan
+  image itself — it is their copyrighted artwork.
 - A "Copy route" button, reusing the clipboard pattern already in
   `GrabberPanel` (`ConventionLineup.jsx`), so it can go in Notes for the day.
 
