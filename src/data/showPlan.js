@@ -98,7 +98,7 @@ export function buildStudioIndex(artists = [], studios = []) {
 const STATUS_SCORE = { 'contact-next': 3, shortlisted: 2, contacted: 1, pass: -4 }
 const STUDIO_STABLEMATE_CAP = 30
 
-export function scoreShowEntry(entry, { artists = [], attendingIds = [], studioIndex, styles = [] } = {}) {
+export function scoreShowEntry(entry, { artists = [], attendingIds = [], studioIndex, styles = [], curated = {} } = {}) {
   const reasons = []
   let score = 0
 
@@ -142,37 +142,70 @@ export function scoreShowEntry(entry, { artists = [], attendingIds = [], studioI
     }
   }
 
-  const kind = artist ? 'mustSee' : studio ? 'suggested' : 'other'
-  return { entry, artist, score, kind, savedArtistId: artist?.id || null, reasons }
+  // A hand-curated pick carries the reason the user wrote for it. Priority
+  // picks are researched choices and rank alongside the gallery; wildcards are
+  // speculative — suggested from a conversation about taste, not yet judged —
+  // so they score below everything validated and are sectioned separately
+  // rather than being dressed up as recommendations.
+  const pick = curated[entry.handle]
+  if (pick) {
+    score += pick.tier === 'priority' ? 90 : 30
+    if (pick.why) reasons.push(pick.why)
+  }
+
+  const kind = artist || pick?.tier === 'priority'
+    ? 'mustSee'
+    : pick?.tier === 'wildcard'
+      ? 'wildcard'
+      : studio
+        ? 'suggested'
+        : 'other'
+  return { entry, artist, score, kind, tier: pick?.tier || null, savedArtistId: artist?.id || null, reasons }
 }
 
 // entries: raw line-up entries — indexed against the gallery here, so callers
 // can pass seedEntriesFor()/parseLineup() output straight through.
-export function buildShowPlan(entries = [], { artists = [], studios = [], attendingIds = [] } = {}) {
-  if (entries.length === 0) return { mustSee: [], suggested: [], skipped: [] }
+export function buildShowPlan(
+  entries = [],
+  { artists = [], studios = [], attendingIds = [], curated = {} } = {}
+) {
+  if (entries.length === 0) {
+    return { mustSee: [], suggested: [], wildcards: [], missing: [], skipped: [] }
+  }
 
   const indexed = indexLineup(entries, artists)
   const studioIndex = buildStudioIndex(artists, studios)
   const styles = preferredStyles(artists)
-  const ctx = { artists, attendingIds, studioIndex, styles }
+  const ctx = { artists, attendingIds, studioIndex, styles, curated }
 
   const mustSee = []
   const suggested = []
+  const wildcards = []
   const skipped = []
 
   for (const entry of indexed) {
     const scored = scoreShowEntry(entry, ctx)
     if (scored.kind === 'skipped') skipped.push(scored)
     else if (scored.kind === 'mustSee') mustSee.push(scored)
+    else if (scored.kind === 'wildcard') wildcards.push(scored)
     else if (scored.kind === 'suggested') suggested.push(scored)
-    // 'other' — no saved artist, no known studio — isn't a pick; it stays in
-    // the plain A-Z index rather than cluttering Top picks with strangers.
+    // 'other' — no saved artist, no curated pick, no known studio — isn't a
+    // pick; it stays in the plain A-Z index rather than cluttering Top picks.
   }
+
+  // A curated pick with no matching line-up entry is worth saying out loud:
+  // the app looked and could not find them, which is different from them not
+  // being worth seeing. Silently dropping one would read as "not at the show".
+  const seen = new Set(indexed.map((e) => e.handle).filter(Boolean))
+  const missing = Object.entries(curated)
+    .filter(([handle]) => !seen.has(handle))
+    .map(([handle, pick]) => ({ handle, tier: pick.tier, why: pick.why }))
 
   const byScore = (a, b) => b.score - a.score
   mustSee.sort(byScore)
   suggested.sort(byScore)
-  return { mustSee, suggested, skipped }
+  wildcards.sort(byScore)
+  return { mustSee, suggested, wildcards, missing, skipped }
 }
 
 // Re-exported so callers of buildShowPlan don't also need to import parseLineup

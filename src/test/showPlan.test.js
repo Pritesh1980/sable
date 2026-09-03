@@ -188,7 +188,63 @@ describe('buildShowPlan', () => {
     expect(buildShowPlan([], { artists: [], studios: [] })).toEqual({
       mustSee: [],
       suggested: [],
+      wildcards: [],
+      missing: [],
       skipped: [],
     })
+  })
+})
+
+describe('buildShowPlan with a curated shortlist', () => {
+  const curated = {
+    thomascarlijarlier: { tier: 'priority', why: 'Benchmark booth — guest judge' },
+    kubalizmus: { tier: 'wildcard', why: 'Fine-art detail' },
+    neverturnedup: { tier: 'priority', why: 'Existing favourite' },
+  }
+  const entries = [
+    { name: 'Thomas Carli Jarlier', handle: 'thomascarlijarlier', note: 'Noire Ink, Booth 97' },
+    { name: 'Kubalizmus', handle: 'kubalizmus', note: 'Kubalizmus, Booth 473' },
+    { name: 'Nobody Known', handle: 'nobody', note: 'Some Parlour, Booth 900' },
+  ]
+
+  it('promotes a curated priority pick into mustSee even with no saved artist', () => {
+    const plan = buildShowPlan(entries, { artists: [], studios: [], curated })
+    expect(plan.mustSee.map((m) => m.entry.handle)).toContain('thomascarlijarlier')
+    expect(plan.mustSee.find((m) => m.entry.handle === 'thomascarlijarlier').reasons.join(' '))
+      .toMatch(/guest judge/i)
+  })
+
+  it('keeps wildcards in their own section rather than mixing them into mustSee', () => {
+    const plan = buildShowPlan(entries, { artists: [], studios: [], curated })
+    expect(plan.wildcards.map((w) => w.entry.handle)).toEqual(['kubalizmus'])
+    expect(plan.mustSee.map((m) => m.entry.handle)).not.toContain('kubalizmus')
+  })
+
+  it('ranks a curated priority pick above a wildcard', () => {
+    const plan = buildShowPlan(entries, { artists: [], studios: [], curated })
+    const priority = plan.mustSee.find((m) => m.entry.handle === 'thomascarlijarlier')
+    expect(priority.score).toBeGreaterThan(plan.wildcards[0].score)
+  })
+
+  it('reports a curated pick that is not in the line-up at all, rather than silently dropping it', () => {
+    const plan = buildShowPlan(entries, { artists: [], studios: [], curated })
+    expect(plan.missing).toEqual([
+      { handle: 'neverturnedup', tier: 'priority', why: 'Existing favourite' },
+    ])
+  })
+
+  it('still lets a saved artist outrank a curated-only priority pick', () => {
+    const saved = [{ id: 'kubalizmus', handle: 'kubalizmus', tags: [], rank: 1 }]
+    const plan = buildShowPlan(entries, { artists: saved, studios: [], curated })
+    // Now in the gallery, so it is a must-see on its own merit, not a wildcard.
+    expect(plan.mustSee.map((m) => m.entry.handle)).toContain('kubalizmus')
+    expect(plan.wildcards).toHaveLength(0)
+  })
+
+  it('behaves exactly as before when no curated list is supplied', () => {
+    const plan = buildShowPlan(entries, { artists: [], studios: [] })
+    expect(plan.mustSee).toHaveLength(0)
+    expect(plan.wildcards).toHaveLength(0)
+    expect(plan.missing).toHaveLength(0)
   })
 })

@@ -12,6 +12,7 @@
 // than sitting next to it, and clearing the list stays cleared.
 import { mergeLineupEntries, parseLineup } from './lineup'
 import { BIG_LONDON_2026 } from './lineups/bigLondon2026'
+import { BIG_LONDON_2026_PICKS } from './lineups/bigLondon2026Picks'
 
 export const LINEUP_SEEDS = {
   'big-london': BIG_LONDON_2026,
@@ -37,4 +38,12 @@ export function mergeLineupSeeds(stored = {}, conventionId) {
   const imported = record?.entries || []
   if (record?.cleared) return imported
   return mergeLineupEntries(seedEntriesFor(conventionId), imported)
+}
+
+// Hand-curated shortlists that ship with the app, keyed by convention id and
+// then by the handle the show lists. Separate from the line-up seeds above
+// because this is the user's own judgement about who matters, not the show's
+// roster — see bigLondon2026Picks.js for what the tiers mean.
+export const CURATED_PICKS = {
+  'big-london': BIG_LONDON_2026_PICKS,
 }

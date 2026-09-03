@@ -39,15 +39,21 @@ export default function ShowPlanView({
   artists = [],
   studios = [],
   attendingIds = [],
+  curated = {},
   onAddArtist = () => {},
   onToggleAttending = () => {},
 }) {
   const plan = useMemo(
-    () => buildShowPlan(entries, { artists, studios, attendingIds }),
-    [entries, artists, studios, attendingIds]
+    () => buildShowPlan(entries, { artists, studios, attendingIds, curated }),
+    [entries, artists, studios, attendingIds, curated]
   )
 
-  if (plan.mustSee.length === 0 && plan.suggested.length === 0) {
+  if (
+    plan.mustSee.length === 0 &&
+    plan.suggested.length === 0 &&
+    plan.wildcards.length === 0 &&
+    plan.missing.length === 0
+  ) {
     return (
       <p className="text-cream-muted/60 text-xs font-mono mt-3">
         No picks yet — nobody in this line-up is in your gallery, or at a studio you follow.
@@ -67,6 +73,15 @@ export default function ShowPlanView({
         onToggleAttending={onToggleAttending}
       />
       <Section
+        title="Wildcards"
+        subtitle="Suggested from your taste, not yet judged — go and decide"
+        picks={plan.wildcards}
+        convention={convention}
+        attendingIds={attendingIds}
+        onAddArtist={onAddArtist}
+        onToggleAttending={onToggleAttending}
+      />
+      <Section
         title="Worth a look"
         subtitle="A stablemate at a studio you already follow"
         picks={plan.suggested}
@@ -75,6 +90,32 @@ export default function ShowPlanView({
         onAddArtist={onAddArtist}
         onToggleAttending={onToggleAttending}
       />
+
+      {plan.missing.length > 0 && (
+        <section className="mt-4">
+          <h3 className="font-display text-cream text-base">Not in the line-up</h3>
+          <p className="text-cream-muted/60 text-[0.6875rem] font-mono mt-0.5">
+            On your shortlist, but this line-up doesn&rsquo;t list them — check with the show
+          </p>
+          <ul className="mt-1.5">
+            {plan.missing.map((m) => (
+              <li key={m.handle} className="py-1 border-b border-ink-border/40 last:border-b-0">
+                <a
+                  href={`https://instagram.com/${m.handle}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-cream text-sm font-body hover:text-accent transition-colors"
+                >
+                  @{m.handle}
+                </a>
+                {m.why && (
+                  <p className="text-[0.6875rem] font-mono text-cream-muted/60">{m.why}</p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   )
 }

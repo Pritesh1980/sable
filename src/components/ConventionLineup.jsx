@@ -10,6 +10,7 @@ import {
 } from '../data/lineup'
 import { appBaseUrl, buildGrabber } from '../data/lineupGrabber'
 import { DEFAULT_STUDIOS } from '../data/artists'
+import { CURATED_PICKS } from '../data/lineupSeeds'
 import ShowPlanView from './ShowPlanView'
 
 // The show's own artist list is 500 names in alphabetical order — useless on a
@@ -320,6 +321,7 @@ export default function ConventionLineup({
               entries={entries}
               artists={artists}
               studios={DEFAULT_STUDIOS}
+              curated={CURATED_PICKS[convention.id] || {}}
               attendingIds={attendingIds}
               onAddArtist={onAddArtist}
               onToggleAttending={onToggleAttending}
