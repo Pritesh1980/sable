@@ -127,6 +127,16 @@ describe('scoreShowEntry', () => {
     expect(scoreShowEntry(entry, ctxFor([saved])).kind).not.toBe('skipped')
   })
 
+  it('does not call a studio a connection when you follow nobody there', () => {
+    // The app knows about No Regrets, but this gallery has nobody at it — so
+    // a No Regrets stand is a stranger, not a stablemate, and must not be
+    // suggested under a claim there is nothing to back up.
+    const [entry] = indexLineup([stablemate], [])
+    const result = scoreShowEntry(entry, ctxFor([]))
+    expect(result.kind).toBe('other')
+    expect(result.reasons).toEqual([])
+  })
+
   it('scores an entry with no booth at all — it just cannot be routed', () => {
     const [entry] = indexLineup([{ name: 'No Booth Artist', handle: '', note: '' }], [])
     const result = scoreShowEntry(entry, ctxFor([]))

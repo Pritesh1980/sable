@@ -119,14 +119,17 @@ export function scoreShowEntry(entry, { artists = [], attendingIds = [], studioI
     if (status && STATUS_SCORE[status]) reasons.push(`Status: ${status}`)
   }
 
-  const studio = studioIndex?.matchText(entry.note)
+  // A studio only counts as a connection when you actually follow someone
+  // there. matchText resolves any studio the app knows about, including ones
+  // with nobody saved — treating that as a match would put a stranger under
+  // "a stablemate at a studio you already follow" and say nothing to back it up.
+  const matchedStudio = studioIndex?.matchText(entry.note)
+  const studio = matchedStudio?.artists.length ? matchedStudio : null
   if (studio) {
     const count = studio.artists.length
-    if (count > 0) {
-      const boost = Math.min(STUDIO_STABLEMATE_CAP, 20 + count * 2)
-      score += boost
-      reasons.push(`${studio.name} — you follow ${count} artist${count === 1 ? '' : 's'} there`)
-    }
+    const boost = Math.min(STUDIO_STABLEMATE_CAP, 20 + count * 2)
+    score += boost
+    reasons.push(`${studio.name} — you follow ${count} artist${count === 1 ? '' : 's'} there`)
   }
 
   if (artist && attendingIds.includes(artist.id)) {
