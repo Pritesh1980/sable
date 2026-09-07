@@ -30,6 +30,16 @@ A big show publishes hundreds of artists as one long alphabetical list. **Artist
 each convention card turns that list into something you can work from the sofa or the show
 floor.
 
+#### Top picks
+
+The index opens on **Top picks** — a verdict, not a list. **Must see** is whichever of your
+own gallery is at this show, each with a one-line reason ("#5 in your ranking", "Matches your
+styles: realism, dark-fantasy"). **Worth a look** is a stablemate at a studio you already
+follow — someone new, at the same studio as an artist you've saved — so a stand you'd
+otherwise walk past gets a reason to stop. Style matching only ever fires for an artist
+already in your gallery: the show's own list carries no style data, so nothing is guessed.
+Switch to **All** for the plain, searchable A–Z list.
+
 #### Big London 2026 is already there
 
 The Big London Tattoo Show's published line-up ships with the app — **466 artists, with each
