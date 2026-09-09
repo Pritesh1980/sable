@@ -10,8 +10,12 @@ export default defineConfig({
   plugins: [react(), precachePlugin()],
   server: {
     // Dev-only: allow Cloudflare quick tunnels (`cloudflared tunnel --url ...`)
-    // so the dev server can be previewed from a phone. No production impact.
-    allowedHosts: ['.trycloudflare.com'],
+    // and Tailscale's MagicDNS hostnames (`<device>.<tailnet>.ts.net`) so the
+    // dev server can be reached from a phone without going through a tunnel.
+    // Vite's Host-header check only blocks hostnames, never bare IPs, so this
+    // is only needed when accessing by the tailnet's MagicDNS name rather than
+    // the raw 100.x.x.x address. No production impact.
+    allowedHosts: ['.trycloudflare.com', '.ts.net'],
   },
   test: {
     environment: 'jsdom',
