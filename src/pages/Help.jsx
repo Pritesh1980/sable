@@ -80,6 +80,8 @@ const SECTIONS = [
       'The index opens on Top picks: Must see is whichever of your own gallery is at the show, each with a reason (your ranking, matching styles); Worth a look is someone new at a studio you already follow. Switch to All for the plain searchable list.',
       'Show sites load their artist list as you scroll, so tap Copy the grabber and save it as a Safari bookmark once. Then tap that bookmark on the show’s artist list: it scrolls the whole thing for you and sends the artists back into Sable. Pasting the list in by hand still works too.',
       'From the index you can search the line-up, filter to the artists you already follow, add a new one to your gallery in a tap, and flag who you want to find on the floor. A later paste merges into the list rather than replacing it.',
+      'Competition winners does the same for a show’s results board. Paste the categories and placings in — award category on its own line, then "1st - Name @handle" under it — and Sable groups them by category, whole-show prizes first, telling you which winners are already in your gallery.',
+      'Tap + Add a photo of the winning tattoo on any winner to attach the shot you took of the trophy table. Photos stay on this device and survive a re-import, so you can add Saturday’s Best of Day and the rest after Sunday’s judging without losing them.',
       'Drawer → Studios groups your saved artists by the studio they work at, sorted by distance, with links to Instagram and the studio site.',
       'Assign an artist to a studio in the Classic gallery’s Manage mode (or the artist detail) to make them appear under Studios.',
     ],

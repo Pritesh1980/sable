@@ -3,8 +3,10 @@ import { CONVENTIONS, getConventionFavicon, mergeConventionOverrides, toggleConv
 import { mergeLineupEntries, parseLineup } from '../data/lineup'
 import { mergeLineupSeeds } from '../data/lineupSeeds'
 import { parseLineupHash } from '../data/lineupGrabber'
+import { mergeWinnerEntries, setWinnerPhoto } from '../data/winners'
 import { createArtist } from '../data/artists'
 import ConventionLineup from '../components/ConventionLineup'
+import ConventionWinners from '../components/ConventionWinners'
 import Logo from '../components/Logo'
 
 function DistanceBadge({ distanceMiles }) {
@@ -107,7 +109,7 @@ function AttendeesEditor({ artists, attendingIds, onToggle }) {
   )
 }
 
-function HeroCard({ convention, artists, attendingIds, onToggle, lineupProps }) {
+function HeroCard({ convention, artists, attendingIds, onToggle, lineupProps, winnerProps }) {
   return (
     <div id={`convention-${convention.id}`} className="bg-gradient-to-br from-accent/10 to-ink-card border border-accent/40 rounded-xs p-6 animate-slide-up">
       <div className="flex items-start gap-4">
@@ -138,11 +140,17 @@ function HeroCard({ convention, artists, attendingIds, onToggle, lineupProps }) 
         attendingIds={attendingIds}
         {...lineupProps}
       />
+      <ConventionWinners
+        convention={convention}
+        artists={artists}
+        attendingIds={attendingIds}
+        {...winnerProps}
+      />
     </div>
   )
 }
 
-function ConventionCard({ convention, artists, attendingIds, onToggle, lineupProps }) {
+function ConventionCard({ convention, artists, attendingIds, onToggle, lineupProps, winnerProps }) {
   return (
     <div
       id={`convention-${convention.id}`}
@@ -185,6 +193,12 @@ function ConventionCard({ convention, artists, attendingIds, onToggle, lineupPro
         attendingIds={attendingIds}
         {...lineupProps}
       />
+      <ConventionWinners
+        convention={convention}
+        artists={artists}
+        attendingIds={attendingIds}
+        {...winnerProps}
+      />
     </div>
   )
 }
@@ -196,6 +210,8 @@ export default function Conventions({
   setConventionOverrides = () => {},
   conventionLineups = {},
   setConventionLineups = () => {},
+  conventionWinners = {},
+  setConventionWinners = () => {},
 }) {
   const merged = mergeConventionOverrides(conventionOverrides)
   const attendanceById = Object.fromEntries(merged.map((c) => [c.id, c.attendingArtistIds]))
@@ -269,6 +285,64 @@ export default function Conventions({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Results trickle out: Best of Day goes up on the Saturday, the rest after the
+  // Sunday judging. So an import merges, exactly as the line-up does — and
+  // mergeWinnerEntries protects the one thing a re-import can't replace, the
+  // photo of the winning piece.
+  function importWinners(conventionId, entries) {
+    setConventionWinners((prev) => ({
+      ...prev,
+      [conventionId]: {
+        entries: mergeWinnerEntries(prev?.[conventionId]?.entries || [], entries),
+        updatedAt: new Date().toISOString(),
+        cleared: false,
+      },
+    }))
+  }
+
+  function clearWinners(conventionId) {
+    setConventionWinners((prev) => ({
+      ...prev,
+      [conventionId]: { entries: [], updatedAt: new Date().toISOString(), cleared: true },
+    }))
+  }
+
+  // The component knows which row it is; the page knows which show that row
+  // belongs to. Keeping the write here is what stops one convention's photo
+  // landing on another's board.
+  function setPhoto(conventionId, key, photo) {
+    setConventionWinners((prev) => ({
+      ...prev,
+      [conventionId]: {
+        ...prev?.[conventionId],
+        entries: setWinnerPhoto(prev?.[conventionId]?.entries || [], key, photo),
+        updatedAt: new Date().toISOString(),
+      },
+    }))
+  }
+
+  // Same two-part job as adding from the line-up: into the gallery to research,
+  // and flagged as attending so they turn up on the floor plan.
+  function addFromWinners(conventionId, draft) {
+    const artist = createArtist(draft, artists)
+    if (!artist) return
+    setArtists((prev) => [...prev, artist])
+    if (!(attendanceById[conventionId] || []).includes(artist.id)) {
+      toggle(conventionId, artist.id)
+    }
+  }
+
+  function winnerPropsFor(conventionId) {
+    return {
+      entries: conventionWinners?.[conventionId]?.entries || [],
+      onImport: (entries) => importWinners(conventionId, entries),
+      onClear: () => clearWinners(conventionId),
+      onAddArtist: (draft) => addFromWinners(conventionId, draft),
+      onToggleAttending: (artistId) => toggle(conventionId, artistId),
+      onSetPhoto: (key, photo) => setPhoto(conventionId, key, photo),
+    }
+  }
+
   function lineupPropsFor(conventionId) {
     return {
       entries: mergeLineupSeeds(conventionLineups, conventionId),
@@ -331,6 +405,7 @@ export default function Conventions({
             attendingIds={attendanceById[c.id] || []}
             onToggle={(artistId) => toggle(c.id, artistId)}
             lineupProps={lineupPropsFor(c.id)}
+            winnerProps={winnerPropsFor(c.id)}
           />
         ))}
 
@@ -343,6 +418,7 @@ export default function Conventions({
               attendingIds={attendanceById[c.id] || []}
               onToggle={(artistId) => toggle(c.id, artistId)}
               lineupProps={lineupPropsFor(c.id)}
+              winnerProps={winnerPropsFor(c.id)}
             />
           ))}
         </div>

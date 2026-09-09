@@ -13,6 +13,11 @@ const PURGE_KEYS = [
   'tattoo_boards',
   'tattoo_artists_meta',
   'tattoo_convention_attending',
+  // Winners, but not tattoo_convention_lineups: a line-up is a show's published
+  // exhibitor list, the same for everyone and no one's private data. A winners
+  // board carries photos the user took of the winning pieces, so it leaves with
+  // them.
+  'tattoo_convention_winners',
   'tattoo_img_migrated_v1',
 ]
 

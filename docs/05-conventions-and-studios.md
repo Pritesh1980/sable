@@ -114,6 +114,57 @@ a shipped line-up, and it stays cleared until you import again. Anything you imp
 on this device only (it's re-importable in seconds); the artists you add from it sync as
 normal.
 
+### Competition winners
+
+Every show runs competitions — Best of Show, Best Black & Grey, Best Large Colour — and
+puts the results up on a board by the stage on the last afternoon. That board is the most
+useful list the convention produces: a room of judges has just picked the ten or twenty
+best pieces out of a line-up of five hundred, already sorted into the style brackets your
+gallery is tagged by.
+
+**Competition winners** sits under the artist index on every convention card, and works the
+same way: paste it in, and Sable turns it into a board you can work.
+
+**Paste the results.** Put the award category on its own line, then the placings under it:
+
+```
+Best of Show
+1st - Oscar Akermo @oscarakermo
+
+Best Black & Grey
+1st - Zoia @zoia.ink
+2nd - Martin Kubala @kubalizmus - Nordic Ink
+```
+
+Sable understands the shorthand shows actually use — `1st`/`First`/`Winner`, `B&G` for
+Black & Grey, a category with or without the word *Best* — and the one-line form
+`Best Colour | 1st | Name @handle` if that's how you have it. Categories it doesn't
+recognise are kept as you typed them rather than dropped, so a one-off *Best Tribal* still
+shows up. Anything that isn't a result — the "congratulations to everyone who entered"
+paragraph, page headings — is left out.
+
+**Then work it.** Winners are grouped by category, whole-show prizes first, and ordered
+1st → 2nd → 3rd within each. On every row you can:
+
+- See at a glance whether the winner is **already in your gallery** (their rank shows) or
+  is **new to you** (an **Add** button, which files them as *researching* with the award in
+  their notes and flags them as attending that show).
+- Tap **Attending?** on someone you already have.
+- Open their Instagram from the handle.
+
+**Add the winning tattoo.** Tap *+ Add a photo of the winning tattoo* on any row and pick
+the shot off your camera roll — everyone photographs the trophy table anyway. The photo is
+compressed on the way in and shown on the row from then on. It's the difference between a
+list of names and a record of *what actually won*.
+
+A later import **merges**, so you can paste Saturday's Best of Day when it goes up and add
+the rest after Sunday's judging without losing anything — including photos you've already
+attached, which are the one part a re-import can't bring back. **Clear results** empties the
+board.
+
+Winners are stored **on this device only** and are cleared when you sign out, because the
+photos are yours. The artists you add from the board sync as normal.
+
 ---
 
 ## Studios

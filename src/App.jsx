@@ -42,6 +42,10 @@ function AppShell() {
   // of rows of someone else's data, re-imported from the source in seconds, and
   // what you keep from it — the artists you add — syncs through the gallery.
   const [conventionLineups, setConventionLineups] = useStorage('tattoo_convention_lineups', {})
+  // Device-local for the same reasons, plus one of its own: a winners board
+  // carries photos of the winning pieces, which are bulky and belong to whoever
+  // shot them. The artists you keep off it sync through the gallery.
+  const [conventionWinners, setConventionWinners] = useStorage('tattoo_convention_winners', {})
   const mergedConventions = mergeConventionOverrides(conventionOverrides)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const navigate = useNavigate()
@@ -69,7 +73,7 @@ function AppShell() {
             <Route path="/pipeline" element={<Dashboard artists={artists} setArtists={setArtists} ideas={ideas} boards={boards} mergedConventions={mergedConventions} />} />
             <Route path="/gallery" element={<Gallery artists={artists} setArtists={setArtists} mergedConventions={mergedConventions} />} />
             <Route path="/brief" element={<Brief ideas={ideas} setIdeas={setIdeas} artists={artists} mergedConventions={mergedConventions} boards={boards} setBoards={setBoards} />} />
-            <Route path="/conventions" element={<Conventions artists={artists} setArtists={setArtists} conventionOverrides={conventionOverrides} setConventionOverrides={setConventionOverrides} conventionLineups={conventionLineups} setConventionLineups={setConventionLineups} />} />
+            <Route path="/conventions" element={<Conventions artists={artists} setArtists={setArtists} conventionOverrides={conventionOverrides} setConventionOverrides={setConventionOverrides} conventionLineups={conventionLineups} setConventionLineups={setConventionLineups} conventionWinners={conventionWinners} setConventionWinners={setConventionWinners} />} />
             <Route path="/studios" element={<Studios artists={artists} />} />
             <Route path="/concepts" element={<Concepts concepts={concepts} setConcepts={setConcepts} artists={artists} ideas={ideas} />} />
             <Route path="/boards" element={<Navigate to="/brief?tab=boards" replace />} />
