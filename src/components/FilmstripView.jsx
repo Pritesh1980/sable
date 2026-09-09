@@ -183,7 +183,7 @@ const NUDGE_IDLE_RELEASE_MS = 700
 // only a state change (not a ref mutation) repaints to reflect it.
 export default function FilmstripView({ artists, onOpenArtist, onSetRank, onSetStatus }) {
   const [pinnedId, setPinnedId] = useState(null)
-  const pinnedIndexRef = useRef(null)
+  const [pinnedIndex, setPinnedIndex] = useState(null)
   const idleTimerRef = useRef(null)
 
   useEffect(() => () => clearTimeout(idleTimerRef.current), [])
@@ -195,7 +195,7 @@ export default function FilmstripView({ artists, onOpenArtist, onSetRank, onSetS
   // fixing it a tick later in an effect.
   if (pinnedId && !artists.some((a) => a.id === pinnedId)) {
     setPinnedId(null)
-    pinnedIndexRef.current = null
+    setPinnedIndex(null)
   }
 
   let displayArtists = artists
@@ -203,7 +203,7 @@ export default function FilmstripView({ artists, onOpenArtist, onSetRank, onSetS
     const rest = artists.slice()
     const at = rest.findIndex((a) => a.id === pinnedId)
     const [pinned] = rest.splice(at, 1)
-    const insertAt = Math.max(0, Math.min(rest.length, pinnedIndexRef.current ?? at))
+    const insertAt = Math.max(0, Math.min(rest.length, pinnedIndex ?? at))
     rest.splice(insertAt, 0, pinned)
     displayArtists = rest
   }
@@ -211,12 +211,12 @@ export default function FilmstripView({ artists, onOpenArtist, onSetRank, onSetS
   function handleNudge(artist, displayIndex, delta) {
     if (pinnedId !== artist.id) {
       setPinnedId(artist.id)
-      pinnedIndexRef.current = displayIndex
+      setPinnedIndex(displayIndex)
     }
     clearTimeout(idleTimerRef.current)
     idleTimerRef.current = setTimeout(() => {
       setPinnedId(null)
-      pinnedIndexRef.current = null
+      setPinnedIndex(null)
     }, NUDGE_IDLE_RELEASE_MS)
     // Read from the live artist passed in this render, never a value
     // captured when the pin started — otherwise rapid clicks would keep
@@ -228,7 +228,7 @@ export default function FilmstripView({ artists, onOpenArtist, onSetRank, onSetS
     if (pinnedId !== artistId) return
     clearTimeout(idleTimerRef.current)
     setPinnedId(null)
-    pinnedIndexRef.current = null
+    setPinnedIndex(null)
   }
 
   return (

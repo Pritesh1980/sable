@@ -45,7 +45,7 @@ const NUDGE_IDLE_RELEASE_MS = 700
 // jumping lists) until it settles, same as any other nudge.
 export default function RankBoard({ artists = [], setArtists = () => {}, onClose = () => {} }) {
   const [pinnedId, setPinnedId] = useState(null)
-  const pinnedIndexRef = useRef(null)
+  const [pinnedIndex, setPinnedIndex] = useState(null)
   const idleTimerRef = useRef(null)
 
   // Own the body-scroll lock, saving/restoring the previous value so this and
@@ -70,7 +70,7 @@ export default function RankBoard({ artists = [], setArtists = () => {}, onClose
   // the pinned artist can disappear between renders (filtered, removed).
   if (pinnedId && !sorted.some((a) => a.id === pinnedId)) {
     setPinnedId(null)
-    pinnedIndexRef.current = null
+    setPinnedIndex(null)
   }
 
   let displayArtists = sorted
@@ -78,7 +78,7 @@ export default function RankBoard({ artists = [], setArtists = () => {}, onClose
     const rest = sorted.slice()
     const at = rest.findIndex((a) => a.id === pinnedId)
     const [pinned] = rest.splice(at, 1)
-    const insertAt = Math.max(0, Math.min(rest.length, pinnedIndexRef.current ?? at))
+    const insertAt = Math.max(0, Math.min(rest.length, pinnedIndex ?? at))
     rest.splice(insertAt, 0, pinned)
     displayArtists = rest
   }
@@ -86,12 +86,12 @@ export default function RankBoard({ artists = [], setArtists = () => {}, onClose
   function handleNudge(artist, displayIndex, delta) {
     if (pinnedId !== artist.id) {
       setPinnedId(artist.id)
-      pinnedIndexRef.current = displayIndex
+      setPinnedIndex(displayIndex)
     }
     clearTimeout(idleTimerRef.current)
     idleTimerRef.current = setTimeout(() => {
       setPinnedId(null)
-      pinnedIndexRef.current = null
+      setPinnedIndex(null)
     }, NUDGE_IDLE_RELEASE_MS)
     setArtists((prev) => (delta < 0 ? moveUp(prev, artist.id) : moveDown(prev, artist.id)))
   }
@@ -100,7 +100,7 @@ export default function RankBoard({ artists = [], setArtists = () => {}, onClose
     if (pinnedId !== artistId) return
     clearTimeout(idleTimerRef.current)
     setPinnedId(null)
-    pinnedIndexRef.current = null
+    setPinnedIndex(null)
   }
 
   const top5 = displayArtists.slice(0, 5)
