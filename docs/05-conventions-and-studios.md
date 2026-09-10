@@ -151,11 +151,9 @@ Sable understands the shorthand shows actually use — `1st`/`First`/`Winner`, `
 medal emoji, `B&G` for Black & Grey, a category with or without the word *Best*, and a
 day-prefixed heading like *Saturday - Small Healed* — plus the one-line form
 `Best Colour | 1st | Name @handle` if that's how you have it. Shows invent their own
-categories (*Asian Inspired*, *Ornamental*, *Best of Saturday*); those are kept as the show
-wrote them. Categories it doesn't
-recognise are kept as you typed them rather than dropped, so a one-off *Best Tribal* still
-shows up. Anything that isn't a result — the "congratulations to everyone who entered"
-paragraph, page headings — is left out.
+categories (*Asian Inspired*, *Ornamental*, *Best Tribal*), and those are kept exactly as
+the show wrote them rather than dropped. Anything that isn't a result — the
+"congratulations to everyone who entered" paragraph, page headings — is left out.
 
 **Then work it.** Winners are grouped by category, whole-show prizes first, and ordered
 1st → 2nd → 3rd within each. On every row you can:
@@ -163,12 +161,15 @@ paragraph, page headings — is left out.
 - See at a glance whether the winner is **already in your gallery** (their rank shows) or
   is **new to you** (an **Add** button, which files them as *researching* with the award in
   their notes and flags them as attending that show).
-- A rank followed by **?** means Sable worked the match out from the name rather than a
-  published handle — most results boards print no handles, and most of your gallery is
-  saved by handle with no name, so a winner's name is also tried as the opening of a handle
-  (*Adam Blakey* → `adamblakeytattoos`). Worth a glance to confirm it's the same person.
 - Tap **Attending?** on someone you already have.
 - Open their Instagram from the handle.
+
+**A rank followed by ?** means Sable worked the match out rather than reading it. Most
+results boards print no Instagram handles at all, and most of your gallery is saved by
+handle with no name — so with nothing to match exactly, a winner's name is also tried as
+the *opening of a handle* (*Adam Blakey* → `adamblakeytattoos`). It only does this when
+the name is distinctive enough and points at exactly one artist, so a near-miss stays
+unmatched instead of pinning an award on the wrong person. Worth a glance to confirm.
 
 **Add the winning tattoo.** Tap *+ Add a photo of the winning tattoo* on any row and pick
 the shots off your camera roll — the piece itself, the trophy, the stage photo. You can add

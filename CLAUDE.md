@@ -47,9 +47,13 @@ This is a personal app for one user (the owner) + occasional sharing with their 
   (`src/data/imageCodec.js`) wired into `useStorage` — the in-memory value stays a
   displayable URL (so consumers like STL export are unchanged) while only `{ key }`
   is persisted/synced. Device-local and NOT synced: `tattoo_theme`, `tattoo_font`,
-  `openai_api_key`, `gemini_api_key`, and the Taste Engine's embedding index
+  `openai_api_key`, `gemini_api_key`, the Taste Engine's embedding index
   (IndexedDB `tattoo-style-index-v1` — derivable from images, keyed by model id,
-  rebuilt per device). JSON export/import backup still available.
+  rebuilt per device), `tattoo_convention_lineups`, `tattoo_convention_winners`,
+  and the winner-photo bytes (IndexedDB `tattoo-winner-photos-v1`). The two
+  convention stores differ on sign-out: line-ups stay (a show's published
+  exhibitor list is nobody's private data), winners are purged (they carry photos
+  the user took). JSON export/import backup still available.
 
 ### PWA Requirements
 - `manifest.json` with app name, icons, dark background colour
@@ -114,6 +118,51 @@ A personal mood board / brief section.
   images. Only the user's own imports are stored under `tattoo_convention_lineups`
   — deliberately **not** a sync collection: it is bulky, re-importable in seconds, and what you
   keep from it syncs as gallery artists
+- **Competition winners** per convention (`src/data/winners.js`,
+  `src/components/ConventionWinners.jsx`, Sept 2026): the award board a show posts on the
+  last afternoon, turned into the same kind of index as the line-up — grouped by award
+  category (whole-show prizes first, 1st→3rd within), cross-referenced against the gallery,
+  one-tap add. A line-up is 500 names; the results are the ten-to-twenty a room of judges
+  just picked out of them, already sorted into the style brackets the gallery is tagged by,
+  which makes it the highest-signal list a convention produces. Paste-in, same as line-ups.
+  **Three things about real results data that are not obvious and that a from-scratch
+  parser gets wrong** (all learned by checking against
+  `brightontattoo.com/news/2026-competition-winners` and Big London winners' own Instagram
+  posts, Sept 2026 — the first version of this parser was written against an *invented*
+  format and got real data almost entirely wrong):
+  1. **The published row is `1st Place - <collector> tattooed by <artist>, <studio>, <town>`.**
+     The name that comes *first* is the collector wearing the tattoo; the artist is the one
+     after **"tattooed by"**. Convention comps work that way — the collector walks the
+     stage, the trophy credits the artist. Sable is an app about artists, so the artist is
+     the winner and the collector is kept as `collector` for context. Guessing by position
+     files every winner under the wrong person.
+  2. **Shows invent their own categories** ("Asian Inspired", "Ornamental", "Best of
+     Saturday", plus a size × finish grid). A heading the taxonomy has never met and that
+     doesn't start with "Best" is undecidable from its own line — it looks exactly like a
+     person's name. `parseWinners` settles it by **lookahead**: a heading has a result row
+     under it, a trailing "Thanks everyone" does not.
+  3. **Most boards publish no Instagram handles at all** (Brighton 2026: 18 winners, zero
+     handles), while most of `DEFAULT_ARTISTS` is saved the other way round — a handle with
+     `name: ''`. Exact matching therefore connects *nothing*. `indexWinners` also tries the
+     winner's name as the **opening of a handle** ("Adam Blakey" → `adamblakeytattoos`),
+     guarded by an exact-match-wins rule, a minimum length, and a uniqueness requirement;
+     rows carry `matchedBy` so the UI can mark an inferred match with `?`. A near-miss (the
+     show's own "Blackey"/"Blakey" typo) deliberately fails — putting an award on the wrong
+     artist is worse than missing one.
+  Results are **not fetchable from the app**: of the seven shows only Brighton publishes
+  them as server-rendered text, and even that page sends no `access-control-allow-origin`,
+  so a browser fetch is CORS-blocked (the same wall that produced the line-up grabber).
+  Instagram/Facebook posts are the real source, which is why the paste box is the input.
+  **Do not add a Gemini "look up the winners" button**: `discovery.js` calls Gemini with no
+  search grounding, and fabricating award results about named real people is the worst
+  failure mode this app has.
+  Stored under `tattoo_convention_winners` — device-local like line-ups, **and additionally
+  purged on sign-out** (`src/backend/purge.js`), because unlike a published exhibitor list a
+  winners board carries photos the user took. Photos themselves live in **IndexedDB**
+  (`src/data/winnerPhotos.js`, `tattoo-winner-photos-v1`) with only an id on the record:
+  winners arrive as phone screenshots and a dozen data URLs would blow the ~5MB origin
+  quota — which is *shared with the gallery's offline cache*, so it takes that down too.
+  Cropped winner photos live in the gitignored `public/images/winners/`.
 
 ### 4. AI Concept Generator (Concepts page)
 - Text prompt → copy a structured prompt into ChatGPT/Claude/Gemini and paste the result back, **or** generate an image directly with a user-supplied OpenAI or Gemini key
@@ -170,6 +219,7 @@ unseeded — ideas are the user's own.
 - Artist ↔ idea/concept matching (tag-overlap, `src/data/planning.js`)
 - Status tracking (idea → booked → done; per-artist shortlist statuses)
 - Home pipeline (shortlist stages), Studios, Settings and Help pages; four gallery views + swipe-ranking; Manage merged into Artists
+- Convention artist index (line-ups) and competition winners, both cross-referenced against the gallery
 
 **Still to do (see `BACKLOG.md` / GitHub Issues):**
 When looking for more work, inspect the open GitHub issues labelled `backlog`
@@ -178,7 +228,16 @@ before proposing new tasks; `BACKLOG.md` is only the local pointer/index.
 - AWS S3 + CloudFront deploy — now only needed for real accounts + custom domain
   (the public demo is already live on GitHub Pages)
 - Read-only shareable link for the tattoo artist (#7)
-- Convention artist attendance auto-lookup
+- Convention artist attendance auto-lookup. **Researched 2026-09-10, do not redo the
+  survey:** of the seven curated shows only Brighton publishes results/attendance as
+  server-rendered text (`brightontattoo.com/news/<year>-competition-winners`); Tattoo
+  Freeze has a `/<year>-winners` page that stopped after 2022; UKTTA, UK Tattoo Fest and
+  Big London post to Instagram/Facebook only. And Brighton's page sends no
+  `access-control-allow-origin`, so the PWA cannot fetch even that one — the same CORS
+  wall that produced the line-up grabber bookmarklet. Viable routes are therefore a
+  grabber-style bookmarklet, or screenshot intake through Gemini vision (which is how the
+  data actually arrives). Not viable: a Gemini text lookup — `discovery.js` has no search
+  grounding, and inventing award results about named real people is unacceptable.
 - Web Share Target (#22) — was blocked on "a deployment"; the Pages PWA is now a
   live installable HTTPS app, so this is likely unblocked
 

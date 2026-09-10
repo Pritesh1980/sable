@@ -43,11 +43,17 @@ an idea you want to place, or a generated visual that helps identify the right a
 ## 1. Discover an artist and decide where they belong
 
 The quickest path starts from an Instagram screenshot. A handle or profile URL works
-too, and every AI-prefilled field remains a suggestion for the user to verify.
+too, and every AI-prefilled field remains a suggestion for the user to verify. A
+convention is the other way in: its **artist index** and its **competition winners**
+both land you on the same verify-and-add step.
 
 ```mermaid
 flowchart TB
   START(["Find an artist on Instagram"])
+  SHOW(["Or: spot one at a convention"])
+  RADARIN{"Which list?"}
+  LINEUP["Artist index<br/>the show's published line-up"]
+  WINNERS["Competition winners<br/>grouped by award category"]
   CAPTURE{"What do you have?"}
   SHOT["Paste, drop, or choose<br/>a screenshot"]
   HANDLE["Paste handle or profile URL"]
@@ -68,6 +74,9 @@ flowchart TB
   PARK["Maybe or Pass"]
 
   START --> CAPTURE
+  SHOW --> RADARIN
+  RADARIN -- "everyone attending" --> LINEUP --> VERIFY
+  RADARIN -- "who the judges picked" --> WINNERS --> VERIFY
   CAPTURE -- "screenshot" --> SHOT --> KEY
   CAPTURE -- "handle or URL" --> HANDLE --> VERIFY
   KEY -- yes --> ANALYSE --> VERIFY
@@ -87,6 +96,10 @@ flowchart TB
 Ranking and status answer different questions. Rank is one global preference order;
 status says what should happen next. Moving someone to **Contact next** does not change
 their rank, and moving them to **Maybe** does not delete their research.
+
+Adding from either convention list does both halves of the job at once: the artist
+lands in the gallery as *researching*, and is flagged as attending that show. Winners
+arrive with the award already in their notes, so the reason you saved them survives.
 
 ---
 

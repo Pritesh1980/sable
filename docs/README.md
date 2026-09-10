@@ -65,7 +65,7 @@ The same guidance is built into the app under **⋯ → Help**:
 2. **[Managing artists](02-managing-artists.md)** — add artists, photos, tags, status, notes.
 3. **[Gallery & ranking](03-gallery-and-ranking.md)** — the classic browse views, filtering, and ranking.
 4. **[Ideas & boards](04-brief-and-boards.md)** — capture ideas, link artists, build boards.
-5. **[Conventions & studios](05-conventions-and-studios.md)** — shows near you, where artists work.
+5. **[Conventions & studios](05-conventions-and-studios.md)** — shows near you, their artist line-ups and competition winners, and where artists work.
 6. **[AI concepts](06-concepts.md)** — generate in an artist's style, prompt packs, variants, relief STLs.
 7. **[Settings, backup & restore](07-backup-and-settings.md)** — account, backups, and moving data.
 

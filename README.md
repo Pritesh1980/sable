@@ -54,7 +54,7 @@ The sign-in screen also links straight to it (**No account? View the demo →**)
 - **Artists**: ranked artist gallery with four views — filmstrip, compare, grid, and style wall — plus browse and swipe-ranking modes.
 - **Brief**: tattoo ideas with descriptions, placements, style tags, reference images, linked artists, and copyable artist-ready briefs.
 - **Mood Boards**: grouped ideas that can be ordered and copied as a board brief.
-- **Convention Radar**: curated UK convention shortlist with distances from Milton Keynes and artist attendance override support.
+- **Convention Radar**: curated UK convention shortlist with distances from Milton Keynes and artist attendance override support. Each show also takes its published **artist index** (Big London 2026 ships with the app; a bookmarklet grabber handles other shows' lazy-loading lists) and its **competition winners** — pasted in, grouped by award category, cross-referenced against the gallery, with photos of the winning tattoos attached per winner.
 - **Studios**: artist grouping by studio and reachability.
 - **AI Concepts**: multi-provider prompt packs (ChatGPT, Adobe Firefly, Gemini, Claude) built from free text or a Brief idea, paste-back of AI results as rated variants with a "Best" pick, optional in-app image generation via an OpenAI (DALL·E 3) or Gemini key with artist-style steering, relief STL export from image results, and style-based artist matching on each concept.
 - **Manage**: artist CRUD, tags, statuses, studios, notes, image import, and backup/import.
@@ -130,9 +130,9 @@ Seed data lives in `src/data/`, with the artist list in `src/data/artists.js` an
 
 Runtime edits are stored locally in the browser and mirrored to the selected backend:
 
-- `localStorage`: artist metadata, ideas, boards, concepts, theme, font size, convention overrides
-- IndexedDB: artist image arrays and blob bytes
-- Device-local only (never synced): theme, font size, API keys
+- `localStorage`: artist metadata, ideas, boards, concepts, theme, font size, convention overrides, convention line-ups and winner boards
+- IndexedDB: artist image arrays and blob bytes, the on-device style index, and winner-tattoo photos (bulky, so only an id goes in `localStorage`)
+- Device-local only (never synced): theme, font size, API keys, the style index, convention line-ups and winner boards
 
 Use **Manage → Export Backup** before clearing browser data or doing larger data edits.
 The JSON includes artists, ideas, boards, concepts, notes, ranks, tags, convention

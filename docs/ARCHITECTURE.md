@@ -281,6 +281,28 @@ Legacy inline images migrate to blobs on first authenticated load.
 
 Documents stay small enough to sync cheaply; bytes move once.
 
+### The same split, without the sync half
+
+Photos of competition-winning tattoos (`src/data/winnerPhotos.js`) take a shorter
+version of this path. The record keeps an id and the bytes go to IndexedDB — but
+directly, with no codec and no blob storage, because the winners collection is
+device-local and never syncs.
+
+The reason for splitting at all is different too, and worth stating because it is
+easy to get wrong twice. For synced collections the driver is *sync cost*: a
+document carrying base64 is expensive to move. Here the driver is **quota**.
+Winners arrive as phone screenshots, and a dozen data URLs exceed the browser's
+~5MB per-origin `localStorage` budget — a budget shared with the gallery's entire
+offline cache, so overflowing it does not degrade the winners board, it breaks the
+app. A contract test asserts `winnerPhotos.js` never calls `localStorage`.
+
+| | Synced collections | Winner photos |
+|---|---|---|
+| Record holds | `{ key }` canonical ref | `photoIds: []` |
+| Bytes live in | blob storage, via codec | IndexedDB, directly |
+| Split exists because | sync cost | localStorage quota |
+| Survives sign-out | yes, it is the user's synced data | no, purged with the board |
+
 ---
 
 ## 4. On-device taste model
@@ -460,6 +482,26 @@ asserts the invariant. See `src/test/precache.test.js`,
 `src/test/swStrategy.test.js`, `src/test/styleIndex.test.js`,
 `src/test/readmeClaims.test.js`.
 
+### A parser is only as good as the data it was written against
+
+TDD guarantees the code matches the test. It guarantees nothing about whether the
+test matches reality — and for a parser, that gap is the whole risk.
+
+The winners parser (`src/data/winners.js`) shipped green: 61 tests, every one
+passing, written against a plausible-looking results format. Checked afterwards
+against an actual published board it read the literal word "Place" as the artist's
+name, dropped two rows in three, and — because a real row reads
+`1st Place - <collector> tattooed by <artist>` — credited the *collector wearing
+the tattoo* rather than the artist, which is backwards for an app about artists.
+None of those failures were reachable from the invented format. The tests were
+self-consistent and wrong together.
+
+So parsers here are fixtured from **verbatim source data**, and the fixture says
+where it came from and when (`src/test/winnersRealFormat.test.js`). The same
+applies to `src/data/lineup.js`, whose fixtures come from real pasted line-ups.
+When a parser's input is something a third party publishes, an invented fixture
+is a guess wearing a test's clothing.
+
 > **Running the suite with worktrees present.** Agent worktrees live inside the repo
 > (`.worktrees/`, `.claude/worktrees/`) and Vitest globs their copies from the repo
 > root, roughly doubling the reported totals. Use
@@ -509,7 +551,7 @@ artefact (#23). The protocol is written down: re-run isolated, and CI is the arb
 |---|---|
 | `src/backend/` | The vendor boundary: `index.js` factory, `sync.js`, `dirty.js`, `owner.js`, `purge.js`, `local/`, `supabase/` |
 | `src/hooks/` | `useStorage.js`, `useArtistStorage.js` — local-first read/write and reconcile |
-| `src/data/` | Domain data and logic: artists, planning, embeddings, taste, screenshot intake, demo seed |
+| `src/data/` | Domain data and logic: artists, planning, embeddings, taste, screenshot intake, convention line-ups and winners, demo seed |
 | `src/sw/` | Pure service-worker logic, contract-tested against `public/sw.js` |
 | `src/pages/`, `src/components/` | UI, 9 feature routes plus 2 legacy redirects |
 | `src/test/` | The suite, including the contract tests |
