@@ -163,6 +163,10 @@ paragraph, page headings — is left out.
 - See at a glance whether the winner is **already in your gallery** (their rank shows) or
   is **new to you** (an **Add** button, which files them as *researching* with the award in
   their notes and flags them as attending that show).
+- A rank followed by **?** means Sable worked the match out from the name rather than a
+  published handle — most results boards print no handles, and most of your gallery is
+  saved by handle with no name, so a winner's name is also tried as the opening of a handle
+  (*Adam Blakey* → `adamblakeytattoos`). Worth a glance to confirm it's the same person.
 - Tap **Attending?** on someone you already have.
 - Open their Instagram from the handle.
 

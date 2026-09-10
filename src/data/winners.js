@@ -380,14 +380,50 @@ export function indexWinners(entries = [], artists = []) {
   return entries.map((entry) => {
     const viaHandle = entry.handle ? byHandle.get(entry.handle) : null
     const viaName = !viaHandle && entry.name ? byName.get(normaliseName(entry.name)) : null
-    const artist = viaHandle || viaName || null
+    const inferred = !viaHandle && !viaName ? inferFromHandle(entry.name, artists) : null
+    const artist = viaHandle || viaName || inferred || null
     return {
       ...entry,
       label: entry.name || (entry.handle ? `@${entry.handle}` : ''),
       savedArtistId: artist ? artist.id : null,
       artist,
+      // Which evidence connected this row, so the UI can be honest about a
+      // match it worked out rather than one the show published.
+      matchedBy: viaHandle ? 'handle' : viaName ? 'name' : inferred ? 'name~handle' : null,
     }
   })
+}
+
+// Shortest name that is distinctive enough to risk this on. Below it, a common
+// first name would start matching handles that merely begin the same way.
+const MIN_INFERRED_NAME = 8
+
+// A results board prints "Adam Blakey"; the gallery holds `adamblakeytattoos`
+// with no name at all, because the owner saved a handle they follow. Neither
+// exact test can bridge that, so the name is tried as the opening of a handle —
+// artists overwhelmingly build handles out of their own name.
+//
+// Two guards keep it from inventing links: the name must be long enough to be
+// distinctive, and it must single out exactly one artist. A near-miss (the
+// "Blackey" typo on Brighton's own page) simply fails, which is the right
+// outcome — attaching an award to the wrong artist is worse than missing one.
+function inferFromHandle(name, artists) {
+  const key = normaliseName(name)
+  if (!key) return null
+
+  // "Zoia Ink" against `zoia.ink` is the whole handle once punctuation goes —
+  // exact evidence, just stored in the other field, so no length guard.
+  const exact = artists.filter((a) => normaliseName(a.handle) === key)
+  if (exact.length === 1) return exact[0]
+  if (exact.length > 1) return null
+
+  // A prefix is weaker evidence, so the name has to be distinctive first.
+  if (key.length < MIN_INFERRED_NAME) return null
+  const hits = artists.filter((a) => {
+    const handle = normaliseName(a.handle)
+    return handle && handle.startsWith(key)
+  })
+  return hits.length === 1 ? hits[0] : null
 }
 
 // Rows with no heading of their own still deserve to be shown.

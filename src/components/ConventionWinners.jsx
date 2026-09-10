@@ -125,8 +125,21 @@ function WinnerRow({ entry, convention, attending, onAddArtist, onToggleAttendin
         </div>
 
         {saved && entry.artist?.rank ? (
-          <span className="text-[0.6875rem] font-mono text-accent tracking-wide shrink-0">
+          <span
+            className="text-[0.6875rem] font-mono text-accent tracking-wide shrink-0"
+            // A results board that prints no handle can only be matched by
+            // working out that the name opens the handle. Say so, rather than
+            // showing a guess with the same confidence as a published handle.
+            title={
+              entry.matchedBy === 'name~handle'
+                ? `Matched to @${entry.artist.handle} from the name — check it is the same artist`
+                : undefined
+            }
+          >
             #{entry.artist.rank}
+            {entry.matchedBy === 'name~handle' && (
+              <span className="text-cream-muted/60" aria-label="likely match"> ?</span>
+            )}
           </span>
         ) : null}
 
