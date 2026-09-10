@@ -3,7 +3,8 @@ import { CONVENTIONS, getConventionFavicon, mergeConventionOverrides, toggleConv
 import { mergeLineupEntries, parseLineup } from '../data/lineup'
 import { mergeLineupSeeds } from '../data/lineupSeeds'
 import { parseLineupHash } from '../data/lineupGrabber'
-import { mergeWinnerEntries, setWinnerPhoto } from '../data/winners'
+import { mergeWinnerEntries, winnerKey } from '../data/winners'
+import { deletePhoto, newPhotoId, putPhoto, withPhotoId, withoutPhotoId } from '../data/winnerPhotos'
 import { createArtist } from '../data/artists'
 import ConventionLineup from '../components/ConventionLineup'
 import ConventionWinners from '../components/ConventionWinners'
@@ -310,15 +311,40 @@ export default function Conventions({
   // The component knows which row it is; the page knows which show that row
   // belongs to. Keeping the write here is what stops one convention's photo
   // landing on another's board.
-  function setPhoto(conventionId, key, photo) {
+  //
+  // The bytes go to IndexedDB first and only the id is put on the record, so the
+  // synced-shaped store stays small enough to live in localStorage — a dozen
+  // screenshots as data URLs would blow the origin quota (see winnerPhotos.js).
+  async function addPhoto(conventionId, key, dataUrl) {
+    const id = newPhotoId()
+    await putPhoto(id, dataUrl)
     setConventionWinners((prev) => ({
       ...prev,
       [conventionId]: {
         ...prev?.[conventionId],
-        entries: setWinnerPhoto(prev?.[conventionId]?.entries || [], key, photo),
+        entries: (prev?.[conventionId]?.entries || []).map((e) =>
+          winnerKey(e) === key ? withPhotoId(e, id) : e
+        ),
         updatedAt: new Date().toISOString(),
       },
     }))
+  }
+
+  // Drop the reference first, then the bytes: a failed delete leaves an orphan
+  // blob (invisible, reclaimed on clear), where the other order would leave a
+  // row pointing at nothing.
+  async function removePhoto(conventionId, key, photoId) {
+    setConventionWinners((prev) => ({
+      ...prev,
+      [conventionId]: {
+        ...prev?.[conventionId],
+        entries: (prev?.[conventionId]?.entries || []).map((e) =>
+          winnerKey(e) === key ? withoutPhotoId(e, photoId) : e
+        ),
+        updatedAt: new Date().toISOString(),
+      },
+    }))
+    await deletePhoto(photoId)
   }
 
   // Same two-part job as adding from the line-up: into the gallery to research,
@@ -339,7 +365,8 @@ export default function Conventions({
       onClear: () => clearWinners(conventionId),
       onAddArtist: (draft) => addFromWinners(conventionId, draft),
       onToggleAttending: (artistId) => toggle(conventionId, artistId),
-      onSetPhoto: (key, photo) => setPhoto(conventionId, key, photo),
+      onAddPhoto: (key, dataUrl) => addPhoto(conventionId, key, dataUrl),
+      onRemovePhoto: (key, photoId) => removePhoto(conventionId, key, photoId),
     }
   }
 

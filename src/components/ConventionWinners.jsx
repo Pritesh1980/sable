@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   groupWinners,
   indexWinners,
@@ -7,6 +7,7 @@ import {
   winnerCounts,
   winnerKey,
 } from '../data/winners'
+import { loadPhotos, photoIdsFor } from '../data/winnerPhotos'
 import { compressImages } from '../hooks/useImageUpload'
 
 // The results board, made useful after the show. A convention's line-up is 500
@@ -32,62 +33,69 @@ function PlacingBadge({ placing }) {
 }
 
 // The photo is the point of the feature, so it gets the width. Attaching runs
-// through the same compressImages the artist forms use, so a 12MP phone photo
-// doesn't land in localStorage at full size.
-function WinningTattoo({ entry, onSetPhoto }) {
+// through the same compressImages the artist forms use; the bytes then go to
+// IndexedDB (see winnerPhotos.js) and only the id reaches the stored record.
+// `photos` is the already-resolved id → data URL map for the whole board, so a
+// row renders without a fetch of its own.
+function WinningTattoo({ entry, photos, onAddPhoto, onRemovePhoto }) {
   const [busy, setBusy] = useState(false)
   const key = winnerKey(entry)
   const inputId = `winner-photo-${key.replace(/[^a-z0-9]/gi, '-')}`
+  const ids = (entry.photoIds || []).filter((id) => photos.has(id))
 
-  async function attach(file) {
-    if (!file || !file.type?.startsWith('image/')) return
+  async function attach(files) {
+    const picked = Array.from(files || []).filter((f) => f.type?.startsWith('image/'))
+    if (!picked.length) return
     setBusy(true)
     try {
-      const [dataUrl] = await compressImages([file])
-      if (dataUrl) onSetPhoto(key, dataUrl)
+      const dataUrls = await compressImages(picked)
+      for (const dataUrl of dataUrls) if (dataUrl) await onAddPhoto(key, dataUrl)
     } finally {
       setBusy(false)
     }
   }
 
-  if (entry.photo) {
-    return (
-      <div className="mt-1.5">
-        <img
-          src={entry.photo}
-          alt={`Winning tattoo — ${entry.label}`}
-          className="w-full max-h-64 object-contain bg-ink-black border border-ink-border rounded-xs"
-        />
-        <button
-          onClick={() => onSetPhoto(key, '')}
-          className="min-h-11 flex items-center text-[0.5625rem] font-mono text-cream-muted/50 tracking-widest uppercase hover:text-accent transition-colors"
-        >
-          Remove photo
-        </button>
-      </div>
-    )
-  }
-
   return (
     <div className="mt-0.5">
+      {ids.length > 0 && (
+        <ul className="flex gap-1.5 overflow-x-auto py-1.5">
+          {ids.map((id) => (
+            <li key={id} className="shrink-0 relative">
+              <img
+                src={photos.get(id)}
+                alt={`Winning tattoo — ${entry.label}`}
+                className="h-40 w-auto max-w-[70vw] object-contain bg-ink-black border border-ink-border rounded-xs"
+              />
+              <button
+                onClick={() => onRemovePhoto(key, id)}
+                aria-label={`Remove photo of ${entry.label}`}
+                className="absolute top-1 right-1 min-h-11 min-w-11 flex items-center justify-center text-[0.625rem] font-mono text-cream/80 bg-ink-black/70 rounded-xs hover:text-accent transition-colors"
+              >
+                ✕
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
       <label
         htmlFor={inputId}
         className="inline-flex items-center min-h-11 text-[0.5625rem] font-mono text-cream-muted/50 tracking-widest uppercase cursor-pointer hover:text-accent transition-colors"
       >
-        {busy ? 'Adding…' : '+ Add a photo of the winning tattoo'}
+        {busy ? 'Adding…' : ids.length ? '+ Add another photo' : '+ Add a photo of the winning tattoo'}
       </label>
       <input
         id={inputId}
         type="file"
         accept="image/*"
+        multiple
         className="sr-only"
-        onChange={(e) => attach(e.target.files?.[0])}
+        onChange={(e) => attach(e.target.files)}
       />
     </div>
   )
 }
 
-function WinnerRow({ entry, convention, attending, onAddArtist, onToggleAttending, onSetPhoto }) {
+function WinnerRow({ entry, convention, attending, onAddArtist, onToggleAttending, photos, onAddPhoto, onRemovePhoto }) {
   const saved = Boolean(entry.savedArtistId)
   const slug = entry.handle || entry.label.toLowerCase().replace(/\s+/g, '-')
   return (
@@ -147,7 +155,7 @@ function WinnerRow({ entry, convention, attending, onAddArtist, onToggleAttendin
           </span>
         )}
       </div>
-      <WinningTattoo entry={entry} onSetPhoto={onSetPhoto} />
+      <WinningTattoo entry={entry} photos={photos} onAddPhoto={onAddPhoto} onRemovePhoto={onRemovePhoto} />
     </li>
   )
 }
@@ -221,13 +229,33 @@ export default function ConventionWinners({
   onClear = () => {},
   onAddArtist = () => {},
   onToggleAttending = () => {},
-  onSetPhoto = () => {},
+  onAddPhoto = () => {},
+  onRemovePhoto = () => {},
 }) {
   const [expanded, setExpanded] = useState(false)
+  // Resolved id → data URL for the whole board. Loaded in one transaction when
+  // the ids change, so opening a card with a dozen winners is one IndexedDB
+  // round trip rather than one per row.
+  const [photos, setPhotos] = useState(() => new Map())
 
   const indexed = useMemo(() => indexWinners(entries, artists), [entries, artists])
   const counts = winnerCounts(indexed)
   const groups = useMemo(() => groupWinners(indexed), [indexed])
+
+  const photoIds = useMemo(() => photoIdsFor(entries), [entries])
+  const photoKey = photoIds.join(',')
+  useEffect(() => {
+    let live = true
+    // No early return for the empty case: loadPhotos([]) already resolves to an
+    // empty map, and clearing synchronously here would set state during the
+    // effect and cascade a render.
+    loadPhotos(photoIds)
+      .then((found) => { if (live) setPhotos(found) })
+      // A photo that won't load is a missing thumbnail, not a broken page.
+      .catch(() => {})
+    return () => { live = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [photoKey])
 
   return (
     <div className="mt-3 pt-3 border-t border-ink-border">
@@ -280,7 +308,9 @@ export default function ConventionWinners({
                     attending={attendingIds.includes(entry.savedArtistId)}
                     onAddArtist={onAddArtist}
                     onToggleAttending={onToggleAttending}
-                    onSetPhoto={onSetPhoto}
+                    photos={photos}
+                    onAddPhoto={onAddPhoto}
+                    onRemovePhoto={onRemovePhoto}
                   />
                 ))}
               </ul>

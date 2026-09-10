@@ -6,6 +6,7 @@ import { render, screen, fireEvent, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import Conventions from '../pages/Conventions'
 import { CONVENTIONS } from '../data/conventions'
+import { clearWinnerPhotos, putPhoto } from '../data/winnerPhotos'
 
 const ROOT = process.cwd()
 
@@ -111,16 +112,18 @@ describe('Conventions page — winners section', () => {
     expect(setConventionOverrides).toHaveBeenCalled()
   })
 
-  // The component hands the page a winner key and a photo; the page is what has
-  // to land it on the right row of the right convention. Removing an existing
-  // photo drives that same handler without needing a file input.
-  it('writes a photo change onto the right winner of the right convention', () => {
+  // The component hands the page a winner key and a photo id; the page is what
+  // has to land it on the right row of the right convention. Removing an
+  // existing photo drives that same handler without needing a file input.
+  it('drops a removed photo id from the right winner of the right convention', async () => {
+    await clearWinnerPhotos()
+    await putPhoto('p1', 'data:image/jpeg;base64,AAA')
     const setConventionWinners = vi.fn()
     const withPhoto = {
       [localConv.id]: {
         ...winners[localConv.id],
         entries: [
-          { ...winners[localConv.id].entries[0], photo: 'data:image/jpeg;base64,AAA' },
+          { ...winners[localConv.id].entries[0], photoIds: ['p1'] },
           winners[localConv.id].entries[1],
         ],
       },
@@ -128,13 +131,23 @@ describe('Conventions page — winners section', () => {
     renderConventions({ conventionWinners: withPhoto, setConventionWinners })
     const card = within(heroCard())
     fireEvent.click(card.getByRole('button', { name: /competition winners/i }))
-    fireEvent.click(card.getByRole('button', { name: /remove photo/i }))
+    fireEvent.click(await card.findByRole('button', { name: /remove photo of oscar akermo/i }))
 
     const next = setConventionWinners.mock.calls[0][0](withPhoto)
-    expect(next[localConv.id].entries[0].photo).toBe('')
+    expect(next[localConv.id].entries[0].photoIds).toEqual([])
     // The other winner, and every other convention, are untouched.
-    expect(next[localConv.id].entries[1].photo).toBeUndefined()
+    expect(next[localConv.id].entries[1].photoIds).toBeUndefined()
     expect(Object.keys(next)).toEqual([localConv.id])
+  })
+
+  // The whole point of the store: image bytes must not share the ~5MB origin
+  // quota with the gallery's offline cache. Comments may discuss localStorage;
+  // the code must never call it.
+  it('keeps the winner photo bytes out of localStorage entirely', () => {
+    const source = readFileSync(join(ROOT, 'src/data/winnerPhotos.js'), 'utf8')
+      .replace(/\/\/[^\n]*/g, '')
+    expect(source).not.toMatch(/localStorage\s*[.[]/)
+    expect(source).toContain('indexedDB.open')
   })
 })
 

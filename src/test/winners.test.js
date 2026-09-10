@@ -8,7 +8,6 @@ import {
   normaliseCategory,
   normalisePlacing,
   parseWinners,
-  setWinnerPhoto,
   winnerArtistDraft,
   winnerCounts,
   winnerKey,
@@ -208,11 +207,16 @@ describe('mergeWinnerEntries', () => {
     expect(merged[0].name).toBe('Oscar Akermo')
   })
 
-  it('preserves a photo the user attached when the row is re-imported', () => {
-    const withPhoto = { ...base, photo: 'data:image/jpeg;base64,AAA' }
+  it('preserves photos the user attached when the row is re-imported', () => {
+    const withPhoto = { ...base, photoIds: ['p1'] }
     const merged = mergeWinnerEntries([withPhoto], [{ ...base, name: 'Oscar Akermo' }])
-    expect(merged[0].photo).toBe('data:image/jpeg;base64,AAA')
+    expect(merged[0].photoIds).toEqual(['p1'])
     expect(merged[0].name).toBe('Oscar Akermo')
+  })
+
+  it('unions photos when both sides carry different shots of the same piece', () => {
+    const merged = mergeWinnerEntries([{ ...base, photoIds: ['p1'] }], [{ ...base, photoIds: ['p2'] }])
+    expect(merged[0].photoIds).toEqual(['p1', 'p2'])
   })
 
   it('caps the merged list', () => {
@@ -307,15 +311,15 @@ describe('groupWinners', () => {
 describe('winnerCounts', () => {
   it('counts winners, gallery matches and attached photos', () => {
     const counts = winnerCounts([
-      { savedArtistId: 'a', photo: 'data:x' },
-      { savedArtistId: null, photo: '' },
-      { savedArtistId: 'b', photo: '' },
+      { savedArtistId: 'a', photoIds: ['p1', 'p2'] },
+      { savedArtistId: null },
+      { savedArtistId: 'b', photoIds: [] },
     ])
-    expect(counts).toEqual({ total: 3, saved: 2, fresh: 1, photos: 1 })
+    expect(counts).toEqual({ total: 3, saved: 2, fresh: 1, photos: 2 })
   })
 })
 
-describe('winnerKey and setWinnerPhoto', () => {
+describe('winnerKey', () => {
   const entries = [
     { category: 'Best Colour', placing: 1, handle: 'oscarakermo', name: '', note: '' },
     { category: 'Best of Show', placing: 1, handle: 'oscarakermo', name: '', note: '' },
@@ -325,20 +329,8 @@ describe('winnerKey and setWinnerPhoto', () => {
     expect(winnerKey(entries[0])).not.toBe(winnerKey(entries[1]))
   })
 
-  it('attaches a photo to exactly one row', () => {
-    const next = setWinnerPhoto(entries, winnerKey(entries[0]), 'data:image/jpeg;base64,AAA')
-    expect(next[0].photo).toBe('data:image/jpeg;base64,AAA')
-    expect(next[1].photo).toBeUndefined()
-  })
-
-  it('removes the photo when given an empty value', () => {
-    const withPhoto = setWinnerPhoto(entries, winnerKey(entries[0]), 'data:x')
-    const cleared = setWinnerPhoto(withPhoto, winnerKey(entries[0]), '')
-    expect(cleared[0].photo).toBe('')
-  })
-
-  it('leaves the list alone for an unknown key', () => {
-    expect(setWinnerPhoto(entries, 'nope', 'data:x')).toEqual(entries)
+  it('is empty when there is nothing to identify the winner by', () => {
+    expect(winnerKey({ category: 'Best Colour', name: '', handle: '' })).toBe('')
   })
 })
 

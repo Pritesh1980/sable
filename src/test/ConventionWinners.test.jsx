@@ -1,5 +1,6 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, within } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react'
+import { clearWinnerPhotos, putPhoto } from '../data/winnerPhotos'
 import ConventionWinners from '../components/ConventionWinners'
 
 const convention = { id: 'big-london', name: 'Big London Tattoo Show' }
@@ -25,7 +26,8 @@ function renderWinners(props = {}) {
       onClear={vi.fn()}
       onAddArtist={vi.fn()}
       onToggleAttending={vi.fn()}
-      onSetPhoto={vi.fn()}
+      onAddPhoto={vi.fn()}
+      onRemovePhoto={vi.fn()}
       {...props}
     />
   )
@@ -152,11 +154,19 @@ describe('ConventionWinners — the board', () => {
 })
 
 describe('ConventionWinners — the winning tattoo', () => {
-  it('renders an attached photo', () => {
-    const withPhoto = [{ ...entries[0], photo: 'data:image/jpeg;base64,AAA' }]
+  // The record holds only ids; the bytes come back out of IndexedDB when the
+  // board opens, so these go through the real store rather than a stub.
+  beforeEach(async () => {
+    await clearWinnerPhotos()
+  })
+
+  const withPhoto = [{ ...entries[0], photoIds: ['p1'] }, entries[1]]
+
+  it('renders a photo the record points at', async () => {
+    await putPhoto('p1', 'data:image/jpeg;base64,AAA')
     renderWinners({ entries: withPhoto })
     open()
-    const img = screen.getByAltText(/winning tattoo — oscar akermo/i)
+    const img = await screen.findByAltText(/winning tattoo — oscar akermo/i)
     expect(img).toHaveAttribute('src', 'data:image/jpeg;base64,AAA')
   })
 
@@ -167,17 +177,25 @@ describe('ConventionWinners — the winning tattoo', () => {
     expect(within(row).getByLabelText(/add a photo of the winning tattoo/i)).toBeInTheDocument()
   })
 
-  it('removes a photo the user no longer wants', () => {
-    const onSetPhoto = vi.fn()
-    const withPhoto = [{ ...entries[0], photo: 'data:image/jpeg;base64,AAA' }]
-    renderWinners({ entries: withPhoto, onSetPhoto })
+  it('asks the page to drop the id when the photo is removed', async () => {
+    await putPhoto('p1', 'data:image/jpeg;base64,AAA')
+    const onRemovePhoto = vi.fn()
+    renderWinners({ entries: withPhoto, onRemovePhoto })
     open()
-    fireEvent.click(screen.getByRole('button', { name: /remove photo/i }))
-    expect(onSetPhoto).toHaveBeenCalledWith(expect.stringContaining('oscarakermo'), '')
+    fireEvent.click(await screen.findByRole('button', { name: /remove photo of oscar akermo/i }))
+    expect(onRemovePhoto).toHaveBeenCalledWith(expect.stringContaining('oscarakermo'), 'p1')
+  })
+
+  it('shows nothing rather than a broken image when the bytes are gone', async () => {
+    renderWinners({ entries: withPhoto })
+    open()
+    await waitFor(() => {
+      expect(screen.queryByAltText(/winning tattoo/i)).toBeNull()
+    })
+    expect(screen.getByTestId('winner-row-oscarakermo')).toHaveTextContent(/add a photo/i)
   })
 
   it('counts the photos on the board in the header', () => {
-    const withPhoto = [{ ...entries[0], photo: 'data:image/jpeg;base64,AAA' }, entries[1]]
     renderWinners({ entries: withPhoto })
     expect(screen.getByRole('button', { name: /competition winners/i })).toHaveTextContent(/1 photo/i)
   })

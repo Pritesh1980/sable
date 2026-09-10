@@ -136,9 +136,23 @@ Best Black & Grey
 2nd - Martin Kubala @kubalizmus - Nordic Ink
 ```
 
-Sable understands the shorthand shows actually use — `1st`/`First`/`Winner`, `B&G` for
-Black & Grey, a category with or without the word *Best* — and the one-line form
-`Best Colour | 1st | Name @handle` if that's how you have it. Categories it doesn't
+It also reads the format shows publish themselves, which looks like this:
+
+```
+Saturday - Small Healed.
+1st Place - Tia tattooed by Adam Blakey, New Mind, Huddersfield.
+```
+
+Note who is who: the first name is the **collector wearing the tattoo** and the artist is
+the one after *tattooed by*. Sable files the **artist** as the winner and keeps the
+collector as context, because the artist is who you're deciding about.
+
+Sable understands the shorthand shows actually use — `1st`/`First`/`Winner`, `1st Place`,
+medal emoji, `B&G` for Black & Grey, a category with or without the word *Best*, and a
+day-prefixed heading like *Saturday - Small Healed* — plus the one-line form
+`Best Colour | 1st | Name @handle` if that's how you have it. Shows invent their own
+categories (*Asian Inspired*, *Ornamental*, *Best of Saturday*); those are kept as the show
+wrote them. Categories it doesn't
 recognise are kept as you typed them rather than dropped, so a one-off *Best Tribal* still
 shows up. Anything that isn't a result — the "congratulations to everyone who entered"
 paragraph, page headings — is left out.
@@ -153,9 +167,14 @@ paragraph, page headings — is left out.
 - Open their Instagram from the handle.
 
 **Add the winning tattoo.** Tap *+ Add a photo of the winning tattoo* on any row and pick
-the shot off your camera roll — everyone photographs the trophy table anyway. The photo is
-compressed on the way in and shown on the row from then on. It's the difference between a
-list of names and a record of *what actually won*.
+the shots off your camera roll — the piece itself, the trophy, the stage photo. You can add
+several per winner. They're compressed on the way in and shown on the row from then on. It's
+the difference between a list of names and a record of *what actually won*.
+
+Photos are held in IndexedDB rather than alongside the rest of the winners data, because a
+handful of phone screenshots would otherwise fill the browser's small localStorage budget and
+take the gallery's offline cache down with it. The winner record itself only stores a
+reference.
 
 A later import **merges**, so you can paste Saturday's Best of Day when it goes up and add
 the rest after Sunday's judging without losing anything — including photos you've already

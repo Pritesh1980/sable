@@ -59,7 +59,27 @@ export const AWARD_CATEGORIES = [
   'Best Back Piece',
   'Best Cover-Up',
   'Best Newcomer',
+  // The size × finish grid the UK shows actually judge on (Brighton, Freeze and
+  // the UKTTA shows all run some version of it). Kept below the "Best …" awards
+  // because a show that runs both treats those as the bigger prizes.
+  'Small Colour',
+  'Small Black & Grey',
+  'Small Healed',
+  'Small Decorative',
+  'Large Colour',
+  'Large Black & Grey',
+  'Large Healed',
+  'Large Decorative',
+  'Project',
 ]
+
+// A results heading is often prefixed with the day it was judged on
+// ("Saturday - Small Healed"). The day is scheduling, not a category.
+const DAY_PREFIX = /^(mon|tues|wednes|thurs|fri|satur|sun)day\s*[-–—:|]\s*/i
+
+// The load-bearing phrase in a real results row. Everything before it is the
+// collector wearing the tattoo; everything after is the artist who made it.
+const TATTOOED_BY = /\s+tattooed\s+by\s+/i
 
 // Rows in the copied block that are furniture rather than a result or a heading.
 const CHROME = new Set([
@@ -162,10 +182,48 @@ function richness(entry) {
 
 const SEPARATOR = /\s*\|\s*|\s+[–—]\s+|\s+-\s+|\s*:\s+/
 
+// "<artist>, <studio>, <town>" or "<artist> - <studio>, <town>": the artist runs
+// up to whichever separator comes first, so a studio credited to two people
+// ("K.Peanut & Gee Jenkins") survives intact while a dash-separated studio does
+// not get glued onto the name.
+function splitArtistFromStudio(text) {
+  const comma = text.indexOf(',')
+  const dash = text.search(/\s+[-–—]\s+/)
+  const at = [comma, dash].filter((i) => i >= 0).sort((a, b) => a - b)[0]
+  if (at === undefined) return { artist: tidy(text), note: '' }
+  const skip = at === dash ? text.slice(at).match(/^\s+[-–—]\s+/)[0].length : 1
+  return { artist: tidy(text.slice(0, at)), note: tidy(text.slice(at + skip)) }
+}
+
 function parseLine(line, runningCategory) {
-  const raw = line.trim()
+  let raw = line.trim()
   if (!raw || raw.length > MAX_LINE_LENGTH) return null
   if (CHROME.has(raw.toLowerCase().replace(/[:.]+$/, ''))) return null
+  raw = raw.replace(DAY_PREFIX, '')
+
+  // The real-world row: "1st Place - Tia tattooed by Adam Blakey, New Mind,
+  // Huddersfield." Handled ahead of the generic path because the phrase tells
+  // us exactly which of the two names is the artist — guessing from position
+  // gets it backwards, which is what the first version of this parser did.
+  const byMatch = raw.split(TATTOOED_BY)
+  if (byMatch.length === 2) {
+    const [lead, credit] = byMatch
+    // "1st Place - Tia" / "1st - Tia" / "Winner: Tia" — one match takes the
+    // placing and leaves the collector behind it.
+    const led = lead.match(/^\s*(1st|2nd|3rd|first|second|third|winner|🥇|🥈|🥉)\b\s*(?:place\b)?/iu)
+    const placing = led ? normalisePlacing(led[1]) : null
+    const collector = tidy((led ? lead.slice(led[0].length) : lead).replace(/^[\s\-–—:.]+/, ''))
+    const { artist, note } = splitArtistFromStudio(credit)
+    if (!artist) return null
+    return {
+      category: runningCategory,
+      placing,
+      name: artist,
+      handle: '',
+      note,
+      ...(collector ? { collector } : {}),
+    }
+  }
 
   // Pull the handle out first so the separators below can't split it.
   let handle = ''
@@ -208,13 +266,17 @@ function parseLine(line, runningCategory) {
   const name = tidy(parts[0] || '')
   const note = tidy(parts.slice(1).join(' — '))
 
-  // No handle and no placing and nothing after it: this is a heading, not a row.
+  // No handle and no placing: this is probably a heading, not a row.
   if (!handle && placing === null) {
     const words = name.split(/\s+/).filter(Boolean).length
     if (!note && words > 0 && words <= MAX_HEADING_WORDS) {
       const known = CATEGORY_LOOKUP.has(categoryKey(name))
       // "Best <something>" is a heading even when the taxonomy hasn't met it.
       if (known || /^best\b/i.test(name)) return { heading: normaliseCategory(name) }
+      // Otherwise it is undecidable from this line alone — shows invent
+      // categories ("Asian Inspired", "Ornamental") that look exactly like a
+      // person's name. parseWinners settles it by looking at what follows.
+      return { maybeHeading: normaliseCategory(name) }
     }
     // A sentence, or a name with nothing to identify it by.
     if (words > MAX_HEADING_WORDS || normaliseName(name).length < 2) return null
@@ -237,9 +299,29 @@ function parseLine(line, runningCategory) {
 export function parseWinners(text = '') {
   const byKey = new Map()
   let category = ''
-  for (const line of String(text || '').split(/\r?\n/)) {
-    const parsed = parseLine(line, category)
+  const lines = String(text || '').split(/\r?\n/)
+
+  // Does a real result row follow this line? That is what separates a category
+  // the taxonomy has never met from an artist with no handle: a heading has
+  // winners under it, a trailing "Thanks everyone" has nothing.
+  const headsSomething = (from) => {
+    for (let j = from + 1; j < lines.length; j += 1) {
+      if (!lines[j].trim()) continue
+      const next = parseLine(lines[j], category)
+      if (!next) return false
+      if (next.heading !== undefined || next.maybeHeading !== undefined) return false
+      return Boolean(next.handle) || next.placing !== null
+    }
+    return false
+  }
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const parsed = parseLine(lines[i], category)
     if (!parsed) continue
+    if (parsed.maybeHeading !== undefined) {
+      if (headsSomething(i)) category = parsed.maybeHeading
+      continue
+    }
     if (parsed.heading !== undefined) {
       category = parsed.heading
       continue
@@ -270,12 +352,12 @@ export function mergeWinnerEntries(existing = [], incoming = []) {
       byKey.set(key, entry)
       continue
     }
-    if (richness(entry) >= richness(current)) {
-      const photo = entry.photo || current.photo
-      byKey.set(key, photo ? { ...entry, photo } : entry)
-    } else if (entry.photo && !current.photo) {
-      byKey.set(key, { ...current, photo: entry.photo })
-    }
+    // Photo ids are the one part of a winner a re-import cannot bring back, so
+    // they survive whichever row wins on richness — and merge, because two
+    // imports may each have picked up a different shot of the same piece.
+    const photoIds = [...new Set([...(current.photoIds || []), ...(entry.photoIds || [])])]
+    const richer = richness(entry) >= richness(current) ? entry : current
+    byKey.set(key, photoIds.length ? { ...richer, photoIds } : richer)
   }
   return Array.from(byKey.values()).slice(0, MAX_WINNER_ENTRIES)
 }
@@ -340,13 +422,8 @@ export function groupWinners(indexed = []) {
 
 export function winnerCounts(indexed = []) {
   const saved = indexed.filter((e) => e.savedArtistId).length
-  const photos = indexed.filter((e) => e.photo).length
+  const photos = indexed.reduce((n, e) => n + (e.photoIds?.length || 0), 0)
   return { total: indexed.length, saved, fresh: indexed.length - saved, photos }
-}
-
-// Attach (or clear) the photo of the winning tattoo on one row.
-export function setWinnerPhoto(entries = [], key = '', photo = '') {
-  return entries.map((entry) => (winnerKey(entry) === key ? { ...entry, photo } : entry))
 }
 
 // Draft for createArtist when you add a winner straight from the board. Tags stay
