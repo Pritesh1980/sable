@@ -53,6 +53,13 @@ tags-batch*.jpeg
 # placeholders (see src/components/ArtistImage.jsx) when these are absent.
 public/images/artists/
 
+# Photos of competition-winning tattoos, cropped out of the winners' own social
+# posts. Same rule as public/images/artists/: someone else's work, and often a
+# photo of an identifiable person — kept local, never redistributed. The app
+# does not read these from disk; winner photos live in IndexedDB per device
+# (src/data/winnerPhotos.js), attached through the Competition winners panel.
+public/images/winners/
+
 # Personal agent context — public repo ships CLAUDE.md only
 CLAUDE.local.md
 
