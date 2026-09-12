@@ -85,11 +85,12 @@ describe('README claims stay true', () => {
     expect(existsSync(WORKFLOWS_PATH)).toBe(true)
   })
 
-  it('keeps the five typical workflow maps discoverable', () => {
+  it('keeps the six typical workflow maps discoverable', () => {
     expect(WORKFLOWS).toContain('## 1. Discover an artist and decide where they belong')
     expect(WORKFLOWS).toContain('## 2. Turn an idea into an artist-ready brief')
     expect(WORKFLOWS).toContain('## 3. Generate and refine an AI concept')
     expect(WORKFLOWS).toContain('## 4. Plan contact, travel, and appointments')
-    expect(WORKFLOWS).toContain('## 5. Work offline and recover safely')
+    expect(WORKFLOWS).toContain('## 5. Research a convention and choose who to see')
+    expect(WORKFLOWS).toContain('## 6. Work offline and recover safely')
   })
 })

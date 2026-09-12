@@ -55,10 +55,11 @@ flowchart TB
   LINEUP["Artist index<br/>the show's published line-up"]
   WINNERS["Competition winners<br/>grouped by award category"]
   CAPTURE{"What do you have?"}
-  SHOT["Paste, drop, or choose<br/>a screenshot"]
+  SHOT["Share to installed PWA,<br/>paste, drop, or choose screenshot"]
   HANDLE["Paste handle or profile URL"]
   KEY{"Gemini key available?"}
-  ANALYSE["Extract handle and name<br/>suggest tags and style note"]
+  ANALYSE["Extract handle and name<br/>suggest tags, style note and artwork crop"]
+  CROP["Review cropped artwork<br/>or restore whole screenshot"]
   MANUAL["Enter details manually<br/>screenshot still attaches"]
   VERIFY["Verify handle, tags,<br/>note, and first image"]
   DUP{"Artist already saved?"}
@@ -79,7 +80,7 @@ flowchart TB
   RADARIN -- "who the judges picked" --> WINNERS --> VERIFY
   CAPTURE -- "screenshot" --> SHOT --> KEY
   CAPTURE -- "handle or URL" --> HANDLE --> VERIFY
-  KEY -- yes --> ANALYSE --> VERIFY
+  KEY -- yes --> ANALYSE --> CROP --> VERIFY
   KEY -- no --> MANUAL --> VERIFY
   VERIFY --> DUP
   DUP -- yes --> APPEND --> WALL
@@ -100,6 +101,12 @@ their rank, and moving them to **Maybe** does not delete their research.
 Adding from either convention list does both halves of the job at once: the artist
 lands in the gallery as *researching*, and is flagged as attending that show. Winners
 arrive with the award already in their notes, so the reason you saved them survives.
+
+OS sharing requires an installed PWA with share-target support and an active service
+worker. The iOS Shortcut instead opens the same intake route ready for a paste.
+If an artwork crop is unavailable or restored to the original screenshot, any taste
+score is labelled rough. Removing a staged screenshot discards its AI suggestions
+without erasing fields you edited yourself.
 
 ---
 
@@ -242,28 +249,81 @@ not automatically scrape an event roster.
 
 ---
 
-## 5. Work offline and recover safely
+## 5. Research a convention and choose who to see
 
-Every edit is local first. Sync is the normal cross-device path; a downloaded backup is
-an extra restore point controlled by the user.
+Radar's imported roster and Top picks help decide who is worth researching. Attendance
+flags are saved decisions, not tickets or confirmed appointments.
+
+```mermaid
+flowchart TB
+  RADAR["Radar → choose show → Artist index"]
+  SOURCE{"Lineup available?"}
+  SEED["Use shipped Big London 2026 list"]
+  IMPORT["Update list → paste published text<br/>or use grabber on the show's page"]
+  MERGE["Validate and merge entries<br/>new import overrides seeded details"]
+  VIEW{"How to browse?"}
+  ALL["All / In your gallery / New to you<br/>search names, handles and booth notes"]
+  PICKS["Top picks<br/>Must see · Wildcards · Worth a look"]
+  CHECK["Read the reasons; inspect Instagram<br/>unmatched curated picks stay visible"]
+  SAVED{"Already in gallery?"}
+  ADD["Add artist<br/>also marks them attending"]
+  FLAG["Toggle attendance for saved artist"]
+  KEEP["Gallery research and attendance<br/>follow normal account sync"]
+  WIN["Competition winners → paste results"]
+  REVIEW["Review award category, place<br/>and matched artist identity"]
+  PHOTO["Optionally attach photos<br/>of the winning piece"]
+
+  RADAR --> SOURCE
+  SOURCE -- "shipped list" --> SEED --> VIEW
+  SOURCE -- "missing or needs updating" --> IMPORT --> MERGE --> VIEW
+  VIEW -- "full index" --> ALL --> CHECK
+  VIEW -- "prioritised" --> PICKS --> CHECK
+  CHECK --> SAVED
+  SAVED -- no --> ADD --> KEEP
+  SAVED -- yes --> FLAG --> KEEP
+  RADAR --> WIN --> REVIEW --> PHOTO
+  REVIEW -- "save this artist" --> SAVED
+```
+
+Top picks use your saved artists, rank/status, known studios and curated choices;
+they do not run CLIP or infer styles for the whole roster. **Pass** artists are omitted
+from picks, and wildcards are explicitly unjudged suggestions. This is a research
+shortlist, not a mapped walking route.
+
+Imports and winner photos stay on this device. Only artists you explicitly save and
+attendance flags join synced collections. **Clear list** also suppresses the shipped
+seed; a later import makes the list available again. Winner-name matches should be
+checked, especially when the app reports a name-prefix match rather than a handle.
+
+---
+
+## 6. Work offline and recover safely
+
+Every edit is local first. With a remote backend configured, sync is the normal
+cross-device path for account collections; the default local/demo adapter stays on
+one device. A downloaded backup is an extra document restore point.
 
 ```mermaid
 flowchart TB
   EDIT(["Create, edit, rank, or delete"])
   LOCAL["Update the screen and<br/>device cache immediately"]
+  KIND{"Synced account collection?"}
+  ONLY["Device-only: lineup, winners,<br/>preferences or derived index<br/>no backend retry"]
   ONLINE{"Backend reachable?"}
   SYNC["Background sync confirms<br/>documents and image blobs"]
   DIRTY["Keep durable pending state<br/>continue working offline"]
   RETURN{"What happens next?"}
   RETRY["After reconnect, reopen Sable<br/>or make another edit to retry"]
-  DEVICE["Sign in on another device<br/>pull account data and image refs"]
+  DEVICE["With remote backend configured:<br/>sign in elsewhere and pull account data"]
   BACKUP["Settings → Export Backup<br/>download a JSON document snapshot"]
   LOSS{"Need to recover or replace data?"}
   IMPORT["Settings → Import Backup"]
   REPLACE["Choose backup file<br/>current collections are replaced"]
   RESTORED["Continue from restored state"]
 
-  EDIT --> LOCAL --> ONLINE
+  EDIT --> LOCAL --> KIND
+  KIND -- no --> ONLY
+  KIND -- yes --> ONLINE
   ONLINE -- yes --> SYNC --> RETURN
   ONLINE -- no --> DIRTY --> RETURN
   RETURN -- "later reopen or edit" --> RETRY --> SYNC
@@ -274,8 +334,14 @@ flowchart TB
 ```
 
 API keys, theme, font size, and the derived Taste Engine index are device-local and are
-not restored by account sync. The index can be rebuilt from images; provider keys must
-be entered separately on each device.
+not restored by account sync. Neither are the composer draft, imported lineups,
+winners boards or winner photos. The index can be rebuilt from images; provider keys
+must be entered separately on each device.
+
+For supported saved-image removals, **Undo** remains available after closing a viewer
+or moving to another route. Consecutive removals from the same source can be restored
+as a batch. This is a short, in-memory recovery window, not a backup or an undo history
+that survives reloads.
 
 There is no `online` event listener today: connectivity returning by itself does not
 start a retry. Reopening Sable runs reconciliation, while another edit schedules a new
@@ -285,4 +351,7 @@ Backup export serialises the values currently in memory. Inline `data:` images r
 embedded, but backend-resolved or signed image URLs are not fetched and materialised
 into the JSON; those URLs may expire. Treat export as a document restore point, not a
 guaranteed standalone archive of every image byte. Account sync remains the normal path
-for moving backend image blobs between devices.
+for moving backend image blobs between devices when a remote adapter is configured.
+Settings backup covers the five account collections, not the device-only convention
+imports or winner photos. Sign-out clears winner-board references but currently leaves
+the photo bytes in IndexedDB; it is not a complete photo-erasure operation.

@@ -16,6 +16,9 @@ Three ideas carry the design:
 The README has the short version. This document is the detailed one, including the
 trade-offs that were taken deliberately and the limits that are still open.
 
+Checked against the source on **12 September 2026**. Diagrams describe implemented
+runtime paths; checked-in data and planned features are identified separately.
+
 ---
 
 ## System context
@@ -38,6 +41,9 @@ flowchart LR
     PWA <--> CACHE
     PWA --> CLIP
     PWA --> SEAM
+    RADAR["Radar imports and Top picks<br/>device-local / derived"]
+    PWA --> RADAR
+    RADAR <--> CACHE
   end
 
   PAGES["GitHub Pages<br/>static host"] -- "app shell and route chunks" --> PWA
@@ -45,13 +51,15 @@ flowchart LR
   SEAM -. "optional selected adapter" .-> SUPA["Supabase"]
   SEAM -. "reserved, not implemented" .-> AWS["AWS"]
   PWA -. "user-initiated generation, discovery,<br/>or screenshot analysis" .-> AI["OpenAI or Gemini APIs"]
+  MODELS["Model hosting"] -- "download model / processor on demand" --> CLIP
   PERSON --> PWA
 ```
 
 This view separates three things that are easy to conflate:
 
 - **delivery** comes from GitHub Pages
-- **persistent application data** goes through the backend seam
+- **synced account data** goes through the backend seam; device-only imports,
+  preferences and derived caches do not
 - **optional AI requests** go directly to a provider and never become an implicit
   backend dependency
 
@@ -59,7 +67,7 @@ This view separates three things that are easy to conflate:
 
 ## 1. The app never imports a vendor SDK
 
-Every persistent auth, document, and blob call passes through `src/backend/`.
+Account auth, synced documents, and backend blob calls pass through `src/backend/`.
 `createBackend()` (`src/backend/index.js`) selects one adapter set — `auth`, `store`,
 `blobs` — from `VITE_BACKEND` (`local` | `supabase` | `aws`, default `local`). The
 Supabase adapter is statically bundled today, but its client is constructed lazily only
@@ -77,7 +85,7 @@ flowchart LR
     LS[("localStorage<br/>tattoo_* metadata")]
     IDB[("IndexedDB<br/>image bytes")]
   end
-  subgraph BE["src/backend — the only way out"]
+  subgraph BE["src/backend — account persistence boundary"]
     SEAM{{"createBackend()<br/>VITE_BACKEND"}}
     L["local<br/>offline default"]
     S["supabase<br/>client created on selection"]
@@ -115,7 +123,8 @@ reconcile *and* the first render — see §2.
 ### React composition and route ownership
 
 `AppShell` is the composition root for user data. It mounts only after
-`ProtectedRoute` has resolved an authenticated user, owns the five shared collections,
+`ProtectedRoute` has resolved an authenticated user, owns five synced collections and
+two device-only convention collections,
 and passes them down to route-level pages. The Wall is eager for first paint; every
 other page is lazy-loaded on first navigation and cached by the service worker after
 delivery.
@@ -128,6 +137,8 @@ flowchart TB
   LOGIN["Login"]
   SHELL["AppShell<br/>shared data and navigation"]
   STATE["useArtistStorage<br/>useStorage: ideas · concepts · boards · convention overrides"]
+  LOCALSTATE["Device-only useStorage<br/>convention lineups · winners"]
+  UNDO["UndoProvider<br/>one shared offer above routes"]
 
   subgraph PRIMARY["Primary navigation"]
     WALL["/ — Wall"]
@@ -145,19 +156,44 @@ flowchart TB
   end
 
   LEGACY["Legacy redirects<br/>/manage → /gallery?mode=manage<br/>/boards → /brief?tab=boards"]
+  SHARE["Share landing redirect<br/>/share → /gallery?shared=1"]
 
   ENTRY --> PROVIDERS --> GATE
   GATE -- "signed out" --> LOGIN
   GATE -- "signed in" --> SHELL
   SHELL --> STATE
-  SHELL --> PRIMARY
-  SHELL --> SUPPORT
+  SHELL --> LOCALSTATE
+  SHELL --> UNDO
+  UNDO --> PRIMARY
+  UNDO --> SUPPORT
   LEGACY --> PRIMARY
+  SHARE --> PRIMARY
 ```
 
 There are nine current feature routes: four primary destinations and five supporting
-ones. The two redirect routes preserve old PWA home-screen links and bookmarks; they
-do not own state or UI.
+ones. Two legacy redirects preserve old links, and `/share` is a third redirect for
+screenshot intake (§5). Redirects do not own state or UI. `UndoProvider` sits above
+the routes so a saved-image removal remains undoable after closing its viewer or
+navigating; its offer is in memory, not persisted across reloads.
+
+### Which state takes which path?
+
+`collectionFor()` in `src/backend/sync.js`, not the use of `useStorage` alone,
+determines whether a value syncs.
+
+| State | Storage / processing | Backend sync |
+|---|---|---|
+| Artists, ideas, concepts, boards | Local cache → corresponding record collection | Yes, selected adapter |
+| Convention attendance overrides | Local map → one `conventionOverrides` singleton document | Yes, whole-map LWW |
+| Imported lineups and winners | `tattoo_convention_lineups` / `tattoo_convention_winners` in localStorage | No |
+| Winner photo bytes | `tattoo-winner-photos-v1` IndexedDB; records carry `photoIds` | No |
+| Top picks | Derived in memory from lineup, gallery, studios and curated picks | No separate collection |
+| Theme, font, API keys, composer draft | Device-local preferences / draft | No |
+| CLIP vectors | Model-keyed IndexedDB cache | No |
+| Shared screenshot awaiting intake | `sable-share-v1` Cache Storage, consumed once | No |
+
+Here, “sync” means the selected backend protocol. The local adapter's simulated remote
+is still on this device; only a configured remote adapter enables cross-device data.
 
 ---
 
@@ -173,9 +209,9 @@ connectivity returns.
 2. **Changed rows are stamped, once.** Only genuinely-edited records get a fresh
    `updatedAt` (`stampChangedRows`, `src/backend/dirty.js`). Over-stamping would let
    untouched rows outrank real edits made on another device.
-3. **A durable dirty marker is written.** The pending edit is recorded in a sidecar
-   that survives a reload or crash, so an interrupted sync is retried rather than
-   silently dropped.
+3. **Durable edit generations are written.** List rows carry a local `editGen`,
+   mirrored in a per-row sidecar. The attendance singleton uses a per-key dirty flag,
+   timestamp and generation. These survive a reload so interrupted work can retry.
 4. **Deletes are tombstoned separately.** An artist removed offline must not ride
    back in on the next pull, so pending deletes are held until the remote confirms —
    and are cancelled if the same handle is re-added before the sync lands.
@@ -193,7 +229,7 @@ sequenceDiagram
   participant UI as Page or component
   participant Hook as Storage hook
   participant Cache as localStorage
-  participant Sidecar as Dirty and delete sidecars
+  participant Sidecar as Edit generations and delete sidecars
   participant Queue as Serialized flush queue
   participant Remote as Selected backend store
 
@@ -201,16 +237,16 @@ sequenceDiagram
   UI->>Hook: setValue updater
   Hook->>Hook: Stamp only changed rows
   Hook->>Cache: Persist canonical value immediately
-  Hook->>Sidecar: Mark dirty and record tombstones
+  Hook->>Sidecar: Track edit generations and record tombstones
   Hook-->>UI: Render updated state without waiting
 
   Note over Hook,Queue: Debounce for 500 ms
   Hook->>Queue: Enqueue latest flush
-  Queue->>Remote: Upsert live rows and remove tombstoned ids
+  Queue->>Remote: Upsert rows without editGen and remove tombstoned ids
 
   alt Remote write succeeds
     Remote-->>Queue: Confirm writes
-    Queue->>Sidecar: Clear synced dirty state and tombstones
+    Queue->>Sidecar: Confirm matching generations and completed tombstones
     Queue->>Hook: Advance synced baseline
   else Offline, interrupted, or provider error
     Remote--xQueue: Write fails
@@ -230,7 +266,10 @@ sequenceDiagram
 The dirty marker and tombstones are deliberately separate from the cached collection:
 the collection describes what the user currently wants, while the sidecars describe
 which remote effects have not yet been acknowledged. That distinction is what lets a
-delete survive closing the tab inside the debounce window.
+delete survive closing the tab inside the debounce window. A successful push clears
+only the generation it actually sent: another tab's newer row remains pending. The
+row's own `editGen` is the proof, not a snapshot of the shared sidecar at flush start.
+This is acknowledgement safety, not live cross-tab state broadcasting.
 
 ### First paint must agree with the reconcile
 
@@ -241,13 +280,15 @@ reconcile will settle on** — any divergence is visible as a flash of the wrong
 The specific case (issue #25): `applyDefaults()` does not only fill in missing fields,
 it *appends* every `DEFAULT_ARTISTS` entry not already stored. Applying it
 unconditionally on first paint meant a non-owner briefly saw their own data plus all
-30 of the owner's curated artists, which the reconcile then removed. The fix gates the
-initializer on `isOwner(user)`, the same rule the reconcile uses.
+of the owner's curated artists, which the reconcile then removed. The current
+initializer and reconcile use `seedsOwnerData(user)`: owner identity plus the build's
+owner-seed flag.
 
 This is safe because `App.jsx` mounts `AppShell` inside `ProtectedRoute`, which holds
 a spinner until the session resolves — so `user` is known before the hook's first
-render. Sign-out nulls the user and purges local caches, so an account switch unmounts
-and re-runs the initializer.
+render. An explicit sign-out nulls the user and purges local caches, so signing in
+again remounts and re-runs the initializer. A direct signed-in identity swap is a
+different path; its remaining limitation is recorded in §10.
 
 The guarantee is **membership parity with the cache**, not with the final state: a
 later pull can still add remote rows the cache never had, and images hydrate
@@ -301,7 +342,12 @@ app. A contract test asserts `winnerPhotos.js` never calls `localStorage`.
 | Record holds | `{ key }` canonical ref | `photoIds: []` |
 | Bytes live in | blob storage, via codec | IndexedDB, directly |
 | Split exists because | sync cost | localStorage quota |
-| Survives sign-out | yes, it is the user's synced data | no, purged with the board |
+| Sign-out behaviour | Account data retained by backend; display cache purged | Board references purged; photo bytes currently remain |
+
+The current `purgeLocalUserData()` does **not** invoke `clearWinnerPhotos()` or delete
+the winner-photo database. Removing board references is not secure byte erasure;
+orphaned winner images can remain on the device. This is an implementation gap, not a
+promised cleanup guarantee.
 
 ---
 
@@ -321,12 +367,12 @@ flowchart TB
   SIG["Taste signal<br/>from rank and status history"]
   OUT1["Similar-ink artist matching"]
   OUT2["Concept to artist matching"]
-  NET(["Network"])
+  MODEL["Hosted CLIP model and processor"]
   IMG --> EMB --> IDX
   IDX --> OUT1
   IDX --> OUT2
   SIG --> OUT1
-  EMB -. "never crosses" .-x NET
+  MODEL -- "on-demand download; WebGPU / WASM inference locally" --> EMB
 ```
 
 The model is heavy, so the binding constraint is that it must never enter the initial
@@ -338,6 +384,10 @@ The index is treated as a cache, not as data: it lives in IndexedDB
 (`tattoo-style-index-v1`), keyed by model id, excluded from sync, and rebuilt per
 device — because it is fully derivable from images the device already has. Losing it
 costs time, never data.
+
+“On-device” describes inference, not a network-free first run: model files must be
+downloaded, and remote reference URLs may need fetching. Reference pixels are not
+uploaded to a model service to compute embeddings.
 
 Relevant modules: `src/data/embeddings.js`, `taste.js`, `styleIndex.js`, `embedder.js`.
 
@@ -361,6 +411,50 @@ Three defences, all in the parsing layer rather than in prose:
 The model is treated as a suggestion engine whose output must survive validation, not
 as a trusted source.
 
+### Share delivery and staged-image lifetime
+
+On supported installed PWAs, the service worker handles the share POST itself;
+GitHub Pages cannot serve that POST. The iOS Shortcut/paste route reaches the same
+intake screen without this POST path.
+
+```mermaid
+flowchart TB
+  OS["OS shares an image to installed PWA"]
+  POST["Same-origin POST to base + share"]
+  SW["Service worker<br/>clear old stash; keep first image"]
+  STASH[("sable-share-v1<br/>one pending screenshot")]
+  LAND["303 → /share?shared=1<br/>route → /gallery?shared=1"]
+  TAKE["takeSharedImage<br/>read and delete stash once"]
+  PASTE["Shortcut landing, paste,<br/>drop or file picker"]
+  STAGE["AddArtistModal<br/>staged File + analysis generation"]
+  AI["Optional Gemini analysis<br/>validated details and crop bounds"]
+  CROP["Local canvas crop<br/>retain original for restore"]
+  TASTE["Optional local taste score<br/>only with existing style vectors"]
+  VERIFY["User verifies fields and image<br/>manual edits retain ownership"]
+  SAVE["Upload selected bytes via backend<br/>add artist or append to existing"]
+
+  OS --> POST --> SW --> STASH
+  SW --> LAND --> TAKE
+  STASH --> TAKE --> STAGE
+  PASTE --> STAGE
+  STAGE -- "key available" --> AI --> CROP --> TASTE
+  STAGE -- "no key: whole image, rough score" --> TASTE
+  TASTE --> VERIFY --> SAVE
+```
+
+Async results belong to one staged file and analysis generation. Removing that file
+invalidates its pending results, clears only AI-owned prefills, and starts analysis of
+the next file. Taste scoring has an additional revision guard so restoring the whole
+screenshot cannot be overwritten by a late crop score. Saving a new artist is blocked
+while intake processing is busy. See `AddArtistModal.jsx`, `screenshotCrop.js`, and
+`src/sw/shareTarget.js`.
+
+Saved-image removal uses a separate recovery path: the removal persists immediately,
+then the app-wide undo offer can restore it through the normal storage setters.
+Consecutive removals from one source can form one batch (5-second offer, 12-second
+maximum batch lifetime). Closing a route does not discard a durable offer; reloading
+the app does. Undo is a new local edit, not a rollback transaction in the backend.
+
 ---
 
 ## 6. Offline delivery and the service worker
@@ -373,12 +467,17 @@ and asserts its invariants still hold.
 
 ```mermaid
 flowchart TB
-  REQ(["fetch"]) --> Q1{"navigation or document?"}
+  REQ(["fetch"]) --> SHARE{"same-origin POST<br/>to base + share?"}
+  SHARE -- yes --> INTAKE["stash first image<br/>303 redirect to share landing"]
+  SHARE -- no --> GET{"GET?"}
+  GET -- no --> PASS["pass through"]
+  GET -- yes --> ORIGIN{"same origin<br/>or Google Fonts?"}
+  ORIGIN -- no --> PASS
+  ORIGIN -- yes --> Q1{"navigation or document?"}
   Q1 -- yes --> NF["network-first<br/>a deploy is never masked"]
-  Q1 -- no --> Q2{"same-origin GET<br/>or Google Font?"}
-  Q2 -- yes --> CF["cache-first<br/>with background refresh"]
-  Q2 -- no --> PASS["pass through"]
-  NF --> OK([response])
+  Q1 -- no --> CF["cache-first<br/>with background refresh"]
+  INTAKE --> OK([response])
+  NF --> OK
   CF --> OK
   PASS --> OK
 ```
@@ -389,7 +488,8 @@ plus Google Fonts, is currently cache-first with a background refresh; cross-ori
 requests other than those fonts bypass the worker. The intended same-origin traffic is
 static assets, but the predicate is broader than `/assets/`: any future same-origin API
 or private-image route must add an explicit bypass or tighten the predicate before it
-ships. A bumped cache name purges old entries on activate, and the page reloads once
+ships. Activation preserves the separate share stash, removes obsolete asset buckets
+and sweeps hashed assets absent from the current manifest. The page reloads once
 when a new worker takes control.
 
 The build is **base-aware**: the router `basename`, the worker, and the precache
@@ -418,7 +518,7 @@ build uses `/`. The precache plugin then injects the exact emitted filenames int
 worker that ships beside them.
 
 ```mermaid
-flowchart LR
+flowchart TB
   SOURCE["React source<br/>public/sw.js"]
   CONFIG["Vite build<br/>base = VITE_BASE or /"]
   SPLIT["Eager Wall shell<br/>lazy route chunks"]
@@ -445,7 +545,72 @@ asset list.
 
 ---
 
-## 7. Demo integrity
+## 7. Convention ingestion and derived show planning
+
+Radar joins public show information with private gallery decisions. There is no
+background roster scraper and no AI request in Top picks. Import and ranking are
+separate stages, so importing a show does not add hundreds of artists to the gallery.
+
+```mermaid
+flowchart TB
+  SEED["Shipped Big London lineup text"]
+  PASTE["User pastes published lineup"]
+  SHOW["Show page in external browser"]
+  GRAB["User-run bookmarklet<br/>scroll and collect Instagram links"]
+  HASH["Radar URL fragment handoff<br/>known show id; clear fragment after reading"]
+  PARSE["Strict parseLineup<br/>normalize and deduplicate"]
+  STORE[("Device-only imported entries<br/>and cleared flag")]
+  MERGE["mergeLineupSeeds<br/>user imports override seed floor"]
+  GALLERY["Saved artists + attendance"]
+  INDEX["indexLineup<br/>match against gallery"]
+  AZ["All / Saved / New<br/>searchable artist index"]
+  PLAN["buildShowPlan<br/>rank · status · styles · studio connections"]
+  CURATED["Bundled studios and curated picks<br/>priority / wildcard reasons"]
+  PICKS["Top picks<br/>Must see · Wildcards · Worth a look<br/>unmatched curated picks reported"]
+  KEEP["Explicit Add artist / attendance toggle"]
+  SYNC["Gallery and attendance setters<br/>normal backend sync"]
+
+  SHOW --> GRAB --> HASH --> PARSE
+  PASTE --> PARSE --> STORE
+  SEED -- "same parser" --> MERGE
+  STORE --> MERGE --> INDEX
+  GALLERY --> INDEX --> AZ
+  INDEX --> PLAN
+  GALLERY --> PLAN
+  CURATED --> PLAN --> PICKS
+  AZ --> KEEP
+  PICKS --> KEEP --> SYNC
+```
+
+The shipped seed is merged at read time, not copied wholesale into localStorage.
+`cleared: true` suppresses it until a new import lifts the flag. Scoring uses existing
+gallery rank/status/tags, attendance, studio connections and curated reasons; artists
+marked **Pass** are excluded from picks. Unmatched strangers remain in the A–Z list
+without invented style scores. `bigLondon2026Floorplan.js` contains checked-in booth
+coordinates, but no runtime component consumes them yet: a walking route or map is
+not an implemented output of `ShowPlanView`.
+
+```mermaid
+flowchart TB
+  SOURCE["Pasted published results"] --> PARSER["parseWinners<br/>category · place · artist, not collector"]
+  PARSER --> BOARD[("Device-only winners board<br/>merge imports, preserve photoIds")]
+  BOARD --> MATCH["Gallery cross-reference<br/>handle, exact name, guarded unique prefix"]
+  PHOTO["User attaches winning-piece photo"] --> BYTES[("Winner-photo IndexedDB")]
+  BYTES -- "photo id only" --> BOARD
+  MATCH --> VIEW["ConventionWinners view<br/>award groups and match rationale"]
+  VIEW -- "explicit Add" --> KEEP["Gallery artist with award note<br/>and convention attendance"]
+  KEEP --> SYNC["Normal account sync"]
+```
+
+Winners are imported from pasted text, not automatically fetched by Gemini. Match
+provenance (`matchedBy`) distinguishes exact identity from a guarded name-prefix
+match. The gallery artist and attendance record can sync; the imported award board
+and its photos cannot. Implementation: `lineup.js`, `lineupGrabber.js`,
+`lineupSeeds.js`, `showPlan.js`, `winners.js`, `winnerPhotos.js`, and `Conventions.jsx`.
+
+---
+
+## 8. Demo integrity
 
 The public demo is the same code seeded with a wholly fictional dataset — invented
 artists with original, committed artwork, because the owner's real references are
@@ -470,7 +635,7 @@ Two problems make this more than a fixture:
 
 ---
 
-## 8. Testing approach
+## 9. Testing approach
 
 TDD-first: behaviour is specified in a failing test before implementation, and any
 change to seed data must keep the data-integrity tests green.
@@ -510,7 +675,7 @@ is a guess wearing a test's clothing.
 
 ---
 
-## 9. Trade-offs taken deliberately
+## 10. Trade-offs taken deliberately
 
 Every one of these is a choice with a reason. A design with no stated limits is
 usually one whose limits have not been found yet.
@@ -521,15 +686,20 @@ are rare and the failure mode is losing the older of two edits — acceptable ag
 the cost of merge structures and a merge UI. Revisit if the app ever gains a second
 writer.
 
-**Cross-tab coordination is open.** Two tabs can each hold their own view of a
-collection, and an old tab can write over newer state. Tracked as issues rather than
-hoped away; the durable dirty-state work was the first step.
+**Cross-tab acknowledgement is guarded, live state is not broadcast.** Per-row
+generations stop a stale tab's successful push from acknowledging another tab's
+unconfirmed edit. Singleton generations protect the attendance map similarly. Tabs
+can still hold different in-memory collections; these guards do not provide a shared
+live view or conflict-free merging.
 
-**Auth transitions are not fully hardened.** A direct A-to-B session change with no
-committed `null` in between does not remount the data shell, so the first paint can
-briefly reflect the previous identity until the sync effect re-runs. Reachable only
-via passive transitions (cross-tab sign-in, session expiry), not the UI sign-out
-path, which purges. Tracked in #28.
+**Identity changes purge caches, but the shell is not keyed by identity.**
+`AuthProvider` now tracks the last user across reloads and purges before publishing a
+different identity, including passive transitions. `ProtectedRoute` still returns the
+same unkeyed shell on a direct signed-in A-to-B transition; do not equate cache purge
+with a guaranteed fresh mount of every in-memory state owner.
+
+**Winner-photo cleanup is incomplete.** Sign-out removes winners metadata but the
+current purge path leaves the separate photo database untouched (§3).
 
 **Full offline needs one online visit.** Assets are precached from a build-time
 manifest, but on a first-ever visit they load before the worker takes control. The app
@@ -551,8 +721,10 @@ artefact (#23). The protocol is written down: re-run isolated, and CI is the arb
 |---|---|
 | `src/backend/` | The vendor boundary: `index.js` factory, `sync.js`, `dirty.js`, `owner.js`, `purge.js`, `local/`, `supabase/` |
 | `src/hooks/` | `useStorage.js`, `useArtistStorage.js` — local-first read/write and reconcile |
-| `src/data/` | Domain data and logic: artists, planning, embeddings, taste, screenshot intake, convention line-ups and winners, demo seed |
+| `src/data/` | Domain logic: planning, embeddings, taste, staged screenshot intake, convention ingestion and Top picks, demo seed |
+| `src/data/lineups/` | Shipped roster and curated picks; floorplan coordinates are data-only, not a runtime map |
+| `src/context/UndoContext.jsx` | Shared, time-bounded undo offer and restoration feedback |
 | `src/sw/` | Pure service-worker logic, contract-tested against `public/sw.js` |
-| `src/pages/`, `src/components/` | UI, 9 feature routes plus 2 legacy redirects |
+| `src/pages/`, `src/components/` | UI, 9 feature routes plus 2 legacy redirects and the share landing redirect |
 | `src/test/` | The suite, including the contract tests |
 | `CLAUDE.md` | Agent-facing operations doc: conventions, review protocol, flake protocol |

@@ -72,7 +72,7 @@ The sign-in screen also links straight to it (**No account? View the demo →**)
 
 Three ideas carry the design:
 
-- **A vendor-SDK boundary.** The app never imports a persistence vendor SDK. All auth, document and blob access passes through `src/backend/`, where one factory selects an adapter set from `VITE_BACKEND` (`local` | `supabase` | `aws`). Changing provider means writing one new adapter, not editing app code.
+- **A vendor-SDK boundary.** The app never imports a persistence vendor SDK. Account auth, synced documents and backend blobs pass through `src/backend/`, where one factory selects an adapter set from `VITE_BACKEND` (`local` | `supabase` | `aws`). Changing provider means writing one new adapter, not editing app code.
 - **Local-first sync.** `localStorage` and IndexedDB are the always-available cache; changes mirror to the backend and reconcile per record by last-write-wins on `updatedAt`. The UI never waits for a network.
 - **On-device visual matching.** CLIP embeddings are computed in the browser, so building artist and concept matches never uploads the saved reference library.
 
@@ -83,7 +83,15 @@ flowchart LR
     LOCAL["local<br/>offline default"]
     SUPA["supabase"]
     AWS["aws — reserved"]
-    APP --> SEAM
+    CACHE[("Local-first account cache<br/>localStorage + IndexedDB")]
+    DEVICE[("Device-only imports and preferences<br/>lineups · winners · API keys")]
+    TASTE["CLIP visual matching<br/>on-device inference"]
+    AI["Optional direct AI requests<br/>generation · screenshot intake · discovery"]
+    APP <--> CACHE
+    APP <--> DEVICE
+    APP --> TASTE
+    APP -. "user-initiated" .-> AI
+    APP -- "auth · synced documents · blobs" --> SEAM
     SEAM --> LOCAL
     SEAM --> SUPA
     SEAM --> AWS
@@ -96,12 +104,14 @@ backend or provider credentials.
 📄 **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** has the detailed version: the full
 write path with offline edits and tombstoned deletes, how images are kept out of synced
 documents, the on-device taste model and the contract test that keeps it out of the
-bundle, screenshot intake as a trust boundary, the service-worker strategy — and the
+bundle, shared-screenshot intake and undo, convention ingestion and derived Top picks,
+the service-worker strategy — and the
 trade-offs taken deliberately, with the limits that are still open.
 
 🧭 **[docs/USER-WORKFLOWS.md](docs/USER-WORKFLOWS.md)** maps the typical journeys:
 discovering and ranking an artist, turning an idea into a brief, generating and refining
-concepts, planning contact and travel, and continuing safely through offline work or
+concepts, choosing convention artists, planning contact and travel, and continuing
+safely through offline work or
 restore.
 
 ## Testing philosophy
