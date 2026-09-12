@@ -55,6 +55,21 @@ describe('Conventions attendance editor', () => {
     const card = within(heroCard())
     expect(card.getByRole('link', { name: /more info/i })).toHaveAttribute('href', localConv.url)
   })
+
+  // A convention's own domain can lapse and get repurposed after this list was
+  // curated (it happened to london-international, Sept 2026) — the app must
+  // not keep pointing users at whatever that domain now serves.
+  it('has no More-info link for a convention with no url', () => {
+    renderConventions({
+      artists: [],
+      conventionOverrides: {},
+    })
+    const noUrl = CONVENTIONS.find((c) => !c.url)
+    expect(noUrl, 'fixture expects at least one convention with no url').toBeTruthy()
+    const heading = screen.getByRole('heading', { name: noUrl.name })
+    const card = within(heading.closest('div.animate-slide-up'))
+    expect(card.queryByRole('link', { name: /more info/i })).toBeNull()
+  })
 })
 
 // The Big London Tattoo Show publishes ~500 artists; the index makes that list

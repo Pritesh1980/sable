@@ -46,7 +46,14 @@ export const CONVENTIONS = [
     location: 'Tobacco Dock, London',
     dates: 'September 2026 (TBC)',
     recurring: 'Annually, late September',
-    url: 'https://www.thelondontattooconvention.com/',
+    // Deliberately no url: thelondontattooconvention.com's root now serves an
+    // unrelated affiliate page (checked 2026-09-12 by fetching it directly,
+    // not inferred from search snippets — a sub-path like /trade-enquiries/
+    // still resolves to the real convention, so this reads as a compromised
+    // or repurposed install rather than a plain expired domain). "More info"
+    // hides itself rather than send anyone there; see Conventions.jsx. Restore
+    // once a verified current URL exists — don't guess a social handle in.
+    url: '',
     summary: 'The most prestigious show in the country — a heavily curated international line-up in a Victorian dockside venue. Smaller and more exclusive than the arena shows.',
     popular: true,
     distanceMiles: 55,

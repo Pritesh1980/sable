@@ -126,14 +126,16 @@ function HeroCard({ convention, artists, attendingIds, onToggle, lineupProps, wi
         </div>
       </div>
       <p className="text-cream-muted text-sm md:text-base font-body leading-relaxed mt-4">{convention.summary}</p>
-      <a
-        href={convention.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center min-h-11 text-xs font-mono text-accent tracking-widest uppercase mt-1 hover:underline"
-      >
-        More info →
-      </a>
+      {convention.url && (
+        <a
+          href={convention.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center min-h-11 text-xs font-mono text-accent tracking-widest uppercase mt-1 hover:underline"
+        >
+          More info →
+        </a>
+      )}
       <AttendeesEditor artists={artists} attendingIds={attendingIds} onToggle={onToggle} />
       <ConventionLineup
         convention={convention}
@@ -179,14 +181,16 @@ function ConventionCard({ convention, artists, attendingIds, onToggle, lineupPro
 
       <p className="text-cream-muted text-sm font-body leading-relaxed mt-3 flex-1">{convention.summary}</p>
 
-      <a
-        href={convention.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex items-center min-h-11 text-[0.6875rem] font-mono text-cream-muted/70 tracking-widest uppercase mt-1 hover:text-accent transition-colors"
-      >
-        More info →
-      </a>
+      {convention.url && (
+        <a
+          href={convention.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center min-h-11 text-[0.6875rem] font-mono text-cream-muted/70 tracking-widest uppercase mt-1 hover:text-accent transition-colors"
+        >
+          More info →
+        </a>
+      )}
       <AttendeesEditor artists={artists} attendingIds={attendingIds} onToggle={onToggle} />
       <ConventionLineup
         convention={convention}

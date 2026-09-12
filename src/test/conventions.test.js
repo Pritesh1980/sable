@@ -9,13 +9,25 @@ describe('CONVENTIONS', () => {
     expect(CONVENTIONS.length).toBeLessThanOrEqual(9)
   })
 
+  // A convention's own domain can lapse after this list was curated and get
+  // repurposed by whoever registers it next (london-international, Sept 2026:
+  // the root now serves an unrelated affiliate page, verified by fetching it,
+  // not assumed from search results). Sable must not keep linking users to
+  // that. Rather than relax the check for everyone, name the one exception —
+  // so a *different* convention silently losing its url still fails loudly.
+  const URL_NOT_REQUIRED = new Set(['london-international'])
+
   it('every convention has required fields', () => {
     CONVENTIONS.forEach((c) => {
       expect(c.id, `${c.name} missing id`).toBeTruthy()
       expect(c.name, `${c.id} missing name`).toBeTruthy()
       expect(c.location, `${c.id} missing location`).toBeTruthy()
       expect(c.dates, `${c.id} missing dates`).toBeTruthy()
-      expect(c.url, `${c.id} missing url`).toMatch(/^https?:\/\//)
+      if (URL_NOT_REQUIRED.has(c.id)) {
+        expect(c.url, `${c.id} should be explicitly falsy while its domain is bad, not a stray string`).toBeFalsy()
+      } else {
+        expect(c.url, `${c.id} missing url`).toMatch(/^https?:\/\//)
+      }
       expect(c.summary, `${c.id} missing summary`).toBeTruthy()
     })
   })
