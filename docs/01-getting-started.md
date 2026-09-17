@@ -35,8 +35,9 @@ tiled edge to edge. No panels, no stats — the work itself is the interface.
   way and fades in on hover.
 - A **red dot** on a photo means it's new — added within the last 14 days.
 - Pinned just under the bar is your **Top 5** — the five artists you've ranked highest,
-  as a slim strip. Nudge any of them up or down with **▲ / ▼**, or tap **Rank ⤢** to
-  open the full ranking board (see [Gallery & ranking](03-gallery-and-ranking.md)).
+  as a slim strip. **Drag the rank number** on any tile to reorder the five, or tap
+  **Rank ⤢** to open the full ranking board (see
+  [Gallery & ranking](03-gallery-and-ranking.md)).
 - The thin bar at the top holds everything else: the **Artists / Concepts** switch,
   **+ Add artist**, and the **⋯** menu (the Drawer).
 - At the very bottom of the Wall, a quiet **Consider** shelf suggests artists matched

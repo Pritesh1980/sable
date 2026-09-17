@@ -79,8 +79,8 @@ nudge when it disagrees with where you've actually ranked them.
 Everything below sets the **same single ranking** — one ordered list of every artist.
 
 The quickest place to rank is the **Home Wall**. Your **Top 5** is pinned at the top:
-nudge any of the five up or down with **▲ / ▼**, or tap **Rank ⤢** to open the full
-**ranking board** — your Top 5 pinned up top, everyone else below, with **▲ / ▼** on
+**drag the rank number** on any tile to reorder the five, or tap **Rank ⤢** to open the
+full **ranking board** — your Top 5 pinned up top, everyone else below, with **▲ / ▼** on
 every row, **Drop ↓** to push an artist out of the Top 5, and **↑ To top 5** to pull one
 in. Close it (or press **Esc**) to return to the Wall.
 

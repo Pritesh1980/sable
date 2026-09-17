@@ -12,7 +12,7 @@ const SECTIONS = [
     steps: [
       'Sign in with your email and password to open the app. Your artists, ideas, boards and concepts are tied to your account and follow you across devices — add something on your Mac and it appears on your iPhone.',
       'You open on the Wall: every photo from every artist in your collection, edge to edge. The artist’s name sits along the bottom of each tile on touch, and fades in on hover with a mouse; a red dot means it was added in the last 14 days.',
-      'Pinned just under the bar is your Top 5 — the five artists you’ve ranked highest. Nudge any of them up or down with ▲ / ▼, or tap Rank ⤢ to open the full ranking board.',
+      'Pinned just under the bar is your Top 5 — the five artists you’ve ranked highest. Drag the rank number on any tile to reorder the five, or tap Rank ⤢ to open the full ranking board.',
       'Click any photo and it fills the screen. Arrow keys drive it: ←/→ moves through this artist’s work, ↑/↓ jumps between artists, G generates a concept in this artist’s style, I opens their info & notes, Esc returns to the Wall.',
       'Leave the mouse still and the viewer’s controls fade away, leaving just the image; move it and they return. The @handle link opens the artist’s Instagram in a new tab.',
       'The bar at the top switches between Artists and Concepts, adds an artist, and opens the ⋯ Drawer — home of the Classic gallery, Ideas, Pipeline, Radar, Studios, Settings and this Help page.',
@@ -44,7 +44,7 @@ const SECTIONS = [
     blurb: 'Rank from the Home Top 5, browse four ways, and filter by style.',
     image: 'gallery-grid.png',
     steps: [
-      'The quickest place to rank is the Home Wall: your Top 5 is pinned at the top. Nudge any of the five up or down with ▲ / ▼, or tap Rank ⤢ to open the full ranking board — Top 5 pinned, everyone else below, with ▲ / ▼ on every row, Drop ↓ to push an artist out of the Top 5, and ↑ To top 5 to pull one in. Esc returns to the Wall.',
+      'The quickest place to rank is the Home Wall: your Top 5 is pinned at the top. Drag the rank number on any tile to reorder the five, or tap Rank ⤢ to open the full ranking board — Top 5 pinned, everyone else below, with ▲ / ▼ on every row, Drop ↓ to push an artist out of the Top 5, and ↑ To top 5 to pull one in. Esc returns to the Wall.',
       'Open Drawer → Classic gallery for structured browsing. Switch views with the toggle: ☰ Filmstrip, ⊟ Compare, ⊞ Grid, ▦ Style Wall.',
       'Tap a style tag in the filter bar to show only artists with that tag; tap All to clear it.',
       'The Classic gallery also ranks: in Grid view turn on ⇅ Reorder to get drag handles (and a + for photos) on each card, or nudge the rank number in Filmstrip. With Reorder off, a grid card is one big tap target that just opens the artist. Every method feeds the same single ranking.',
