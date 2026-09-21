@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import process from 'node:process'
+import { KEY_TO_COLLECTION, collectionFor } from '../backend/sync'
 
 // Contract test for the README's own factual claims — the same pattern used for
 // public/sw.js: read a file that can't be imported and assert its invariants.
@@ -14,6 +15,7 @@ import process from 'node:process'
 const ROOT = process.cwd()
 const README = readFileSync(join(ROOT, 'README.md'), 'utf8')
 const GUIDE = readFileSync(join(ROOT, 'docs/README.md'), 'utf8')
+const ARCHITECTURE = readFileSync(join(ROOT, 'docs/ARCHITECTURE.md'), 'utf8')
 const WORKFLOWS_PATH = join(ROOT, 'docs/USER-WORKFLOWS.md')
 const WORKFLOWS = existsSync(WORKFLOWS_PATH)
   ? readFileSync(WORKFLOWS_PATH, 'utf8')
@@ -74,11 +76,6 @@ describe('README claims stay true', () => {
     expect(claimed).toBeLessThanOrEqual(Math.ceil(floor * 1.15))
   })
 
-  it('points at the detailed architecture doc, and it exists', () => {
-    expect(README).toContain('docs/ARCHITECTURE.md')
-    expect(existsSync(join(ROOT, 'docs/ARCHITECTURE.md'))).toBe(true)
-  })
-
   it('links the user-workflow maps from both documentation entry points', () => {
     expect(README).toContain('docs/USER-WORKFLOWS.md')
     expect(GUIDE).toContain('USER-WORKFLOWS.md')
@@ -92,5 +89,30 @@ describe('README claims stay true', () => {
     expect(WORKFLOWS).toContain('## 4. Plan contact, travel, and appointments')
     expect(WORKFLOWS).toContain('## 5. Research a convention and choose who to see')
     expect(WORKFLOWS).toContain('## 6. Work offline and recover safely')
+  })
+
+  it('links an architecture doc whose collection boundaries match the runtime sync mapping', () => {
+    expect(README).toContain('docs/ARCHITECTURE.md')
+    expect(existsSync(join(ROOT, 'docs/ARCHITECTURE.md'))).toBe(true)
+    // Catch a new/renamed sync collection or accidentally synced convention
+    // import without relying on matching prose or grepping implementation text.
+    // The table supplies expected behaviour; collectionFor is the real resolver.
+    const rows = ARCHITECTURE.split('\n').flatMap((line) => {
+      const cells = line.split('|').map((cell) => cell.trim())
+      const key = cells[2]?.match(/^`(tattoo_[a-z_]+)`$/)?.[1]
+      return key ? [{ key, target: cells[3] }] : []
+    })
+    expect(rows.map(({ key }) => key).sort()).toEqual([
+      ...Object.keys(KEY_TO_COLLECTION),
+      'tattoo_convention_lineups',
+      'tattoo_convention_winners',
+    ].sort())
+    for (const { key, target } of rows) {
+      expect(target, `Missing collection or explicit device-only marker for ${key}`)
+        .toMatch(/^(`\w+`|Not synced)$/)
+      const documented = target === 'Not synced' ? null : target.slice(1, -1)
+      expect(collectionFor(key), `Update the documented sync boundary for ${key}`)
+        .toBe(documented)
+    }
   })
 })

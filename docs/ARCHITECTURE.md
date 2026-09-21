@@ -181,11 +181,15 @@ navigating; its offer is in memory, not persisted across reloads.
 `collectionFor()` in `src/backend/sync.js`, not the use of `useStorage` alone,
 determines whether a value syncs.
 
-| State | Storage / processing | Backend sync |
+| State | Storage key / processing | Backend collection |
 |---|---|---|
-| Artists, ideas, concepts, boards | Local cache → corresponding record collection | Yes, selected adapter |
-| Convention attendance overrides | Local map → one `conventionOverrides` singleton document | Yes, whole-map LWW |
-| Imported lineups and winners | `tattoo_convention_lineups` / `tattoo_convention_winners` in localStorage | No |
+| Artists | `tattoo_artists_meta` | `artistsMeta` |
+| Ideas | `tattoo_ideas` | `ideas` |
+| Concepts | `tattoo_concepts` | `concepts` |
+| Boards | `tattoo_boards` | `boards` |
+| Convention attendance overrides | `tattoo_convention_attending` | `conventionOverrides` |
+| Imported lineups | `tattoo_convention_lineups` | Not synced |
+| Imported winners | `tattoo_convention_winners` | Not synced |
 | Winner photo bytes | `tattoo-winner-photos-v1` IndexedDB; records carry `photoIds` | No |
 | Top picks | Derived in memory from lineup, gallery, studios and curated picks | No separate collection |
 | Theme, font, API keys, composer draft | Device-local preferences / draft | No |
@@ -194,6 +198,11 @@ determines whether a value syncs.
 
 Here, “sync” means the selected backend protocol. The local adapter's simulated remote
 is still on this device; only a configured remote adapter enables cross-device data.
+The seven `tattoo_*` keys above are localStorage metadata stores. Attendance overrides sync as
+one singleton map with whole-map last-write-wins; the other synced collections use
+individual records. `readmeClaims.test.js` compares this table with the runtime sync
+mapping, including the two device-only convention stores. It does not validate every
+claim in these diagrams; the behavioural suites and source review remain necessary.
 
 ---
 
@@ -414,18 +423,20 @@ as a trusted source.
 ### Share delivery and staged-image lifetime
 
 On supported installed PWAs, the service worker handles the share POST itself;
-GitHub Pages cannot serve that POST. The iOS Shortcut/paste route reaches the same
-intake screen without this POST path.
+GitHub Pages cannot serve that POST. **iOS Safari does not support Web Share Target**
+([WebKit tracking issue](https://bugs.webkit.org/show_bug.cgi?id=194593), checked
+17 September 2026). On iPhone, use the Shortcut/paste route: it reaches the same
+intake screen without this POST path. See the [setup guide](02-managing-artists.md#share-a-screenshot-straight-from-instagram).
 
 ```mermaid
 flowchart TB
-  OS["OS shares an image to installed PWA"]
+  OS["Supported Web Share Target platforms<br/>OS shares image to installed PWA — not iOS Safari"]
   POST["Same-origin POST to base + share"]
   SW["Service worker<br/>clear old stash; keep first image"]
   STASH[("sable-share-v1<br/>one pending screenshot")]
   LAND["303 → /share?shared=1<br/>route → /gallery?shared=1"]
   TAKE["takeSharedImage<br/>read and delete stash once"]
-  PASTE["Shortcut landing, paste,<br/>drop or file picker"]
+  PASTE["iPhone: Shortcut → paste<br/>Also: paste, drop or file picker"]
   STAGE["AddArtistModal<br/>staged File + analysis generation"]
   AI["Optional Gemini analysis<br/>validated details and crop bounds"]
   CROP["Local canvas crop<br/>retain original for restore"]

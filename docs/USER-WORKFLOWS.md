@@ -103,7 +103,10 @@ lands in the gallery as *researching*, and is flagged as attending that show. Wi
 arrive with the award already in their notes, so the reason you saved them survives.
 
 OS sharing requires an installed PWA with share-target support and an active service
-worker. The iOS Shortcut instead opens the same intake route ready for a paste.
+worker. **On iPhone, use the Shortcut/paste path:** iOS Safari does not support Web
+Share Target ([WebKit tracking issue](https://bugs.webkit.org/show_bug.cgi?id=194593)).
+The Shortcut opens the same intake route ready for a paste; see the
+[setup guide](02-managing-artists.md#share-a-screenshot-straight-from-instagram).
 If an artwork crop is unavailable or restored to the original screenshot, any taste
 score is labelled rough. Removing a staged screenshot discards its AI suggestions
 without erasing fields you edited yourself.
