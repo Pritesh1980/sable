@@ -1,0 +1,23 @@
+# Provider binaries — hundreds of MB, re-fetched by `terraform init`.
+.terraform/
+
+# State. Holds the real resource ids and can hold sensitive values, so it never
+# goes in a public repo. This is LOCAL state on the Mac: fine for a solo
+# single-machine project, but it means the Mac is the only record of what was
+# created. If this file is lost, `terraform import` can rebuild it from the
+# live resources — or, since everything here is disposable, delete the stack in
+# the console and re-apply.
+terraform.tfstate
+terraform.tfstate.*
+.terraform.tfstate.lock.info
+
+# May contain the alert email.
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+
+# Saved plans can contain variable values.
+*.tfplan
+
+# .terraform.lock.hcl is deliberately NOT ignored — it pins provider versions
+# and belongs in the repo.
