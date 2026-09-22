@@ -27,20 +27,22 @@ import {
   SHORT,
   INVALIDATION_PATHS,
 } from '../src/deploy/cacheControl.js'
+import { parseDeployArgs } from '../src/deploy/args.js'
 
-const args = process.argv.slice(2)
-const dryRun = args.includes('--dry-run')
-const INFRA_DIR = valueOf('--infra') || 'infra'
+let dryRun
+let INFRA_DIR
+try {
+  ;({ dryRun, infraDir: INFRA_DIR } = parseDeployArgs(process.argv.slice(2)))
+} catch (err) {
+  console.error(err.message)
+  process.exit(1)
+}
+
 const DIST = 'dist'
 
 // Local-only build artefacts that should not be on a public origin. audit.html
 // is the curation grid viewer — a dev tool, not part of the app.
 const NEVER_UPLOAD = ['audit.html']
-
-function valueOf(flag) {
-  const i = args.indexOf(flag)
-  return i === -1 ? null : args[i + 1]
-}
 
 function run(cmd, cmdArgs) {
   console.log(`  $ ${cmd} ${cmdArgs.join(' ')}`)
@@ -110,19 +112,9 @@ function syncPass({ label, include, cacheControl, extraArgs = [] }) {
 
 // --- go ------------------------------------------------------------------
 
-if (!dryRun) {
-  console.log('Building (base "/", so no VITE_BASE)…')
-  execFileSync('npm', ['run', 'build'], { stdio: 'inherit' })
-}
-
-if (!existsSync(DIST)) {
-  console.error(`No ${DIST}/ — run a build first.`)
-  process.exit(1)
-}
-
-const files = walk(DIST).filter((f) => !NEVER_UPLOAD.includes(f))
-assertAssetsAreHashed(files)
-
+// Resolve the target BEFORE building. A production build takes minutes, and
+// there is no point spending them only to discover there is nowhere to put the
+// result.
 const outputs = stackOutputs()
 const bucket = outputs.bucket_name
 const distributionId = outputs.distribution_id
@@ -137,6 +129,29 @@ if (!bucket || !distributionId) {
   )
   process.exit(1)
 }
+
+if (!dryRun) {
+  console.log('Building at base "/"…')
+  // VITE_BASE is pinned rather than merely left unset (codex review). Vite gives
+  // an existing environment variable priority, and vite.config.js reads
+  // `process.env.VITE_BASE`, so an exported `VITE_BASE=/sable/` left over from
+  // testing the Pages build would silently produce a bundle referencing
+  // /sable/assets/* — uploaded to the bucket root, where every one of those
+  // requests hits the SPA 403 fallback and returns index.html instead of
+  // JavaScript. The result is a blank app with no failed request to explain it.
+  execFileSync('npm', ['run', 'build'], {
+    stdio: 'inherit',
+    env: { ...process.env, VITE_BASE: '/' },
+  })
+}
+
+if (!existsSync(DIST)) {
+  console.error(`No ${DIST}/ — run a build first.`)
+  process.exit(1)
+}
+
+const files = walk(DIST).filter((f) => !NEVER_UPLOAD.includes(f))
+assertAssetsAreHashed(files)
 
 console.log(`\nBucket:       ${bucket}`)
 console.log(`Distribution: ${distributionId}`)
