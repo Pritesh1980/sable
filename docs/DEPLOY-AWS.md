@@ -43,7 +43,9 @@ A working `aws` CLI with credentials, and Terraform.
 > installer from AWS:
 >
 > ```
-> curl -fsSL "https://awscliv2.amazonaws.com/AWSCLIV2.pkg" -o /tmp/AWSCLIV2.pkg
+> brew unlink awscli    # if a broken Homebrew copy exists; it shadows /usr/local/bin/aws
+> curl -fsSL "https://awscli.amazonaws.com/AWSCLIV2.pkg" -o /tmp/AWSCLIV2.pkg
+> pkgutil --check-signature /tmp/AWSCLIV2.pkg   # expect "AMZN Mobile LLC", notarized
 > sudo installer -pkg /tmp/AWSCLIV2.pkg -target /
 > ```
 >
