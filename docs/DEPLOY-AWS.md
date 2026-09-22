@@ -39,10 +39,33 @@ The £1 threshold is a smoke alarm, not a ceiling — it should never fire.
 
 A working `aws` CLI with credentials, and Terraform.
 
-> **Known local breakage:** the Homebrew `awscli` is currently broken on this Mac —
-> `ImportError: … libaws-c-common.1.dylib` from a partial upgrade. Fix with
-> `brew reinstall awscli` (or `brew install aws-c-common`). Same class of problem
-> as the codex cask issue: the binary is present but its dependency is not.
+> **Do not install the AWS CLI with Homebrew on this Mac.** Use the official
+> installer from AWS:
+>
+> ```
+> curl -fsSL "https://awscliv2.amazonaws.com/AWSCLIV2.pkg" -o /tmp/AWSCLIV2.pkg
+> sudo installer -pkg /tmp/AWSCLIV2.pkg -target /
+> ```
+>
+> **Why.** This machine is Intel x86_64 (macOS 15.7.9) and **Homebrew has dropped
+> Intel support** — there is no bottle, and a source build is refused outright:
+> *"You are using macOS on Intel x86_64 … This build failure was expected, as this
+> is not a Tier 1 configuration."* So `brew reinstall awscli` cannot fix anything;
+> it exits 0 having built nothing.
+>
+> The symptom is a dynamic-loader failure, not a Python one:
+> `ImportError: … Library not loaded: …/libaws-c-common.1.dylib`. Exactly one of
+> `_awscrt`'s nine linked libraries is missing — `aws-c-common` upgraded its
+> soname from `libaws-c-common.1.dylib` to `libaws-c-common.1.0.dylib`, and the
+> compiled extension that links against the old name can no longer be rebuilt on
+> this platform. A `libaws-c-common.1.dylib` symlink appears to fix it, but
+> `_awscrt` was built against 0.14.5 while 1.0.1 is installed — a major-version
+> ABI gap — so it may load and then misbehave. Not worth the risk for a tool that
+> uploads files and creates infrastructure.
+>
+> The official package bundles its own copies of these libraries and is unaffected
+> by any of it. Expect the same class of breakage from Homebrew for other
+> compiled formulae on this machine.
 
 Credentials are interactive, so set them up yourself rather than through an agent:
 
