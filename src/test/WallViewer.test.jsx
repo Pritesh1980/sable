@@ -90,6 +90,17 @@ describe('WallViewer', () => {
     expect(onGenerate.mock.calls[0][0]).toMatchObject({ artistId: 'victorportugal', imageIndex: 0 })
   })
 
+  it('has a visible close button that calls onClose (#89)', () => {
+    const onClose = vi.fn()
+    renderViewer({ onClose })
+
+    const close = screen.getByRole('button', { name: /close viewer/i })
+    expect(close).toHaveTextContent(/close/i)
+    fireEvent.click(close)
+
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
   it('calls onGenerate on G keypress and onClose on Escape', () => {
     const onGenerate = vi.fn()
     const onClose = vi.fn()

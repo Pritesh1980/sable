@@ -65,9 +65,12 @@ The keyboard does the driving:
 | `I` | open the artist's **info & notes** (status, notes, linked ideas) |
 | `Esc` | back to the Wall |
 
+No keyboard (on a phone, say)? Tap **× Close** in the top-left corner to go back to the Wall.
+
 A filmstrip of the artist's other photos sits along the bottom — click one to jump. The
 artist's `@handle ↗` opens their Instagram in a new tab. Leave the mouse still for a couple
-of seconds and the controls fade away, leaving just the image; move it and they return.
+of seconds and the controls fade away, leaving just the image; move it, press a key or tap
+the screen and they return.
 
 You can also **paste a screenshot** (`⌘V`) while viewing an artist — it's added to that
 artist's photos and gets a red *new* dot on the Wall.

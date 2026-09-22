@@ -90,6 +90,16 @@ describe('Wall → WallViewer integration', () => {
     expect(screen.getByText('Sable')).toBeInTheDocument()
   })
 
+  it('the close button returns to the wall without a keyboard (#89)', () => {
+    renderApp()
+    clickPiece('zoia.ink')
+
+    fireEvent.click(screen.getByRole('button', { name: /close viewer/i }))
+
+    expect(screen.queryByRole('heading', { name: 'zoia.ink' })).not.toBeInTheDocument()
+    expect(screen.getByText('Sable')).toBeInTheDocument()
+  })
+
   it('locks body scroll while open and releases it on close', () => {
     renderApp()
     expect(document.body.style.overflow).not.toBe('hidden')

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-// Tracks whether the user has been idle (no mousemove/keydown) for
+// Tracks whether the user has been idle (no mousemove/keydown/tap) for
 // `timeoutMs`. Used to fade the wall-viewer HUD out of the way of the image.
 // If the user prefers reduced motion, idle never becomes true — the HUD just
 // stays put rather than animating.
@@ -30,11 +30,13 @@ export default function useIdleFade(timeoutMs = 2000) {
     reset()
     window.addEventListener('mousemove', reset)
     window.addEventListener('keydown', reset)
+    window.addEventListener('pointerdown', reset)
 
     return () => {
       clearTimeout(timerRef.current)
       window.removeEventListener('mousemove', reset)
       window.removeEventListener('keydown', reset)
+      window.removeEventListener('pointerdown', reset)
     }
   }, [timeoutMs])
 

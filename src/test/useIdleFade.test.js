@@ -41,6 +41,16 @@ describe('useIdleFade', () => {
     expect(result.current).toBe(false)
   })
 
+  // iPhone has no mousemove or keyboard: a tap is the only activity signal,
+  // and without it the HUD (including the close button) stays invisible.
+  it('resets on pointerdown (a touch tap)', () => {
+    const { result } = renderHook(() => useIdleFade(2000))
+    act(() => { vi.advanceTimersByTime(2000) })
+    expect(result.current).toBe(true)
+    act(() => { window.dispatchEvent(new Event('pointerdown')) })
+    expect(result.current).toBe(false)
+  })
+
   it('never goes idle when prefers-reduced-motion is set', () => {
     const original = window.matchMedia
     window.matchMedia = vi.fn().mockReturnValue({ matches: true })
