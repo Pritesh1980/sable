@@ -190,7 +190,19 @@ export default function ConceptViewer({
           idle ? 'opacity-0' : 'opacity-100'
         }`}
       >
-        <div className="absolute right-8 top-6 font-v2-display text-sm tracking-[0.2em] text-v2-muted pointer-events-auto">
+        {/* The installed PWA draws under the iPhone status bar
+            (black-translucent), so the top row clears the safe-area inset. */}
+        <button
+          onClick={onClose}
+          aria-label="Close viewer"
+          title="Back to concepts (Esc)"
+          className="absolute left-[max(1rem,env(safe-area-inset-left))] top-[max(1rem,env(safe-area-inset-top))] flex items-center gap-2 bg-v2-ink/70 backdrop-blur-md border border-v2-hairline hover:border-v2-accent rounded-xs px-4 py-3 text-v2-cream font-v2-ui text-xs tracking-widest uppercase pointer-events-auto transition-colors"
+        >
+          <span aria-hidden="true" className="text-base leading-none">×</span>
+          Close
+        </button>
+
+        <div className="absolute right-8 top-[max(1.5rem,env(safe-area-inset-top))] font-v2-display text-sm tracking-[0.2em] text-v2-muted pointer-events-auto">
           <b className="text-v2-cream font-normal">{pad2(index + 1)}</b> / {items.length}
         </div>
 

@@ -98,7 +98,7 @@ const SECTIONS = [
       'No API key? Copy prompt, run it in ChatGPT, Claude, Gemini or AI Studio (great with a Google AI Pro subscription), then drop or paste the result into the composer — it saves to the wall exactly like a generated image.',
       'To generate in-app, open AI setup in the composer and add a paid OpenAI or Gemini API key (~$0.04/image, billing required; stored only on this device).',
       '+ Prompt packs in the composer builds tailored prompts for ChatGPT, Firefly, Gemini and Claude from free text or a Brief idea; Save Pack keeps the set. Pack concepts without an image wait in the Drafts strip until you paste a result in.',
-      'Click a saved concept and it fills the screen like the artists’ Wall. Press I for its prompt, response, style matching and AI results — save multiple outputs as variants, each with an image, text, notes and a rating; mark the strongest as Best.',
+      'Click a saved concept and it fills the screen like the artists’ Wall; Esc or × Close (top-left) takes you back. Press I for its prompt, response, style matching and AI results — save multiple outputs as variants, each with an image, text, notes and a rating; mark the strongest as Best.',
       'For results with images, use Make STL to export a printable relief-style heightmap file.',
       'Tag each concept with styles to reveal its top artist matches; tap a match to open their Instagram.',
       'With the style index built (Artists → Similar ink), the info panel also shows Visual matches — the concept image compared against each artist’s actual work, on-device, to rank who could execute it — plus a taste-fit score for how strongly the image matches your overall taste.',

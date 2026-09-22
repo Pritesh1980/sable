@@ -50,7 +50,7 @@ an image** strip under the wall until you paste a result in.
 ## Work with a concept
 
 **Click a concept on the wall** and it fills the screen — same viewer as the artists'
-Wall, same keys (`←` `→`, `Esc`; the controls fade when your mouse is still). Press **`I`**
+Wall, same keys (`←` `→`, `Esc`, or tap **× Close** top-left; the controls fade when your mouse is still). Press **`I`**
 (or the on-screen button) for everything attached to it:
 
 ![A concept full-screen with its details open](../public/guide/concept-card.png)
