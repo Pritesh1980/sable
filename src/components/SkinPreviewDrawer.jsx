@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { PLACEMENTS } from '../data/artists'
+import LiveTryOn from './LiveTryOn'
 import { loadPhotoForRelief } from '../data/reliefImage'
 import { generateSkinPreviewWithGemini, imageUrlToDataUrl, shrinkImageDataUrl } from '../data/skinPreview'
 
@@ -21,6 +22,7 @@ function SkinPreviewContent({ source, apiKey, onSave, onClose }) {
   const [result, setResult] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [live, setLive] = useState(false)
 
   useEffect(() => { onCloseRef.current = onClose }, [onClose])
 
@@ -165,6 +167,15 @@ function SkinPreviewContent({ source, apiKey, onSave, onClose }) {
           </div>
 
           <div className="space-y-4">
+            <button
+              type="button"
+              onClick={() => setLive(true)}
+              className={`${BUTTON_CLASS} w-full border-accent/45 text-accent hover:bg-accent/10`}
+            >
+              Live camera — free, instant
+            </button>
+            <p className="text-xs text-cream-muted">Or render it properly with AI:</p>
+
             <label className={`${BUTTON_CLASS} inline-flex cursor-pointer border-ink-border text-cream-muted hover:text-cream`}>
               {photo ? 'Change photo…' : 'Choose photo…'}
               <input
@@ -215,6 +226,14 @@ function SkinPreviewContent({ source, apiKey, onSave, onClose }) {
           </div>
         </div>
       </section>
+      {live && (
+        <LiveTryOn
+          designUrl={source.imageUrl}
+          label={label}
+          onSave={(input) => onSave(source.conceptId, input)}
+          onClose={() => setLive(false)}
+        />
+      )}
     </div>
   )
 }

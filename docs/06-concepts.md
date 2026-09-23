@@ -74,7 +74,16 @@ On a phone, swipe left / right between concepts, swipe down to close, and tap th
 
 ## Try a concept on skin
 
-On any result with an image, choose **Try on skin**. Pick a photo of where the tattoo would
+On any result with an image, choose **Try on skin**.
+
+**Live camera** (free, instant, works offline) opens your camera with the design floating on
+the live view — the white of the design disappears so only the ink shows. Drag to move it,
+pinch to size and turn it (or use the **Size**, **Rotation** and **Ink** sliders). Tap
+**Real size**, hold a bank card flat against your skin and match the dashed outline to it,
+and the design's width shows in centimetres. **Save snapshot** keeps the view as a variant.
+No camera, or access blocked? **Use a photo** puts the design over a still photo instead.
+
+For a polished render, use the AI preview below it: pick a photo of where the tattoo would
 go (take one with the camera or choose from your library), set the **Placement**, and tap
 **Generate preview**: Gemini draws the design onto your skin as a healed tattoo, following
 the curve of the body and the photo's lighting. Tap **Save as variant** to keep it on the

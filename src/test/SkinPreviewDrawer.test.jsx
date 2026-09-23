@@ -10,6 +10,15 @@ vi.mock('../data/skinPreview', () => ({
   shrinkImageDataUrl: h.shrink,
 }))
 
+vi.mock('../components/LiveTryOn', () => ({
+  default: ({ designUrl, onSave, onClose }) => (
+    <div data-testid="live-try-on" data-design={designUrl}>
+      <button type="button" onClick={() => onSave({ title: 'Live try-on', imageUrl: 'snap' })}>snap</button>
+      <button type="button" onClick={onClose}>close live</button>
+    </div>
+  ),
+}))
+
 const source = { conceptId: 'c1', conceptLabel: 'Moth', variantLabel: 'Pass 2', imageUrl: 'blob:design' }
 
 beforeEach(() => {
@@ -26,6 +35,17 @@ function pickPhoto() {
 }
 
 describe('SkinPreviewDrawer', () => {
+  it('offers a free live-camera try-on of the same design, saving to the same concept', () => {
+    const onSave = vi.fn()
+    const onClose = vi.fn()
+    render(<SkinPreviewDrawer source={source} apiKey="" onSave={onSave} onClose={onClose} />)
+    fireEvent.click(screen.getByRole('button', { name: /live camera/i }))
+    expect(screen.getByTestId('live-try-on')).toHaveAttribute('data-design', 'blob:design')
+
+    fireEvent.click(screen.getByRole('button', { name: 'snap' }))
+    expect(onSave).toHaveBeenCalledWith('c1', { title: 'Live try-on', imageUrl: 'snap' })
+  })
+
   it('without a Gemini key, says where to add one and cannot generate', () => {
     render(<SkinPreviewDrawer source={source} apiKey="" onSave={vi.fn()} onClose={vi.fn()} />)
     expect(screen.getByText(/add a gemini key/i)).toBeInTheDocument()
