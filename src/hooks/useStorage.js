@@ -107,9 +107,13 @@ export function useStorage(key, defaultValue, codecArg) {
     let cancelled = false
     ;(async () => {
       try {
+        const remoteRows = await backend.store.list(collection)
+        if (cancelled) return
         // Rows deleted locally but not yet remotely must not ride back in on
         // the pull; the remove is retried below instead. A pending delete for
-        // an id present in the local cache was superseded by a re-add.
+        // an id present in the local cache was superseded by a re-add. Read
+        // after the list await, not before: a delete made while the pull was
+        // in flight must count too (#86 review).
         const localIds = new Set(
           (Array.isArray(valueRef.current) ? valueRef.current : [])
             .map((r) => (r && typeof r === 'object' ? r.id : undefined))
@@ -118,8 +122,6 @@ export function useStorage(key, defaultValue, codecArg) {
         const superseded = allPending.filter((id) => localIds.has(id))
         if (superseded.length) clearPendingDeletes(key, superseded)
         const pendingDeletes = allPending.filter((id) => !localIds.has(id))
-        const remoteRows = await backend.store.list(collection)
-        if (cancelled) return
         const usableRemote = pendingDeletes.length
           ? remoteRows.filter((r) => !pendingDeletes.includes(r.id))
           : remoteRows
