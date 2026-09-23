@@ -4,6 +4,7 @@ import TagPill from '../components/TagPill'
 import Logo from '../components/Logo'
 import BoardsSection from '../components/BoardsSection'
 import ArtistImage from '../components/ArtistImage'
+import ReliefStlDrawer from '../components/ReliefStlDrawer'
 import { STYLE_TAGS, PLACEMENTS } from '../data/artists'
 import { IDEA_STATUSES, matchArtistsToIdea } from '../data/brief'
 import { buildIdeaBrief } from '../data/export'
@@ -229,6 +230,14 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
     commitImageRemoval((updater) => onRestoreImages?.(id, updater))
   }
 
+  // Rendered after the modal rather than inside it, so the drawer is fixed to
+  // the screen whatever the modal's animation or scroll is doing.
+  const [stlSource, setStlSource] = useState(null)
+  function makeStl(url, index) {
+    const label = `${draft.title?.trim() || 'Idea'} reference ${index + 1}`
+    setStlSource({ imageUrl: url, label, filenameSeed: label })
+  }
+
   async function copyBrief() {
     await navigator.clipboard.writeText(buildIdeaBrief(draft, artists))
     setCopied(true)
@@ -236,6 +245,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
   }
 
   return (
+    <>
     <div className="fixed inset-0 z-50 bg-ink-black/95 flex flex-col animate-fade-in overflow-y-auto">
       <div className="flex items-center justify-between px-5 pt-safe-top pt-6 pb-4 border-b border-ink-border sticky top-0 bg-ink-black z-10">
         <button onClick={onClose} className="text-cream-muted hover:text-cream text-sm tracking-widest uppercase">
@@ -357,6 +367,13 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
                       className="absolute top-0 right-0 w-11 h-11 flex items-start justify-end p-1 can-hover:opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       <span className="w-6 h-6 bg-ink-dark/80 text-accent rounded-full text-xs flex items-center justify-center">×</span>
+                    </button>
+                    <button
+                      onClick={() => makeStl(url, index)}
+                      aria-label={`3D print reference ${index + 1}`}
+                      className="absolute bottom-0 left-0 h-11 min-w-11 flex items-end p-1 can-hover:opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <span className="bg-ink-dark/80 text-cream rounded-xs px-2 py-1 font-mono text-[0.625rem] uppercase tracking-widest">3D print</span>
                     </button>
                   </div>
                   <textarea
@@ -499,6 +516,8 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
         </div>
       </div>
     </div>
+    <ReliefStlDrawer source={stlSource} onClose={() => setStlSource(null)} />
+    </>
   )
 }
 

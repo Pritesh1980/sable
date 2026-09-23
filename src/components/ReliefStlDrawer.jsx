@@ -64,6 +64,11 @@ function ReliefStlDrawerContent({ source, onClose }) {
   const [imageElement, setImageElement] = useState(null)
   const [error, setError] = useState('')
   const [view, setView] = useState('image')
+  // A photo picked from the device replaces the source for this session.
+  const [ownImage, setOwnImage] = useState(null)
+  // The same <img> node is reused when the source changes, so the element
+  // alone can't key the preview's heightmap; the src that loaded can.
+  const [loadedSrc, setLoadedSrc] = useState('')
 
   useEffect(() => {
     onCloseRef.current = onClose
@@ -114,16 +119,18 @@ function ReliefStlDrawerContent({ source, onClose }) {
   }), [validation, settings])
 
   const preview = useMemo(() => {
-    if (view !== 'preview' || !imageElement) return { heightmap: null, error: '' }
+    if (view !== 'preview' || !imageElement || !loadedSrc) return { heightmap: null, error: '' }
     try {
       return { heightmap: imageToHeightmap(imageElement, settings.detail), error: '' }
     } catch (previewError) {
       return { heightmap: null, error: previewError.message }
     }
-  }, [view, imageElement, settings.detail])
+    // Keyed on loadedSrc too: a new picture can load into the same element.
+  }, [view, imageElement, loadedSrc, settings.detail])
 
-  const sourceLabel = source.label || 'Selected image'
-  const filenameSlug = slugify(source.filenameSeed || source.label)
+  const imageUrl = ownImage?.url || source.imageUrl
+  const sourceLabel = ownImage?.label || source.label || 'Selected image'
+  const filenameSlug = slugify(ownImage?.label || source.filenameSeed || source.label)
   const downloadDisabled = validation.errors.length > 0 || !imageElement
 
   function updateSetting(name, value) {
@@ -139,7 +146,22 @@ function ReliefStlDrawerContent({ source, onClose }) {
 
   function handleImageLoad(event) {
     setImageElement(event.currentTarget)
+    setLoadedSrc(event.currentTarget.getAttribute('src') || '')
     setError('')
+  }
+
+  function handleOwnImage(event) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      setImageElement(null)
+      setError('')
+      setOwnImage({ url: String(reader.result), label: file.name.replace(/\.[^.]+$/, '') || 'Photo' })
+    }
+    reader.onerror = () => setError(IMAGE_LOAD_ERROR)
+    reader.readAsDataURL(file)
   }
 
   function handleImageError() {
@@ -215,13 +237,23 @@ function ReliefStlDrawerContent({ source, onClose }) {
             </div>
             {/* Stays mounted while the preview shows: the download reads its pixels. */}
             <img
-              src={source.imageUrl}
+              src={imageUrl}
               alt={`${sourceLabel} STL source`}
               onLoad={handleImageLoad}
               onError={handleImageError}
               hidden={view === 'preview'}
               className="aspect-[4/3] w-full rounded-xs border border-ink-border bg-ink-muted object-contain"
             />
+            <label className="inline-flex cursor-pointer items-center rounded-xs border border-ink-border px-3 py-2 font-mono text-[0.6875rem] uppercase tracking-widest text-cream-muted transition-colors hover:text-cream">
+              Use another image…
+              <input
+                type="file"
+                accept="image/*"
+                aria-label="Use another image"
+                onChange={handleOwnImage}
+                className="sr-only"
+              />
+            </label>
             {view === 'preview' && (
               preview.error
                 ? <p className="rounded-xs border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-accent">{preview.error}</p>

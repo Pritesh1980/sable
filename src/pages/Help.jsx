@@ -60,7 +60,7 @@ const SECTIONS = [
     blurb: 'Capture tattoo ideas, link artists to them, and group ideas into mood boards.',
     image: 'brief-idea-editor.png',
     steps: [
-      'Open Ideas and tap + to create an idea. Add a title, description, style tags, body placement and reference images.',
+      'Open Ideas and tap + to create an idea. Add a title, description, style tags, body placement and reference images. 3D print on a reference image turns it into a printable relief STL.',
       'With a Gemini key set and a reference image uploaded, Fill idea from image drafts the title, description, tags and placement from the image — only fields you left empty are filled.',
       'As you add style tags, matching artists appear ranked by overlap, status and rank — tap to link them to the idea.',
       'Use Copy brief to put a shareable, formatted summary on your clipboard.',
@@ -99,7 +99,7 @@ const SECTIONS = [
       'To generate in-app, open AI setup in the composer and add a paid OpenAI or Gemini API key (~$0.04/image, billing required; stored only on this device).',
       '+ Prompt packs in the composer builds tailored prompts for ChatGPT, Firefly, Gemini and Claude from free text or a Brief idea; Save Pack keeps the set. Pack concepts without an image wait in the Drafts strip until you paste a result in.',
       'Click a saved concept and it fills the screen like the artists’ Wall; Esc or × Close (top-left) takes you back. On a phone, swipe left/right between concepts, down to close, and tap the image (or Details) for Delete and Variants. Deleting shows an Undo bar for a few seconds. Press I for its prompt, response, style matching and AI results — save multiple outputs as variants, each with an image, text, notes and a rating; mark the strongest as Best.',
-      'For results with images, use Make STL to export a printable relief-style heightmap file.',
+      'For results with images, use Make STL to export a printable relief (also from an idea’s reference image via 3D print, or any photo via Use another image…). Choose Relief for shading-as-height or Line art for crisp raised lines with a threshold; check it in the rotatable 3D preview before downloading.',
       'Tag each concept with styles to reveal its top artist matches; tap a match to open their Instagram.',
       'With the style index built (Artists → Similar ink), the info panel also shows Visual matches — the concept image compared against each artist’s actual work, on-device, to rank who could execute it — plus a taste-fit score for how strongly the image matches your overall taste.',
     ],

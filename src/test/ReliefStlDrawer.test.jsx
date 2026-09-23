@@ -87,6 +87,21 @@ describe('ReliefStlDrawer', () => {
     expect(screen.getByAltText('Raven Chest STL source')).toBeVisible()
   })
 
+  it('can swap in your own photo from the device', async () => {
+    render(<ReliefStlDrawer source={source} onClose={() => {}} />)
+    const file = new File(['png-bytes'], 'My Sketch.PNG', { type: 'image/png' })
+    fireEvent.change(screen.getByLabelText('Use another image'), { target: { files: [file] } })
+
+    const img = await screen.findByAltText('My Sketch STL source')
+    expect(img.getAttribute('src')).toMatch(/^data:image\/png;base64,/)
+
+    fireEvent.load(img)
+    const downloadButton = screen.getByRole('button', { name: 'Download STL' })
+    await waitFor(() => expect(downloadButton).toBeEnabled())
+    fireEvent.click(downloadButton)
+    expect(buildReliefStl).toHaveBeenCalledWith(expect.any(Object), expect.objectContaining({ solidName: 'my-sketch' }))
+  })
+
   it('offers a fine detail level', () => {
     render(<ReliefStlDrawer source={source} onClose={() => {}} />)
     const values = [...screen.getByLabelText('Detail preset').querySelectorAll('option')].map((o) => o.value)

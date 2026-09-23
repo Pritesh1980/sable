@@ -74,20 +74,25 @@ On a phone, swipe left / right between concepts, swipe down to close, and tap th
 
 ## Export a relief STL
 
-When a result has an image, choose **Make STL**. Sable turns the image into a relief-style
-heightmap where brighter areas become raised surface detail.
+When a result has an image, choose **Make STL**. You can also start from a reference image
+in an idea (its **3D print** button), or pick any photo on your device with **Use another
+image…** inside the drawer. (Images pasted as a link from another website may be blocked
+by the browser; upload them instead.)
 
-Start with the defaults:
+Pick a **Style**:
 
-- Width: `80mm`
-- Max relief: `3mm`
-- Base: `1.2mm`
-- Detail: `medium`
-- Smoothing: `light`
+- **Relief** — brightness becomes height, so shading turns into a sculpted surface.
+- **Line art** — every point is either the flat plate or full height, so line work prints as
+  crisp raised lines. Line art starts with **Invert** on, which raises dark ink on a light
+  background; move the **Line threshold** to catch fainter lines or keep only the boldest.
 
-Use **Invert** when the wrong parts of the image are raised. Download the STL and open it
-in your slicer before printing. This first version creates relief plaques only; lithophane,
-line-art extrusion, and live 3D preview are later enhancements.
+Defaults: width `80mm`, max relief `3mm`, base `1.2mm`, detail `medium`, smoothing
+`light`. **Fine** detail samples about every 0.3mm at 80mm wide — close to a 0.4mm
+nozzle — for fine-line work, at the cost of a larger file.
+
+Switch to **3D preview** to see exactly what will print and drag to rotate it; it updates
+as you change settings. The download is a binary STL, which is much smaller than the old
+text format and loads quickly in Cura or any other slicer.
 
 > **Tip:** the concept tags use the same six styles as the rest of the app, so a well-tagged
 > concept points straight at the artists already in your collection.

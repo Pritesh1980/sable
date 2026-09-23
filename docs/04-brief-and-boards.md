@@ -28,7 +28,8 @@ Tap **+** to add an idea (or tap a card to edit one). The editor gives you:
   image, this button drafts the title, description, style tags and placement from the
   image itself; only fields you haven't filled are touched.
 - **Reference images** — paste an image URL or upload photos, each with a note on *what to
-  borrow from it*.
+  borrow from it*. **3D print** on an image opens the relief STL export for it (see
+  [AI concepts](06-concepts.md#export-a-relief-stl)).
 
 ### Artists match automatically
 
