@@ -170,8 +170,20 @@ export function useStorage(key, defaultValue, codecArg) {
     // meaningful for singletons — list collections confirm per row instead
     // (#84), via confirmRowGenerations below.
     const genAtStart = isSingleton ? readGeneration(key) : null
-    const next = valueRef.current
-    await codec.ensureUploaded(next, { userId: user.id })
+    // Everything below (cache write, upsert, tombstone bookkeeping) works from
+    // `next`, so it must not be a snapshot the user has moved past while the
+    // upload was in flight (#86): a stale one re-upserts a row deleted in the
+    // meantime, clears its tombstone as "re-added", and writes the stale value
+    // over the local cache. Re-snapshot after each upload; if edits keep
+    // arriving, stand down — each edit has already queued its own flush, and
+    // tombstones and the offline cache were made durable at edit time.
+    let next = valueRef.current
+    for (let round = 0; ; round += 1) {
+      await codec.ensureUploaded(next, { userId: user.id })
+      if (valueRef.current === next) break
+      if (round >= 2) return
+      next = valueRef.current
+    }
     // Kept un-stripped (still carries each row's editGen) so it can be handed
     // to confirmRowGenerations after a successful push — valueToRecords
     // strips editGen from what's actually sent to the remote store.
