@@ -229,6 +229,29 @@ describe('ConceptVariantLab', () => {
     })
   })
 
+  it('offers Try on skin for image results and passes the same design details', () => {
+    const onTryOnSkin = vi.fn()
+    renderLab({
+      concept: {
+        ...baseConcept,
+        variants: [{
+          id: 'variant-image', provider: 'gemini', title: 'Moth pass', imageUrl: 'data:image/png;base64,moth',
+          response: '', notes: '', rating: 0, isBest: false, createdAt: '2026-05-31T08:00:00.000Z',
+        }],
+      },
+      onTryOnSkin,
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Moth pass result for Raven chest tattoo' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Try Moth pass result for Raven chest tattoo on skin' }))
+    expect(onTryOnSkin).toHaveBeenCalledWith({
+      conceptId: 'concept-1',
+      conceptLabel: 'Raven chest tattoo',
+      variantId: 'variant-image',
+      variantLabel: 'Moth pass',
+      imageUrl: 'data:image/png;base64,moth',
+    })
+  })
+
   it('does not show Make STL for variants without images', () => {
     renderLab({
       concept: {

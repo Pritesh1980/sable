@@ -72,6 +72,18 @@ On a phone, swipe left / right between concepts, swipe down to close, and tap th
 - **Delete** removes the concept — an **Undo** bar appears for a few seconds if you change
   your mind.
 
+## Try a concept on skin
+
+On any result with an image, choose **Try on skin**. Pick a photo of where the tattoo would
+go (take one with the camera or choose from your library), set the **Placement**, and tap
+**Generate preview**: Gemini draws the design onto your skin as a healed tattoo, following
+the curve of the body and the photo's lighting. Tap **Save as variant** to keep it on the
+concept next to your other results, or **Change photo…** to try another angle.
+
+This needs a Gemini key (set it in AI setup on this page). Your photo and the design are sent
+to Google's Gemini image model — about $0.04 per image — and nothing is kept unless you save
+the result.
+
 ## Export a relief STL
 
 When a result has an image, choose **Make STL**. You can also start from a reference image

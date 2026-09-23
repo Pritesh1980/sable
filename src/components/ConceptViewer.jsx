@@ -31,7 +31,7 @@ function pad2(n) {
   return String(n).padStart(2, '0')
 }
 
-function InfoPanel({ item, artists, onClose, onSaveTags, onAddVariant, onMarkBest, onDeleteVariant, onRateVariant, onMakeStl }) {
+function InfoPanel({ item, artists, onClose, onSaveTags, onAddVariant, onMarkBest, onDeleteVariant, onRateVariant, onMakeStl, onTryOnSkin }) {
   const concept = item.concept
   const matched = (concept.tags || []).length && artists.length
     ? matchArtistsForIdea({ tags: concept.tags }, artists).slice(0, 3)
@@ -93,6 +93,7 @@ function InfoPanel({ item, artists, onClose, onSaveTags, onAddVariant, onMarkBes
         onDeleteVariant={onDeleteVariant}
         onRateVariant={onRateVariant}
         onMakeStl={onMakeStl}
+        onTryOnSkin={onTryOnSkin}
       />
     </aside>
   )
@@ -123,6 +124,7 @@ export default function ConceptViewer({
   onDeleteVariant,
   onRateVariant,
   onMakeStl,
+  onTryOnSkin,
 }) {
   const [index, setIndex] = useState(initialIndex)
   const [showInfo, setShowInfo] = useState(false)
@@ -341,6 +343,7 @@ export default function ConceptViewer({
           onDeleteVariant={onDeleteVariant}
           onRateVariant={onRateVariant}
           onMakeStl={onMakeStl}
+          onTryOnSkin={onTryOnSkin}
         />
       )}
     </div>

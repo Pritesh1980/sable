@@ -297,6 +297,7 @@ function VariantDetails({
   label,
   variant,
   onMakeStl,
+  onTryOnSkin,
   onMarkBest,
   onDeleteVariant,
   onRateVariant,
@@ -376,6 +377,22 @@ function VariantDetails({
                 Make STL
               </button>
             )}
+            {imageUrl && onTryOnSkin && (
+              <button
+                type="button"
+                aria-label={`Try ${title} result for ${label} on skin`}
+                onClick={() => onTryOnSkin({
+                  conceptId,
+                  conceptLabel: label,
+                  variantId: variant.id,
+                  variantLabel: title,
+                  imageUrl,
+                })}
+                className="rounded-xs border border-accent/45 px-3 py-2 text-xs text-accent transition-colors hover:bg-accent/10"
+              >
+                Try on skin
+              </button>
+            )}
             {!variant.isBest && (
               <button
                 type="button"
@@ -408,6 +425,7 @@ function VariantCard({
   isExpanded,
   onToggle,
   onMakeStl,
+  onTryOnSkin,
   onMarkBest,
   onDeleteVariant,
   onRateVariant,
@@ -465,6 +483,7 @@ function VariantCard({
             label={label}
             variant={variant}
             onMakeStl={onMakeStl}
+            onTryOnSkin={onTryOnSkin}
             onMarkBest={onMarkBest}
             onDeleteVariant={onDeleteVariant}
             onRateVariant={onRateVariant}
@@ -479,6 +498,7 @@ export default function ConceptVariantLab({
   concept,
   onAddVariant,
   onMakeStl,
+  onTryOnSkin,
   onMarkBest,
   onDeleteVariant,
   onRateVariant,
@@ -547,6 +567,7 @@ export default function ConceptVariantLab({
                 ))
               }}
               onMakeStl={onMakeStl}
+              onTryOnSkin={onTryOnSkin}
               onMarkBest={onMarkBest}
               onDeleteVariant={onDeleteVariant}
               onRateVariant={onRateVariant}

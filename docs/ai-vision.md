@@ -165,6 +165,6 @@ lines. Screenshot intake (#20/#21): both add-artist forms + Brief
 fill-idea-from-image, with taste-fit scoring on intake — which delivered the
 deferred discovery-rescoring, since candidates finally carry images. Hardened
 after cross-model review (#24 tracks remaining refinements: bounding-box crop
-before embedding, batch inbox). Still open: on-skin preview (flagship 3,
-parked), copilot (flagship 4, to be co-designed with Pritesh), Web Share
-Target (#22, post-deploy).
+before embedding, batch inbox). Web Share Target (#22) has since shipped, and
+on-skin preview (flagship 3) shipped 2026-09-23 as "Try on skin" on concept
+results. Still open: copilot (flagship 4, to be co-designed with Pritesh).

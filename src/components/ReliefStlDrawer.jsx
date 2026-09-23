@@ -226,8 +226,9 @@ function ReliefStlDrawerContent({ source, onClose }) {
     }
   }
 
+  // z-[70]: above the full-screen viewers (z-[60]) these open from.
   return (
-    <div className="fixed inset-0 z-50 bg-ink-black/90 px-4 py-6 backdrop-blur-xs">
+    <div className="fixed inset-0 z-[70] bg-ink-black/90 px-4 py-6 backdrop-blur-xs">
       <section
         role="dialog"
         aria-modal="true"

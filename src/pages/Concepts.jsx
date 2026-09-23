@@ -6,6 +6,7 @@ import ConceptVariantLab from '../components/ConceptVariantLab'
 import ConceptViewer from '../components/ConceptViewer'
 import PromptPackComposer from '../components/PromptPackComposer'
 import ReliefStlDrawer from '../components/ReliefStlDrawer'
+import SkinPreviewDrawer from '../components/SkinPreviewDrawer'
 import SavedPromptPack from '../components/SavedPromptPack'
 import {
   addConceptVariant,
@@ -118,6 +119,7 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
 
   const [viewerIndex, setViewerIndex] = useState(null)
   const [stlSource, setStlSource] = useState(null)
+  const [skinSource, setSkinSource] = useState(null)
 
   const hasOpenai = Boolean(openaiKey)
   const hasGemini = Boolean(geminiKey)
@@ -278,6 +280,15 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
     )))
   }
 
+  function tryOnSkin(input) {
+    setSkinSource({
+      conceptId: input.conceptId,
+      conceptLabel: input.conceptLabel,
+      variantLabel: input.variantLabel,
+      imageUrl: input.imageUrl,
+    })
+  }
+
   function makeStlFromVariant(input) {
     setStlSource({
       imageUrl: input.imageUrl,
@@ -389,6 +400,7 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
                   onDeleteVariant={deleteVariant}
                   onRateVariant={rateVariant}
                   onMakeStl={makeStlFromVariant}
+                  onTryOnSkin={tryOnSkin}
                 />
                 <div className="flex justify-end mt-4 pt-3 border-t border-v2-hairline">
                   <button
@@ -449,12 +461,20 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
           onDeleteVariant={deleteVariant}
           onRateVariant={rateVariant}
           onMakeStl={makeStlFromVariant}
+          onTryOnSkin={tryOnSkin}
         />
       )}
 
       <ReliefStlDrawer
         source={stlSource}
         onClose={() => setStlSource(null)}
+      />
+
+      <SkinPreviewDrawer
+        source={skinSource}
+        apiKey={geminiKey}
+        onSave={addVariant}
+        onClose={() => setSkinSource(null)}
       />
     </div>
   )
