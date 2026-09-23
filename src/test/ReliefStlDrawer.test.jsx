@@ -11,6 +11,12 @@ vi.mock('../data/reliefStl', async () => {
   }
 })
 
+const photo = vi.hoisted(() => ({ load: vi.fn() }))
+vi.mock('../data/reliefImage', async () => {
+  const actual = await vi.importActual('../data/reliefImage')
+  return { ...actual, loadPhotoForRelief: photo.load }
+})
+
 vi.mock('../components/ReliefPreview', () => ({
   default: ({ heightmap, settings }) => (
     <div data-testid="relief-preview" data-width={heightmap?.width} data-mode={settings?.mode} />
@@ -32,6 +38,7 @@ describe('ReliefStlDrawer', () => {
   beforeEach(() => {
     buildReliefStl.mockClear()
     getContextSpy = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+      fillRect: vi.fn(),
       drawImage: vi.fn(),
       getImageData: vi.fn(() => ({
         data: new Uint8ClampedArray([
@@ -87,19 +94,37 @@ describe('ReliefStlDrawer', () => {
     expect(screen.getByAltText('Raven Chest STL source')).toBeVisible()
   })
 
-  it('can swap in your own photo from the device', async () => {
+  it('can swap in your own photo from the device, downsized on the way in', async () => {
+    let resolvePhoto
+    photo.load.mockReturnValueOnce(new Promise((r) => { resolvePhoto = r }))
     render(<ReliefStlDrawer source={source} onClose={() => {}} />)
+    fireEvent.load(screen.getByRole('img', { name: 'Raven Chest STL source' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Download STL' })).toBeEnabled())
+
     const file = new File(['png-bytes'], 'My Sketch.PNG', { type: 'image/png' })
     fireEvent.change(screen.getByLabelText('Use another image'), { target: { files: [file] } })
+    // The old image must not stay downloadable while the new one is read (codex review).
+    expect(screen.getByRole('button', { name: 'Download STL' })).toBeDisabled()
+    expect(photo.load).toHaveBeenCalledWith(file)
 
+    resolvePhoto('data:image/png;base64,small')
     const img = await screen.findByAltText('My Sketch STL source')
-    expect(img.getAttribute('src')).toMatch(/^data:image\/png;base64,/)
+    expect(img.getAttribute('src')).toBe('data:image/png;base64,small')
 
     fireEvent.load(img)
     const downloadButton = screen.getByRole('button', { name: 'Download STL' })
     await waitFor(() => expect(downloadButton).toBeEnabled())
     fireEvent.click(downloadButton)
     expect(buildReliefStl).toHaveBeenCalledWith(expect.any(Object), expect.objectContaining({ solidName: 'my-sketch' }))
+  })
+
+  it('does not override detail or height the user already chose when switching to line art', () => {
+    render(<ReliefStlDrawer source={source} onClose={() => {}} />)
+    fireEvent.change(screen.getByLabelText('Detail preset'), { target: { value: 'high' } })
+    fireEvent.change(screen.getByLabelText('Maximum relief height in millimetres'), { target: { value: '2' } })
+    fireEvent.change(screen.getByLabelText('Style'), { target: { value: 'lineart' } })
+    expect(screen.getByLabelText('Detail preset')).toHaveValue('high')
+    expect(screen.getByLabelText('Maximum relief height in millimetres')).toHaveValue(2)
   })
 
   it('offers a fine detail level', () => {
@@ -114,7 +139,11 @@ describe('ReliefStlDrawer', () => {
     expect(screen.queryByLabelText('Line threshold')).not.toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('Style'), { target: { value: 'lineart' } })
-    expect(screen.getByLabelText('Invert relief height')).toBeChecked()
+    // Worded for what it does to a print, not as an image operation (agy review).
+    expect(screen.getByLabelText('Raise dark lines')).toBeChecked()
+    // Print-safe line-art defaults: nozzle-scale detail, low sturdy lines.
+    expect(screen.getByLabelText('Detail preset')).toHaveValue('fine')
+    expect(screen.getByLabelText('Maximum relief height in millimetres')).toHaveValue(1.5)
     fireEvent.change(screen.getByLabelText('Line threshold'), { target: { value: '0.6' } })
 
     fireEvent.load(screen.getByRole('img', { name: 'Raven Chest STL source' }))

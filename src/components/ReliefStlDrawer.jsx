@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { buildReliefStl, DEFAULT_RELIEF_SETTINGS } from '../data/reliefStl'
-import { CANVAS_READ_ERROR, imageToHeightmap } from '../data/reliefImage'
+import { CANVAS_READ_ERROR, imageToHeightmap, loadPhotoForRelief } from '../data/reliefImage'
 import ReliefPreview from './ReliefPreview'
 const IMAGE_LOAD_ERROR = 'Could not load this image for STL export.'
 
@@ -14,6 +14,10 @@ const DEFAULT_DRAWER_SETTINGS = {
   mode: DEFAULT_RELIEF_SETTINGS.mode,
   threshold: String(DEFAULT_RELIEF_SETTINGS.threshold),
 }
+
+// Line art prints best at nozzle-scale detail with low, sturdy lines; a 3mm
+// fin a sample wide snaps off or gets dropped by the slicer.
+const LINEART_DEFAULTS = { detail: 'fine', maxReliefMm: '1.5' }
 
 const SELECT_CLASS = 'w-full rounded-xs border border-ink-border bg-ink-muted px-3 py-2 font-body text-sm text-cream outline-hidden transition-colors focus:border-cream-muted/50'
 const LABEL_CLASS = 'mb-2 block font-mono text-[0.6875rem] uppercase tracking-widest text-cream-muted'
@@ -69,6 +73,7 @@ function ReliefStlDrawerContent({ source, onClose }) {
   // The same <img> node is reused when the source changes, so the element
   // alone can't key the preview's heightmap; the src that loaded can.
   const [loadedSrc, setLoadedSrc] = useState('')
+  const photoPickRef = useRef(0)
 
   useEffect(() => {
     onCloseRef.current = onClose
@@ -138,7 +143,12 @@ function ReliefStlDrawerContent({ source, onClose }) {
       const next = { ...current, [name]: value }
       // Tattoo line work is dark ink on a light ground; raising the ink is
       // almost always what's wanted, so line art starts inverted.
-      if (name === 'mode' && value === 'lineart' && current.mode !== 'lineart') next.invert = true
+      if (name === 'mode' && value === 'lineart' && current.mode !== 'lineart') {
+        next.invert = true
+        // Only replace values still at their defaults — never a user's choice.
+        if (current.detail === DEFAULT_DRAWER_SETTINGS.detail) next.detail = LINEART_DEFAULTS.detail
+        if (current.maxReliefMm === DEFAULT_DRAWER_SETTINGS.maxReliefMm) next.maxReliefMm = LINEART_DEFAULTS.maxReliefMm
+      }
       return next
     })
     setError('')
@@ -154,14 +164,21 @@ function ReliefStlDrawerContent({ source, onClose }) {
     const file = event.target.files?.[0]
     event.target.value = ''
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      setImageElement(null)
-      setError('')
-      setOwnImage({ url: String(reader.result), label: file.name.replace(/\.[^.]+$/, '') || 'Photo' })
-    }
-    reader.onerror = () => setError(IMAGE_LOAD_ERROR)
-    reader.readAsDataURL(file)
+    // Nothing downloadable until the new photo has loaded, and only the most
+    // recent pick may land.
+    const pick = photoPickRef.current + 1
+    photoPickRef.current = pick
+    setImageElement(null)
+    setLoadedSrc('')
+    setError('')
+    loadPhotoForRelief(file)
+      .then((url) => {
+        if (photoPickRef.current !== pick) return
+        setOwnImage({ url, label: file.name.replace(/\.[^.]+$/, '') || 'Photo' })
+      })
+      .catch(() => {
+        if (photoPickRef.current === pick) setError(IMAGE_LOAD_ERROR)
+      })
   }
 
   function handleImageError() {
@@ -372,13 +389,17 @@ function ReliefStlDrawerContent({ source, onClose }) {
 
             <label className="flex items-center gap-3 rounded-xs border border-ink-border bg-ink-black/20 px-3 py-3 text-sm text-cream-muted">
               <input
-                aria-label="Invert relief height"
+                aria-label={settings.mode === 'lineart' ? 'Raise dark lines' : 'Invert relief height'}
                 type="checkbox"
                 checked={settings.invert}
                 onChange={(event) => updateSetting('invert', event.target.checked)}
                 className="h-4 w-4 accent-accent"
               />
-              <span>Invert relief height</span>
+              <span>
+                {settings.mode === 'lineart'
+                  ? 'Raise dark lines (untick to engrave them instead)'
+                  : 'Invert relief height'}
+              </span>
             </label>
 
             {[...validation.errors, error].filter(Boolean).map((message) => (

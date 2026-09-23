@@ -35,8 +35,9 @@ export function createReliefPreview(THREE, mount) {
   canvas.style.width = '100%'
   canvas.style.height = '100%'
   canvas.style.display = 'block'
-  // The page must not scroll or zoom while a finger orbits the model.
-  canvas.style.touchAction = 'none'
+  // Vertical swipes still scroll the drawer on a phone; horizontal drags (and
+  // any mouse drag) orbit the model.
+  canvas.style.touchAction = 'pan-y'
   mount.appendChild(canvas)
 
   const scene = new THREE.Scene()

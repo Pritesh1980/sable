@@ -83,8 +83,10 @@ Pick a **Style**:
 
 - **Relief** — brightness becomes height, so shading turns into a sculpted surface.
 - **Line art** — every point is either the flat plate or full height, so line work prints as
-  crisp raised lines. Line art starts with **Invert** on, which raises dark ink on a light
-  background; move the **Line threshold** to catch fainter lines or keep only the boldest.
+  crisp raised lines. It starts with **Raise dark lines** ticked (untick it to engrave the
+  lines into the plate instead), **Fine** detail and a low `1.5mm` line height, which print
+  far more reliably than tall thin fins. Move the **Line threshold** to catch fainter lines
+  or keep only the boldest. Transparent PNGs work: the background counts as white.
 
 Defaults: width `80mm`, max relief `3mm`, base `1.2mm`, detail `medium`, smoothing
 `light`. **Fine** detail samples about every 0.3mm at 80mm wide — close to a 0.4mm

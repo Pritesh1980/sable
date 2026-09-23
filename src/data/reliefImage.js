@@ -21,6 +21,10 @@ export function imageToHeightmap(image, detail) {
     throw new Error(CANVAS_READ_ERROR)
   }
 
+  // Transparent pixels would otherwise read as black, turning a transparent
+  // line-art PNG into a solid slab. Paint onto white first.
+  context.fillStyle = '#ffffff'
+  context.fillRect(0, 0, width, height)
   context.drawImage(image, 0, 0, width, height)
 
   let pixels
@@ -36,4 +40,38 @@ export function imageToHeightmap(image, detail) {
   }
 
   return { width, height, values }
+}
+
+const PHOTO_MAX_SIDE = 1024
+
+// A device photo, downsized (well above the finest preset's 256 samples) and
+// flattened onto white as PNG. Decoding through an object URL avoids holding
+// a base64 copy of a full-resolution camera file.
+export function loadPhotoForRelief(file, maxSide = PHOTO_MAX_SIDE) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file)
+    const image = new Image()
+    image.onload = () => {
+      try {
+        const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight))
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.max(2, Math.round(image.naturalWidth * scale))
+        canvas.height = Math.max(2, Math.round(image.naturalHeight * scale))
+        const context = canvas.getContext('2d')
+        context.fillStyle = '#ffffff'
+        context.fillRect(0, 0, canvas.width, canvas.height)
+        context.drawImage(image, 0, 0, canvas.width, canvas.height)
+        resolve(canvas.toDataURL('image/png'))
+      } catch (error) {
+        reject(error)
+      } finally {
+        URL.revokeObjectURL(url)
+      }
+    }
+    image.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('Could not read that photo.'))
+    }
+    image.src = url
+  })
 }

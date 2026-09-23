@@ -35,4 +35,24 @@ describe('createReliefPreview', () => {
     const mount = { clientWidth: 100, clientHeight: 100, appendChild: vi.fn() }
     expect(createReliefPreview(THREE, mount)).toBeNull()
   })
+
+  // On a phone the preview sits in a scrolling drawer: vertical swipes must
+  // still scroll it (agy review), horizontal drags rotate.
+  it('lets vertical swipes scroll the page on touch', () => {
+    const style = {}
+    const canvas = { style, addEventListener: vi.fn(), removeEventListener: vi.fn() }
+    const noop = class { add() {} remove() {} set() {} }
+    const THREE = {
+      WebGLRenderer: class { constructor() { this.domElement = canvas } setPixelRatio() {} setSize() {} render() {} dispose() {} },
+      Scene: noop,
+      PerspectiveCamera: class { constructor() { this.up = { set() {} }; this.position = { set() {} } } lookAt() {} updateProjectionMatrix() {} },
+      HemisphereLight: noop,
+      DirectionalLight: class { constructor() { this.position = { set() {} } } },
+      MeshStandardMaterial: class { dispose() {} },
+    }
+    const mount = { clientWidth: 100, clientHeight: 100, appendChild: vi.fn() }
+    expect(createReliefPreview(THREE, mount)).toBeTruthy()
+    expect(style.touchAction).toBe('pan-y')
+  })
 })
+
