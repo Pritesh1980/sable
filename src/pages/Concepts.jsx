@@ -328,11 +328,11 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
 
   return (
     <div className="min-h-screen bg-v2-ink">
-      <header className="sticky top-0 z-10 flex items-center gap-8 px-8 py-3.5 bg-v2-ink/[.88] backdrop-blur-md border-b border-v2-hairline">
-        <div className="font-v2-display text-[1.35rem] tracking-[0.28em] uppercase text-v2-cream">
+      <header className="sticky top-0 z-10 flex items-center gap-4 px-4 sm:gap-8 sm:px-8 py-3.5 bg-v2-ink/[.88] backdrop-blur-md border-b border-v2-hairline">
+        <div className="hidden sm:block font-v2-display text-[1.35rem] tracking-[0.28em] uppercase text-v2-cream">
           Sable<span className="text-v2-accent">.</span>
         </div>
-        <nav className="flex items-center gap-6 flex-1">
+        <nav className="flex items-center gap-4 sm:gap-6 flex-1">
           <button
             onClick={() => navigate('/')}
             className="font-v2-ui text-sm tracking-wide uppercase min-h-11 flex items-center border-b-2 border-transparent text-v2-muted hover:text-v2-cream"

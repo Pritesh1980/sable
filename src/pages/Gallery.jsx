@@ -264,13 +264,13 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
   return (
     <div className="min-h-screen bg-ink-black pt-safe-top">
       {/* Page header */}
-      <div className="px-4 pt-10 pb-4 flex items-end justify-between">
+      <div className="px-4 pt-10 pb-4 flex flex-wrap items-end justify-between gap-y-4">
         <div>
           <Logo size={28} className="mb-3" />
           <p className="font-mono text-xs text-accent tracking-[0.4em] uppercase mb-2">Your Collection</p>
           <h1 className="font-display text-5xl text-cream leading-none tracking-tight">Artists</h1>
         </div>
-        <div className="flex gap-2 mb-1">
+        <div className="flex flex-wrap gap-2 mb-1">
           {artistsWithImages.length > 0 && !manageMode && (
             <>
               <button

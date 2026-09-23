@@ -84,6 +84,17 @@ describe('createGlEngine', () => {
     expect(typeof engine.dispose).toBe('function')
   })
 
+  // #96: setSize's default updateStyle=true would overwrite the canvas's
+  // 100% CSS with fixed pixels, pinning the viewer to its first-seen size.
+  it('sizes only the drawing buffer, leaving the canvas CSS at 100%', () => {
+    const { THREE, canvas } = makeThree()
+    const setSize = vi.fn()
+    THREE.WebGLRenderer.prototype.setSize = setSize
+    createGlEngine(THREE, makeMount())
+    expect(setSize).toHaveBeenCalledWith(200, 100, false)
+    expect(canvas.style.width).toBe('100%')
+  })
+
   it('returns null when a WebGL renderer cannot be constructed', () => {
     const { THREE } = makeThree()
     THREE.WebGLRenderer = class { constructor() { throw new Error('no webgl context') } }

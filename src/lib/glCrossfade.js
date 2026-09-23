@@ -75,7 +75,9 @@ export function createGlEngine(THREE, mount, { durationMs = 600, onContextLost }
 
   const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1
   renderer.setPixelRatio?.(Math.min(dpr, 2))
-  renderer.setSize?.(width, height)
+  // updateStyle=false: only size the drawing buffer. The canvas CSS stays
+  // 100% (below) so it follows its container instead of pinning it (#96).
+  renderer.setSize?.(width, height, false)
   renderer.setClearColor?.(0x000000, 0)
 
   const canvas = renderer.domElement
@@ -231,7 +233,7 @@ export function createGlEngine(THREE, mount, { durationMs = 600, onContextLost }
     if (disposed) return
     const w = mount.clientWidth || width
     const h = mount.clientHeight || height
-    renderer.setSize?.(w, h)
+    renderer.setSize?.(w, h, false)
     uniforms.uViewport.value.set(w, h)
     renderOnce()
   }
