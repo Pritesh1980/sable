@@ -11,7 +11,12 @@ const DEFAULT_DRAWER_SETTINGS = {
   detail: DEFAULT_RELIEF_SETTINGS.detail,
   smoothing: DEFAULT_RELIEF_SETTINGS.smoothing,
   invert: DEFAULT_RELIEF_SETTINGS.invert,
+  mode: DEFAULT_RELIEF_SETTINGS.mode,
+  threshold: String(DEFAULT_RELIEF_SETTINGS.threshold),
 }
+
+const SELECT_CLASS = 'w-full rounded-xs border border-ink-border bg-ink-muted px-3 py-2 font-body text-sm text-cream outline-hidden transition-colors focus:border-cream-muted/50'
+const LABEL_CLASS = 'mb-2 block font-mono text-[0.6875rem] uppercase tracking-widest text-cream-muted'
 
 function slugify(value) {
   const slug = String(value || '')
@@ -134,7 +139,13 @@ function ReliefStlDrawerContent({ source, onClose }) {
   const downloadDisabled = validation.errors.length > 0 || !imageElement
 
   function updateSetting(name, value) {
-    setSettings((current) => ({ ...current, [name]: value }))
+    setSettings((current) => {
+      const next = { ...current, [name]: value }
+      // Tattoo line work is dark ink on a light ground; raising the ink is
+      // almost always what's wanted, so line art starts inverted.
+      if (name === 'mode' && value === 'lineart' && current.mode !== 'lineart') next.invert = true
+      return next
+    })
     setError('')
   }
 
@@ -160,6 +171,8 @@ function ReliefStlDrawerContent({ source, onClose }) {
         detail: settings.detail,
         smoothing: settings.smoothing,
         invert: settings.invert,
+        mode: settings.mode,
+        threshold: Number.parseFloat(settings.threshold),
         solidName: filenameSlug,
       })
       const blob = new Blob([stl], { type: 'model/stl' })
@@ -217,6 +230,39 @@ function ReliefStlDrawerContent({ source, onClose }) {
 
           <div className="space-y-4">
             <label className="block">
+              <span className={LABEL_CLASS}>Style</span>
+              <select
+                value={settings.mode}
+                onChange={(event) => updateSetting('mode', event.target.value)}
+                className={SELECT_CLASS}
+              >
+                <option value="relief">Relief (shading becomes height)</option>
+                <option value="lineart">Line art (raised lines on a flat plate)</option>
+              </select>
+            </label>
+
+            {settings.mode === 'lineart' && (
+              <div>
+                <label className="block">
+                  <span className={LABEL_CLASS}>Line threshold</span>
+                  <input
+                    type="range"
+                    min="0.05"
+                    max="0.95"
+                    step="0.05"
+                    value={settings.threshold}
+                    onChange={(event) => updateSetting('threshold', event.target.value)}
+                    aria-describedby="relief-threshold-hint"
+                    className="w-full accent-accent"
+                  />
+                </label>
+                <p id="relief-threshold-hint" className="mt-1 text-xs text-cream-muted">
+                  Higher catches fainter lines; lower keeps only the boldest.
+                </p>
+              </div>
+            )}
+
+            <label className="block">
               <span className="mb-2 block font-mono text-[0.6875rem] uppercase tracking-widest text-cream-muted">
                 Width in millimetres
               </span>
@@ -273,6 +319,7 @@ function ReliefStlDrawerContent({ source, onClose }) {
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
                 <option value="high">High</option>
+                <option value="fine">Fine (nozzle-scale, bigger file)</option>
               </select>
             </label>
 

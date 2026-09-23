@@ -250,6 +250,46 @@ describe('relief STL geometry', () => {
     expect(stl.byteLength).toBeLessThan(3 * 1024 * 1024)
   })
 
+  describe('line-art mode', () => {
+    const map = { width: 2, height: 2, values: [0.2, 0.8, 0.4, 0.6] }
+    const lineart = { ...flatOff, mode: 'lineart', threshold: 0.5 }
+
+    it('turns every point into either the plate or full height, split at the threshold', () => {
+      const mesh = buildReliefMesh(map, lineart)
+      expect(mesh.vertices.slice(0, 4).map((v) => v[2])).toEqual([1, 5, 1, 5])
+    })
+
+    it('raises the dark side instead when inverted (tattoo ink on a light ground)', () => {
+      const mesh = buildReliefMesh(map, { ...lineart, invert: true })
+      expect(mesh.vertices.slice(0, 4).map((v) => v[2])).toEqual([5, 1, 5, 1])
+    })
+
+    it('moves the split with the threshold', () => {
+      const mesh = buildReliefMesh(map, { ...lineart, threshold: 0.7 })
+      expect(mesh.vertices.slice(0, 4).map((v) => v[2])).toEqual([1, 5, 1, 1])
+    })
+
+    it('smooths before thresholding, so an isolated speck is dropped rather than softened', () => {
+      const speck = { width: 3, height: 3, values: [0, 0, 0, 0, 1, 0, 0, 0, 0] }
+      const mesh = buildReliefMesh(speck, { ...lineart, smoothing: 'light' })
+      expect(mesh.vertices.slice(0, 9).every((v) => v[2] === 1)).toBe(true)
+    })
+  })
+
+  it('normalizes mode and threshold', () => {
+    expect(normalizeReliefSettings({ mode: 'bogus' }).mode).toBe('relief')
+    expect(normalizeReliefSettings({ mode: 'lineart' }).mode).toBe('lineart')
+    expect(normalizeReliefSettings({ threshold: 2 }).threshold).toBe(0.95)
+    expect(normalizeReliefSettings({ threshold: -1 }).threshold).toBe(0.05)
+    expect(normalizeReliefSettings({ threshold: 'x' }).threshold).toBe(DEFAULT_RELIEF_SETTINGS.threshold)
+  })
+
+  it('has a fine detail level at nozzle scale (~0.3mm across 80mm)', () => {
+    const values = Array.from({ length: 400 * 400 }, () => 0.5)
+    const mesh = buildReliefMesh({ width: 400, height: 400, values }, { detail: 'fine', smoothing: 'off' })
+    expect(mesh.vertices[1][0] - mesh.vertices[0][0]).toBeLessThan(0.33)
+  })
+
   it('computes normalized triangle normals', () => {
     expect(triangleNormal([0, 0, 0], [1, 0, 0], [0, 1, 0])).toEqual([0, 0, 1])
   })

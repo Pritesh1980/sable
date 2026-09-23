@@ -62,6 +62,32 @@ describe('ReliefStlDrawer', () => {
     expect(screen.getByLabelText('Invert relief height')).not.toBeChecked()
   })
 
+  it('offers a fine detail level', () => {
+    render(<ReliefStlDrawer source={source} onClose={() => {}} />)
+    const values = [...screen.getByLabelText('Detail preset').querySelectorAll('option')].map((o) => o.value)
+    expect(values).toEqual(['low', 'medium', 'high', 'fine'])
+  })
+
+  it('line-art style shows a threshold, raises dark lines by default, and is passed to the STL', async () => {
+    render(<ReliefStlDrawer source={source} onClose={() => {}} />)
+    expect(screen.getByLabelText('Style')).toHaveValue('relief')
+    expect(screen.queryByLabelText('Line threshold')).not.toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Style'), { target: { value: 'lineart' } })
+    expect(screen.getByLabelText('Invert relief height')).toBeChecked()
+    fireEvent.change(screen.getByLabelText('Line threshold'), { target: { value: '0.6' } })
+
+    fireEvent.load(screen.getByRole('img', { name: 'Raven Chest STL source' }))
+    const downloadButton = screen.getByRole('button', { name: 'Download STL' })
+    await waitFor(() => expect(downloadButton).toBeEnabled())
+    fireEvent.click(downloadButton)
+
+    expect(buildReliefStl).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ mode: 'lineart', threshold: 0.6, invert: true }),
+    )
+  })
+
   it('disables STL download and shows width validation when width is out of range', () => {
     render(<ReliefStlDrawer source={source} onClose={() => {}} />)
 

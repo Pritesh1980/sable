@@ -5,15 +5,23 @@ export const DEFAULT_RELIEF_SETTINGS = {
   detail: 'medium',
   smoothing: 'light',
   invert: false,
+  // 'relief' maps brightness to height; 'lineart' splits at `threshold` into
+  // plate or full height, so line work prints as crisp raised shapes.
+  mode: 'relief',
+  threshold: 0.5,
 }
 
+// Samples across the longest side. At the default 80mm, fine is ~0.31mm per
+// sample, about a 0.4mm nozzle's line width.
 export const DETAIL_PRESETS = {
   low: 48,
   medium: 96,
   high: 160,
+  fine: 256,
 }
 
 const VALID_SMOOTHING = new Set(['off', 'light'])
+const VALID_MODES = new Set(['relief', 'lineart'])
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 
@@ -37,6 +45,8 @@ export function normalizeReliefSettings(rawSettings = {}) {
     detail,
     smoothing,
     invert: Boolean(settings.invert),
+    mode: VALID_MODES.has(settings.mode) ? settings.mode : DEFAULT_RELIEF_SETTINGS.mode,
+    threshold: clamp(finiteNumber(Number(settings.threshold), DEFAULT_RELIEF_SETTINGS.threshold), 0.05, 0.95),
   }
 }
 
@@ -148,7 +158,10 @@ export function buildReliefMesh(heightmap, rawSettings = {}) {
     const coordinateY = depthMm - y * yStep
 
     for (let x = 0; x < prepared.width; x += 1) {
-      const brightness = clamp(finiteNumber(Number(valueAt(prepared, x, y)), 0), 0, 1)
+      const raw = clamp(finiteNumber(Number(valueAt(prepared, x, y)), 0), 0, 1)
+      // Thresholded after smoothing, so smoothing removes specks and noise
+      // rather than softening the line edges.
+      const brightness = settings.mode === 'lineart' ? (raw >= settings.threshold ? 1 : 0) : raw
       const mapped = settings.invert ? 1 - brightness : brightness
       vertices.push([x * xStep, coordinateY, settings.baseMm + mapped * settings.maxReliefMm])
     }
