@@ -117,6 +117,8 @@ export default function useWallKeyboard({
     index,
     current: items[index],
     setIndex,
+    moveWithinArtist,
+    jumpArtist,
     positionInArtist: group ? index - group.startIndex : 0,
     artistImageCount: group ? group.endIndex - group.startIndex : 0,
     artistOrdinal: groupIndex + 1,

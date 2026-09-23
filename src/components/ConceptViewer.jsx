@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import useIdleFade from '../hooks/useIdleFade'
 import useDialogFocus from '../hooks/useDialogFocus'
+import useMediaQuery from '../hooks/useMediaQuery'
+import useSwipeTap from '../hooks/useSwipeTap'
 import ConceptVariantLab from './ConceptVariantLab'
 import ConceptVisualMatches from './ConceptVisualMatches'
 import GlCrossfade from './GlCrossfade'
@@ -16,6 +18,9 @@ function isFormFieldFocused() {
   const tag = el.tagName
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable
 }
+
+const KBD = 'border border-v2-hairline rounded px-1.5 py-0.5 mr-1 text-v2-cream text-[0.66rem]'
+const PANEL_BUTTON = 'flex items-center justify-center gap-3 bg-v2-ink/70 backdrop-blur-md border border-v2-hairline hover:border-v2-accent rounded-xs px-4 py-3 text-v2-cream font-v2-ui text-sm transition-colors'
 
 function pad2(n) {
   return String(n).padStart(2, '0')
@@ -120,6 +125,20 @@ export default function ConceptViewer({
   const [transitionMode] = useState(resolveTransitionMode)
   const idle = useIdleFade(2000)
   const dialogRef = useDialogFocus(open)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const touch = useMediaQuery('(hover: none)')
+
+  function step(delta) {
+    setIndex((i) => (i + delta + items.length) % items.length)
+  }
+
+  const gestures = useSwipeTap({
+    onTap: () => setSheetOpen((s) => !s),
+    onSwipe: (dir) => {
+      if (dir === 'left') step(1)
+      else if (dir === 'right') step(-1)
+    },
+  })
 
   useEffect(() => {
     if (!open) return undefined
@@ -155,6 +174,43 @@ export default function ConceptViewer({
 
   const current = items[index]
 
+  const topRow = (
+    <>
+      {/* The installed PWA draws under the iPhone status bar
+          (black-translucent), so the top row clears the safe-area inset. */}
+      <button
+        onClick={onClose}
+        aria-label="Close viewer"
+        title="Back to concepts (Esc)"
+        className="absolute left-[max(1rem,env(safe-area-inset-left))] top-[max(1rem,env(safe-area-inset-top))] flex items-center gap-2 bg-v2-ink/70 backdrop-blur-md border border-v2-hairline hover:border-v2-accent rounded-xs px-4 py-3 text-v2-cream font-v2-ui text-xs tracking-widest uppercase pointer-events-auto transition-colors"
+      >
+        <span aria-hidden="true" className="text-base leading-none">×</span>
+        Close
+      </button>
+
+      <div className="absolute right-[max(1rem,env(safe-area-inset-right))] sm:right-8 top-[max(1.5rem,env(safe-area-inset-top))] font-v2-display text-sm tracking-[0.2em] text-v2-muted pointer-events-auto">
+        <b className="text-v2-cream font-normal">{pad2(index + 1)}</b> / {items.length}
+      </div>
+    </>
+  )
+
+  const plate = (
+    <>
+      <h1 className="font-v2-display text-[1.6rem] tracking-[0.24em] uppercase text-v2-cream truncate [text-shadow:0_1px_12px_rgba(19,17,16,0.8)]">
+        {current.title}
+      </h1>
+      <div className="mt-1 font-v2-ui text-[0.68rem] tracking-[0.14em] uppercase text-v2-muted">
+        {current.steerArtistName ? `steered · ${current.steerArtistName}` : current.tags.join(' · ')}
+      </div>
+    </>
+  )
+
+  const deleteButton = (className = '') => (
+    <button onClick={() => onDelete?.(current.id)} className={`${PANEL_BUTTON} ${className}`}>
+      Delete
+    </button>
+  )
+
   return (
     <div
       ref={dialogRef}
@@ -164,98 +220,96 @@ export default function ConceptViewer({
       tabIndex={-1}
       className="fixed inset-0 z-[60] bg-v2-ink overflow-hidden focus:outline-hidden"
     >
-      {/* t9: WebGL crossfade/ripple chosen once per open; 'css' keeps <img>. */}
-      {transitionMode === 'webgl' ? (
-        <div className="absolute inset-0">
-          <GlCrossfade
-            src={current.imageUrl}
-            label={current.title}
-            className="w-full h-full block"
-            fallbackImageClassName="max-w-[100vw] max-h-[100vh] object-contain animate-fade-in"
-          />
+      {/* Gesture surface (#93). touch-action: none stops the browser claiming
+          the swipe as a scroll or pinch-zoom before our pointerup arrives. */}
+      <div
+        data-testid="viewer-surface"
+        className="absolute inset-0"
+        style={touch ? { touchAction: 'none' } : undefined}
+        {...(touch ? gestures : {})}
+      >
+        {/* t9: WebGL crossfade/ripple chosen once per open; 'css' keeps <img>. */}
+        {transitionMode === 'webgl' ? (
+          <div className="absolute inset-0">
+            <GlCrossfade
+              src={current.imageUrl}
+              label={current.title}
+              className="w-full h-full block"
+              fallbackImageClassName="max-w-[100vw] max-h-[100vh] object-contain animate-fade-in"
+            />
+          </div>
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <img
+              key={current.id}
+              src={current.imageUrl}
+              alt={current.title}
+              className="max-w-[100vw] max-h-[100vh] object-contain animate-fade-in"
+            />
+          </div>
+        )}
+      </div>
+
+      {touch ? (
+        <div className="absolute inset-0 pointer-events-none">
+          {topRow}
+
+          {sheetOpen && (
+            <div className="absolute inset-x-0 bottom-0 pointer-events-auto flex flex-col gap-4 bg-gradient-to-t from-v2-ink via-v2-ink/90 to-transparent pt-16 px-[max(1rem,env(safe-area-inset-left))] pb-[max(1.25rem,env(safe-area-inset-bottom))] animate-slide-up">
+              <div className="min-w-0">{plate}</div>
+              <div className="flex gap-2">
+                <button onClick={() => setShowInfo((s) => !s)} className={`${PANEL_BUTTON} flex-1`}>
+                  Variants & STL export
+                </button>
+                {deleteButton()}
+              </div>
+            </div>
+          )}
         </div>
       ) : (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <img
-            key={current.id}
-            src={current.imageUrl}
-            alt={current.title}
-            className="max-w-[100vw] max-h-[100vh] object-contain animate-fade-in"
-          />
-        </div>
-      )}
-
-      <div
-        className={`absolute inset-0 pointer-events-none transition-opacity duration-500 motion-reduce:transition-none ${
-          idle ? 'opacity-0' : 'opacity-100'
-        }`}
-      >
-        {/* The installed PWA draws under the iPhone status bar
-            (black-translucent), so the top row clears the safe-area inset. */}
-        <button
-          onClick={onClose}
-          aria-label="Close viewer"
-          title="Back to concepts (Esc)"
-          className="absolute left-[max(1rem,env(safe-area-inset-left))] top-[max(1rem,env(safe-area-inset-top))] flex items-center gap-2 bg-v2-ink/70 backdrop-blur-md border border-v2-hairline hover:border-v2-accent rounded-xs px-4 py-3 text-v2-cream font-v2-ui text-xs tracking-widest uppercase pointer-events-auto transition-colors"
+        <div
+          className={`absolute inset-0 pointer-events-none transition-opacity duration-500 motion-reduce:transition-none ${
+            idle ? 'opacity-0' : 'opacity-100'
+          }`}
         >
-          <span aria-hidden="true" className="text-base leading-none">×</span>
-          Close
-        </button>
+          {topRow}
 
-        <div className="absolute right-8 top-[max(1.5rem,env(safe-area-inset-top))] font-v2-display text-sm tracking-[0.2em] text-v2-muted pointer-events-auto">
-          <b className="text-v2-cream font-normal">{pad2(index + 1)}</b> / {items.length}
-        </div>
+          {items.length > 1 && (
+            <>
+              <button
+                onClick={() => step(-1)}
+                title="Previous concept (←)"
+                className="absolute left-2 top-1/2 -translate-y-1/2 text-v2-muted hover:text-v2-cream text-4xl px-4 py-8 pointer-events-auto transition-colors"
+              >
+                ‹
+              </button>
+              <button
+                onClick={() => step(1)}
+                title="Next concept (→)"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-v2-muted hover:text-v2-cream text-4xl px-4 py-8 pointer-events-auto transition-colors"
+              >
+                ›
+              </button>
+            </>
+          )}
 
-        {items.length > 1 && (
-          <>
-            <button
-              onClick={() => setIndex((i) => (i - 1 + items.length) % items.length)}
-              title="Previous concept (←)"
-              className="absolute left-2 top-1/2 -translate-y-1/2 text-v2-muted hover:text-v2-cream text-4xl px-4 py-8 pointer-events-auto transition-colors"
-            >
-              ‹
+          <div className="absolute left-8 bottom-7 pointer-events-auto max-w-[60%]">{plate}</div>
+
+          <div className="absolute right-8 bottom-7 flex items-center gap-3 pointer-events-auto">
+            {deleteButton()}
+            <button onClick={() => setShowInfo((s) => !s)} className={PANEL_BUTTON}>
+              Variants & STL export
+              <kbd className="text-[0.7rem] text-v2-accent border border-v2-accent rounded px-1.5 py-0.5">I</kbd>
             </button>
-            <button
-              onClick={() => setIndex((i) => (i + 1) % items.length)}
-              title="Next concept (→)"
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-v2-muted hover:text-v2-cream text-4xl px-4 py-8 pointer-events-auto transition-colors"
-            >
-              ›
-            </button>
-          </>
-        )}
+          </div>
 
-        <div className="absolute left-8 bottom-7 pointer-events-auto max-w-[60%]">
-          <h1 className="font-v2-display text-[1.6rem] tracking-[0.24em] uppercase text-v2-cream truncate [text-shadow:0_1px_12px_rgba(19,17,16,0.8)]">
-            {current.title}
-          </h1>
-          <div className="mt-1 font-v2-ui text-[0.68rem] tracking-[0.14em] uppercase text-v2-muted">
-            {current.steerArtistName ? `steered · ${current.steerArtistName}` : current.tags.join(' · ')}
+          <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-5 font-v2-ui text-[0.68rem] tracking-[0.1em] text-v2-muted pointer-events-auto">
+            <span><kbd className={KBD}>←</kbd><kbd className={KBD}>→</kbd>concepts</span>
+            <span><kbd className={KBD}>I</kbd>variants & STL</span>
+            <span><kbd className={KBD}>Esc</kbd>back to wall</span>
           </div>
         </div>
-
-        <div className="absolute right-8 bottom-7 flex items-center gap-3 pointer-events-auto">
-          <button
-            onClick={() => onDelete?.(current.id)}
-            className="bg-v2-ink/70 backdrop-blur-md border border-v2-hairline hover:border-v2-accent rounded-xs px-4 py-3 text-v2-cream font-v2-ui text-sm transition-colors"
-          >
-            Delete
-          </button>
-          <button
-            onClick={() => setShowInfo((s) => !s)}
-            className="flex items-center gap-3 bg-v2-ink/70 backdrop-blur-md border border-v2-hairline hover:border-v2-accent rounded-xs px-4 py-3 text-v2-cream font-v2-ui text-sm transition-colors"
-          >
-            Variants & STL export
-            <kbd className="text-[0.7rem] text-v2-accent border border-v2-accent rounded px-1.5 py-0.5">I</kbd>
-          </button>
-        </div>
-
-        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-5 font-v2-ui text-[0.68rem] tracking-[0.1em] text-v2-muted pointer-events-auto">
-          <span><kbd className="border border-v2-hairline rounded px-1.5 py-0.5 mr-1 text-v2-cream text-[0.66rem]">←</kbd><kbd className="border border-v2-hairline rounded px-1.5 py-0.5 mr-1 text-v2-cream text-[0.66rem]">→</kbd>concepts</span>
-          <span><kbd className="border border-v2-hairline rounded px-1.5 py-0.5 mr-1 text-v2-cream text-[0.66rem]">I</kbd>variants & STL</span>
-          <span><kbd className="border border-v2-hairline rounded px-1.5 py-0.5 mr-1 text-v2-cream text-[0.66rem]">Esc</kbd>back to wall</span>
-        </div>
-      </div>
+      )}
 
       {showInfo && (
         <InfoPanel

@@ -4,6 +4,8 @@ import GlCrossfade from './GlCrossfade'
 import useWallKeyboard from '../hooks/useWallKeyboard'
 import useIdleFade from '../hooks/useIdleFade'
 import useDialogFocus from '../hooks/useDialogFocus'
+import useMediaQuery from '../hooks/useMediaQuery'
+import useSwipeTap from '../hooks/useSwipeTap'
 import { resolveTransitionMode } from '../lib/gl'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
 
@@ -63,9 +65,14 @@ function InfoPanel({ artist, ideas, onClose }) {
   )
 }
 
-// Full-screen wall viewer. The image owns the screen; the HUD (index, artist
-// plate, filmstrip, keys legend) fades away after a couple of seconds of
-// stillness and returns on any mouse/keyboard activity.
+const KBD = 'border border-v2-hairline rounded px-1.5 py-0.5 mr-1 text-v2-cream text-[0.66rem]'
+const PANEL_BUTTON = 'flex items-center justify-center gap-3 bg-v2-ink/70 backdrop-blur-md border border-v2-hairline hover:border-v2-accent rounded-xs px-4 py-3 text-v2-cream font-v2-ui text-sm transition-colors'
+
+// Full-screen wall viewer. The image owns the screen.
+// Mouse/keyboard: the HUD (index, artist plate, filmstrip, keys legend) fades
+// away after a couple of seconds of stillness and returns on any activity.
+// Touch (#93): only Close and the counter stay up; a tap on the image toggles
+// a bottom sheet with everything else, and swipes stand in for the arrow keys.
 export default function WallViewer({
   items,
   initialIndex = 0,
@@ -78,12 +85,16 @@ export default function WallViewer({
   onPasteImage,
 }) {
   const [showInfo, setShowInfo] = useState(false)
+  const [sheetOpen, setSheetOpen] = useState(false)
   // Resolve the transition renderer once per viewer open (not per keypress).
   const [transitionMode] = useState(resolveTransitionMode)
+  const touch = useMediaQuery('(hover: none)')
 
   const {
     current,
     setIndex,
+    moveWithinArtist,
+    jumpArtist,
     positionInArtist,
     artistImageCount,
     artistOrdinal,
@@ -99,6 +110,18 @@ export default function WallViewer({
 
   const idle = useIdleFade(2000)
   const dialogRef = useDialogFocus(open)
+
+  const gestures = useSwipeTap({
+    onTap: () => setSheetOpen((s) => !s),
+    // Swipe names where the finger went: pulling the image left brings the
+    // next one in, pushing it up brings the next artist up from below.
+    onSwipe: (dir) => {
+      if (dir === 'left') moveWithinArtist(1)
+      else if (dir === 'right') moveWithinArtist(-1)
+      else if (dir === 'up') jumpArtist(1)
+      else if (dir === 'down') jumpArtist(-1)
+    },
+  })
 
   // Paste (⌘V) with the viewer open adds the pasted image to the artist
   // currently in view.
@@ -129,6 +152,57 @@ export default function WallViewer({
     setIndex(items.indexOf(nextItem))
   }
 
+  // The installed PWA draws under the iPhone status bar (black-translucent),
+  // so the top row clears the safe-area inset.
+  const topRow = (
+    <>
+      <button
+        onClick={onClose}
+        aria-label="Close viewer"
+        title="Back to wall (Esc)"
+        className="absolute left-[max(1rem,env(safe-area-inset-left))] top-[max(1rem,env(safe-area-inset-top))] flex items-center gap-2 bg-v2-ink/70 backdrop-blur-md border border-v2-hairline hover:border-v2-accent rounded-xs px-4 py-3 text-v2-cream font-v2-ui text-xs tracking-widest uppercase pointer-events-auto transition-colors"
+      >
+        <span aria-hidden="true" className="text-base leading-none">×</span>
+        Close
+      </button>
+
+      <div className="absolute right-[max(1rem,env(safe-area-inset-right))] sm:right-8 top-[max(1.5rem,env(safe-area-inset-top))] font-v2-display text-sm tracking-[0.2em] text-v2-muted pointer-events-auto">
+        <b className="text-v2-cream font-normal">{pad2(positionInArtist + 1)}</b> / {artistImageCount} · artist {artistOrdinal} of {artistCount}
+      </div>
+    </>
+  )
+
+  const plate = (
+    <>
+      <h1 className="font-v2-display text-[1.6rem] tracking-[0.24em] uppercase text-v2-cream [text-shadow:0_1px_12px_rgba(19,17,16,0.8)]">
+        {current.artistName}
+      </h1>
+      <a
+        href={instagramUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="font-v2-ui text-xs tracking-[0.12em] text-v2-muted hover:text-v2-cream"
+      >
+        @{current.handle} ↗
+      </a>
+      <div className="mt-1 font-v2-ui text-[0.68rem] tracking-[0.14em] uppercase text-v2-muted">
+        {current.styles.join(' · ')}
+      </div>
+    </>
+  )
+
+  const thumbnails = artistItems.map((item) => (
+    <img
+      key={item.imageIndex}
+      src={getItemSrc(item)}
+      alt={`${item.artistName} thumbnail ${item.imageIndex + 1}`}
+      onClick={() => setIndex(items.indexOf(item))}
+      className={`h-14 w-[42px] shrink-0 object-cover rounded-xs cursor-pointer transition-opacity ${
+        item === current ? 'opacity-100 outline outline-1 outline-v2-accent outline-offset-1' : 'opacity-45 hover:opacity-100'
+      }`}
+    />
+  ))
+
   return (
     <div
       ref={dialogRef}
@@ -138,115 +212,108 @@ export default function WallViewer({
       tabIndex={-1}
       className="fixed inset-0 z-[60] bg-v2-ink overflow-hidden focus:outline-hidden"
     >
-      {/* t9: WebGL crossfade/ripple transition layer. Chosen once per open via
-          resolveTransitionMode(); 'css' keeps the plain <img> path untouched. */}
-      {transitionMode === 'webgl' ? (
-        <div className="absolute inset-0">
-          <GlCrossfade
-            src={getItemSrc(current)}
-            label={`${current.artistName} — ${current.styles.join(', ')}`}
-            className="w-full h-full block"
-            fallbackImageClassName="max-w-[100vw] max-h-[100vh] object-contain animate-fade-in"
-            monogramClassName="text-8xl"
-          />
-        </div>
-      ) : (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <ArtistImage
-            key={`${current.artistId}-${current.imageIndex}`}
-            src={getItemSrc(current)}
-            label={`${current.artistName} — ${current.styles.join(', ')}`}
-            className="max-w-[100vw] max-h-[100vh] object-contain animate-fade-in"
-            monogramClassName="text-8xl"
-          />
-        </div>
-      )}
-
+      {/* Gesture surface. touch-action: none stops the browser claiming the
+          swipe as a scroll or pinch-zoom before our pointerup arrives. */}
       <div
-        className={`absolute inset-0 pointer-events-none transition-opacity duration-500 motion-reduce:transition-none ${
-          idle ? 'opacity-0' : 'opacity-100'
-        }`}
+        data-testid="viewer-surface"
+        className="absolute inset-0"
+        style={touch ? { touchAction: 'none' } : undefined}
+        {...(touch ? gestures : {})}
       >
-        {/* The installed PWA draws under the iPhone status bar
-            (black-translucent), so the top row clears the safe-area inset. */}
-        <button
-          onClick={onClose}
-          aria-label="Close viewer"
-          title="Back to wall (Esc)"
-          className="absolute left-[max(1rem,env(safe-area-inset-left))] top-[max(1rem,env(safe-area-inset-top))] flex items-center gap-2 bg-v2-ink/70 backdrop-blur-md border border-v2-hairline hover:border-v2-accent rounded-xs px-4 py-3 text-v2-cream font-v2-ui text-xs tracking-widest uppercase pointer-events-auto transition-colors"
-        >
-          <span aria-hidden="true" className="text-base leading-none">×</span>
-          Close
-        </button>
-
-        <div className="absolute right-8 top-[max(1.5rem,env(safe-area-inset-top))] font-v2-display text-sm tracking-[0.2em] text-v2-muted pointer-events-auto">
-          <b className="text-v2-cream font-normal">{pad2(positionInArtist + 1)}</b> / {artistImageCount} · artist {artistOrdinal} of {artistCount}
-        </div>
-
-        <button
-          onClick={() => goWithinArtist(-1)}
-          title="Previous image (←)"
-          className="absolute left-2 top-1/2 -translate-y-1/2 text-v2-muted hover:text-v2-cream text-4xl px-4 py-8 pointer-events-auto transition-colors"
-        >
-          ‹
-        </button>
-        <button
-          onClick={() => goWithinArtist(1)}
-          title="Next image (→)"
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-v2-muted hover:text-v2-cream text-4xl px-4 py-8 pointer-events-auto transition-colors"
-        >
-          ›
-        </button>
-
-        <div className="absolute left-8 bottom-7 pointer-events-auto">
-          <h1 className="font-v2-display text-[1.6rem] tracking-[0.24em] uppercase text-v2-cream [text-shadow:0_1px_12px_rgba(19,17,16,0.8)]">
-            {current.artistName}
-          </h1>
-          <a
-            href={instagramUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-v2-ui text-xs tracking-[0.12em] text-v2-muted hover:text-v2-cream"
-          >
-            @{current.handle} ↗
-          </a>
-          <div className="mt-1 font-v2-ui text-[0.68rem] tracking-[0.14em] uppercase text-v2-muted">
-            {current.styles.join(' · ')}
+        {/* t9: WebGL crossfade/ripple transition layer. Chosen once per open via
+            resolveTransitionMode(); 'css' keeps the plain <img> path untouched. */}
+        {transitionMode === 'webgl' ? (
+          <div className="absolute inset-0">
+            <GlCrossfade
+              src={getItemSrc(current)}
+              label={`${current.artistName} — ${current.styles.join(', ')}`}
+              className="w-full h-full block"
+              fallbackImageClassName="max-w-[100vw] max-h-[100vh] object-contain animate-fade-in"
+              monogramClassName="text-8xl"
+            />
           </div>
-        </div>
-
-        {artistItems.length > 1 && (
-          <div className="absolute left-1/2 -translate-x-1/2 bottom-[4.6rem] flex gap-1 pointer-events-auto">
-            {artistItems.map((item) => (
-              <img
-                key={item.imageIndex}
-                src={getItemSrc(item)}
-                alt={`${item.artistName} thumbnail ${item.imageIndex + 1}`}
-                onClick={() => setIndex(items.indexOf(item))}
-                className={`h-14 w-[42px] object-cover rounded-xs cursor-pointer transition-opacity ${
-                  item === current ? 'opacity-100 outline outline-1 outline-v2-accent outline-offset-1' : 'opacity-45 hover:opacity-100'
-                }`}
-              />
-            ))}
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <ArtistImage
+              key={`${current.artistId}-${current.imageIndex}`}
+              src={getItemSrc(current)}
+              label={`${current.artistName} — ${current.styles.join(', ')}`}
+              className="max-w-[100vw] max-h-[100vh] object-contain animate-fade-in"
+              monogramClassName="text-8xl"
+            />
           </div>
         )}
-
-        <button
-          onClick={() => onGenerate?.(current)}
-          className="absolute right-8 bottom-7 flex items-center gap-3 bg-v2-ink/70 backdrop-blur-md border border-v2-hairline hover:border-v2-accent rounded-xs px-4 py-3 text-v2-cream font-v2-ui text-sm pointer-events-auto transition-colors"
-        >
-          Generate a concept in this style
-          <kbd className="text-[0.7rem] text-v2-accent border border-v2-accent rounded px-1.5 py-0.5">G</kbd>
-        </button>
-
-        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-5 font-v2-ui text-[0.68rem] tracking-[0.1em] text-v2-muted pointer-events-auto">
-          <span><kbd className="border border-v2-hairline rounded px-1.5 py-0.5 mr-1 text-v2-cream text-[0.66rem]">←</kbd><kbd className="border border-v2-hairline rounded px-1.5 py-0.5 mr-1 text-v2-cream text-[0.66rem]">→</kbd>this artist</span>
-          <span><kbd className="border border-v2-hairline rounded px-1.5 py-0.5 mr-1 text-v2-cream text-[0.66rem]">↑</kbd><kbd className="border border-v2-hairline rounded px-1.5 py-0.5 mr-1 text-v2-cream text-[0.66rem]">↓</kbd>next artist</span>
-          <span><kbd className="border border-v2-hairline rounded px-1.5 py-0.5 mr-1 text-v2-cream text-[0.66rem]">G</kbd>generate</span>
-          <span><kbd className="border border-v2-hairline rounded px-1.5 py-0.5 mr-1 text-v2-cream text-[0.66rem]">I</kbd>info & notes</span>
-          <span><kbd className="border border-v2-hairline rounded px-1.5 py-0.5 mr-1 text-v2-cream text-[0.66rem]">Esc</kbd>back to wall</span>
-        </div>
       </div>
+
+      {touch ? (
+        <div className="absolute inset-0 pointer-events-none">
+          {topRow}
+
+          {sheetOpen && (
+            <div className="absolute inset-x-0 bottom-0 pointer-events-auto flex flex-col gap-4 bg-gradient-to-t from-v2-ink via-v2-ink/90 to-transparent pt-16 px-[max(1rem,env(safe-area-inset-left))] pb-[max(1.25rem,env(safe-area-inset-bottom))] animate-slide-up">
+              {artistItems.length > 1 && (
+                <div className="flex gap-1 overflow-x-auto p-1">{thumbnails}</div>
+              )}
+              <div>{plate}</div>
+              <div className="flex gap-2">
+                <button onClick={() => onGenerate?.(current)} className={`${PANEL_BUTTON} flex-1`}>
+                  Generate a concept in this style
+                </button>
+                <button onClick={() => setShowInfo((s) => !s)} className={PANEL_BUTTON}>
+                  Info & notes
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div
+          className={`absolute inset-0 pointer-events-none transition-opacity duration-500 motion-reduce:transition-none ${
+            idle ? 'opacity-0' : 'opacity-100'
+          }`}
+        >
+          {topRow}
+
+          <button
+            onClick={() => goWithinArtist(-1)}
+            title="Previous image (←)"
+            className="absolute left-2 top-1/2 -translate-y-1/2 text-v2-muted hover:text-v2-cream text-4xl px-4 py-8 pointer-events-auto transition-colors"
+          >
+            ‹
+          </button>
+          <button
+            onClick={() => goWithinArtist(1)}
+            title="Next image (→)"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-v2-muted hover:text-v2-cream text-4xl px-4 py-8 pointer-events-auto transition-colors"
+          >
+            ›
+          </button>
+
+          <div className="absolute left-8 bottom-7 pointer-events-auto">{plate}</div>
+
+          {artistItems.length > 1 && (
+            <div className="absolute left-1/2 -translate-x-1/2 bottom-[4.6rem] flex gap-1 pointer-events-auto">
+              {thumbnails}
+            </div>
+          )}
+
+          <button
+            onClick={() => onGenerate?.(current)}
+            className={`absolute right-8 bottom-7 ${PANEL_BUTTON} pointer-events-auto`}
+          >
+            Generate a concept in this style
+            <kbd className="text-[0.7rem] text-v2-accent border border-v2-accent rounded px-1.5 py-0.5">G</kbd>
+          </button>
+
+          <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-5 font-v2-ui text-[0.68rem] tracking-[0.1em] text-v2-muted pointer-events-auto">
+            <span><kbd className={KBD}>←</kbd><kbd className={KBD}>→</kbd>this artist</span>
+            <span><kbd className={KBD}>↑</kbd><kbd className={KBD}>↓</kbd>next artist</span>
+            <span><kbd className={KBD}>G</kbd>generate</span>
+            <span><kbd className={KBD}>I</kbd>info & notes</span>
+            <span><kbd className={KBD}>Esc</kbd>back to wall</span>
+          </div>
+        </div>
+      )}
 
       {showInfo && (
         <InfoPanel artist={activeArtist} ideas={ideas} onClose={() => setShowInfo(false)} />

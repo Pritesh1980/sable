@@ -65,12 +65,19 @@ The keyboard does the driving:
 | `I` | open the artist's **info & notes** (status, notes, linked ideas) |
 | `Esc` | back to the Wall |
 
-No keyboard (on a phone, say)? Tap **× Close** in the top-left corner to go back to the Wall.
+**On a phone** the photo opens clean, with just **× Close** and the photo count along the
+top. Swipe instead of using the arrow keys:
+
+| Gesture | Does |
+|---|---|
+| swipe left / right | next / previous photo by **this artist** |
+| swipe up / down | **next / previous artist** |
+| tap the photo | show or hide the panel with the filmstrip, the artist's name and `@handle`, **Generate a concept** and **Info & notes** |
 
 A filmstrip of the artist's other photos sits along the bottom — click one to jump. The
-artist's `@handle ↗` opens their Instagram in a new tab. Leave the mouse still for a couple
-of seconds and the controls fade away, leaving just the image; move it, press a key or tap
-the screen and they return.
+artist's `@handle ↗` opens their Instagram in a new tab. With a mouse, leave it still for a
+couple of seconds and the controls fade away, leaving just the image; move it or press a key
+and they return.
 
 You can also **paste a screenshot** (`⌘V`) while viewing an artist — it's added to that
 artist's photos and gets a red *new* dot on the Wall.
