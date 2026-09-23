@@ -69,7 +69,8 @@ On a phone, swipe left / right between concepts, swipe down to close, and tap th
   ranking and shortlist statuses).
 - **AI results** — keep multiple outputs as curated variants, each with an image, text,
   notes and a rating. Mark one **Best** to keep the strongest direction first.
-- **Delete** removes the concept.
+- **Delete** removes the concept — an **Undo** bar appears for a few seconds if you change
+  your mind.
 
 ## Export a relief STL
 

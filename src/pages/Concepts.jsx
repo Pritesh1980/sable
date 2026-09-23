@@ -17,6 +17,7 @@ import { buildConceptWallItems } from '../data/concepts'
 import { clearComposerDraft, loadComposerDraft, saveComposerDraft } from '../data/composerDraft'
 import { generateImageWithGemini } from '../data/geminiImage'
 import { buildImagePrompt, buildTextPrompt } from '../data/conceptPrompts'
+import { useUndoableRemoval } from '../hooks/useUndoableRemoval'
 
 function conceptActionLabel(concept) {
   return String(concept?.prompt || concept?.id || 'this concept').trim() || 'this concept'
@@ -80,6 +81,15 @@ function KeyField({ label, help, placeholder, value, onSave, onRemove }) {
 }
 
 export default function Concepts({ concepts, setConcepts, artists = [], ideas = [] }) {
+  // A concept carries its image, variants and notes; deleting one goes through
+  // the app's Undo bar rather than being final (#95). Durable: the removal is
+  // already persisted, so the offer must outlive the viewer closing.
+  const { remove: removeConcept } = useUndoableRemoval(concepts, setConcepts, {
+    durable: true,
+    message: 'Concept deleted',
+    batchMessage: (n) => `${n} concepts deleted`,
+    confirmMessage: (n) => (n === 1 ? 'Concept restored' : `${n} concepts restored`),
+  })
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
@@ -240,7 +250,8 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
   }
 
   function discard(id) {
-    setConcepts((prev) => prev.filter((c) => c.id !== id))
+    const index = concepts.findIndex((c) => c.id === id)
+    if (index !== -1) removeConcept(index)
   }
 
   function addVariant(conceptId, input) {
