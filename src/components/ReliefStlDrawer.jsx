@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { buildReliefStl, DETAIL_PRESETS, DEFAULT_RELIEF_SETTINGS } from '../data/reliefStl'
-
-const CANVAS_READ_ERROR = 'This image cannot be read by the browser. Use an uploaded image or data URL.'
+import { buildReliefStl, DEFAULT_RELIEF_SETTINGS } from '../data/reliefStl'
+import { CANVAS_READ_ERROR, imageToHeightmap } from '../data/reliefImage'
+import ReliefPreview from './ReliefPreview'
 const IMAGE_LOAD_ERROR = 'Could not load this image for STL export.'
 
 const DEFAULT_DRAWER_SETTINGS = {
@@ -55,39 +55,6 @@ function validateSettings(settings) {
   return { errors, widthMm, maxReliefMm, baseMm }
 }
 
-function imageToHeightmap(image, detail) {
-  const maxSide = DETAIL_PRESETS[detail] || DETAIL_PRESETS.medium
-  const sourceWidth = image.naturalWidth || image.width || image.clientWidth || 2
-  const sourceHeight = image.naturalHeight || image.height || image.clientHeight || 2
-  const scale = Math.min(1, maxSide / Math.max(sourceWidth, sourceHeight))
-  const width = Math.max(2, Math.round(sourceWidth * scale))
-  const height = Math.max(2, Math.round(sourceHeight * scale))
-  const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
-
-  const context = canvas.getContext('2d')
-  if (!context) {
-    throw new Error(CANVAS_READ_ERROR)
-  }
-
-  context.drawImage(image, 0, 0, width, height)
-
-  let pixels
-  try {
-    pixels = context.getImageData(0, 0, width, height).data
-  } catch {
-    throw new Error(CANVAS_READ_ERROR)
-  }
-
-  const values = []
-  for (let index = 0; index < pixels.length; index += 4) {
-    values.push((pixels[index] * 0.299 + pixels[index + 1] * 0.587 + pixels[index + 2] * 0.114) / 255)
-  }
-
-  return { width, height, values }
-}
-
 function ReliefStlDrawerContent({ source, onClose }) {
   const closeButtonRef = useRef(null)
   const revokeTimerRef = useRef(null)
@@ -96,6 +63,7 @@ function ReliefStlDrawerContent({ source, onClose }) {
   const [settings, setSettings] = useState(DEFAULT_DRAWER_SETTINGS)
   const [imageElement, setImageElement] = useState(null)
   const [error, setError] = useState('')
+  const [view, setView] = useState('image')
 
   useEffect(() => {
     onCloseRef.current = onClose
@@ -134,6 +102,26 @@ function ReliefStlDrawerContent({ source, onClose }) {
 
   const validation = useMemo(() => validateSettings(settings), [settings])
 
+  const reliefSettings = useMemo(() => (validation.errors.length ? null : {
+    widthMm: validation.widthMm,
+    maxReliefMm: validation.maxReliefMm,
+    baseMm: validation.baseMm,
+    detail: settings.detail,
+    smoothing: settings.smoothing,
+    invert: settings.invert,
+    mode: settings.mode,
+    threshold: Number.parseFloat(settings.threshold),
+  }), [validation, settings])
+
+  const preview = useMemo(() => {
+    if (view !== 'preview' || !imageElement) return { heightmap: null, error: '' }
+    try {
+      return { heightmap: imageToHeightmap(imageElement, settings.detail), error: '' }
+    } catch (previewError) {
+      return { heightmap: null, error: previewError.message }
+    }
+  }, [view, imageElement, settings.detail])
+
   const sourceLabel = source.label || 'Selected image'
   const filenameSlug = slugify(source.filenameSeed || source.label)
   const downloadDisabled = validation.errors.length > 0 || !imageElement
@@ -164,17 +152,7 @@ function ReliefStlDrawerContent({ source, onClose }) {
 
     try {
       const heightmap = imageToHeightmap(imageElement, settings.detail)
-      const stl = buildReliefStl(heightmap, {
-        widthMm: validation.widthMm,
-        maxReliefMm: validation.maxReliefMm,
-        baseMm: validation.baseMm,
-        detail: settings.detail,
-        smoothing: settings.smoothing,
-        invert: settings.invert,
-        mode: settings.mode,
-        threshold: Number.parseFloat(settings.threshold),
-        solidName: filenameSlug,
-      })
+      const stl = buildReliefStl(heightmap, { ...reliefSettings, solidName: filenameSlug })
       const blob = new Blob([stl], { type: 'model/stl' })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
@@ -218,14 +196,37 @@ function ReliefStlDrawerContent({ source, onClose }) {
         </header>
 
         <div className="grid min-h-0 flex-1 gap-5 overflow-y-auto p-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
-          <div className="min-w-0">
+          <div className="min-w-0 space-y-3">
+            <div className="flex gap-2" role="group" aria-label="Show">
+              {[['image', 'Image'], ['preview', '3D preview']].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={view === value}
+                  disabled={value === 'preview' && !imageElement}
+                  onClick={() => setView(value)}
+                  className={`rounded-xs border px-3 py-2 font-mono text-[0.6875rem] uppercase tracking-widest transition-colors disabled:opacity-40 ${
+                    view === value ? 'border-accent text-cream' : 'border-ink-border text-cream-muted hover:text-cream'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {/* Stays mounted while the preview shows: the download reads its pixels. */}
             <img
               src={source.imageUrl}
               alt={`${sourceLabel} STL source`}
               onLoad={handleImageLoad}
               onError={handleImageError}
+              hidden={view === 'preview'}
               className="aspect-[4/3] w-full rounded-xs border border-ink-border bg-ink-muted object-contain"
             />
+            {view === 'preview' && (
+              preview.error
+                ? <p className="rounded-xs border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-accent">{preview.error}</p>
+                : <ReliefPreview heightmap={preview.heightmap} settings={reliefSettings} />
+            )}
           </div>
 
           <div className="space-y-4">

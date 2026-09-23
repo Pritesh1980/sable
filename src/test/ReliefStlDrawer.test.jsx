@@ -11,6 +11,12 @@ vi.mock('../data/reliefStl', async () => {
   }
 })
 
+vi.mock('../components/ReliefPreview', () => ({
+  default: ({ heightmap, settings }) => (
+    <div data-testid="relief-preview" data-width={heightmap?.width} data-mode={settings?.mode} />
+  ),
+}))
+
 const source = {
   imageUrl: 'data:image/png;base64,relief-source',
   label: 'Raven Chest',
@@ -60,6 +66,25 @@ describe('ReliefStlDrawer', () => {
     expect(screen.getByLabelText('Detail preset')).toHaveValue('medium')
     expect(screen.getByLabelText('Smoothing preset')).toHaveValue('light')
     expect(screen.getByLabelText('Invert relief height')).not.toBeChecked()
+  })
+
+  it('switches between the source image and a 3D preview of the same settings', async () => {
+    render(<ReliefStlDrawer source={source} onClose={() => {}} />)
+    fireEvent.load(screen.getByRole('img', { name: 'Raven Chest STL source' }))
+    expect(screen.queryByTestId('relief-preview')).not.toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Style'), { target: { value: 'lineart' } })
+    fireEvent.click(screen.getByRole('button', { name: '3D preview' }))
+
+    const preview = await screen.findByTestId('relief-preview')
+    expect(preview).toHaveAttribute('data-width', '2')
+    expect(preview).toHaveAttribute('data-mode', 'lineart')
+    // The source image stays mounted (hidden) so it can still be read for the download.
+    expect(screen.getByAltText('Raven Chest STL source')).not.toBeVisible()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Image' }))
+    expect(screen.queryByTestId('relief-preview')).not.toBeInTheDocument()
+    expect(screen.getByAltText('Raven Chest STL source')).toBeVisible()
   })
 
   it('offers a fine detail level', () => {
