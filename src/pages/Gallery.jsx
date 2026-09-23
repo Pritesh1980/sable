@@ -19,6 +19,7 @@ import {
 import SortableArtistCard from '../components/SortableArtistCard'
 import Logo from '../components/Logo'
 import ArtistDetail from '../components/ArtistDetail'
+import TasteMap from '../components/TasteMap'
 import ArtistBrowse from '../components/ArtistBrowse'
 import RankingMode from '../components/RankingMode'
 import StyleWall from '../components/StyleWall'
@@ -93,6 +94,7 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
   }
   const [browsing, setBrowsing] = useState(false)
   const [ranking, setRanking] = useState(false)
+  const [mapOpen, setMapOpen] = useState(false)
   // Deep links (?mode=manage) open maintenance directly; after that it's plain
   // state so toggling doesn't spam history.
   const [manageMode, setManageMode] = useState(() => searchParams.get('mode') === 'manage')
@@ -285,6 +287,12 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
               >
                 Browse
               </button>
+              <button
+                onClick={() => setMapOpen(true)}
+                className="font-mono text-xs text-cream-muted hover:text-cream border border-ink-border hover:border-cream-muted/40 px-3 py-2 rounded-xs transition-colors tracking-widest uppercase"
+              >
+                Map
+              </button>
             </>
           )}
           {/* Always reachable — one-step onboarding for a new artist */}
@@ -470,6 +478,14 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
           attendingConventions={mergedConventions.filter((c) => c.attendingArtistIds.includes(selected.id))}
           allArtists={artists}
           onSelectArtist={setSelected}
+        />
+      )}
+
+      {mapOpen && (
+        <TasteMap
+          artists={artists}
+          onOpenArtist={(artist) => { setMapOpen(false); setSelected(artist) }}
+          onClose={() => setMapOpen(false)}
         />
       )}
 

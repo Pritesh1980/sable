@@ -72,6 +72,16 @@ behaviour: how strongly this artist's work fits the taste implied by your rankin
 shortlist statuses, and where the model would place them on images alone — a useful
 nudge when it disagrees with where you've actually ranked them.
 
+### Taste map
+
+Tap **Map** in the Artists header to see your whole collection laid out by what the
+work looks like: artists whose ink looks alike sit closer together, each ringed in the
+colour of their main style (the key is underneath). **✦ You** marks your taste — the
+blend of everyone's work weighted by your ranking and shortlist statuses — so you can
+see which corner of your collection pulls you most, and spot artists sitting far from
+everything else. Tap anyone to open them. It uses the same on-device style index as
+Similar ink; if you haven't built it yet, the map offers **Build style index**.
+
 ---
 
 ## Ranking your favourites

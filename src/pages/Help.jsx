@@ -52,6 +52,7 @@ const SECTIONS = [
       'Tap any card to open the full artist detail — photos, tags, status, studio, notes and conventions they are attending.',
       'In the artist detail, Similar ink shows the three closest artists by how their work actually looks. Tap Build style index once — a small vision model downloads and all matching then runs on your device; your images never leave the browser.',
       'Similar ink also shows a taste line: how well the artist fits the taste learned from your ranking and statuses, and where the model would place them on images alone.',
+      'Map (in the Artists header) lays out your whole collection by how the work looks — similar ink sits together, ringed by main style — with ✦ You marking your taste. Tap an artist to open them. It uses the same on-device style index.',
     ],
   },
   {
