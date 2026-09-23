@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_RELIEF_SETTINGS,
+  buildReliefHeightField,
   buildReliefMesh,
   buildReliefStl,
   normalizeReliefSettings,
@@ -274,6 +275,33 @@ describe('relief STL geometry', () => {
       const mesh = buildReliefMesh(speck, { ...lineart, smoothing: 'light' })
       expect(mesh.vertices.slice(0, 9).every((v) => v[2] === 1)).toBe(true)
     })
+  })
+
+  // The 2D line mask and the 3D model must agree exactly, so both come from
+  // one preparation step. Checked against every top vertex, both modes.
+  it('builds a height field that matches the mesh top surface exactly', () => {
+    const w = 23
+    const h = 17
+    const values = Array.from({ length: w * h }, (_, i) => ((i * 53) % 97) / 96)
+    for (const settings of [
+      { ...flatOff, mode: 'relief', smoothing: 'light' },
+      { ...flatOff, mode: 'lineart', threshold: 0.4, invert: true, smoothing: 'light' },
+    ]) {
+      const field = buildReliefHeightField({ width: w, height: h, values }, settings)
+      const mesh = buildReliefMesh({ width: w, height: h, values }, settings)
+      expect(field.width * field.height).toBe(w * h)
+      for (let i = 0; i < field.values.length; i += 1) {
+        expect(mesh.vertices[i][2]).toBeCloseTo(settings.baseMm + field.values[i] * settings.maxReliefMm)
+      }
+    }
+  })
+
+  it('gives a pure 0/1 field in line-art mode', () => {
+    const field = buildReliefHeightField(
+      { width: 3, height: 3, values: [0.1, 0.9, 0.3, 0.6, 0.2, 0.8, 0.5, 0.4, 0.7] },
+      { mode: 'lineart', threshold: 0.5, smoothing: 'off' },
+    )
+    expect([...field.values]).toEqual([0, 1, 0, 1, 0, 1, 1, 0, 1])
   })
 
   it('normalizes mode and threshold', () => {

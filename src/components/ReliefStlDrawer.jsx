@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { buildReliefStl, DEFAULT_RELIEF_SETTINGS } from '../data/reliefStl'
 import { CANVAS_READ_ERROR, imageToHeightmap, loadPhotoForRelief } from '../data/reliefImage'
+import ReliefMask from './ReliefMask'
 import ReliefPreview from './ReliefPreview'
 const IMAGE_LOAD_ERROR = 'Could not load this image for STL export.'
 
@@ -123,15 +124,20 @@ function ReliefStlDrawerContent({ source, onClose }) {
     threshold: Number.parseFloat(settings.threshold),
   }), [validation, settings])
 
+  // The line mask only means something in line-art mode; fall back to the
+  // image rather than show a stale or meaningless view.
+  const shownView = view === 'mask' && settings.mode !== 'lineart' ? 'image' : view
+  const views = [['image', 'Image'], ...(settings.mode === 'lineart' ? [['mask', 'Line mask']] : []), ['preview', '3D preview']]
+
   const preview = useMemo(() => {
-    if (view !== 'preview' || !imageElement || !loadedSrc) return { heightmap: null, error: '' }
+    if (shownView === 'image' || !imageElement || !loadedSrc) return { heightmap: null, error: '' }
     try {
       return { heightmap: imageToHeightmap(imageElement, settings.detail), error: '' }
     } catch (previewError) {
       return { heightmap: null, error: previewError.message }
     }
     // Keyed on loadedSrc too: a new picture can load into the same element.
-  }, [view, imageElement, loadedSrc, settings.detail])
+  }, [shownView, imageElement, loadedSrc, settings.detail])
 
   const imageUrl = ownImage?.url || source.imageUrl
   const sourceLabel = ownImage?.label || source.label || 'Selected image'
@@ -237,28 +243,28 @@ function ReliefStlDrawerContent({ source, onClose }) {
         <div className="grid min-h-0 flex-1 gap-5 overflow-y-auto p-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
           <div className="min-w-0 space-y-3">
             <div className="flex gap-2" role="group" aria-label="Show">
-              {[['image', 'Image'], ['preview', '3D preview']].map(([value, label]) => (
+              {views.map(([value, label]) => (
                 <button
                   key={value}
                   type="button"
-                  aria-pressed={view === value}
-                  disabled={value === 'preview' && !imageElement}
+                  aria-pressed={shownView === value}
+                  disabled={value !== 'image' && !imageElement}
                   onClick={() => setView(value)}
                   className={`rounded-xs border px-3 py-2 font-mono text-[0.6875rem] uppercase tracking-widest transition-colors disabled:opacity-40 ${
-                    view === value ? 'border-accent text-cream' : 'border-ink-border text-cream-muted hover:text-cream'
+                    shownView === value ? 'border-accent text-cream' : 'border-ink-border text-cream-muted hover:text-cream'
                   }`}
                 >
                   {label}
                 </button>
               ))}
             </div>
-            {/* Stays mounted while the preview shows: the download reads its pixels. */}
+            {/* Stays mounted under the other views: the download reads its pixels. */}
             <img
               src={imageUrl}
               alt={`${sourceLabel} STL source`}
               onLoad={handleImageLoad}
               onError={handleImageError}
-              hidden={view === 'preview'}
+              hidden={shownView !== 'image'}
               className="aspect-[4/3] w-full rounded-xs border border-ink-border bg-ink-muted object-contain"
             />
             <label className="inline-flex cursor-pointer items-center rounded-xs border border-ink-border px-3 py-2 font-mono text-[0.6875rem] uppercase tracking-widest text-cream-muted transition-colors hover:text-cream">
@@ -271,10 +277,14 @@ function ReliefStlDrawerContent({ source, onClose }) {
                 className="sr-only"
               />
             </label>
-            {view === 'preview' && (
-              preview.error
-                ? <p className="rounded-xs border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-accent">{preview.error}</p>
-                : <ReliefPreview heightmap={preview.heightmap} settings={reliefSettings} />
+            {shownView !== 'image' && preview.error && (
+              <p className="rounded-xs border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-accent">{preview.error}</p>
+            )}
+            {shownView === 'mask' && !preview.error && (
+              <ReliefMask heightmap={preview.heightmap} settings={reliefSettings} />
+            )}
+            {shownView === 'preview' && !preview.error && (
+              <ReliefPreview heightmap={preview.heightmap} settings={reliefSettings} />
             )}
           </div>
 

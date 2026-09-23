@@ -141,34 +141,50 @@ function addWallQuad(faces, a, b, c, d) {
   faces.push([a, b, c], [b, d, c])
 }
 
-export function buildReliefMesh(heightmap, rawSettings = {}) {
+// Normalised surface heights (0 = plate, 1 = full relief) after the same
+// downsample → smoothing → threshold → invert pipeline the mesh uses. The 2D
+// line mask and the 3D model both read this, so they can't disagree.
+export function buildReliefHeightField(heightmap, rawSettings = {}) {
   validateHeightmap(heightmap)
 
   const settings = normalizeReliefSettings(rawSettings)
-  const detailLimit = DETAIL_PRESETS[settings.detail]
-  const sampled = downsampleHeightmap(heightmap, detailLimit)
+  const sampled = downsampleHeightmap(heightmap, DETAIL_PRESETS[settings.detail])
   const prepared = settings.smoothing === 'light' ? smoothHeightmap(sampled) : sampled
-  const depthMm = settings.widthMm * ((prepared.height - 1) / (prepared.width - 1))
-  const xStep = settings.widthMm / (prepared.width - 1)
-  const yStep = depthMm / (prepared.height - 1)
-  const vertices = []
-  const faces = []
+  const values = new Float32Array(prepared.width * prepared.height)
 
   for (let y = 0; y < prepared.height; y += 1) {
-    const coordinateY = depthMm - y * yStep
-
     for (let x = 0; x < prepared.width; x += 1) {
       const raw = clamp(finiteNumber(Number(valueAt(prepared, x, y)), 0), 0, 1)
       // Thresholded after smoothing, so smoothing removes specks and noise
       // rather than softening the line edges.
       const brightness = settings.mode === 'lineart' ? (raw >= settings.threshold ? 1 : 0) : raw
-      const mapped = settings.invert ? 1 - brightness : brightness
+      values[vertexIndex(x, y, prepared.width)] = settings.invert ? 1 - brightness : brightness
+    }
+  }
+
+  return { width: prepared.width, height: prepared.height, values }
+}
+
+export function buildReliefMesh(heightmap, rawSettings = {}) {
+  const settings = normalizeReliefSettings(rawSettings)
+  const field = buildReliefHeightField(heightmap, settings)
+  const depthMm = settings.widthMm * ((field.height - 1) / (field.width - 1))
+  const xStep = settings.widthMm / (field.width - 1)
+  const yStep = depthMm / (field.height - 1)
+  const vertices = []
+  const faces = []
+
+  for (let y = 0; y < field.height; y += 1) {
+    const coordinateY = depthMm - y * yStep
+
+    for (let x = 0; x < field.width; x += 1) {
+      const mapped = field.values[vertexIndex(x, y, field.width)]
       vertices.push([x * xStep, coordinateY, settings.baseMm + mapped * settings.maxReliefMm])
     }
   }
 
   const topCount = vertices.length
-  const { width, height } = prepared
+  const { width, height } = field
 
   for (let y = 0; y < height - 1; y += 1) {
     for (let x = 0; x < width - 1; x += 1) {

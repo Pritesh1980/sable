@@ -17,6 +17,10 @@ vi.mock('../data/reliefImage', async () => {
   return { ...actual, loadPhotoForRelief: photo.load }
 })
 
+vi.mock('../components/ReliefMask', () => ({
+  default: ({ settings }) => <div data-testid="relief-mask" data-threshold={settings?.threshold} />,
+}))
+
 vi.mock('../components/ReliefPreview', () => ({
   default: ({ heightmap, settings }) => (
     <div data-testid="relief-preview" data-width={heightmap?.width} data-mode={settings?.mode} />
@@ -125,6 +129,22 @@ describe('ReliefStlDrawer', () => {
     fireEvent.change(screen.getByLabelText('Style'), { target: { value: 'lineart' } })
     expect(screen.getByLabelText('Detail preset')).toHaveValue('high')
     expect(screen.getByLabelText('Maximum relief height in millimetres')).toHaveValue(2)
+  })
+
+  it('shows a line mask of what will be raised, only in line-art mode', async () => {
+    render(<ReliefStlDrawer source={source} onClose={() => {}} />)
+    fireEvent.load(screen.getByRole('img', { name: 'Raven Chest STL source' }))
+    expect(screen.queryByRole('button', { name: 'Line mask' })).not.toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Style'), { target: { value: 'lineart' } })
+    fireEvent.change(screen.getByLabelText('Line threshold'), { target: { value: '0.35' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Line mask' }))
+    expect(await screen.findByTestId('relief-mask')).toHaveAttribute('data-threshold', '0.35')
+
+    // Back to relief: the mask no longer applies, so the drawer shows the image.
+    fireEvent.change(screen.getByLabelText('Style'), { target: { value: 'relief' } })
+    expect(screen.queryByTestId('relief-mask')).not.toBeInTheDocument()
+    expect(screen.getByAltText('Raven Chest STL source')).toBeVisible()
   })
 
   it('offers a fine detail level', () => {
