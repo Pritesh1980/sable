@@ -90,12 +90,36 @@ describe('WallViewer on a touch screen (#93)', () => {
     expect(dialogLabel()).toMatch(/Mora Lane — image 2 of 2/)
   })
 
-  it('swipe up goes to the next artist, swipe down back', () => {
+  it('swipe up goes to the next artist; the sheet has Previous artist to go back', () => {
     renderWall()
     swipe(surface(), 0, -120)
     expect(dialogLabel()).toMatch(/Iris Vale/)
-    swipe(surface(), 0, 120)
+    tap(surface())
+    fireEvent.click(screen.getByRole('button', { name: /previous artist/i }))
     expect(dialogLabel()).toMatch(/Mora Lane/)
+  })
+
+  // iOS convention (agy review): pulling a full-screen photo down dismisses it.
+  it('swipe down closes the viewer', () => {
+    const onClose = vi.fn()
+    renderWall({ onClose })
+    swipe(surface(), 0, 120)
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  // Screen readers activate with a synthesized click, never a raw pointer
+  // tap, so the sheet needs a real button too (codex review). It also tells a
+  // first-time user the controls exist (agy review).
+  it('a visible Show controls button toggles the sheet, with aria-expanded', () => {
+    renderWall()
+    const show = screen.getByRole('button', { name: /show controls/i })
+    expect(show).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(show)
+    expect(screen.getByRole('button', { name: /generate a concept/i })).toBeInTheDocument()
+    const hide = screen.getByRole('button', { name: /hide controls/i })
+    expect(hide).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.click(hide)
+    expect(screen.queryByRole('button', { name: /generate a concept/i })).not.toBeInTheDocument()
   })
 })
 
@@ -114,6 +138,15 @@ describe('ConceptViewer on a touch screen (#93)', () => {
     tap(surface())
     expect(screen.getByRole('button', { name: /^delete$/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /variants & stl/i })).toBeInTheDocument()
+  })
+
+  it('swipe down closes, and Show controls works here too', () => {
+    const onClose = vi.fn()
+    render(<ConceptViewer items={concepts} onClose={onClose} onDelete={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: /show controls/i }))
+    expect(screen.getByRole('button', { name: /^delete$/i })).toBeInTheDocument()
+    swipe(surface(), 0, 120)
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 
   it('swipe left/right moves between concepts', () => {

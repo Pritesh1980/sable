@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import ArtistImage from './ArtistImage'
 import GlCrossfade from './GlCrossfade'
+import ViewerSheetToggle from './ViewerSheetToggle'
 import useWallKeyboard from '../hooks/useWallKeyboard'
 import useIdleFade from '../hooks/useIdleFade'
 import useDialogFocus from '../hooks/useDialogFocus'
 import useMediaQuery from '../hooks/useMediaQuery'
 import useSwipeTap from '../hooks/useSwipeTap'
+import useViewportZoomed from '../hooks/useViewportZoomed'
 import { resolveTransitionMode } from '../lib/gl'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
 
@@ -71,8 +73,10 @@ const PANEL_BUTTON = 'flex items-center justify-center gap-3 bg-v2-ink/70 backdr
 // Full-screen wall viewer. The image owns the screen.
 // Mouse/keyboard: the HUD (index, artist plate, filmstrip, keys legend) fades
 // away after a couple of seconds of stillness and returns on any activity.
-// Touch (#93): only Close and the counter stay up; a tap on the image toggles
-// a bottom sheet with everything else, and swipes stand in for the arrow keys.
+// Touch (#93): only Close, the counter and a Details handle stay up; a tap on
+// the image (or the handle) toggles a bottom sheet with everything else.
+// Swipe left/right = photos, up = next artist, down = close (the iOS
+// convention for a full-screen photo); Previous artist lives in the sheet.
 export default function WallViewer({
   items,
   initialIndex = 0,
@@ -89,6 +93,9 @@ export default function WallViewer({
   // Resolve the transition renderer once per viewer open (not per keypress).
   const [transitionMode] = useState(resolveTransitionMode)
   const touch = useMediaQuery('(hover: none)')
+  // Pinch-zoomed: hand one-finger drags back to the browser as pans.
+  const zoomed = useViewportZoomed()
+  const sheetId = useId()
 
   const {
     current,
@@ -112,6 +119,7 @@ export default function WallViewer({
   const dialogRef = useDialogFocus(open)
 
   const gestures = useSwipeTap({
+    enabled: !zoomed,
     onTap: () => setSheetOpen((s) => !s),
     // Swipe names where the finger went: pulling the image left brings the
     // next one in, pushing it up brings the next artist up from below.
@@ -119,7 +127,7 @@ export default function WallViewer({
       if (dir === 'left') moveWithinArtist(1)
       else if (dir === 'right') moveWithinArtist(-1)
       else if (dir === 'up') jumpArtist(1)
-      else if (dir === 'down') jumpArtist(-1)
+      else if (dir === 'down') onClose?.()
     },
   })
 
@@ -166,7 +174,7 @@ export default function WallViewer({
         Close
       </button>
 
-      <div className="absolute right-[max(1rem,env(safe-area-inset-right))] sm:right-8 top-[max(1.5rem,env(safe-area-inset-top))] font-v2-display text-sm tracking-[0.2em] text-v2-muted pointer-events-auto">
+      <div className="absolute right-[max(1rem,env(safe-area-inset-right))] sm:right-[max(2rem,env(safe-area-inset-right))] top-[max(1.5rem,env(safe-area-inset-top))] font-v2-display text-sm tracking-[0.2em] text-v2-muted pointer-events-auto">
         <b className="text-v2-cream font-normal">{pad2(positionInArtist + 1)}</b> / {artistImageCount} · artist {artistOrdinal} of {artistCount}
       </div>
     </>
@@ -212,12 +220,12 @@ export default function WallViewer({
       tabIndex={-1}
       className="fixed inset-0 z-[60] bg-v2-ink overflow-hidden focus:outline-hidden"
     >
-      {/* Gesture surface. touch-action: none stops the browser claiming the
-          swipe as a scroll or pinch-zoom before our pointerup arrives. */}
+      {/* Gesture surface. touch-action: pinch-zoom keeps one-finger drags ours
+          (not a scroll) while pinch-to-zoom on the artwork still works. */}
       <div
         data-testid="viewer-surface"
         className="absolute inset-0"
-        style={touch ? { touchAction: 'none' } : undefined}
+        style={touch ? { touchAction: zoomed ? 'auto' : 'pinch-zoom' } : undefined}
         {...(touch ? gestures : {})}
       >
         {/* t9: WebGL crossfade/ripple transition layer. Chosen once per open via
@@ -249,12 +257,38 @@ export default function WallViewer({
         <div className="absolute inset-0 pointer-events-none">
           {topRow}
 
+          {!sheetOpen && (
+            <ViewerSheetToggle
+              open={false}
+              onToggle={() => setSheetOpen(true)}
+              controls={sheetId}
+              className="absolute left-1/2 -translate-x-1/2 bottom-[max(0.5rem,env(safe-area-inset-bottom))]"
+            />
+          )}
+
           {sheetOpen && (
-            <div className="absolute inset-x-0 bottom-0 pointer-events-auto flex flex-col gap-4 bg-gradient-to-t from-v2-ink via-v2-ink/90 to-transparent pt-16 px-[max(1rem,env(safe-area-inset-left))] pb-[max(1.25rem,env(safe-area-inset-bottom))] animate-slide-up">
+            <div id={sheetId} className="absolute inset-x-0 bottom-0 pointer-events-auto flex flex-col gap-4 [@media(max-height:500px)]:gap-2 [@media(max-height:500px)]:[&_h1]:text-xl bg-gradient-to-t from-v2-ink via-v2-ink/90 to-transparent pt-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1.25rem,env(safe-area-inset-bottom))] animate-slide-up">
+              <ViewerSheetToggle open onToggle={() => setSheetOpen(false)} controls={sheetId} className="self-center" />
               {artistItems.length > 1 && (
-                <div className="flex gap-1 overflow-x-auto p-1">{thumbnails}</div>
+                <div className="flex gap-1 overflow-x-auto p-1 [@media(max-height:500px)]:hidden">{thumbnails}</div>
               )}
               <div>{plate}</div>
+              <div className="flex justify-between font-v2-ui text-xs tracking-widest uppercase">
+                <button
+                  onClick={() => jumpArtist(-1)}
+                  disabled={artistOrdinal <= 1}
+                  className="py-2 text-v2-cream disabled:text-v2-muted"
+                >
+                  ‹ Previous artist
+                </button>
+                <button
+                  onClick={() => jumpArtist(1)}
+                  disabled={artistOrdinal >= artistCount}
+                  className="py-2 text-v2-cream disabled:text-v2-muted"
+                >
+                  Next artist ›
+                </button>
+              </div>
               <div className="flex gap-2">
                 <button onClick={() => onGenerate?.(current)} className={`${PANEL_BUTTON} flex-1`}>
                   Generate a concept in this style

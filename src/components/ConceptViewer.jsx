@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import useIdleFade from '../hooks/useIdleFade'
 import useDialogFocus from '../hooks/useDialogFocus'
 import useMediaQuery from '../hooks/useMediaQuery'
 import useSwipeTap from '../hooks/useSwipeTap'
+import useViewportZoomed from '../hooks/useViewportZoomed'
 import ConceptVariantLab from './ConceptVariantLab'
 import ConceptVisualMatches from './ConceptVisualMatches'
 import GlCrossfade from './GlCrossfade'
+import ViewerSheetToggle from './ViewerSheetToggle'
 import SavedPromptPack from './SavedPromptPack'
 import TagPill from './TagPill'
 import { STYLE_TAGS } from '../data/artists'
@@ -21,6 +23,9 @@ function isFormFieldFocused() {
 
 const KBD = 'border border-v2-hairline rounded px-1.5 py-0.5 mr-1 text-v2-cream text-[0.66rem]'
 const PANEL_BUTTON = 'flex items-center justify-center gap-3 bg-v2-ink/70 backdrop-blur-md border border-v2-hairline hover:border-v2-accent rounded-xs px-4 py-3 text-v2-cream font-v2-ui text-sm transition-colors'
+
+// Delete sits under the thumb in the touch sheet; mark it as destructive.
+const DANGER_BUTTON = PANEL_BUTTON.replace('border-v2-hairline', 'border-v2-accent').replace('text-v2-cream', 'text-v2-accent')
 
 function pad2(n) {
   return String(n).padStart(2, '0')
@@ -127,16 +132,20 @@ export default function ConceptViewer({
   const dialogRef = useDialogFocus(open)
   const [sheetOpen, setSheetOpen] = useState(false)
   const touch = useMediaQuery('(hover: none)')
+  const zoomed = useViewportZoomed()
+  const sheetId = useId()
 
   function step(delta) {
     setIndex((i) => (i + delta + items.length) % items.length)
   }
 
   const gestures = useSwipeTap({
+    enabled: !zoomed,
     onTap: () => setSheetOpen((s) => !s),
     onSwipe: (dir) => {
       if (dir === 'left') step(1)
       else if (dir === 'right') step(-1)
+      else if (dir === 'down') onClose?.()
     },
   })
 
@@ -188,7 +197,7 @@ export default function ConceptViewer({
         Close
       </button>
 
-      <div className="absolute right-[max(1rem,env(safe-area-inset-right))] sm:right-8 top-[max(1.5rem,env(safe-area-inset-top))] font-v2-display text-sm tracking-[0.2em] text-v2-muted pointer-events-auto">
+      <div className="absolute right-[max(1rem,env(safe-area-inset-right))] sm:right-[max(2rem,env(safe-area-inset-right))] top-[max(1.5rem,env(safe-area-inset-top))] font-v2-display text-sm tracking-[0.2em] text-v2-muted pointer-events-auto">
         <b className="text-v2-cream font-normal">{pad2(index + 1)}</b> / {items.length}
       </div>
     </>
@@ -205,8 +214,8 @@ export default function ConceptViewer({
     </>
   )
 
-  const deleteButton = (className = '') => (
-    <button onClick={() => onDelete?.(current.id)} className={`${PANEL_BUTTON} ${className}`}>
+  const deleteButton = (danger = false) => (
+    <button onClick={() => onDelete?.(current.id)} className={danger ? DANGER_BUTTON : PANEL_BUTTON}>
       Delete
     </button>
   )
@@ -220,12 +229,12 @@ export default function ConceptViewer({
       tabIndex={-1}
       className="fixed inset-0 z-[60] bg-v2-ink overflow-hidden focus:outline-hidden"
     >
-      {/* Gesture surface (#93). touch-action: none stops the browser claiming
-          the swipe as a scroll or pinch-zoom before our pointerup arrives. */}
+      {/* Gesture surface (#93). touch-action: pinch-zoom keeps one-finger
+          drags ours (not a scroll) while pinch-to-zoom still works. */}
       <div
         data-testid="viewer-surface"
         className="absolute inset-0"
-        style={touch ? { touchAction: 'none' } : undefined}
+        style={touch ? { touchAction: zoomed ? 'auto' : 'pinch-zoom' } : undefined}
         {...(touch ? gestures : {})}
       >
         {/* t9: WebGL crossfade/ripple chosen once per open; 'css' keeps <img>. */}
@@ -254,14 +263,24 @@ export default function ConceptViewer({
         <div className="absolute inset-0 pointer-events-none">
           {topRow}
 
+          {!sheetOpen && (
+            <ViewerSheetToggle
+              open={false}
+              onToggle={() => setSheetOpen(true)}
+              controls={sheetId}
+              className="absolute left-1/2 -translate-x-1/2 bottom-[max(0.5rem,env(safe-area-inset-bottom))]"
+            />
+          )}
+
           {sheetOpen && (
-            <div className="absolute inset-x-0 bottom-0 pointer-events-auto flex flex-col gap-4 bg-gradient-to-t from-v2-ink via-v2-ink/90 to-transparent pt-16 px-[max(1rem,env(safe-area-inset-left))] pb-[max(1.25rem,env(safe-area-inset-bottom))] animate-slide-up">
+            <div id={sheetId} className="absolute inset-x-0 bottom-0 pointer-events-auto flex flex-col gap-4 bg-gradient-to-t from-v2-ink via-v2-ink/90 to-transparent pt-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1.25rem,env(safe-area-inset-bottom))] animate-slide-up">
+              <ViewerSheetToggle open onToggle={() => setSheetOpen(false)} controls={sheetId} className="self-center" />
               <div className="min-w-0">{plate}</div>
               <div className="flex gap-2">
                 <button onClick={() => setShowInfo((s) => !s)} className={`${PANEL_BUTTON} flex-1`}>
                   Variants & STL export
                 </button>
-                {deleteButton()}
+                {deleteButton(true)}
               </div>
             </div>
           )}

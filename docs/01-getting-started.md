@@ -66,13 +66,16 @@ The keyboard does the driving:
 | `Esc` | back to the Wall |
 
 **On a phone** the photo opens clean, with just **× Close** and the photo count along the
-top. Swipe instead of using the arrow keys:
+top and a small **Details** handle at the bottom. Swipe instead of using the arrow keys:
 
 | Gesture | Does |
 |---|---|
 | swipe left / right | next / previous photo by **this artist** |
-| swipe up / down | **next / previous artist** |
-| tap the photo | show or hide the panel with the filmstrip, the artist's name and `@handle`, **Generate a concept** and **Info & notes** |
+| swipe up | **next artist** |
+| swipe down | close the viewer, back to the Wall |
+| tap the photo (or **Details**) | show or hide the panel: filmstrip, the artist's name and `@handle`, **‹ Previous artist** / **Next artist ›**, **Generate a concept** and **Info & notes** |
+
+Pinch to zoom in on the linework as usual; swipes pause while you're zoomed in.
 
 A filmstrip of the artist's other photos sits along the bottom — click one to jump. The
 artist's `@handle ↗` opens their Instagram in a new tab. With a mouse, leave it still for a

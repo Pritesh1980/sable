@@ -30,12 +30,34 @@ describe('useSwipeTap', () => {
     expect(onTap).not.toHaveBeenCalled()
   })
 
-  it('ignores mouse and pen so desktop clicks behave exactly as before', () => {
+  it('ignores the mouse so desktop clicks behave exactly as before', () => {
     const { h, onTap, onSwipe } = setup()
     h.onPointerDown(ev(100, 100, { pointerType: 'mouse' }))
     h.onPointerUp(ev(100, 100, { pointerType: 'mouse' }))
     h.onPointerDown(ev(200, 100, { pointerType: 'mouse' }))
     h.onPointerUp(ev(100, 100, { pointerType: 'mouse' }))
+    expect(onTap).not.toHaveBeenCalled()
+    expect(onSwipe).not.toHaveBeenCalled()
+  })
+
+  // A stylus on a (hover: none) tablet gets the touch layout, so it must be
+  // able to drive it (codex review).
+  it('accepts a pen like a finger', () => {
+    const { h, onSwipe } = setup()
+    h.onPointerDown(ev(200, 100, { pointerType: 'pen' }))
+    h.onPointerUp(ev(100, 100, { pointerType: 'pen' }))
+    expect(onSwipe).toHaveBeenCalledWith('left')
+  })
+
+  // While the page is pinch-zoomed a one-finger drag is a pan, not a swipe.
+  it('does nothing while disabled', () => {
+    const onTap = vi.fn()
+    const onSwipe = vi.fn()
+    const { result } = renderHook(() => useSwipeTap({ onTap, onSwipe, enabled: false }))
+    result.current.onPointerDown(ev(200, 100))
+    result.current.onPointerUp(ev(100, 100))
+    result.current.onPointerDown(ev(100, 100))
+    result.current.onPointerUp(ev(100, 100))
     expect(onTap).not.toHaveBeenCalled()
     expect(onSwipe).not.toHaveBeenCalled()
   })
