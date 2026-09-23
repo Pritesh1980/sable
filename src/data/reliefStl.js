@@ -154,77 +154,83 @@ export function buildReliefMesh(heightmap, rawSettings = {}) {
     }
   }
 
-  const bottomOffset = vertices.length
+  const topCount = vertices.length
+  const { width, height } = prepared
 
-  for (let y = 0; y < prepared.height; y += 1) {
-    const coordinateY = depthMm - y * yStep
-
-    for (let x = 0; x < prepared.width; x += 1) {
-      vertices.push([x * xStep, coordinateY, 0])
+  for (let y = 0; y < height - 1; y += 1) {
+    for (let x = 0; x < width - 1; x += 1) {
+      addQuad(
+        faces,
+        vertexIndex(x, y, width),
+        vertexIndex(x + 1, y, width),
+        vertexIndex(x, y + 1, width),
+        vertexIndex(x + 1, y + 1, width),
+      )
     }
   }
 
-  for (let y = 0; y < prepared.height - 1; y += 1) {
-    for (let x = 0; x < prepared.width - 1; x += 1) {
-      const topA = vertexIndex(x, y, prepared.width)
-      const topB = vertexIndex(x + 1, y, prepared.width)
-      const topC = vertexIndex(x, y + 1, prepared.width)
-      const topD = vertexIndex(x + 1, y + 1, prepared.width)
+  // The bottom is flat, so it needs no interior vertices: just the perimeter
+  // (shared with the walls, keeping the solid watertight) fanned from one
+  // centre point. A full grid here doubled the file for no change in shape.
+  // Walk the perimeter counter-clockwise as seen from above (+z); grid row
+  // height-1 is the smallest world Y.
+  const perimeter = []
+  for (let x = 0; x < width - 1; x += 1) perimeter.push([x, height - 1])
+  for (let y = height - 1; y > 0; y -= 1) perimeter.push([width - 1, y])
+  for (let x = width - 1; x > 0; x -= 1) perimeter.push([x, 0])
+  for (let y = 0; y < height - 1; y += 1) perimeter.push([0, y])
 
-      addQuad(faces, topA, topB, topC, topD)
-    }
+  const bottomIndex = new Map()
+  for (const [x, y] of perimeter) {
+    bottomIndex.set(vertexIndex(x, y, width), vertices.length)
+    vertices.push([x * xStep, depthMm - y * yStep, 0])
+  }
+  const centre = vertices.length
+  vertices.push([settings.widthMm / 2, depthMm / 2, 0])
+  const bottom = (x, y) => bottomIndex.get(vertexIndex(x, y, width))
+
+  // Reversed (centre, next, current) so the normals point down.
+  for (let i = 0; i < perimeter.length; i += 1) {
+    const [ax, ay] = perimeter[i]
+    const [bx, by] = perimeter[(i + 1) % perimeter.length]
+    faces.push([centre, bottom(bx, by), bottom(ax, ay)])
   }
 
-  for (let y = 0; y < prepared.height - 1; y += 1) {
-    for (let x = 0; x < prepared.width - 1; x += 1) {
-      const topA = vertexIndex(x, y, prepared.width)
-      const topB = vertexIndex(x + 1, y, prepared.width)
-      const topC = vertexIndex(x, y + 1, prepared.width)
-      const topD = vertexIndex(x + 1, y + 1, prepared.width)
-      const bottomA = bottomOffset + topA
-      const bottomB = bottomOffset + topB
-      const bottomC = bottomOffset + topC
-      const bottomD = bottomOffset + topD
-
-      faces.push([bottomA, bottomB, bottomC], [bottomB, bottomD, bottomC])
-    }
-  }
-
-  for (let x = 0; x < prepared.width - 1; x += 1) {
+  for (let x = 0; x < width - 1; x += 1) {
     addWallQuad(
       faces,
-      vertexIndex(x, 0, prepared.width),
-      vertexIndex(x + 1, 0, prepared.width),
-      bottomOffset + vertexIndex(x, 0, prepared.width),
-      bottomOffset + vertexIndex(x + 1, 0, prepared.width),
+      vertexIndex(x, 0, width),
+      vertexIndex(x + 1, 0, width),
+      bottom(x, 0),
+      bottom(x + 1, 0),
     )
     addWallQuad(
       faces,
-      vertexIndex(x + 1, prepared.height - 1, prepared.width),
-      vertexIndex(x, prepared.height - 1, prepared.width),
-      bottomOffset + vertexIndex(x + 1, prepared.height - 1, prepared.width),
-      bottomOffset + vertexIndex(x, prepared.height - 1, prepared.width),
+      vertexIndex(x + 1, height - 1, width),
+      vertexIndex(x, height - 1, width),
+      bottom(x + 1, height - 1),
+      bottom(x, height - 1),
     )
   }
 
-  for (let y = 0; y < prepared.height - 1; y += 1) {
+  for (let y = 0; y < height - 1; y += 1) {
     addWallQuad(
       faces,
-      vertexIndex(0, y + 1, prepared.width),
-      vertexIndex(0, y, prepared.width),
-      bottomOffset + vertexIndex(0, y + 1, prepared.width),
-      bottomOffset + vertexIndex(0, y, prepared.width),
+      vertexIndex(0, y + 1, width),
+      vertexIndex(0, y, width),
+      bottom(0, y + 1),
+      bottom(0, y),
     )
     addWallQuad(
       faces,
-      vertexIndex(prepared.width - 1, y, prepared.width),
-      vertexIndex(prepared.width - 1, y + 1, prepared.width),
-      bottomOffset + vertexIndex(prepared.width - 1, y, prepared.width),
-      bottomOffset + vertexIndex(prepared.width - 1, y + 1, prepared.width),
+      vertexIndex(width - 1, y, width),
+      vertexIndex(width - 1, y + 1, width),
+      bottom(width - 1, y),
+      bottom(width - 1, y + 1),
     )
   }
 
-  const heightMm = vertices.slice(0, bottomOffset).reduce((max, vertex) => Math.max(max, vertex[2]), 0)
+  const heightMm = vertices.slice(0, topCount).reduce((max, vertex) => Math.max(max, vertex[2]), 0)
 
   return {
     vertices,
@@ -291,6 +297,30 @@ export function serializeAsciiStl(mesh, solidName = 'raven_relief') {
   return lines.join('\n')
 }
 
+// Binary STL: 80-byte header, uint32 triangle count, then 50 bytes per
+// triangle (normal + 3 vertices as float32, uint16 attribute), little-endian.
+// Roughly a fifth the size of the ASCII form and faster for slicers to load.
+export function serializeBinaryStl(mesh, solidName = 'raven_relief') {
+  const buffer = new ArrayBuffer(84 + 50 * mesh.faces.length)
+  const view = new DataView(buffer)
+  // Must not begin with "solid": some readers take that to mean ASCII.
+  const header = new TextEncoder().encode(`Sable relief ${sanitizeSolidName(solidName)}`.slice(0, 80))
+  new Uint8Array(buffer, 0, 80).set(header)
+  view.setUint32(80, mesh.faces.length, true)
+
+  let offset = 84
+  for (const face of mesh.faces) {
+    const vertices = face.map((index) => mesh.vertices[index])
+    for (const value of [...triangleNormal(vertices[0], vertices[1], vertices[2]), ...vertices.flat()]) {
+      view.setFloat32(offset, finiteNumber(Number(value), 0), true)
+      offset += 4
+    }
+    view.setUint16(offset, 0, true)
+    offset += 2
+  }
+  return buffer
+}
+
 export function buildReliefStl(heightmap, settings = {}) {
-  return serializeAsciiStl(buildReliefMesh(heightmap, settings), settings.solidName || 'raven_relief')
+  return serializeBinaryStl(buildReliefMesh(heightmap, settings), settings.solidName || 'raven_relief')
 }
