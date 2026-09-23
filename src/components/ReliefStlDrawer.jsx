@@ -14,11 +14,14 @@ const DEFAULT_DRAWER_SETTINGS = {
   invert: DEFAULT_RELIEF_SETTINGS.invert,
   mode: DEFAULT_RELIEF_SETTINGS.mode,
   threshold: String(DEFAULT_RELIEF_SETTINGS.threshold),
+  frame: DEFAULT_RELIEF_SETTINGS.frame,
 }
 
 // Line art prints best at nozzle-scale detail with low, sturdy lines; a 3mm
 // fin a sample wide snaps off or gets dropped by the slicer.
 const LINEART_DEFAULTS = { detail: 'fine', maxReliefMm: '1.5' }
+// Typical lithophane range: ~0.8mm lets light through, ~3mm blocks it.
+const LITHOPHANE_DEFAULTS = { detail: 'fine', baseMm: '0.8', maxReliefMm: '2.2' }
 
 const SELECT_CLASS = 'w-full rounded-xs border border-ink-border bg-ink-muted px-3 py-2 font-body text-sm text-cream outline-hidden transition-colors focus:border-cream-muted/50'
 const LABEL_CLASS = 'mb-2 block font-mono text-[0.6875rem] uppercase tracking-widest text-cream-muted'
@@ -122,6 +125,7 @@ function ReliefStlDrawerContent({ source, onClose }) {
     invert: settings.invert,
     mode: settings.mode,
     threshold: Number.parseFloat(settings.threshold),
+    frame: settings.frame,
   }), [validation, settings])
 
   // The line mask only means something in line-art mode; fall back to the
@@ -154,6 +158,11 @@ function ReliefStlDrawerContent({ source, onClose }) {
         // Only replace values still at their defaults — never a user's choice.
         if (current.detail === DEFAULT_DRAWER_SETTINGS.detail) next.detail = LINEART_DEFAULTS.detail
         if (current.maxReliefMm === DEFAULT_DRAWER_SETTINGS.maxReliefMm) next.maxReliefMm = LINEART_DEFAULTS.maxReliefMm
+      }
+      if (name === 'mode' && value === 'lithophane' && current.mode !== 'lithophane') {
+        for (const [field, preset] of Object.entries(LITHOPHANE_DEFAULTS)) {
+          if (current[field] === DEFAULT_DRAWER_SETTINGS[field]) next[field] = preset
+        }
       }
       return next
     })
@@ -298,8 +307,16 @@ function ReliefStlDrawerContent({ source, onClose }) {
               >
                 <option value="relief">Relief (shading becomes height)</option>
                 <option value="lineart">Line art (raised lines on a flat plate)</option>
+                <option value="lithophane">Lithophane (shows when lit from behind)</option>
               </select>
             </label>
+
+            {settings.mode === 'lithophane' && (
+              <p className="text-xs text-cream-muted">
+                Print it standing upright in white or natural filament at 100% infill, then hold it
+                up to a light: thick areas read dark, thin areas glow.
+              </p>
+            )}
 
             {settings.mode === 'lineart' && (
               <div>
@@ -399,6 +416,18 @@ function ReliefStlDrawerContent({ source, onClose }) {
 
             <label className="flex items-center gap-3 rounded-xs border border-ink-border bg-ink-black/20 px-3 py-3 text-sm text-cream-muted">
               <input
+                aria-label="Add a border"
+                type="checkbox"
+                checked={settings.frame}
+                onChange={(event) => updateSetting('frame', event.target.checked)}
+                className="h-4 w-4 accent-accent"
+              />
+              <span>Add a border (3mm frame, stiffens thin prints)</span>
+            </label>
+
+            {settings.mode !== 'lithophane' && (
+            <label className="flex items-center gap-3 rounded-xs border border-ink-border bg-ink-black/20 px-3 py-3 text-sm text-cream-muted">
+              <input
                 aria-label={settings.mode === 'lineart' ? 'Raise dark lines' : 'Invert relief height'}
                 type="checkbox"
                 checked={settings.invert}
@@ -411,6 +440,7 @@ function ReliefStlDrawerContent({ source, onClose }) {
                   : 'Invert relief height'}
               </span>
             </label>
+            )}
 
             {[...validation.errors, error].filter(Boolean).map((message) => (
               <p key={message} className="rounded-xs border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-accent">

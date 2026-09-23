@@ -6,10 +6,15 @@ export const DEFAULT_RELIEF_SETTINGS = {
   smoothing: 'light',
   invert: false,
   // 'relief' maps brightness to height; 'lineart' splits at `threshold` into
-  // plate or full height, so line work prints as crisp raised shapes.
+  // plate or full height, so line work prints as crisp raised shapes;
+  // 'lithophane' makes dark areas thick, so the image shows when backlit.
   mode: 'relief',
   threshold: 0.5,
+  // A full-height rim around the edge: stiffens a thin lithophane, neatens a plaque.
+  frame: false,
 }
+
+const FRAME_MM = 3
 
 // Samples across the longest side. At the default 80mm, fine is ~0.31mm per
 // sample, about a 0.4mm nozzle's line width.
@@ -21,7 +26,7 @@ export const DETAIL_PRESETS = {
 }
 
 const VALID_SMOOTHING = new Set(['off', 'light'])
-const VALID_MODES = new Set(['relief', 'lineart'])
+const VALID_MODES = new Set(['relief', 'lineart', 'lithophane'])
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 
@@ -47,6 +52,7 @@ export function normalizeReliefSettings(rawSettings = {}) {
     invert: Boolean(settings.invert),
     mode: VALID_MODES.has(settings.mode) ? settings.mode : DEFAULT_RELIEF_SETTINGS.mode,
     threshold: clamp(finiteNumber(Number(settings.threshold), DEFAULT_RELIEF_SETTINGS.threshold), 0.05, 0.95),
+    frame: Boolean(settings.frame),
   }
 }
 
@@ -157,8 +163,28 @@ export function buildReliefHeightField(heightmap, rawSettings = {}) {
       const raw = clamp(finiteNumber(Number(valueAt(prepared, x, y)), 0), 0, 1)
       // Thresholded after smoothing, so smoothing removes specks and noise
       // rather than softening the line edges.
-      const brightness = settings.mode === 'lineart' ? (raw >= settings.threshold ? 1 : 0) : raw
-      values[vertexIndex(x, y, prepared.width)] = settings.invert ? 1 - brightness : brightness
+      let height
+      if (settings.mode === 'lithophane') {
+        // Thickness blocks light: dark areas thick, highlights thin. Only
+        // readable one way round, so invert doesn't apply.
+        height = 1 - raw
+      } else {
+        const brightness = settings.mode === 'lineart' ? (raw >= settings.threshold ? 1 : 0) : raw
+        height = settings.invert ? 1 - brightness : brightness
+      }
+      values[vertexIndex(x, y, prepared.width)] = height
+    }
+  }
+
+  if (settings.frame) {
+    const spacingMm = settings.widthMm / (prepared.width - 1)
+    const band = Math.max(1, Math.ceil(FRAME_MM / spacingMm - 1e-9))
+    for (let y = 0; y < prepared.height; y += 1) {
+      for (let x = 0; x < prepared.width; x += 1) {
+        if (x < band || y < band || x >= prepared.width - band || y >= prepared.height - band) {
+          values[vertexIndex(x, y, prepared.width)] = 1
+        }
+      }
     }
   }
 

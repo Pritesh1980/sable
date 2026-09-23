@@ -304,9 +304,61 @@ describe('relief STL geometry', () => {
     expect([...field.values]).toEqual([0, 1, 0, 1, 0, 1, 1, 0, 1])
   })
 
+  describe('lithophane mode', () => {
+    it('makes dark areas thick and light areas thin, so light shines through the highlights', () => {
+      const field = buildReliefHeightField(
+        { width: 3, height: 2, values: [0, 0.25, 1, 1, 0.75, 0] },
+        { mode: 'lithophane', smoothing: 'off' },
+      )
+      expect([...field.values]).toEqual([1, 0.75, 0, 0, 0.25, 1])
+    })
+
+    it('ignores invert — a lithophane is only readable one way round', () => {
+      const map = { width: 2, height: 2, values: [0, 1, 0.5, 0.2] }
+      const a = buildReliefHeightField(map, { mode: 'lithophane', smoothing: 'off', invert: false })
+      const b = buildReliefHeightField(map, { mode: 'lithophane', smoothing: 'off', invert: true })
+      expect([...b.values]).toEqual([...a.values])
+    })
+
+    it('ignores the line threshold', () => {
+      const map = { width: 2, height: 2, values: [0.3, 0.6, 0.45, 0.55] }
+      const a = buildReliefHeightField(map, { mode: 'lithophane', smoothing: 'off', threshold: 0.2 })
+      const b = buildReliefHeightField(map, { mode: 'lithophane', smoothing: 'off', threshold: 0.9 })
+      expect([...b.values]).toEqual([...a.values])
+      expect([...a.values].some((v) => v > 0 && v < 1)).toBe(true)
+    })
+  })
+
+  describe('border', () => {
+    const w = 41
+    const h = 21
+    const values = Array(w * h).fill(0)
+    // 40mm wide over 41 samples = 1mm spacing, so a 3mm border is 3 samples deep.
+    const settings = { widthMm: 40, smoothing: 'off', frame: true }
+
+    it('raises a full-height frame of about 3mm around every edge', () => {
+      const field = buildReliefHeightField({ width: w, height: h, values }, settings)
+      const at = (x, y) => field.values[y * w + x]
+      for (const [x, y] of [[0, 0], [2, 10], [w - 1, 5], [w - 3, 5], [20, 0], [20, 2], [20, h - 1], [20, h - 3]]) {
+        expect(at(x, y), `(${x},${y})`).toBe(1)
+      }
+      expect(at(3, 10)).toBe(0)
+      expect(at(20, 10)).toBe(0)
+      expect(at(w - 4, 10)).toBe(0)
+    })
+
+    it('is off unless asked for', () => {
+      const field = buildReliefHeightField({ width: w, height: h, values }, { ...settings, frame: false })
+      expect([...field.values].every((v) => v === 0)).toBe(true)
+    })
+  })
+
   it('normalizes mode and threshold', () => {
     expect(normalizeReliefSettings({ mode: 'bogus' }).mode).toBe('relief')
     expect(normalizeReliefSettings({ mode: 'lineart' }).mode).toBe('lineart')
+    expect(normalizeReliefSettings({ mode: 'lithophane' }).mode).toBe('lithophane')
+    expect(normalizeReliefSettings({}).frame).toBe(false)
+    expect(normalizeReliefSettings({ frame: 'yes' }).frame).toBe(true)
     expect(normalizeReliefSettings({ threshold: 2 }).threshold).toBe(0.95)
     expect(normalizeReliefSettings({ threshold: -1 }).threshold).toBe(0.05)
     expect(normalizeReliefSettings({ threshold: 'x' }).threshold).toBe(DEFAULT_RELIEF_SETTINGS.threshold)

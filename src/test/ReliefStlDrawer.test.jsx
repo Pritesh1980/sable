@@ -147,6 +147,29 @@ describe('ReliefStlDrawer', () => {
     expect(screen.getByAltText('Raven Chest STL source')).toBeVisible()
   })
 
+  it('lithophane style: print-ready defaults, no invert or threshold, and a print tip', async () => {
+    render(<ReliefStlDrawer source={source} onClose={() => {}} />)
+    fireEvent.change(screen.getByLabelText('Style'), { target: { value: 'lithophane' } })
+
+    expect(screen.getByLabelText('Base thickness in millimetres')).toHaveValue(0.8)
+    expect(screen.getByLabelText('Maximum relief height in millimetres')).toHaveValue(2.2)
+    expect(screen.getByLabelText('Detail preset')).toHaveValue('fine')
+    expect(screen.queryByLabelText('Invert relief height')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Line threshold')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Line mask' })).not.toBeInTheDocument()
+    expect(screen.getByText(/print it standing upright/i)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByLabelText('Add a border'))
+    fireEvent.load(screen.getByRole('img', { name: 'Raven Chest STL source' }))
+    const downloadButton = screen.getByRole('button', { name: 'Download STL' })
+    await waitFor(() => expect(downloadButton).toBeEnabled())
+    fireEvent.click(downloadButton)
+    expect(buildReliefStl).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ mode: 'lithophane', baseMm: 0.8, maxReliefMm: 2.2, frame: true }),
+    )
+  })
+
   it('offers a fine detail level', () => {
     render(<ReliefStlDrawer source={source} onClose={() => {}} />)
     const values = [...screen.getByLabelText('Detail preset').querySelectorAll('option')].map((o) => o.value)

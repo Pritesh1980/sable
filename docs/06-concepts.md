@@ -87,7 +87,14 @@ Pick a **Style**:
   lines into the plate instead), **Fine** detail and a low `1.5mm` line height, which print
   far more reliably than tall thin fins. Move the **Line threshold** to catch fainter lines
   or keep only the boldest, and switch to **Line mask** to see exactly what will be raised
-  (dark) against the plate (light), one square per sample, so broken or missing lines show. Transparent PNGs work: the background counts as white.
+  (dark) against the plate (light), one square per sample, so broken or missing lines show.
+- **Lithophane** — a thin plate that shows the image when held up to a light: dark areas
+  are printed thick (up to `3mm`), highlights thin (down to `0.8mm`). Print it standing
+  upright in white or natural filament at 100% infill. Invert and threshold don't apply.
+
+Tick **Add a border** for a 3mm full-height frame round the edge — it stiffens a thin
+lithophane and neatens any plaque. There's no hanging hole yet; add one in your slicer
+(or drill it) if you want to hang the print. Transparent PNGs work: the background counts as white.
 
 Defaults: width `80mm`, max relief `3mm`, base `1.2mm`, detail `medium`, smoothing
 `light`. **Fine** detail samples about every 0.3mm at 80mm wide — close to a 0.4mm
