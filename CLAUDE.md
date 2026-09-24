@@ -224,7 +224,8 @@ unseeded — ideas are the user's own.
 
 **Still to do (see `BACKLOG.md` / GitHub Issues):**
 When looking for more work, inspect the open GitHub issues labelled `backlog`
-before proposing new tasks; `BACKLOG.md` is only the local pointer/index.
+before proposing new tasks (skip any also labelled `in-progress` — another agent has
+it); `BACKLOG.md` is only the local pointer/index.
 
 - AWS S3 + CloudFront deploy — now only needed for real accounts + custom domain
   (the public demo is already live on GitHub Pages)
