@@ -93,7 +93,10 @@ export default function LiveTryOn({ designUrl, label = 'Design', onSave, onClose
 
   useEffect(() => {
     function onKeyDown(event) {
-      if (event.key === 'Escape') onCloseRef.current?.()
+      if (event.key !== 'Escape') return
+      // Handled: the try-on drawer underneath must not close on the same press.
+      event.preventDefault()
+      onCloseRef.current?.()
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)

@@ -287,9 +287,11 @@ describe('ReliefStlDrawer', () => {
     const onClose = vi.fn()
     render(<ReliefStlDrawer source={source} onClose={onClose} />)
 
-    fireEvent.keyDown(document, { key: 'Escape' })
+    const unhandled = fireEvent.keyDown(document, { key: 'Escape' })
 
     expect(onClose).toHaveBeenCalled()
+    // Marked handled, so the viewer underneath doesn't close as well.
+    expect(unhandled).toBe(false)
   })
 
   it('shows an image load error', () => {

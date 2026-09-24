@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from 'react'
 import useIdleFade from '../hooks/useIdleFade'
-import useDialogFocus from '../hooks/useDialogFocus'
+import useDialogFocus, { isTopmostDialog } from '../hooks/useDialogFocus'
 import useMediaQuery from '../hooks/useMediaQuery'
 import useSwipeTap from '../hooks/useSwipeTap'
 import useViewportZoomed from '../hooks/useViewportZoomed'
@@ -156,6 +156,11 @@ export default function ConceptViewer({
 
     function handleKeyDown(e) {
       if (isFormFieldFocused()) return
+      // A drawer open over the viewer owns the keyboard: Escape is for it,
+      // and ←/→ would change the concept hidden underneath. `defaultPrevented`
+      // covers the drawer that just closed on this very key press — with real
+      // input React has already removed it by the time this listener runs.
+      if (e.defaultPrevented || !isTopmostDialog(dialogRef.current)) return
       switch (e.key) {
         case 'ArrowLeft':
           e.preventDefault()
@@ -179,7 +184,7 @@ export default function ConceptViewer({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [open, items.length, onClose])
+  }, [open, items.length, onClose, dialogRef])
 
   if (!open || !items[index]) return null
 

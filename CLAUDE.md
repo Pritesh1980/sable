@@ -275,6 +275,12 @@ them. Keep messages terse and conventional (e.g. `feat(home): …`, `docs: …`)
   root — a full run with a worktree present reports ~2× files/tests. Run the suite
   from inside the worktree while it exists, or remove worktrees before a root run.
   Other agents' worktrees may be present concurrently — never remove or touch those.
+- **Browser suite**: `npm run test:e2e` (Playwright, `e2e/`) runs against *built* copies
+  of the demo on an emulated iPhone, plus desktop and `/sable/` sub-path projects. It
+  is a separate CI job. Use it for anything jsdom can't see: layout width, touch, which
+  overlay is on top, canvas/WebGL/camera, downloads, offline start, `basename`. Every run
+  rebuilds. `E2E_REUSE=1` reuses whatever answers on :4179/:4180 instead, so rebuild
+  first when you use it. How-to and gotchas: `docs/MAINTAINING.md#browser-tests-e2e`.
 - `.claude/` is gitignored in this repo: rules/settings placed there load locally but aren't version-controlled — put anything you want shared/checked-in into `CLAUDE.md` itself.
 
 ### What to test
@@ -356,17 +362,6 @@ Before the repo went public (July 2026), three things were intentionally kept ou
   keeping the visible doc focused, not scrubbing the past.
 
 <!-- IJFW-MEMORY-START (managed -- do not edit manually) -->
-<ijfw-memory>
-Project memory at .ijfw/memory/. Call `ijfw_memory_prelude` for full context.
-
-Recent decisions:
-**How to apply:** When implementing AI result comparison, extend concept records with optional variants. Preserve legacy concepts. Render the best variant first inside the concept card, with compact expandable cards for the rest. Do not add a separate Result Lab page yet.
-**Why:** A boolean cannot distinguish which file owns in-flight and derived state. Abort alone cannot prevent every late callback, and clearing whole fields would destroy user edits.
-**How to apply:** Increment/invalidate the generation whenever analysis ownership changes; guard every async boundary; keep staged files in a synchronous ref for exact replacement; clear field provenance when the user edits a field or toggles an AI-added tag.
-
-Last handoff: # Handoff: 2026-07-05
-## Shipped: Sable v2 (merged to main, 7b8622d)
-</ijfw-memory>
 
 <ijfw-routing>
 IJFW is installed alongside a peer brainstorming skill. For project-level tasks (build, create, design, plan, brainstorm, landing page, app, website, dashboard, campaign, book, launch), prefer the ijfw:ijfw-workflow skill -- the user opted into IJFW via install, and ijfw-workflow is its configured workflow entry point. IJFW orchestrates think-build-ship end to end and dispatches peer specialist skills (frontend-design, TDD, code-review) as subagent tools when the workflow needs them.

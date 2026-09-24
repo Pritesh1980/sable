@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { PLACEMENTS } from '../data/artists'
 import LiveTryOn from './LiveTryOn'
+import { isTopmostDialog } from '../hooks/useDialogFocus'
 import { loadPhotoForRelief } from '../data/reliefImage'
 import { generateSkinPreviewWithGemini, imageUrlToDataUrl, shrinkImageDataUrl } from '../data/skinPreview'
 
@@ -13,6 +14,7 @@ const BUTTON_CLASS = 'rounded-xs border px-3 py-2 font-mono text-[0.6875rem] upp
 // onto it as a tattoo. The result can be saved as a variant on the concept.
 function SkinPreviewContent({ source, apiKey, onSave, onClose }) {
   const closeButtonRef = useRef(null)
+  const dialogRef = useRef(null)
   const onCloseRef = useRef(onClose)
   const pickRef = useRef(0)
   const fileInputRef = useRef(null)
@@ -30,7 +32,11 @@ function SkinPreviewContent({ source, apiKey, onSave, onClose }) {
     const previous = document.activeElement
     closeButtonRef.current?.focus()
     function onKeyDown(event) {
-      if (event.key === 'Escape') onCloseRef.current?.()
+      // The live camera opens over this drawer and takes its own Escape.
+      if (event.key !== 'Escape' || event.defaultPrevented || !isTopmostDialog(dialogRef.current)) return
+      // Handled: the viewer underneath must not close on the same press.
+      event.preventDefault()
+      onCloseRef.current?.()
     }
     document.addEventListener('keydown', onKeyDown)
     return () => {
@@ -85,6 +91,7 @@ function SkinPreviewContent({ source, apiKey, onSave, onClose }) {
   return (
     <div className="fixed inset-0 z-[70] bg-ink-black/90 px-4 py-6 backdrop-blur-xs">
       <section
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label="Try on skin"

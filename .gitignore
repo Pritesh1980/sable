@@ -68,3 +68,9 @@ CLAUDE.local.md
 # local, never redistributed in the public repo. The cross-referenced result
 # lands in src/data/conventions.js as attendingArtistIds.
 artifacts/
+
+# Playwright
+/dist-sable/
+/playwright-report/
+/test-results/
+/blob-report/

@@ -41,6 +41,17 @@ describe('LiveTryOn', () => {
     expect(stop).toHaveBeenCalled()
   })
 
+  it('closes on Escape and marks it handled, so the drawer underneath stays open', async () => {
+    const onClose = vi.fn()
+    render(<LiveTryOn {...props} onSave={vi.fn()} onClose={onClose} />)
+    await waitFor(() => expect(getUserMedia).toHaveBeenCalled())
+
+    const unhandled = fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(onClose).toHaveBeenCalled()
+    expect(unhandled).toBe(false)
+  })
+
   it('says it is starting the camera while waiting for permission', () => {
     getUserMedia.mockReturnValueOnce(new Promise(() => {}))
     render(<LiveTryOn {...props} onSave={vi.fn()} onClose={vi.fn()} />)

@@ -89,6 +89,8 @@ function ReliefStlDrawerContent({ source, onClose }) {
 
     function handleKeyDown(event) {
       if (event.key === 'Escape') {
+        // Handled: the viewer underneath must not close on the same press.
+        event.preventDefault()
         onCloseRef.current?.()
       }
     }

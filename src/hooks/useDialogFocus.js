@@ -26,6 +26,18 @@ export function ownsFocus(container) {
   return !active.closest?.('[aria-modal="true"]')
 }
 
+/**
+ * Whether `node` is the dialog a key press is meant for: the last open modal
+ * in document order, which is also the one painted on top (drawers render
+ * after the viewer they open from, the live camera after its drawer — the
+ * same rule UndoToast uses). Every layer listens on the document or window, so
+ * without this one Escape closed the whole stack at once.
+ */
+export function isTopmostDialog(node) {
+  const dialogs = document.querySelectorAll('[aria-modal="true"]')
+  return dialogs[dialogs.length - 1] === node
+}
+
 // Dialog focus management for full-screen overlays (WallViewer,
 // ConceptViewer): moves focus into the overlay on open, wraps Tab within it,
 // and restores focus to the previously-focused element on close. Same

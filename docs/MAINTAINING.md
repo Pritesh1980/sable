@@ -113,6 +113,62 @@ and covered the artist's name, so tapping the name opened Instagram. The victim 
 `a11yAffordances.spec.js` fails any 44pt growth class combined with a negative margin.
 **Grow the layout, never pull the target over its neighbour.**
 
+## Browser tests (e2e)
+
+```bash
+npx playwright install chromium   # once
+npm run test:e2e                  # builds, serves, runs everything
+npx playwright test e2e/stl.e2e.js --project=iphone   # one file
+npx playwright show-trace test-results/<test>/trace.zip   # after a failure
+```
+
+`playwright.config.js` builds the app twice and serves both builds with `vite preview`:
+one at `/` on :4179, and one with `VITE_BASE=/sable/` on :4180, matching the public
+demo. Both use the **offline local backend**. Every run rebuilds (about 20 seconds).
+`E2E_REUSE=1` reuses servers already on those ports for a faster loop, but anything
+answering there counts, including an old build or another checkout. Rebuild
+(`npm run build`) after changing app code, or you are testing yesterday's `dist/` (the
+same trap as a stale dev server).
+Service workers are **blocked** by default so a cached build can't hide a change; only
+the offline tests opt back in (`test.use({ serviceWorkers: 'allow' })`).
+Every test starts from the fictional `?demo=1` data (`openDemo` in `e2e/fixtures.js`),
+fails on any uncaught page error, and never touches a real key or Google: the one
+Gemini call is intercepted with `page.route`.
+
+Three projects: **iphone** (390×844, `isMobile`, touch; runs almost everything),
+**desktop** (`*.desktop.e2e.js`: hover and keyboard) and **iphone-subpath**
+(`*.subpath.e2e.js`). What each file guards:
+
+| File | Guards |
+|---|---|
+| `layout` | No route or gallery view wider than the screen at 320/375/390px (#96) |
+| `viewers` | Swipe/tap/close in both viewers; delete + undo; drawers paint above the viewer; Escape peels **one** layer |
+| `stl` | Real canvas → mesh → download for relief, line art (+ mask pixels) and lithophane; WebGL preview |
+| `tryon` | Gemini request shape (key in header, three parts); fake-camera drag + pinch; refused-camera photo fallback |
+| `tastemap` | Map from a seeded style index (no 90MB model in CI); tap through to the artist |
+| `hover` / `hover.desktop` | `can-hover` controls visible on a phone and hover-revealed on desktop (#49) |
+| `offline` | Once installed, the app opens every main route with the network off, images included |
+| `routes.subpath` | Deep links, redirects, image paths, the manifest and offline start under `/sable/` |
+
+Things this suite taught that are easy to get wrong:
+
+- **Measure overflow against `documentElement.clientWidth`, not `innerWidth`.** On a
+  mobile viewport Chromium zooms out to fit overflowing content, so `innerWidth` grows
+  with the page and the check can never fail.
+- **Swipes go through CDP `Input.dispatchTouchEvent`, one session per gesture.**
+  Playwright's touchscreen only taps, and a new CDP session mid-gesture rejects the
+  move.
+- **"On top" means `elementFromPoint`, after scrolling into view.** A drawer rendered
+  *under* a viewer can still be visible and clickable as far as Playwright is
+  concerned.
+- **Real key presses run microtasks between listeners; `fireEvent` doesn't.** That is
+  why the Escape-stacking bug passed in Vitest and failed here. React had already
+  removed the closed drawer before the viewer's `window` listener ran. Layers now
+  `preventDefault()` the Escape they handle, and lower layers skip handled events
+  (`isTopmostDialog` in `useDialogFocus.js` covers the reverse order).
+- **Check a new guard can fail.** Each one here was mutation-checked: revert the fix,
+  rebuild, watch it go red.
+
 ## Cross-check before committing
 
 Every referenced image should exist, and every image should be referenced:
