@@ -31,10 +31,11 @@ export function parseGeminiImage(json) {
 
 export async function generateImageWithGemini(apiKey, { prompt = '', styleDescriptor = '', tags = [] } = {}) {
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_IMAGE_MODEL}:generateContent`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      // Header, not ?key=: URLs end up in logs and error reports.
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({
         contents: [{ parts: [{ text: buildGeminiImagePrompt({ prompt, styleDescriptor, tags }) }] }],
       }),

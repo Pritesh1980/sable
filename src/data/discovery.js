@@ -54,10 +54,11 @@ export function parseDiscoveryResponse(text = '') {
 
 export async function discoverArtistsWithGemini(apiKey, artists, { exclude = [] } = {}) {
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_TEXT_MODEL}:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_TEXT_MODEL}:generateContent`,
     {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      // Header, not ?key=: URLs end up in logs and error reports.
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({
         contents: [{ parts: [{ text: buildDiscoveryPrompt(artists, { exclude }) }] }],
       }),
