@@ -29,5 +29,14 @@ export default defineConfig({
       VITE_SUPABASE_URL: '',
       VITE_SUPABASE_ANON_KEY: '',
     },
+    // `npm run test:coverage` (CI). lcov feeds SonarQube Cloud; the text
+    // summary lands in the CI log. Not a gate — no thresholds on purpose.
+    coverage: {
+      provider: 'v8',
+      reporter: ['text-summary', 'lcov'],
+      include: ['src/**/*.{js,jsx}'],
+      // The line-up seed is data held as text, not code worth measuring.
+      exclude: ['src/test/**', 'src/data/lineups/**'],
+    },
   },
 })
