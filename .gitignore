@@ -74,3 +74,6 @@ artifacts/
 /playwright-report/
 /test-results/
 /blob-report/
+
+# Vitest coverage output (npm run test:coverage)
+/coverage/

@@ -17,9 +17,16 @@ jobs:
   test-and-build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      # Empty on forks, Dependabot PRs and until the secret is added, which
+      # skips the SonarQube Cloud step below rather than failing it.
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
+        with:
+          # SonarQube Cloud's new-code detection and blame need full history.
+          fetch-depth: 0
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
@@ -39,10 +46,17 @@ jobs:
         run: npx eslint .
       # Suite is pinned to the offline local backend via vite.config.js test.env,
       # so no secrets or external services are needed here.
+      # Same suite as `npm test`, plus coverage/lcov.info for SonarQube Cloud.
       - name: Run tests
-        run: npm test
+        run: npm run test:coverage
       - name: Build production app
         run: npm run build
+      # Code quality, duplication and coverage (sonar-project.properties).
+      # CI-based analysis: turn OFF Automatic Analysis in SonarQube Cloud
+      # (Administration → Analysis Method) or this step errors out.
+      - name: SonarQube Cloud scan
+        if: env.SONAR_TOKEN != ''
+        uses: SonarSource/sonarqube-scan-action@v8.2.2
 
   # Browser tests (e2e/, Playwright): real layout, touch gestures, stacking,
   # canvas, WebGL, a fake camera and downloads, on an emulated iPhone plus a

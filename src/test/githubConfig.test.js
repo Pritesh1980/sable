@@ -104,4 +104,34 @@ describe('GitHub repository configuration', () => {
     expect(labeler).toContain('pull_request_target:')
     expect(labeler).not.toContain('actions/checkout')
   })
+  it('measures test coverage in CI as lcov, for SonarQube Cloud', () => {
+    const pkg = JSON.parse(readRepoFile('package.json'))
+    const viteConfig = readRepoFile('vite.config.js')
+    const workflow = readRepoFile('.github/workflows/ci.yml')
+
+    expect(pkg.scripts['test:coverage']).toBe('vitest run --coverage')
+    // The coverage plugin must match vitest exactly, or it refuses to load.
+    expect(pkg.devDependencies['@vitest/coverage-v8']).toBe(pkg.devDependencies.vitest)
+    expect(viteConfig).toContain("provider: 'v8'")
+    expect(viteConfig).toContain("'lcov'")
+    expect(workflow).toContain('run: npm run test:coverage')
+    expect(readRepoFile('.gitignore')).toMatch(/^\/?coverage\/?$/m)
+  })
+
+  it('runs the SonarQube Cloud scan only once a token is configured', () => {
+    const workflow = readRepoFile('.github/workflows/ci.yml')
+    const sonar = readRepoFile('sonar-project.properties')
+
+    expect(workflow).toContain('SonarSource/sonarqube-scan-action@')
+    expect(workflow).toContain('SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}')
+    // Skipped (not failed) on forks, Dependabot and before setup: no secret.
+    expect(workflow).toContain("if: env.SONAR_TOKEN != ''")
+    // Sonar's new-code and blame data need full history, not a shallow clone.
+    expect(workflow).toContain('fetch-depth: 0')
+    expect(sonar).toContain('sonar.organization=pritesh1980')
+    expect(sonar).toContain('sonar.projectKey=Pritesh1980_sable')
+    expect(sonar).toContain('sonar.javascript.lcov.reportPaths=coverage/lcov.info')
+    // The shipped line-up seed is data held as text, not code to grade.
+    expect(sonar).toContain('src/data/lineups/**')
+  })
 })

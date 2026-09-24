@@ -295,6 +295,14 @@ them. Keep messages terse and conventional (e.g. `feat(home): …`, `docs: …`)
   setup is on). The bookmarklet's `eval(atob())` alert is expected: dismiss it, don't "fix" it.
   Also dependency review on PRs, and `pr-labels.yml`
   labelling PRs from their conventional title so `.github/release.yml` can group release notes.
+- **Coverage + SonarQube Cloud**: CI runs `npm run test:coverage` (same suite, plus
+  `coverage/lcov.info`; ~77% statements, Sept 2026, no threshold). The SonarQube Cloud scan
+  step in `ci.yml` is skipped until the `SONAR_TOKEN` secret exists, and needs Automatic
+  Analysis **off** in SonarQube Cloud (CI and automatic analysis can't both run).
+  Config: `sonar-project.properties` (excludes the line-up seed). Coverage is only written
+  when every test passes; locally add `--coverage.reportOnFailure` to see it anyway.
+  **CodeScene** (hotspots: complex code that changes often) reads git history directly:
+  no files in the repo.
 - `.claude/` is gitignored in this repo: rules/settings placed there load locally but aren't version-controlled — put anything you want shared/checked-in into `CLAUDE.md` itself.
 
 ### What to test
