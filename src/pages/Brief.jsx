@@ -4,6 +4,7 @@ import TagPill from '../components/TagPill'
 import Logo from '../components/Logo'
 import BoardsSection from '../components/BoardsSection'
 import ArtistImage from '../components/ArtistImage'
+import GeneratedArtworkNotice from '../components/GeneratedArtworkNotice'
 import { STYLE_TAGS, PLACEMENTS } from '../data/artists'
 import { IDEA_STATUSES, matchArtistsToIdea } from '../data/brief'
 import { buildIdeaBrief } from '../data/export'
@@ -573,6 +574,7 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
           <Logo size={24} className="mb-2" />
           <p className="font-mono text-xs text-accent tracking-[0.4em] uppercase mb-1">My Brief</p>
           <h1 className="font-display text-3xl text-cream">Ideas</h1>
+          <GeneratedArtworkNotice images={ideas.flatMap((idea) => idea.images || [])} className="mt-2" />
         </div>
         {tab === 'ideas' && (
           <button

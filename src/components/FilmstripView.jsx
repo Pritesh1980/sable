@@ -157,7 +157,7 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onNudge, onSetStatus, 
               className="shrink-0 w-24 h-24 lg:w-28 lg:h-28 xl:w-32 xl:h-32 rounded-xs overflow-hidden bg-ink-muted cursor-pointer hover:ring-1 hover:ring-cream-muted/30 transition-all"
               onClick={() => onOpen(artist)}
             >
-              <ArtistImage src={src} label={artist.name || `@${artist.handle}`} className="w-full h-full object-cover" monogramClassName="text-2xl" />
+              <ArtistImage src={src} sizes="128px" label={artist.name || `@${artist.handle}`} className="w-full h-full object-cover" monogramClassName="text-2xl" />
             </div>
           ))
         ) : (

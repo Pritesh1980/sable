@@ -46,6 +46,13 @@ function renderWall(props = {}, { initialEntries = ['/'] } = {}) {
 const main = () => within(screen.getByRole('main'))
 
 describe('Wall page', () => {
+  it('keeps generated-art provenance outside hover captions after dismissing the intro', () => {
+    localStorage.setItem('tattoo_demo_intro_dismissed', '1')
+    renderWall({ artists: [{ ...baseArtists[0], images: ['images/demo/mora.blackfern/fern-v4.webp'] }] })
+    const notices = screen.getAllByText(/AI-generated imagery/)
+    expect(notices.some((notice) => !notice.closest('figcaption'))).toBe(true)
+  })
+
   it('renders one piece per image across all artists', () => {
     renderWall()
     expect(main().getAllByRole('img')).toHaveLength(3)

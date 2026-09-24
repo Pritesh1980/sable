@@ -10,6 +10,7 @@ const SECTIONS = [
     blurb: 'The Wall, the full-screen viewer, and how to move around.',
     image: 'wall.png',
     steps: [
+      'The public demo contains six invented artists with AI-generated tattoo imagery. Its label stays visible on the Wall, gallery and viewer after you dismiss the introduction. Demo updates reset sample artists and ideas, including your edits; real accounts are untouched. Lettering examples are concepts, not language-verified tattoo stencils.',
       'Sign in with your email and password to open the app. Your artists, ideas, boards and concepts are tied to your account and follow you across devices — add something on your Mac and it appears on your iPhone.',
       'You open on the Wall: every photo from every artist in your collection, edge to edge. The artist’s name sits along the bottom of each tile on touch, and fades in on hover with a mouse; a red dot means it was added in the last 14 days.',
       'Pinned just under the bar is your Top 5 — the five artists you’ve ranked highest. Drag the rank number on any tile to reorder the five, or tap Rank ⤢ to open the full ranking board.',
@@ -44,6 +45,7 @@ const SECTIONS = [
     blurb: 'Rank from the Home Top 5, browse four ways, and filter by style.',
     image: 'gallery-grid.png',
     steps: [
+      'Demo portfolios span botanical, surrealist, Japanese-inspired, tribal, colour-realism and brush-lettering styles. The AI-generated imagery label follows the sample artwork, independently of editable notes.',
       'The quickest place to rank is the Home Wall: your Top 5 is pinned at the top. Drag the rank number on any tile to reorder the five, or tap Rank ⤢ to open the full ranking board — Top 5 pinned, everyone else below, with ▲ / ▼ on every row, Drop ↓ to push an artist out of the Top 5, and ↑ To top 5 to pull one in. Esc returns to the Wall.',
       'Open Drawer → Classic gallery for structured browsing. Switch views with the toggle: ☰ Filmstrip, ⊟ Compare, ⊞ Grid, ▦ Style Wall.',
       'Tap a style tag in the filter bar to show only artists with that tag; tap All to clear it.',

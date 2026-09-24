@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import ArtistImage from './ArtistImage'
+import GeneratedArtworkNotice from './GeneratedArtworkNotice'
 
 // A single image on the Wall — full-bleed, no chrome. The caption is an
 // engraved plate that only appears on hover; it never intercepts the click
@@ -41,6 +42,7 @@ export default function WallPiece({ item, onOpen, onDropImage }) {
         src={src}
         label={item.artistName}
         loading="lazy"
+        sizes="auto, (max-width: 617px) 100vw, (max-width: 923px) 50vw, (max-width: 1229px) 33vw, 25vw"
         className="w-full block grayscale-[0.15] group-hover:grayscale-0 transition-[filter] duration-300"
         fallbackClassName="aspect-[4/5]"
       />
@@ -63,6 +65,7 @@ export default function WallPiece({ item, onOpen, onDropImage }) {
             {item.studioName}
           </small>
         )}
+        <GeneratedArtworkNotice images={[src]} />
       </figcaption>
     </figure>
   )

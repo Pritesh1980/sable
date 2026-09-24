@@ -16,6 +16,15 @@ function makeDropEvent(file) {
 }
 
 describe('WallPiece drop-zone', () => {
+  it('labels generated demo artwork even without a demo session', () => {
+    render(<WallPiece item={{ ...item, image: '/sable/images/demo/mora.blackfern/fern-v4.webp' }} onOpen={vi.fn()} />)
+    expect(screen.getByText(/AI-generated imagery/i)).toBeInTheDocument()
+  })
+
+  it('does not label a real artist image as generated', () => {
+    render(<WallPiece item={item} onOpen={vi.fn()} />)
+    expect(screen.queryByText(/AI-generated imagery/i)).toBeNull()
+  })
   it('highlights with a v2-accent ring while a file is dragged over it', () => {
     render(<WallPiece item={item} onOpen={vi.fn()} onDropImage={vi.fn()} />)
     const figure = screen.getByRole('img').closest('figure')

@@ -22,6 +22,7 @@ export default function StyleWall({ artists, onOpenArtist }) {
           onClick={() => onOpenArtist(artist)}
         >
           <ArtistImage
+            sizes="(max-width: 640px) 50vw, 33vw"
             src={src}
             label={artist.name || `@${artist.handle}`}
             className="w-full block group-hover:scale-105 transition-transform duration-500"

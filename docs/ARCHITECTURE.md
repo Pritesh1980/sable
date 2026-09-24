@@ -624,10 +624,18 @@ and its photos cannot. Implementation: `lineup.js`, `lineupGrabber.js`,
 ## 8. Demo integrity
 
 The public demo is the same code seeded with a wholly fictional dataset — invented
-artists with original, committed artwork, because the owner's real references are
+artists with original AI-generated tattoo imagery, because the owner's real references are
 third-party work that never enters the repository (`src/data/demoSeed.js`).
 
-Two problems make this more than a fixture:
+`demoArtwork.js` allowlists immutable full-size WebP paths and their thumbnails.
+Stored image references and CLIP inputs keep the full-size path; `ArtistImage`
+selects a responsive display source without changing the persistence schema.
+`GeneratedArtworkNotice` recognises those asset paths, so provenance remains
+visible independently of editable notes or a dismissed introduction. Old SVGs
+remain available for previously saved references. The service worker caches these
+images on demand, not in the app-shell precache.
+
+Three problems make this more than a fixture:
 
 - **Stale datasets.** A returning visitor can hold data from an older deploy, so
   seeds are versioned (`DEMO_SEED_VERSION`) and re-seeded on any boot — an installed

@@ -2,9 +2,9 @@
 // visit) sees the Wall, Top-5 dock and gallery looking alive instead of
 // monogram placeholders. The curated real-artist images are third-party work
 // and gitignored; these artists are invented and their artwork is original,
-// hand-authored SVG committed under public/images/demo/ (deliberate tattoo
-// designs — botanical, celestial, sacred geometry, blackwork, architectural,
-// dotwork, single-line — one coherent style per artist).
+// AI-generated tattoo photography under public/images/demo/ (botanical,
+// surrealist, Japanese-inspired, tribal, colour realism and brush lettering).
+// These are synthetic concepts, not evidence of any real artist's work.
 //
 // Entry point: visit any route with `?demo=1` on the local backend
 // (VITE_BACKEND=local, the default). Seeding writes the same localStorage keys
@@ -15,6 +15,7 @@
 
 import { backend } from '../backend'
 import { nowStamp } from '../backend/sync'
+import { DEMO_ARTWORK } from './demoArtwork'
 
 // `demo: true` is the ownership proof: localAuth.signIn writes only { user },
 // so no login — even with this exact email — can produce a marked session.
@@ -36,7 +37,8 @@ export const DEMO_INTRO_KEY = 'tattoo_demo_intro_dismissed'
 // v3: image paths went base-relative. Old v2 records hold /sable/-prefixed
 // paths which resolveAssetPath still renders correctly, so this bump is about
 // converging stored data on the canonical form rather than fixing a break.
-export const DEMO_SEED_VERSION = 3
+// v4: realistic synthetic portfolios, new immutable image URLs and matching ideas.
+export const DEMO_SEED_VERSION = 4
 
 // Base-relative, deliberately. seedDemoData writes these straight into
 // localStorage, so prefixing BASE_URL here would freeze the build's base into
@@ -44,48 +46,47 @@ export const DEMO_SEED_VERSION = 3
 // if the app ever moved. resolveAssetPath applies the base at display time,
 // and rebases anything already stored (including the /sable/-prefixed paths
 // the earlier version of this file wrote).
-const demoImages = (id, count = 3) =>
-  Array.from({ length: count }, (_, i) => `images/demo/${id}/${i + 1}.svg`)
+const demoImages = (id) => DEMO_ARTWORK.filter((piece) => piece.artistId === id).map((piece) => piece.src)
 
 // Fictional artists only — invented names and handles, no resemblance to the
 // real artists in src/data/artists.js. Tags come from the canonical STYLE_TAGS.
 export const DEMO_ARTISTS = [
-  { id: 'mora.blackfern', handle: 'mora.blackfern', name: 'Mora Vane', tags: ['dark-illustrative', 'fine-line'], styleNote: 'Botanical fine-line — branching stems and seed heads drawn in airy off-white line over deep black.', images: demoImages('mora.blackfern'), rank: 1, status: 'shortlisted', notes: '', studio: null },
-  { id: 'vesper_noctis', handle: 'vesper_noctis', name: 'Vesper Ash', tags: ['dark-fantasy', 'surrealism'], styleNote: 'Nocturnal surrealism — eclipsed moons, drifting wisps and star fields in moody black-and-grey.', images: demoImages('vesper_noctis'), rank: 2, status: 'contact-next', notes: '', studio: null },
-  { id: 'hexen_atlas', handle: 'hexen_atlas', name: '', tags: ['blackwork', 'surrealism'], styleNote: 'Sacred geometry — concentric circles, polygons and radial spokes with a single red mark.', images: demoImages('hexen_atlas'), rank: 3, status: 'shortlisted', notes: '', studio: null },
-  { id: 'ferrum_line', handle: 'ferrum_line', name: '', tags: ['blackwork'], styleNote: 'Bold brush blackwork — thick gestural swipes with dry-brush texture and heavy saturation.', images: demoImages('ferrum_line'), rank: 4, status: 'researching', notes: '', studio: null },
-  { id: 'ashgrove.tattoo', handle: 'ashgrove.tattoo', name: '', tags: ['realism', 'dark-illustrative'], styleNote: 'Dotwork realism — depth built from thousands of fine stippled points; soft, smoky, patient.', images: demoImages('ashgrove.tattoo'), rank: 5, status: 'researching', notes: '', studio: null },
-  { id: 'lekhani.ink', handle: 'lekhani.ink', name: 'Asha Lekhani', tags: ['fine-line', 'blackwork'], styleNote: 'Script & letterforms — names carried across writing systems: katakana, hanzi, Gujarati, each set like lettering, not type.', images: demoImages('lekhani.ink'), rank: 6, status: 'shortlisted', notes: '', studio: null },
+  { id: 'mora.blackfern', handle: 'mora.blackfern', name: 'Mora Vane', tags: ['dark-illustrative', 'fine-line'], styleNote: 'Botanical fine-line — fern fronds, magnolia petals and meadow grasses with delicate black-and-grey shading.', images: demoImages('mora.blackfern'), rank: 1, status: 'shortlisted', notes: '', studio: null },
+  { id: 'vesper_noctis', handle: 'vesper_noctis', name: 'Vesper Ash', tags: ['surrealism', 'realism'], styleNote: 'Surreal black-and-grey — an ocean inside an hourglass, fractured marble and stairways into impossible spaces.', images: demoImages('vesper_noctis'), rank: 2, status: 'contact-next', notes: '', studio: null },
+  { id: 'hexen_atlas', handle: 'hexen_atlas', name: '', tags: ['dark-illustrative', 'realism'], styleNote: 'Japanese-inspired storytelling — samurai armour, koi and temple landscapes shaped around the body.', images: demoImages('hexen_atlas'), rank: 3, status: 'shortlisted', notes: '', studio: null },
+  { id: 'ferrum_line', handle: 'ferrum_line', name: '', tags: ['blackwork'], styleNote: 'Contemporary tribal-inspired blackwork — bold interlocking shapes and clean negative space following the calf, shoulder and forearm.', images: demoImages('ferrum_line'), rank: 4, status: 'researching', notes: '', studio: null },
+  { id: 'ashgrove.tattoo', handle: 'ashgrove.tattoo', name: '', tags: ['realism'], styleNote: 'Colour photorealism — a vivid kingfisher, a tiger portrait and a luminous teal gemstone with convincing depth.', images: demoImages('ashgrove.tattoo'), rank: 5, status: 'researching', notes: '', studio: null },
+  { id: 'lekhani.ink', handle: 'lekhani.ink', name: 'Asha Lekhani', tags: ['fine-line', 'blackwork'], styleNote: 'Sumi-e-inspired brushwork — Gujarati, Japanese and Latin lettering concepts alongside abstract ink. Generated lettering is not a language-verified tattoo stencil.', images: demoImages('lekhani.ink'), rank: 6, status: 'shortlisted', notes: '', studio: null },
 ]
 
 export const DEMO_IDEAS = [
   {
     id: 'demo-idea-forest',
-    title: 'Night forest half-sleeve',
-    description: 'Branching botanicals fading into a dark, starlit canopy. Fine line up top, denser black toward the elbow.',
+    title: 'Botanical forearm study',
+    description: 'A fern unfolding along the forearm, with delicate veins and soft black-and-grey shading. Keep breathing room between the fronds.',
     tags: ['dark-illustrative', 'fine-line'],
     placement: 'forearm',
-    images: [{ url: `images/demo/mora.blackfern/2.svg`, note: 'Line density reference' }],
+    images: [{ url: 'images/demo/mora.blackfern/fern-v4.webp', note: 'Frond spacing and shading reference' }],
     linkedArtists: ['mora.blackfern'],
     status: 'idea',
   },
   {
     id: 'demo-idea-eclipse',
-    title: 'Eclipse over still water',
-    description: 'A near-total eclipse with thin drifting cloud lines below — quiet, heavy, mostly negative space.',
-    tags: ['dark-fantasy', 'surrealism'],
-    placement: 'upper arm',
-    images: [{ url: `images/demo/vesper_noctis/1.svg`, note: 'Mood reference' }],
+    title: 'Ocean in an hourglass',
+    description: 'An impossible ocean held inside glass, with realistic reflections and a quiet, dreamlike atmosphere in black-and-grey.',
+    tags: ['surrealism', 'realism'],
+    placement: 'forearm',
+    images: [{ url: 'images/demo/vesper_noctis/hourglass-v4.webp', note: 'Glass, water and tonal depth' }],
     linkedArtists: ['vesper_noctis'],
     status: 'booked',
   },
   {
     id: 'demo-idea-geometry',
-    title: 'Radial geometry chest piece',
-    description: 'Concentric circles and a broken polygon centred on the sternum; one small red accent.',
-    tags: ['blackwork', 'surrealism'],
-    placement: 'chest',
-    images: [],
+    title: 'Samurai and mountain temple',
+    description: 'A samurai in the foreground with a misty temple landscape above, composed to wrap naturally around the upper arm.',
+    tags: ['dark-illustrative', 'realism'],
+    placement: 'upper arm',
+    images: [{ url: 'images/demo/hexen_atlas/samurai-v4.webp', note: 'Armour detail and landscape composition' }],
     linkedArtists: ['hexen_atlas'],
     status: 'idea',
   },

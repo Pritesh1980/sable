@@ -1,6 +1,7 @@
 import { useState, useRef, useLayoutEffect } from 'react'
 import { imageSrc } from '../data/wall'
 import { refreshedBlobUrl } from '../data/blobUrls'
+import { demoResponsiveProps } from '../data/demoArtwork'
 
 // A single artist/reference image that degrades gracefully: if the file is
 // missing (e.g. the public repo ships without the curated seed images) the
@@ -12,6 +13,7 @@ export default function ArtistImage({
   className = '',
   fallbackClassName = '',
   monogramClassName = 'text-4xl',
+  sizes = '100vw',
   ...imgProps
 }) {
   // Accept both image shapes (plain string, or { url, addedAt } refs) and
@@ -32,12 +34,15 @@ export default function ArtistImage({
   const [trackedSrc, setTrackedSrc] = useState(resolved)
   const [retriedSrc, setRetriedSrc] = useState(null)
   const [failed, setFailed] = useState(false)
+  const [responsiveFailed, setResponsiveFailed] = useState(false)
   if (trackedSrc !== resolved) {
     setTrackedSrc(resolved)
     setRetriedSrc(null)
     setFailed(false)
+    setResponsiveFailed(false)
   }
   const displaySrc = retriedSrc || resolved
+  const responsive = responsiveFailed ? {} : demoResponsiveProps(displaySrc)
 
   // Only ever touched inside handleError/handleLoad (event handlers) or this
   // layout effect — never read or written during render. retryStatusRef
@@ -67,6 +72,11 @@ export default function ArtistImage({
   // stale blob URL (a static path, or one the cache still considers fresh),
   // so this is a no-op fallthrough for every non-blob image.
   async function handleError() {
+    // A missing thumbnail must not hide a still-available full-size image.
+    if (responsive.srcSet) {
+      setResponsiveFailed(true)
+      return
+    }
     const forSrc = resolved
     if (retryStatusRef.current === 'idle') {
       retryStatusRef.current = 'pending'
@@ -132,6 +142,9 @@ export default function ArtistImage({
       className={className}
       onError={handleError}
       onLoad={handleLoad}
+      {...responsive}
+      sizes={responsive.srcSet ? sizes : undefined}
+      loading={responsive.srcSet ? 'lazy' : undefined}
       {...imgProps}
     />
   )

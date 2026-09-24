@@ -36,6 +36,13 @@ describe('Brief Ideas | Boards tabs', () => {
     expect(screen.queryByText('Dark folklore')).not.toBeInTheDocument()
   })
 
+  it('discloses generated demo references on Ideas and Boards', () => {
+    renderBrief({ props: { ideas: [{ ...ideas[0], images: [{ url: 'images/demo/mora.blackfern/fern-v4.webp' }] }] } })
+    expect(screen.getByText(/AI-generated imagery/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /boards/i }))
+    expect(screen.getByText(/AI-generated imagery/)).toBeInTheDocument()
+  })
+
   it('switches to Boards and back', () => {
     renderBrief()
     fireEvent.click(screen.getByRole('button', { name: /boards \(1\)/i }))

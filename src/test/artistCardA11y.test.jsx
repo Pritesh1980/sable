@@ -35,6 +35,11 @@ const artist = {
 }
 
 describe('ArtistCard keyboard accessibility (#30, #83)', () => {
+  it('uses responsive demo artwork in the grid card', () => {
+    render(<ArtistCard artist={{ ...artist, images: ['images/demo/mora.blackfern/fern-v4.webp'] }} onOpen={vi.fn()} onSaveImages={vi.fn()} />)
+    expect(screen.getByRole('img', { name: 'Zoia' })).toHaveAttribute('srcset')
+  })
+
   it('exposes the card as a real, labeled <button>', () => {
     render(<ArtistCard artist={artist} onOpen={vi.fn()} onSaveImages={vi.fn()} />)
     const card = screen.getByRole('button', { name: 'Zoia' })

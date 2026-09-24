@@ -84,6 +84,21 @@ describe('createGlEngine', () => {
     expect(typeof engine.dispose).toBe('function')
   })
 
+  it('encodes linear texture samples back to display colour after blending', async () => {
+    const { THREE, record } = makeThree()
+    let shader
+    const OriginalMaterial = THREE.ShaderMaterial
+    THREE.ShaderMaterial = class extends OriginalMaterial {
+      constructor(options) { super(options); shader = options.fragmentShader }
+    }
+    const engine = createGlEngine(THREE, makeMount())
+    engine.setImage('photo.webp')
+    await flush()
+    expect(record.textures[0].colorSpace).toBe(THREE.SRGBColorSpace)
+    expect(shader).toMatch(/gl_FragColor = mix\(from, to, t\);\s*#include <colorspace_fragment>/)
+    engine.dispose()
+  })
+
   // #96: setSize's default updateStyle=true would overwrite the canvas's
   // 100% CSS with fixed pixels, pinning the viewer to its first-seen size.
   it('sizes only the drawing buffer, leaving the canvas CSS at 100%', () => {

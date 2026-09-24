@@ -41,8 +41,8 @@ export default function DemoIntro() {
         {/* Kept to two lines on a phone: this strip sits above the masonry, and
             the work is what the demo is here to show. */}
         <p className="font-v2-ui text-v2-muted text-xs sm:text-sm mt-1.5 leading-relaxed pr-8">
-          A demo collection of six invented artists — change anything you like, it stays
-          in this browser.
+          Six invented artists with AI-generated imagery. Edits stay in this browser;
+          demo updates reset artists and ideas.
         </p>
       </div>
     </div>

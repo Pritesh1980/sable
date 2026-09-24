@@ -38,9 +38,9 @@ with Reorder **off** — that is the view people arrive in.
    committed and published — the curated images under `public/images/artists/` are
    third-party portfolio work that must never appear in them (this bit us once:
    pre-July-2026 captures shipped real artists' photos). Visit `/?demo=1` — it seeds
-   a fictional session, 6 artists with committed hand-authored SVG artwork, and 3 ideas
+   a fictional session, 6 artists with AI-generated tattoo photographs, and 3 ideas
    (`src/data/demoSeed.js`). Boards and Concepts aren't in the seed; inject them via
-   Playwright `evaluate` using `/images/demo/<artist>/<n>.svg` paths, writing BOTH
+   Playwright `evaluate` using base-relative paths from `src/data/demoArtwork.js`, writing BOTH
    the `tattoo_*` and `tattoo_remote_*` localStorage keys so sync keeps them, then
    reload:
 
@@ -72,6 +72,16 @@ with Reorder **off** — that is the view people arrive in.
    (Doing this with the Playwright MCP: resize → navigate → `browser_evaluate` to seed → reload →
    wait ~1.5s for images → `browser_take_screenshot` per state, clicking view toggles / opening
    modals as needed.)
+
+## Demo image assets
+
+Demo artwork ships as 1024 × 1536 WebP images (at most 350 KiB each) and
+384 × 576 thumbnails (at most 80 KiB each). Only full image paths are stored;
+`ArtistImage` derives responsive candidates from the allowlisted manifest. Keep
+legacy SVGs for saved references. New artwork needs a new immutable filename and
+demo seed version. Images are cached on demand, not precached: offline testing must
+warm the images being checked first. Personalised artwork requires explicit
+public-use consent before being added to the repository.
 
 ## Auditing touch targets
 

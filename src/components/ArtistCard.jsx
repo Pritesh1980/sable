@@ -2,8 +2,8 @@ import { useState, useRef } from 'react'
 import { uploadImages } from '../hooks/useImageUpload'
 import { useAuth } from '../context/useAuth'
 import { DEFAULT_STUDIOS } from '../data/artists'
-import { imageSrc } from '../data/wall'
 import { useLongPress } from '../hooks/useLongPress'
+import ArtistImage from './ArtistImage'
 
 // `editing` gates every control that is not "open this artist" (#70). Off — the
 // default — the card is one undivided tap target; on, it grows the drag handle
@@ -12,7 +12,6 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
   const displayName = artist.name || `@${artist.handle}`
   const studio = artist.studio ? DEFAULT_STUDIOS.find((s) => s.id === artist.studio) : null
   const hasImages = artist.images && artist.images.length > 0
-  const [imgError, setImgError] = useState(false)
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef()
   const { user } = useAuth() || {}
@@ -100,13 +99,13 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
         className="absolute inset-0 z-0 w-full h-full appearance-none bg-transparent border-0 p-0 m-0 text-left rounded-xs focus:outline-hidden"
       />
       <div className={`${featured ? 'aspect-[3/4]' : 'aspect-[4/5]'} bg-ink-muted relative overflow-hidden`}>
-        {hasImages && !imgError ? (
-          <img
-            src={imageSrc(artist.images[0])}
-            alt={displayName}
+        {hasImages ? (
+          <ArtistImage
+            src={artist.images[0]}
+            label={displayName}
+            sizes={featured ? '(max-width: 640px) 50vw, 25vw' : '(max-width: 640px) 50vw, 33vw'}
             draggable={false}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-            onError={() => setImgError(true)}
           />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center gap-2">
@@ -160,7 +159,7 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
         {/* Quick upload on tiles that already have images — editing only (#70).
             This corner is the one-handed thumb sweep, and the payoff for a
             mis-tap is the system photo sheet over the whole UI. */}
-        {hasImages && !imgError && editing && (
+        {hasImages && editing && (
           <button
             onClick={(e) => { e.stopPropagation(); fileRef.current.click() }}
             className="absolute bottom-6 right-0 w-11 h-11 p-1.5 flex items-end justify-end opacity-80 hover:opacity-100 transition-opacity z-10 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent rounded-xs"

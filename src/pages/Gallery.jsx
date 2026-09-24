@@ -18,6 +18,7 @@ import {
 } from '@dnd-kit/sortable'
 import SortableArtistCard from '../components/SortableArtistCard'
 import Logo from '../components/Logo'
+import GeneratedArtworkNotice from '../components/GeneratedArtworkNotice'
 import ArtistDetail from '../components/ArtistDetail'
 import ArtistBrowse from '../components/ArtistBrowse'
 import RankingMode from '../components/RankingMode'
@@ -269,6 +270,7 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
           <Logo size={28} className="mb-3" />
           <p className="font-mono text-xs text-accent tracking-[0.4em] uppercase mb-2">Your Collection</p>
           <h1 className="font-display text-5xl text-cream leading-none tracking-tight">Artists</h1>
+          <GeneratedArtworkNotice images={artists.flatMap((artist) => artist.images || [])} className="mt-3" />
         </div>
         <div className="flex flex-wrap gap-2 mb-1">
           {artistsWithImages.length > 0 && !manageMode && (

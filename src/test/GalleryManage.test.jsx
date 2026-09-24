@@ -18,6 +18,11 @@ function renderGallery({ artists = baseArtists, setArtists = vi.fn(), route = '/
 }
 
 describe('Gallery manage mode', () => {
+  it('discloses generated artwork independently of editable notes and demo session', () => {
+    renderGallery({ artists: [{ ...baseArtists[0], notes: '', images: ['images/demo/mora.blackfern/fern-v4.webp'] }] })
+    expect(screen.getByText(/AI-generated imagery/)).toBeInTheDocument()
+  })
+
   beforeEach(() => localStorage.clear())
 
   it('shows a Manage button even when there are no artists', () => {
