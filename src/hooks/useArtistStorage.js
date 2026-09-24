@@ -129,8 +129,31 @@ export function canonicalizeImages(images = []) {
   return out
 }
 
+// `unresolvedImages` holds canonical refs that aren't in the display list right
+// now, each with its position: every ref before hydration, and afterwards any
+// key that couldn't be resolved (offline, a failed signed-URL fetch). They are
+// not shown, but they are still the artist's photos, so writing the cache or
+// pushing the remote puts them back in place. Dropping them is how opening the
+// app offline used to strip a user's own photos from their data (#101).
 function canonicalizeArtist(a) {
-  return { ...a, images: canonicalizeImages(a.images) }
+  const { unresolvedImages, ...rest } = a
+  const images = canonicalizeImages(a.images)
+  if (!unresolvedImages?.length) return { ...rest, images }
+  const present = new Set(images.map(refIdentity).filter(Boolean))
+  for (const { ref, index } of [...unresolvedImages].sort((x, y) => x.index - y.index)) {
+    const id = refIdentity(ref)
+    if (id && present.has(id)) continue
+    images.splice(Math.min(index, images.length), 0, ref)
+    if (id) present.add(id)
+  }
+  return { ...rest, images }
+}
+
+// An artist as first painted, before any photo has been resolved: nothing to
+// show yet, every ref pending.
+function unhydrated(a) {
+  const refs = Array.isArray(a.images) ? a.images : []
+  return { ...a, images: [], unresolvedImages: refs.map((ref, index) => ({ ref, index })) }
 }
 
 // Stable string identity for a canonical image ref, used only to compare
@@ -196,8 +219,10 @@ function saveMeta(artists) {
 }
 
 // Resolve canonical refs to displayable URL strings (awaiting blob keys),
-// carrying `addedAt` through as { url, addedAt } wherever the ref has one.
-export async function displayFromCanonical(refs = []) {
+// carrying `addedAt` through as { url, addedAt } wherever the ref has one. A
+// key that can't be resolved right now is left out of `display` but returned
+// in `unresolved` with its position, so it can be written back (#101).
+async function resolveImageRefs(refs = []) {
   const items = await Promise.all(
     refs.map(async (ref) => {
       if (typeof ref === 'string') return ref
@@ -208,7 +233,15 @@ export async function displayFromCanonical(refs = []) {
       return ref.addedAt ? { url, addedAt: ref.addedAt } : url
     })
   )
-  return items.filter(Boolean)
+  const unresolved = []
+  items.forEach((item, index) => {
+    if (!item && refs[index]?.key) unresolved.push({ ref: refs[index], index })
+  })
+  return { display: items.filter(Boolean), unresolved }
+}
+
+export async function displayFromCanonical(refs = []) {
+  return (await resolveImageRefs(refs)).display
 }
 
 // Merge curated static paths into the IndexedDB display cache without
@@ -249,7 +282,7 @@ export async function buildArtists(metaList, imageMap, withDefaults = true) {
     metaList.map(async (a) => {
       const def = withDefaults ? DEFAULT_ARTISTS.find((d) => d.id === a.id) : undefined
       const idbImages = imageMap[a.id]
-      const resolved = await displayFromCanonical(Array.isArray(a.images) ? a.images : [])
+      const { display: resolved, unresolved } = await resolveImageRefs(Array.isArray(a.images) ? a.images : [])
       const legacyLocalOnly = Array.isArray(idbImages)
         ? idbImages.filter((s) => typeof s === 'string' && s.startsWith('data:') && !keyForUrl(s))
         : []
@@ -261,7 +294,10 @@ export async function buildArtists(metaList, imageMap, withDefaults = true) {
       const doomed = new Set((a.removedImages || []).map((t) => refIdentity(t.ref)).filter(Boolean))
       const defImages = (def?.images || []).filter((img) => !doomed.has(refIdentity(img)))
       const display = mergeStaticImages(own, defImages)
-      return { ...a, images: display }
+      const built = { ...a, images: display }
+      if (unresolved.length) built.unresolvedImages = unresolved
+      else delete built.unresolvedImages
+      return built
     })
   )
 }
@@ -320,7 +356,7 @@ export function useArtistStorage() {
   //
   // This is membership parity with the cache, not with the final state: a later
   // pull can still add remote rows the cache had never seen, and images are
-  // hydrated separately (see the `images: []` below), so both arrive after paint.
+  // hydrated separately (see `unhydrated` below), so both arrive after paint.
   // Those are hydration, not a flash of the wrong identities.
   //
   // Safe to read `user` here because App.jsx mounts AppShell inside
@@ -334,7 +370,7 @@ export function useArtistStorage() {
     const meta = initialRawCache
       ? (owner ? applyDefaults(initialRawCache) : initialRawCache)
       : (owner ? DEFAULT_ARTISTS : [])
-    return meta.map((a) => ({ ...a, images: [] }))
+    return meta.map(unhydrated)
   })
 
   const artistsRef = useRef(artists)
@@ -376,7 +412,9 @@ export function useArtistStorage() {
 
         const imageMap = await dbGetAll()
         imageMapRef.current = imageMap
-        const built = await buildArtists(artistsRef.current, imageMap, seedsOwnerData(user))
+        // Canonical, so rows still unhydrated contribute their pending refs
+        // rather than their empty first-paint images (#101).
+        const built = await buildArtists(artistsRef.current.map(canonicalizeArtist), imageMap, seedsOwnerData(user))
         if (!cancelled) setArtistsRaw(built)
       } catch (e) {
         console.error('[tattoo] Failed to load images:', e)
@@ -407,23 +445,28 @@ export function useArtistStorage() {
           didMigrate = true
         }
 
-        // Artists deleted locally but not yet remotely must not ride back in
-        // on the pull; the remove is retried after reconcile. A pending delete
-        // for a handle present in the local cache was superseded by a re-add.
-        const cachedIds = new Set((initialRawCache || []).map((a) => a.id))
-        const allPending = readPendingDeletes(META_KEY)
-        const superseded = allPending.filter((id) => cachedIds.has(id))
-        if (superseded.length) clearPendingDeletes(META_KEY, superseded)
-        const pendingDeletes = allPending.filter((id) => !cachedIds.has(id))
         const remoteAll = await backend.store.list(COLLECTION)
         if (cancelled) return
+        // Reconcile against what's on screen *now*, read after the fetch — not
+        // the mount-time cache. An edit made while the pull was in flight is
+        // stamped newer than the remote row and wins last-write-wins; the old
+        // snapshot replaced it wholesale (#101). Same for deletes: those made
+        // mid-pull are only visible after the await (as in useStorage, #86).
+        const localMeta = artistsRef.current.map(canonicalizeArtist)
+        // Artists deleted locally but not yet remotely must not ride back in
+        // on the pull; the remove is retried after reconcile. A pending delete
+        // for a handle present locally was superseded by a re-add.
+        const localIds = new Set(localMeta.map((a) => a.id))
+        const allPending = readPendingDeletes(META_KEY)
+        const superseded = allPending.filter((id) => localIds.has(id))
+        if (superseded.length) clearPendingDeletes(META_KEY, superseded)
+        const pendingDeletes = allPending.filter((id) => !localIds.has(id))
         const remote = pendingDeletes.length
           ? remoteAll.filter((r) => !pendingDeletes.includes(r.id))
           : remoteAll
         const owner = seedsOwnerData(user)
-        // Baseline = the user's own raw cache (never the default seed). The owner
-        // additionally gets DEFAULT_ARTISTS folded in; non-owners never do.
-        const localMeta = initialRawCache || []
+        // The owner additionally gets DEFAULT_ARTISTS folded in; non-owners
+        // never do (their first paint never included them either).
         let nextMeta
 
         if (remote.length > 0) {

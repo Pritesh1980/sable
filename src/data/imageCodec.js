@@ -69,22 +69,37 @@ export const ideasCodec = {
 
 // ── concepts: imageUrl string at top level and on each variant ────────────────
 
-const canonVariant = (v) => ({ ...v, imageUrl: canonUrl(v.imageUrl) })
-const displayVariant = async (v) => ({ ...v, imageUrl: await displayUrl(v.imageUrl) })
+// A blob key that can't be resolved right now (offline, a failed signed-URL
+// fetch) displays as '' — nothing to show — but rides along as
+// `unresolvedImageKey` so the cache and remote keep pointing at the photo.
+// Without it, opening the app offline rewrote every concept's image to '' (#101).
+// Ideas do the same by keeping `key` on each display image.
+async function displayImage(item) {
+  const imageUrl = await displayUrl(item.imageUrl)
+  const next = { ...item, imageUrl }
+  delete next.unresolvedImageKey
+  if (!imageUrl && isBlobKey(item.imageUrl)) next.unresolvedImageKey = item.imageUrl
+  return next
+}
+
+// A new image set since then (imageUrl no longer empty) wins over the old key.
+function canonImage(item) {
+  const next = { ...item, imageUrl: canonUrl(item.imageUrl) || item.unresolvedImageKey || item.imageUrl }
+  delete next.unresolvedImageKey
+  return next
+}
 
 export const conceptsCodec = {
   toCanonical: (concepts = []) =>
     concepts.map((c) => ({
-      ...c,
-      imageUrl: canonUrl(c.imageUrl),
-      ...(Array.isArray(c.variants) ? { variants: c.variants.map(canonVariant) } : {}),
+      ...canonImage(c),
+      ...(Array.isArray(c.variants) ? { variants: c.variants.map(canonImage) } : {}),
     })),
   toDisplay: async (concepts = []) =>
     Promise.all(
       concepts.map(async (c) => ({
-        ...c,
-        imageUrl: await displayUrl(c.imageUrl),
-        ...(Array.isArray(c.variants) ? { variants: await Promise.all(c.variants.map(displayVariant)) } : {}),
+        ...(await displayImage(c)),
+        ...(Array.isArray(c.variants) ? { variants: await Promise.all(c.variants.map(displayImage)) } : {}),
       }))
     ),
   ensureUploaded: async (concepts = [], { userId }) => {
