@@ -220,6 +220,7 @@ unseeded — ideas are the user's own.
 - Status tracking (idea → booked → done; per-artist shortlist statuses)
 - Home pipeline (shortlist stages), Studios, Settings and Help pages; four gallery views + swipe-ranking; Manage merged into Artists
 - Convention artist index (line-ups) and competition winners, both cross-referenced against the gallery
+- Web Share Target (#22, shipped in #41) — share an Instagram screenshot straight into add-artist intake
 
 **Still to do (see `BACKLOG.md` / GitHub Issues):**
 When looking for more work, inspect the open GitHub issues labelled `backlog`
@@ -238,8 +239,6 @@ before proposing new tasks; `BACKLOG.md` is only the local pointer/index.
   grabber-style bookmarklet, or screenshot intake through Gemini vision (which is how the
   data actually arrives). Not viable: a Gemini text lookup — `discovery.js` has no search
   grounding, and inventing award results about named real people is unacceptable.
-- Web Share Target (#22) — was blocked on "a deployment"; the Pages PWA is now a
-  live installable HTTPS app, so this is likely unblocked
 
 ---
 
