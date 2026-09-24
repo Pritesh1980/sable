@@ -4,7 +4,7 @@
 
 A personal Progressive Web App (PWA) called **Sable** — a visual-first artist discovery and prioritisation tool. The core purpose is to map tattoo themes and style preferences against a curated list of favourite artists, helping plan a tattoo journey.
 
-This is a personal app for one user (the owner) + occasional sharing with their tattoo artist via a read-only link.
+This is a personal app for one user (the owner). (A read-only share link for the tattoo artist was considered and dropped — #7, closed Sept 2026.)
 
 **Philosophy: Start simple, build over time. MVP first.**
 
@@ -228,7 +228,6 @@ before proposing new tasks; `BACKLOG.md` is only the local pointer/index.
 
 - AWS S3 + CloudFront deploy — now only needed for real accounts + custom domain
   (the public demo is already live on GitHub Pages)
-- Read-only shareable link for the tattoo artist (#7)
 - Convention artist attendance auto-lookup. **Researched 2026-09-10, do not redo the
   survey:** of the seven curated shows only Brighton publishes results/attendance as
   server-rendered text (`brightontattoo.com/news/<year>-competition-winners`); Tattoo

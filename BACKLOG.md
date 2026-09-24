@@ -12,7 +12,6 @@ Open issues (as of 2026-09-24):
 
 - [#5 AWS backend adapter (Cognito + API store + S3 blobs)](https://github.com/Pritesh1980/sable/issues/5)
 - [#6 Deploy to S3 + CloudFront](https://github.com/Pritesh1980/sable/issues/6)
-- [#7 Read-only share link for the tattoo artist](https://github.com/Pritesh1980/sable/issues/7)
 - [#88 Upgrade demo images to agy-generated ones](https://github.com/Pritesh1980/sable/issues/88) (no `backlog` label yet)
 
 This list goes stale; the issue tracker is the source of truth.
