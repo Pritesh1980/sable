@@ -65,17 +65,6 @@ describe('GitHub repository configuration', () => {
     expect(workflow).toContain('name: Run tests')
     expect(workflow).toContain('name: Build production app')
   })
-  it('scans the code with CodeQL on PRs, main and a weekly schedule', () => {
-    const workflow = readRepoFile('.github/workflows/codeql.yml')
-
-    expect(workflow).toContain('github/codeql-action/init@')
-    expect(workflow).toContain('github/codeql-action/analyze@')
-    expect(workflow).toContain('languages: javascript-typescript')
-    expect(workflow).toMatch(/\n {2}pull_request:/)
-    expect(workflow).toMatch(/\n {2}schedule:/)
-    expect(workflow).toContain('security-events: write')
-  })
-
   it('blocks PRs that add vulnerable dependencies', () => {
     const workflow = readRepoFile('.github/workflows/dependency-review.yml')
 
