@@ -4,7 +4,7 @@
 
 A personal Progressive Web App (PWA) called **Sable** — a visual-first artist discovery and prioritisation tool. The core purpose is to map tattoo themes and style preferences against a curated list of favourite artists, helping plan a tattoo journey.
 
-This is a personal app for one user (the owner) + occasional sharing with their tattoo artist via a read-only link.
+This is a personal app for one user (the owner). (A read-only share link for the tattoo artist was considered and dropped — #7, closed Sept 2026.)
 
 **Philosophy: Start simple, build over time. MVP first.**
 
@@ -220,14 +220,15 @@ unseeded — ideas are the user's own.
 - Status tracking (idea → booked → done; per-artist shortlist statuses)
 - Home pipeline (shortlist stages), Studios, Settings and Help pages; four gallery views + swipe-ranking; Manage merged into Artists
 - Convention artist index (line-ups) and competition winners, both cross-referenced against the gallery
+- Web Share Target (#22, shipped in #41) — share an Instagram screenshot straight into add-artist intake
 
 **Still to do (see `BACKLOG.md` / GitHub Issues):**
 When looking for more work, inspect the open GitHub issues labelled `backlog`
-before proposing new tasks; `BACKLOG.md` is only the local pointer/index.
+before proposing new tasks (skip any also labelled `in-progress` — another agent has
+it); `BACKLOG.md` is only the local pointer/index.
 
 - AWS S3 + CloudFront deploy — now only needed for real accounts + custom domain
   (the public demo is already live on GitHub Pages)
-- Read-only shareable link for the tattoo artist (#7)
 - Convention artist attendance auto-lookup. **Researched 2026-09-10, do not redo the
   survey:** of the seven curated shows only Brighton publishes results/attendance as
   server-rendered text (`brightontattoo.com/news/<year>-competition-winners`); Tattoo
@@ -238,8 +239,6 @@ before proposing new tasks; `BACKLOG.md` is only the local pointer/index.
   grabber-style bookmarklet, or screenshot intake through Gemini vision (which is how the
   data actually arrives). Not viable: a Gemini text lookup — `discovery.js` has no search
   grounding, and inventing award results about named real people is unacceptable.
-- Web Share Target (#22) — was blocked on "a deployment"; the Pages PWA is now a
-  live installable HTTPS app, so this is likely unblocked
 
 ---
 
