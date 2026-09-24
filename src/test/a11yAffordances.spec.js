@@ -22,6 +22,20 @@ function uiFiles() {
     .map((f) => ({ path: f, rel: f.replace(root + '/', ''), src: readFileSync(f, 'utf8') }))
 }
 
+// The element a className belongs to: the last `<tag` before it. A backward scan
+// rather than a regex over everything before it — that regex's lookahead was
+// quadratic in file length and ran for every className, so under a loaded full
+// run this spec's tests hit the 5s timeout.
+function openingTag(src, index) {
+  for (let i = index - 2; i >= 0; i--) {
+    if (src[i] !== '<' || !/[A-Za-z]/.test(src[i + 1])) continue
+    let end = i + 2
+    while (end < index && /[\w.]/.test(src[end])) end++
+    return src.slice(i + 1, end)
+  }
+  return '?'
+}
+
 // A className is frequently a multi-line template literal or ternary, so scanning
 // line-by-line lets `opacity-0` on one line and `group-hover:opacity-100` on the next
 // slip past. Collapse each className expression to a single string, keeping the line
@@ -30,6 +44,8 @@ function classNameExpressions(src) {
   const out = []
   const re = /className\s*=\s*(\{`|\{|")/g
   let m
+  let line = 1
+  let counted = 0
   while ((m = re.exec(src)) !== null) {
     const open = m[1]
     const start = m.index + m[0].length
@@ -49,16 +65,21 @@ function classNameExpressions(src) {
     }
     if (end === -1 || end <= start) continue
     const text = src.slice(start, end)
-    // The element this className belongs to: scan back to the opening `<tag`.
-    const before = src.slice(0, m.index)
-    const tag = (before.match(/<([A-Za-z][\w.]*)(?![\s\S]*<[A-Za-z])/) || [])[1] || '?'
+    for (; counted < m.index; counted++) if (src[counted] === '\n') line++
     out.push({
-      line: before.split('\n').length,
+      line,
       text: text.replace(/\s+/g, ' '),
-      tag,
+      tag: openingTag(src, m.index),
     })
   }
   return out
+}
+
+// Parsed once for the whole spec: every test below walks the same files.
+let parsed
+function uiExpressions() {
+  parsed ??= uiFiles().map((file) => ({ ...file, exprs: classNameExpressions(file.src) }))
+  return parsed
 }
 
 // Decorative overlays are not tap targets; controls are. A drag handle is a `div`
@@ -102,8 +123,8 @@ describe('touch affordances (#49)', () => {
   // control is simply always visible on touch, and unchanged on a mouse.
   it('never hides a hover-revealed control unconditionally', () => {
     const offenders = []
-    for (const { rel, src } of uiFiles()) {
-      for (const { line, text } of classNameExpressions(src)) {
+    for (const { rel, exprs } of uiExpressions()) {
+      for (const { line, text } of exprs) {
         if (!/group-hover:opacity-/.test(text)) continue
         // Bare `opacity-0` — not preceded by a variant prefix such as `can-hover:`.
         if (/(?<![\w:-])opacity-0(?![\w-])/.test(text)) {
@@ -121,8 +142,8 @@ describe('touch affordances (#49)', () => {
   // only.
   it('has no full-bleed hover-revealed controls', () => {
     const offenders = []
-    for (const { rel, src } of uiFiles()) {
-      for (const { line, text } of classNameExpressions(src)) {
+    for (const { rel, exprs } of uiExpressions()) {
+      for (const { line, text } of exprs) {
         if (!/can-hover:opacity-0/.test(text)) continue
         if (/(?<![\w-])inset-0(?![\w-])/.test(text)) {
           offenders.push(`${rel}:${line} — inset-0 hover-revealed control; use a localised target`)
@@ -138,8 +159,8 @@ describe('touch affordances (#49)', () => {
   // what has to grow — the visible chip stays small, nested inside.
   it('gives every hover-revealed control a 44pt hit area', () => {
     const offenders = []
-    for (const { rel, src } of uiFiles()) {
-      for (const expr of classNameExpressions(src)) {
+    for (const { rel, exprs } of uiExpressions()) {
+      for (const expr of exprs) {
         if (!/can-hover:opacity-0/.test(expr.text)) continue
         if (!isInteractive(expr)) continue
         if (!meetsTouchTarget(expr.text)) {
@@ -178,8 +199,8 @@ describe('touch affordances (#49)', () => {
     }
 
     const offenders = []
-    for (const { rel, src } of uiFiles()) {
-      for (const expr of classNameExpressions(src)) {
+    for (const { rel, exprs } of uiExpressions()) {
+      for (const expr of exprs) {
         // Only controls: a spacer or image sized 44px with a negative margin is
         // ordinary layout, not a target that can steal a tap.
         if (!isInteractive(expr)) continue
@@ -217,7 +238,7 @@ describe('focus affordances (#50)', () => {
     const exempt = new Set(OUTLINE_EXEMPT)
     const offenders = []
 
-    for (const { rel, src } of uiFiles()) {
+    for (const { rel, src, exprs } of uiExpressions()) {
       if (exempt.has(rel)) continue
       // A control that's deliberately occluded for pointer purposes (#83:
       // an invisible overlay button, painted under an opaque sibling so a
@@ -227,7 +248,7 @@ describe('focus affordances (#50)', () => {
       // it's just not on the same className as the suppression, so it's
       // checked file-wide rather than expression-by-expression like the rest.
       const hasAncestorFocusWithinRing = /focus-within:ring-[\w./[\]-]+/.test(src)
-      for (const { line, text } of classNameExpressions(src)) {
+      for (const { line, text } of exprs) {
         if (!/outline-hidden/.test(text)) continue
         if (hasAncestorFocusWithinRing) continue
         const affordances = text.match(/(?:focus-visible:ring|focus:border|focus:bg)-[\w./[\]-]+/g) || []

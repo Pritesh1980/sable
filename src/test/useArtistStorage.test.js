@@ -132,6 +132,10 @@ describe('useArtistStorage', () => {
   const wrapper = ({ children }) =>
     createElement(AuthProvider, null, createElement(Gate, null, children))
 
+  // Resolves once the session is up and the hook has mounted — NOT once images
+  // have hydrated: every artist paints with `images: []` and the photos arrive
+  // from IndexedDB afterwards. Assert on images inside a waitFor; reading them
+  // straight after this was the spec's long-standing flake under load.
   async function renderOwned() {
     const { result } = renderHook(() => useArtistStorage(), { wrapper })
     await waitFor(() => expect(result.current).toBeTruthy())
@@ -217,14 +221,17 @@ describe('useArtistStorage', () => {
 
     const result = await renderOwned()
 
-    // Wait for the async init (IndexedDB) to fully complete
+    // The old key goes first; the images hydrate after (see renderOwned).
     await waitFor(() => {
       expect(localStorage.getItem('tattoo_artists')).toBeNull()
     })
 
     // Migrated data-URL should appear first, followed by any static defaults
+    await waitFor(() => {
+      const hydrated = result.current[0].find((a) => a.id === DEFAULT_ARTISTS[0].id)
+      expect(hydrated.images[0]).toBe('data:image/jpeg;base64,migratedimg')
+    })
     const migrated = result.current[0].find((a) => a.id === DEFAULT_ARTISTS[0].id)
-    expect(migrated.images[0]).toBe('data:image/jpeg;base64,migratedimg')
     // Static paths from DEFAULT_ARTISTS are merged in after the upload
     const def = DEFAULT_ARTISTS.find((a) => a.id === DEFAULT_ARTISTS[0].id)
     def.images.forEach((p) => expect(migrated.images).toContain(p))
@@ -255,8 +262,10 @@ describe('useArtistStorage', () => {
 
     // A fresh mount ("reload") — no further edits happened in between.
     const second = await renderOwned()
-    const migratedAgain = second.current[0].find((a) => a.id === DEFAULT_ARTISTS[0].id)
-    expect(migratedAgain.images[0]).toBe(dataUrl)
+    await waitFor(() => {
+      const migratedAgain = second.current[0].find((a) => a.id === DEFAULT_ARTISTS[0].id)
+      expect(migratedAgain.images[0]).toBe(dataUrl)
+    })
   })
 
   // #32 (react-hooks/exhaustive-deps flags the missing `user` on this effect's

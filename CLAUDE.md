@@ -269,7 +269,13 @@ them. Keep messages terse and conventional (e.g. `feat(home): …`, `docs: …`)
   `useArtistStorage`, then green), all passing isolated. Treat any single-file
   failure in a full run as suspect, not just the two named. Protocol: rerun the
   failing spec isolated; if green there and CI is green, it's environment, not
-  your change. CI is the arbiter.
+  your change. CI is the arbiter. **But "environment" often means a test race that
+  load exposes.** Two were root-caused in Sept 2026: `useArtistStorage` read images
+  straight after mount, but artists paint with `images: []` and hydrate from
+  IndexedDB afterwards, so assert on images inside `waitFor`. `a11yAffordances` hit
+  the 5s timeout because its tag lookup was quadratic in file length. A recurring
+  "flake" is worth a timing run (`npx vitest run --reporter=json`) before the next
+  shrug.
 - **Worktrees double the suite**: agent worktrees live *inside* the repo
   (`.claude/worktrees/`, `.worktrees/`) and vitest globs their copies from the repo
   root — a full run with a worktree present reports ~2× files/tests. Run the suite
