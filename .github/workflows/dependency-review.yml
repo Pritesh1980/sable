@@ -1,0 +1,25 @@
+name: Dependency review
+
+# Fails a PR that adds a dependency with a known high/critical vulnerability.
+# Dependabot only reports those once they are already on main; this catches
+# them at the door, which matters when agents add packages. Needs the
+# dependency graph (on by default for public repos).
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@v5.0.0
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure

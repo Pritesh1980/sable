@@ -65,4 +65,54 @@ describe('GitHub repository configuration', () => {
     expect(workflow).toContain('name: Run tests')
     expect(workflow).toContain('name: Build production app')
   })
+  it('scans the code with CodeQL on PRs, main and a weekly schedule', () => {
+    const workflow = readRepoFile('.github/workflows/codeql.yml')
+
+    expect(workflow).toContain('github/codeql-action/init@')
+    expect(workflow).toContain('github/codeql-action/analyze@')
+    expect(workflow).toContain('languages: javascript-typescript')
+    expect(workflow).toMatch(/\n {2}pull_request:/)
+    expect(workflow).toMatch(/\n {2}schedule:/)
+    expect(workflow).toContain('security-events: write')
+  })
+
+  it('blocks PRs that add vulnerable dependencies', () => {
+    const workflow = readRepoFile('.github/workflows/dependency-review.yml')
+
+    expect(workflow).toMatch(/\n {2}pull_request:/)
+    expect(workflow).toContain('actions/dependency-review-action@')
+    expect(workflow).toContain('fail-on-severity: high')
+  })
+
+  it('smoke-tests the live demo after each deploy and weekly', () => {
+    const workflow = readRepoFile('.github/workflows/live-smoke.yml')
+    const config = readRepoFile('playwright.live.config.js')
+
+    expect(workflow).toContain('workflow_run:')
+    expect(workflow).toContain('Deploy demo to GitHub Pages')
+    // Only a successful deploy is worth testing; a failed one left the old site up.
+    expect(workflow).toContain("github.event.workflow_run.conclusion == 'success'")
+    expect(workflow).toMatch(/\n {2}schedule:/)
+    expect(workflow).toContain('playwright.live.config.js')
+    // Against the real site: no local build or server.
+    expect(config).not.toContain('webServer')
+    expect(config).toContain('https://pritesh1980.github.io/sable/')
+    // The live spec must not be picked up by the offline suite, and vice versa.
+    expect(config).toContain("testMatch: '**/*.live.js'")
+    expect(readRepoFile('playwright.config.js')).toContain("testMatch: '**/*.e2e.js'")
+  })
+
+  it('groups generated release notes by the labels PR titles map to', () => {
+    const release = readRepoFile('.github/release.yml')
+    const labeler = readRepoFile('.github/workflows/pr-labels.yml')
+
+    for (const label of ['feature', 'fix', 'docs', 'dependencies']) {
+      expect(release).toContain(`- ${label}`)
+      expect(labeler).toContain(`'${label}'`)
+    }
+    expect(release).toContain("- '*'")
+    // Reads only the title; never checks out PR code under the write token.
+    expect(labeler).toContain('pull_request_target:')
+    expect(labeler).not.toContain('actions/checkout')
+  })
 })
