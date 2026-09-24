@@ -150,6 +150,27 @@ Three projects: **iphone** (390×844, `isMobile`, touch; runs almost everything)
 | `offline` | Once installed, the app opens every main route with the network off, images included |
 | `routes.subpath` | Deep links, redirects, image paths, the manifest and offline start under `/sable/` |
 
+### Live demo smoke test
+
+`e2e/smoke.live.js` runs against the **deployed** demo (https://pritesh1980.github.io/sable/),
+not a local build: Pages' CDN, the real service worker and the production-minified
+bundle. `.github/workflows/live-smoke.yml` runs it after every successful Pages deploy
+and weekly. Its own config, `playwright.live.config.js`, has no `webServer`, and its
+`*.live.js` pattern keeps it and the offline suite from running each other.
+
+```bash
+npx playwright test --config playwright.live.config.js
+LIVE_URL=http://localhost:4190/sable/ npx playwright test --config playwright.live.config.js
+```
+
+To try it against a local build, build with `VITE_BASE=/sable/` **and start
+`vite preview` with `VITE_BASE=/sable/` too**. Preview reads the base when it starts.
+Without it, `/sable/assets/*` script requests 404 and the page is blank.
+Pages answers deep links with `404.html` and a 404 status, so the spec judges documents
+by what renders and requires only sub-resources to be 2xx. `vite preview` answers a
+missing stylesheet with `index.html` (200), so that one class of breakage shows up only
+against the real site.
+
 Things this suite taught that are easy to get wrong:
 
 - **Measure overflow against `documentElement.clientWidth`, not `innerWidth`.** On a

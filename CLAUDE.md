@@ -280,6 +280,14 @@ them. Keep messages terse and conventional (e.g. `feat(home): …`, `docs: …`)
   overlay is on top, canvas/WebGL/camera, downloads, offline start, `basename`. Every run
   rebuilds. `E2E_REUSE=1` reuses whatever answers on :4179/:4180 instead, so rebuild
   first when you use it. How-to and gotchas: `docs/MAINTAINING.md#browser-tests-e2e`.
+- **Live smoke test**: `e2e/smoke.live.js` + `playwright.live.config.js` hit the *deployed*
+  Pages demo after each deploy and weekly (`live-smoke.yml`). This container's network
+  policy may block `github.io`; point `LIVE_URL` at a local `/sable/` preview instead.
+- **Other GitHub checks**: CodeQL runs via GitHub's **default setup** (repo settings, not a
+  workflow file; don't add a `codeql.yml`, since GitHub rejects advanced-config uploads while default
+  setup is on). The bookmarklet's `eval(atob())` alert is expected: dismiss it, don't "fix" it.
+  Also dependency review on PRs, and `pr-labels.yml`
+  labelling PRs from their conventional title so `.github/release.yml` can group release notes.
 - `.claude/` is gitignored in this repo: rules/settings placed there load locally but aren't version-controlled — put anything you want shared/checked-in into `CLAUDE.md` itself.
 
 ### What to test

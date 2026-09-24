@@ -1,0 +1,52 @@
+name: Live demo smoke test
+
+# The main e2e job tests fresh local builds. This one tests what visitors
+# actually get at https://pritesh1980.github.io/sable/: Pages' CDN, the real
+# service worker, and the production-minified build (the bookmarklet bug in
+# CLAUDE.md only existed there). It runs after each successful deploy and
+# weekly, so a site that broke without a code change (an expired dependency,
+# a Pages problem) still gets noticed.
+on:
+  workflow_run:
+    workflows: [Deploy demo to GitHub Pages]
+    types: [completed]
+  schedule:
+    - cron: '41 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    # Only a successful deploy is worth testing; a failed one left the old site up.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 26
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Run smoke tests against the live demo
+        run: npx playwright test --config playwright.live.config.js
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: live-smoke-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14

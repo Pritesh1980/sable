@@ -1,0 +1,50 @@
+name: PR labels
+
+# Labels each PR from its conventional-commit title (feat(home): ... →
+# feature) so release.yml can group the generated release notes. Retitling a
+# PR swaps the label. pull_request_target gives the token write access even on
+# a fork's PR; that is safe only because this job reads the title and never
+# checks out or runs PR code — keep it that way.
+on:
+  pull_request_target:
+    types: [opened, edited, reopened]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/github-script@v9
+        with:
+          script: |
+            const LABELS = {
+              feat: 'feature',
+              fix: 'fix',
+              perf: 'performance',
+              docs: 'docs',
+              test: 'test',
+              ci: 'ci',
+              deps: 'dependencies',
+              chore: 'chore',
+              refactor: 'chore',
+              build: 'chore',
+              style: 'chore',
+            }
+            const managed = new Set(Object.values(LABELS))
+            const pr = context.payload.pull_request
+            const type = /^(\w+)(\([^)]*\))?!?:/.exec(pr.title)?.[1]?.toLowerCase()
+            const wanted = LABELS[type]
+            const issue = { owner: context.repo.owner, repo: context.repo.repo, issue_number: pr.number }
+            // Drop a label left by the old title; leave unmanaged labels
+            // (and Dependabot's "dependencies") alone.
+            for (const { name } of pr.labels) {
+              if (managed.has(name) && name !== wanted && name !== 'dependencies') {
+                await github.rest.issues.removeLabel({ ...issue, name })
+              }
+            }
+            if (wanted && !pr.labels.some(({ name }) => name === wanted)) {
+              await github.rest.issues.addLabels({ ...issue, labels: [wanted] })
+            }
