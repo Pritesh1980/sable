@@ -22,8 +22,9 @@ samples. They do not replace a real account's collection. Export anything you wa
 to keep before relying on the demo for your own planning.
 
 The artwork is synthetic, not a real tattoo artist's portfolio. An **AI-generated
-imagery** label remains on the Wall, gallery and image viewer even after you dismiss
-the introduction. Lettering examples are concepts, not language-verified stencils.
+imagery** label remains on the Wall, gallery, image viewer, ranking and image-bearing
+editors even after you dismiss the introduction. Lettering examples are concepts,
+not language-verified stencils.
 
 The demo opens with a short strip across the top of the Wall explaining what you're
 looking at. Close it with **✕** and it stays closed on that device — it's an

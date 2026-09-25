@@ -13,7 +13,8 @@ The approved in-conversation plan and contact sheet are the visual brief.
 - [x] Responsive gallery images and persistent generated-art disclosure.
 - [x] Tests, production builds at both bases, mobile and desktop browser checks.
 - [x] Updated Help, documentation and demo-only guide screenshots.
-- [ ] Independent review and final user preview; no push or publication.
+- [x] Independent whole-branch review and its verified fix pass.
+- [ ] Final user preview; no push or publication.
 
 ## Safety and acceptance
 
@@ -60,3 +61,36 @@ The approved in-conversation plan and contact sheet are the visual brief.
   1.48/255 after the colour-space fix.
 - Recaptured all guide screenshots affected by the demo artwork; the Concepts
   pair is 1280 × 900 as specified by the maintenance guide.
+
+## Review and final verification — 2026-09-25
+
+- Independent review found two Important provenance gaps: full-screen Browse,
+  Rank, Idea and Board editors hid the page-level disclosure; explicit Board
+  covers were absent from the provenance inventory. Both are fixed with five
+  overlay/cover tests watched fail then pass. A reused demo image in Concepts
+  also receives a tile and full-screen label (two RED→GREEN tests).
+- The reviewer found one Minor extra blank line at the manifest EOF; removed.
+- Repeated builds exposed a stale-service-worker injection issue. The precache
+  plugin now reads canonical `public/sw.js`, with a RED→GREEN repeated-build
+  regression test. Both `/` and `/sable/` production builds passed using
+  isolated output directories, with 25 base-correct precached shell assets and
+  no eager demo-image precache.
+- `npm test -- --maxWorkers=2`: 151 files / 1,429 tests passed. Unrestricted
+  runs encountered the project's documented parallel-test flakiness and worker
+  timeouts; the isolated migration and route specs passed. Lint and
+  `docs:check` passed; 20 Mermaid diagrams parsed across four documents.
+- Local Chromium confirmed the disclosures in Browse and Rank on the `/sable/`
+  production build. The affected mobile editor, Board and ranking guide
+  screenshots and the desktop Concepts pair were recaptured and inspected.
+
+## Final review rulings
+
+- Final: Ruling: Gujarati/Japanese lettering correctness and stencil suitability
+  remain unverified generated concepts, not tattoo-ready text. Cost if wrong:
+  someone could copy inaccurate glyphs without consulting a fluent artist.
+- Final: Ruling: physical iPhone/Safari GPU and wide-gamut appearance remain
+  unverified; Chromium and pixel checks cover the tested browser. Cost if wrong:
+  colour or overlay placement could differ on the owner's device.
+- Final: Ruling: first offline access to an uncached full-size image remains
+  outside the plan's warmed-image scope. Cost if wrong: a never-viewed image
+  will not be available until the device reconnects.

@@ -1,6 +1,8 @@
 // A single concept on the Concepts wall — same visual language as WallPiece
 // (v2 tokens, hover caption, full-bleed image). Adds a variants-count badge
 // in the top-left corner when the concept has saved results.
+import GeneratedArtworkNotice from './GeneratedArtworkNotice'
+
 export default function ConceptPiece({ item, onOpen }) {
   return (
     <figure
@@ -12,6 +14,11 @@ export default function ConceptPiece({ item, onOpen }) {
         alt={item.title}
         loading="lazy"
         className="w-full block grayscale-[0.15] group-hover:grayscale-0 transition-[filter] duration-300"
+      />
+
+      <GeneratedArtworkNotice
+        images={[item.imageUrl]}
+        className="absolute top-2 right-2 max-w-[65%] rounded-xs bg-v2-ink/85 px-2 py-1"
       />
 
       {item.variantsCount > 0 && (

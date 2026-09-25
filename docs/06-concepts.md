@@ -11,6 +11,10 @@ arrive by pressing **`G`** while viewing an artist full-screen. Your saved conce
 the page just like the artists' Wall; the **composer** slides in from the right when
 you're making something new.
 
+If you reuse one of Sable's shipped demo images in a saved concept, its
+**AI-generated imagery** label appears on the concept tile and remains visible in the
+full-screen viewer.
+
 ![The Concepts wall with the composer open](../public/guide/concepts.png)
 
 ## The composer

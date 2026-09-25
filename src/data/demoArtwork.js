@@ -44,4 +44,3 @@ export function demoResponsiveProps(image, base) {
     height: 1536,
   }
 }
-

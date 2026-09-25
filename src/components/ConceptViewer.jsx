@@ -6,6 +6,7 @@ import useSwipeTap from '../hooks/useSwipeTap'
 import useViewportZoomed from '../hooks/useViewportZoomed'
 import ConceptVariantLab from './ConceptVariantLab'
 import ConceptVisualMatches from './ConceptVisualMatches'
+import GeneratedArtworkNotice from './GeneratedArtworkNotice'
 import GlCrossfade from './GlCrossfade'
 import ViewerSheetToggle from './ViewerSheetToggle'
 import SavedPromptPack from './SavedPromptPack'
@@ -258,6 +259,11 @@ export default function ConceptViewer({
           </div>
         )}
       </div>
+
+      <GeneratedArtworkNotice
+        images={[current.imageUrl]}
+        className="absolute top-16 left-4 z-20 rounded-xs bg-v2-ink/85 px-2 py-1 pointer-events-none"
+      />
 
       {touch ? (
         <div className="absolute inset-0 pointer-events-none">

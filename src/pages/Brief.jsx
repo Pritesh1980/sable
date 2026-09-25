@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router'
 import TagPill from '../components/TagPill'
 import Logo from '../components/Logo'
 import BoardsSection from '../components/BoardsSection'
+import { getBoardCover } from '../data/boards'
 import ArtistImage from '../components/ArtistImage'
 import GeneratedArtworkNotice from '../components/GeneratedArtworkNotice'
 import { STYLE_TAGS, PLACEMENTS } from '../data/artists'
@@ -238,27 +239,30 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
 
   return (
     <div className="fixed inset-0 z-50 bg-ink-black/95 flex flex-col animate-fade-in overflow-y-auto">
-      <div className="flex items-center justify-between px-5 pt-safe-top pt-6 pb-4 border-b border-ink-border sticky top-0 bg-ink-black z-10">
-        <button onClick={onClose} className="text-cream-muted hover:text-cream text-sm tracking-widest uppercase">
-          ← Back
-        </button>
-        <div className="flex gap-4">
-          {!isNew && (
-            <button onClick={() => { onDelete(idea.id); onClose() }} className="text-accent/60 hover:text-accent text-sm transition-colors">
-              Delete
+      <div className="px-5 pt-safe-top pt-6 pb-4 border-b border-ink-border sticky top-0 bg-ink-black z-10">
+        <div className="flex items-center justify-between">
+          <button onClick={onClose} className="text-cream-muted hover:text-cream text-sm tracking-widest uppercase">
+            ← Back
+          </button>
+          <div className="flex gap-4">
+            {!isNew && (
+              <button onClick={() => { onDelete(idea.id); onClose() }} className="text-accent/60 hover:text-accent text-sm transition-colors">
+                Delete
+              </button>
+            )}
+            <button
+              onClick={copyBrief}
+              disabled={!draft.title.trim()}
+              className="text-cream-muted hover:text-cream disabled:opacity-30 text-sm transition-colors"
+            >
+              {copied ? 'Copied' : 'Copy brief'}
             </button>
-          )}
-          <button
-            onClick={copyBrief}
-            disabled={!draft.title.trim()}
-            className="text-cream-muted hover:text-cream disabled:opacity-30 text-sm transition-colors"
-          >
-            {copied ? 'Copied' : 'Copy brief'}
-          </button>
-          <button onClick={save} className="text-accent hover:text-accent-hover text-sm font-body transition-colors">
-            {isNew ? 'Add' : 'Save'}
-          </button>
+            <button onClick={save} className="text-accent hover:text-accent-hover text-sm font-body transition-colors">
+              {isNew ? 'Add' : 'Save'}
+            </button>
+          </div>
         </div>
+        <GeneratedArtworkNotice images={images} className="mt-2" />
       </div>
 
       <div className="flex-1 px-5 py-6 max-w-2xl mx-auto w-full space-y-6">
@@ -574,7 +578,10 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
           <Logo size={24} className="mb-2" />
           <p className="font-mono text-xs text-accent tracking-[0.4em] uppercase mb-1">My Brief</p>
           <h1 className="font-display text-3xl text-cream">Ideas</h1>
-          <GeneratedArtworkNotice images={ideas.flatMap((idea) => idea.images || [])} className="mt-2" />
+          <GeneratedArtworkNotice images={[
+            ...ideas.flatMap((idea) => idea.images || []),
+            ...boards.map((board) => getBoardCover(board, ideas)),
+          ]} className="mt-2" />
         </div>
         {tab === 'ideas' && (
           <button

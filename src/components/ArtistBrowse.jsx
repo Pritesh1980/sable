@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import ArtistImage from './ArtistImage'
+import GeneratedArtworkNotice from './GeneratedArtworkNotice'
 
 export default function ArtistBrowse({ artists, startIndex = 0, onClose }) {
   const withImages = artists.filter((a) => a.images?.length > 0)
@@ -132,6 +133,7 @@ export default function ArtistBrowse({ artists, startIndex = 0, onClose }) {
         <div className="flex items-end justify-between">
           <div>
             <h2 className="font-display text-2xl text-cream leading-tight">{displayName}</h2>
+            <GeneratedArtworkNotice images={[images[imageIdx]]} className="mt-1" />
             {artist.name && (
               <p className="font-mono text-[0.8125rem] text-cream-muted/60 mt-0.5">@{artist.handle}</p>
             )}

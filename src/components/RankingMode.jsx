@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { computeSwipeRanking } from '../data/ranking'
 import ArtistImage from './ArtistImage'
+import GeneratedArtworkNotice from './GeneratedArtworkNotice'
 import TagPill from './TagPill'
 import { DEFAULT_STUDIOS } from '../data/artists'
 
@@ -43,6 +44,7 @@ function SummaryScreen({ decisions, artists, onApply, onDiscard }) {
         <h2 className="font-display text-4xl text-cream mb-8 leading-none">
           {total} artists<br />sorted
         </h2>
+        <GeneratedArtworkNotice images={artists.flatMap((a) => a.images || [])} className="-mt-5 mb-7" />
 
         {/* Visual proportion bar */}
         <div className="flex h-1.5 rounded-full overflow-hidden mb-8 gap-px">
@@ -258,6 +260,7 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
       >
         <div className="mb-4">
           <h2 className="font-display text-3xl text-cream leading-tight">{displayName}</h2>
+          <GeneratedArtworkNotice images={images} className="mt-1" />
           {artist.name && (
             <p className="font-mono text-[0.8125rem] text-cream-muted/50 mt-0.5">@{artist.handle}</p>
           )}
