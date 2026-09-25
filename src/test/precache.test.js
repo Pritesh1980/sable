@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { tmpdir } from 'node:os'
 import { selectPrecacheAssets, isObsoleteAsset } from '../sw/precache'
-import { injectManifest } from '../../scripts/precachePlugin'
+import precachePlugin, { injectManifest } from '../../scripts/precachePlugin'
 
 describe('selectPrecacheAssets', () => {
   const distFiles = [
@@ -95,6 +96,28 @@ describe('injectManifest', () => {
 
   it('throws if the placeholder has drifted out of sw.js', () => {
     expect(() => injectManifest('const nope = []', ['/assets/a.js'])).toThrow(/__PRECACHE_MANIFEST__/)
+  })
+})
+
+describe('precache build plugin', () => {
+  it('refreshes an already-injected service worker on a repeated build', () => {
+    const root = mkdtempSync(join(tmpdir(), 'sable-precache-'))
+    try {
+      mkdirSync(join(root, 'public'))
+      mkdirSync(join(root, 'dist', 'assets'), { recursive: true })
+      writeFileSync(join(root, 'public', 'sw.js'), 'const BUILD_MANIFEST = /* __PRECACHE_MANIFEST__ */ []')
+      writeFileSync(join(root, 'dist', 'sw.js'), 'const BUILD_MANIFEST = ["/assets/old.js"]')
+      writeFileSync(join(root, 'dist', 'assets', 'new.js'), '')
+      const plugin = precachePlugin()
+      plugin.configResolved({ root, build: { outDir: 'dist' }, base: '/' })
+
+      plugin.closeBundle()
+
+      expect(readFileSync(join(root, 'dist', 'sw.js'), 'utf8')).toContain('/assets/new.js')
+      expect(readFileSync(join(root, 'dist', 'sw.js'), 'utf8')).not.toContain('/assets/old.js')
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
   })
 })
 
