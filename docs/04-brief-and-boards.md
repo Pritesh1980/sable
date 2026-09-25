@@ -31,6 +31,9 @@ Tap **+** to add an idea (or tap a card to edit one). The editor gives you:
   borrow from it*. **3D print** on an image opens the relief STL export for it (see
   [AI concepts](06-concepts.md#export-a-relief-stl)).
 
+If an idea uses a shipped demo image, its editor keeps the **AI-generated imagery** label
+visible while you review or change its references.
+
 ### Artists match automatically
 
 As soon as an idea has style tags, the editor shows **matching artists**, ranked by how
@@ -45,7 +48,9 @@ and its linked artists goes to your clipboard, ready to paste to an artist.
 ## Mood boards
 
 **Boards** (the second tab on the Ideas page) group related ideas into a themed collection — handy for a
-sleeve or a connected set of pieces. The board's cover is taken from its first idea's image.
+sleeve or a connected set of pieces. A board can keep its own cover; otherwise its cover
+comes from the first idea with an image. A generated demo cover is labeled on the board
+card, and the label stays visible in the board editor when demo references appear.
 
 ![The Boards list](../public/guide/boards-list.png)
 

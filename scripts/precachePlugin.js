@@ -4,7 +4,7 @@
 // page, so without a manifest nothing but the shell is cached until the
 // second visit. Dev is untouched (public/sw.js keeps an empty manifest).
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { join, relative } from 'node:path'
+import { join, relative, resolve } from 'node:path'
 import { selectPrecacheAssets } from '../src/sw/precache.js'
 
 const PLACEHOLDER = /const BUILD_MANIFEST = \/\* __PRECACHE_MANIFEST__ \*\/ \[\]/
@@ -25,18 +25,20 @@ function walk(dir, root = dir) {
 
 export default function precachePlugin() {
   let outDir = 'dist'
+  let sourcePath = 'public/sw.js'
   let base = '/'
   return {
     name: 'sable-precache-manifest',
     apply: 'build',
     configResolved(config) {
-      outDir = join(config.root, config.build.outDir)
+      outDir = resolve(config.root, config.build.outDir)
+      sourcePath = join(config.root, 'public', 'sw.js')
       base = config.base // '/' or e.g. '/sable/' — prefixed onto every cached URL
     },
     closeBundle() {
       const assets = selectPrecacheAssets(walk(outDir), base)
       const swPath = join(outDir, 'sw.js')
-      writeFileSync(swPath, injectManifest(readFileSync(swPath, 'utf8'), assets))
+      writeFileSync(swPath, injectManifest(readFileSync(sourcePath, 'utf8'), assets))
       console.log(`[precache] injected ${assets.length} assets into sw.js`)
     },
   }

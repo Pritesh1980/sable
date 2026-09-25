@@ -26,6 +26,46 @@ describe('ArtistImage', () => {
     refreshedBlobUrl.mockResolvedValue(null)
   })
 
+  it('offers small and full sources only for allowlisted demo artwork', () => {
+    render(<ArtistImage src="images/demo/mora.blackfern/fern-v4.webp" label="Fern" sizes="128px" />)
+    const img = screen.getByRole('img')
+    expect(img).toHaveAttribute('src', '/images/demo/mora.blackfern/fern-v4.webp')
+    expect(img).toHaveAttribute('srcset', '/images/demo/mora.blackfern/fern-v4-thumb.webp 384w, /images/demo/mora.blackfern/fern-v4.webp 1024w')
+    expect(img).toHaveAttribute('sizes', '128px')
+    expect(img).toHaveAttribute('loading', 'lazy')
+    expect(img).toHaveAttribute('width', '1024')
+    expect(img).toHaveAttribute('height', '1536')
+  })
+
+  it('does not invent thumbnails for uploads, external images or legacy demo SVGs', () => {
+    const { rerender } = render(<ArtistImage src="https://example.com/images/demo/mora.blackfern/fern-v4.webp" label="Artwork" />)
+    expect(screen.getByRole('img')).not.toHaveAttribute('srcset')
+    for (const src of ['blob:local-image', 'images/demo/mora.blackfern/1.svg', 'images/demo/unknown.webp']) {
+      rerender(<ArtistImage src={src} label="Artwork" />)
+      expect(screen.getByRole('img')).not.toHaveAttribute('srcset')
+    }
+  })
+
+  it('retries the full demo image if a responsive source fails, then retains normal fallback', async () => {
+    render(<ArtistImage src="images/demo/mora.blackfern/fern-v4.webp" label="Fern" />)
+    expect(screen.getByRole('img')).toHaveAttribute('srcset')
+    fireEvent.error(screen.getByRole('img'))
+    expect(screen.getByRole('img')).not.toHaveAttribute('srcset')
+    expect(screen.getByRole('img')).toHaveAttribute('src', '/images/demo/mora.blackfern/fern-v4.webp')
+    expect(refreshedBlobUrl).not.toHaveBeenCalled()
+    fireEvent.error(screen.getByRole('img'))
+    await waitFor(() => expect(screen.queryByRole('img')).toBeNull())
+  })
+
+  it('restores responsive sources when navigating away and back after a failure', () => {
+    const { rerender } = render(<ArtistImage src="images/demo/mora.blackfern/fern-v4.webp" label="Artwork" />)
+    fireEvent.error(screen.getByRole('img'))
+    rerender(<ArtistImage src="images/demo/mora.blackfern/magnolia-v4.webp" label="Artwork" />)
+    expect(screen.getByRole('img')).toHaveAttribute('srcset')
+    rerender(<ArtistImage src="images/demo/mora.blackfern/fern-v4.webp" label="Artwork" />)
+    expect(screen.getByRole('img')).toHaveAttribute('srcset')
+  })
+
   it('renders an <img> with the given src and a derived alt', () => {
     render(<ArtistImage src="/images/artists/zoia.ink/1.jpg" label="@zoia.ink" />)
     const img = screen.getByRole('img')

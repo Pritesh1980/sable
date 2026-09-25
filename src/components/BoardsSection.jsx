@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { getImageUrl } from '../data/planning'
+import GeneratedArtworkNotice from './GeneratedArtworkNotice'
 import {
   BLANK_BOARD,
   addIdeaToBoard,
@@ -33,6 +34,7 @@ function BoardCard({ board, ideas, onOpen }) {
       </div>
       <div className="p-4">
         <h3 className="font-display text-cream text-lg leading-tight mb-0.5">{board.name || 'Untitled board'}</h3>
+        <GeneratedArtworkNotice images={[cover]} className="mb-1" />
         {board.description && (
           <p className="text-cream-muted text-sm font-body line-clamp-2 mb-2">{board.description}</p>
         )}
@@ -75,35 +77,41 @@ function BoardModal({ board, onClose, onSave, onDelete, ideas, artists }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-ink-black/95 flex flex-col animate-fade-in overflow-y-auto">
-      <div className="flex items-center justify-between px-5 pt-safe-top pt-6 pb-4 border-b border-ink-border sticky top-0 bg-ink-black z-10">
-        <button onClick={onClose} className="text-cream-muted hover:text-cream text-sm tracking-widest uppercase">
-          ← Back
-        </button>
-        <div className="flex gap-4">
-          {!isNew && (
+      <div className="px-5 pt-safe-top pt-6 pb-4 border-b border-ink-border sticky top-0 bg-ink-black z-10">
+        <div className="flex items-center justify-between">
+          <button onClick={onClose} className="text-cream-muted hover:text-cream text-sm tracking-widest uppercase">
+            ← Back
+          </button>
+          <div className="flex gap-4">
+            {!isNew && (
+              <button
+                onClick={() => {
+                  if (confirm(`Delete board "${draft.name}"? Ideas will not be deleted.`)) {
+                    onDelete(board.id)
+                    onClose()
+                  }
+                }}
+                className="text-accent/60 hover:text-accent text-sm transition-colors"
+              >
+                Delete
+              </button>
+            )}
             <button
-              onClick={() => {
-                if (confirm(`Delete board "${draft.name}"? Ideas will not be deleted.`)) {
-                  onDelete(board.id)
-                  onClose()
-                }
-              }}
-              className="text-accent/60 hover:text-accent text-sm transition-colors"
+              onClick={copyBoardBrief}
+              disabled={!draft.name.trim()}
+              className="text-cream-muted hover:text-cream disabled:opacity-30 text-sm transition-colors"
             >
-              Delete
+              {copied ? 'Copied' : 'Copy brief'}
             </button>
-          )}
-          <button
-            onClick={copyBoardBrief}
-            disabled={!draft.name.trim()}
-            className="text-cream-muted hover:text-cream disabled:opacity-30 text-sm transition-colors"
-          >
-            {copied ? 'Copied' : 'Copy brief'}
-          </button>
-          <button onClick={save} className="text-accent hover:text-accent-hover text-sm font-body transition-colors">
-            {isNew ? 'Add' : 'Save'}
-          </button>
+            <button onClick={save} className="text-accent hover:text-accent-hover text-sm font-body transition-colors">
+              {isNew ? 'Add' : 'Save'}
+            </button>
+          </div>
         </div>
+        <GeneratedArtworkNotice images={[
+          getBoardCover(draft, ideas),
+          ...ideas.flatMap((idea) => idea.images || []),
+        ]} className="mt-2" />
       </div>
 
       <div className="flex-1 px-5 py-6 max-w-2xl mx-auto w-full space-y-6">

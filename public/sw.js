@@ -9,7 +9,8 @@
 // (guarded by src/test/precache.test.js).
 // v5 makes every cache key base-relative so the app works when served from a
 // sub-path (GitHub Pages, /sable/) as well as from a root host.
-const CACHE_NAME = 'tattoo-v5'
+// v6 also precaches the bounded shipped demo artwork for offline browsing.
+const CACHE_NAME = 'tattoo-v6'
 
 // The path this SW is served from is the deploy base: '/sw.js' → '/',
 // '/sable/sw.js' → '/sable/'. Deriving it here keeps this file correct at any

@@ -15,6 +15,25 @@ import {
 import { DEFAULT_ARTISTS, STYLE_TAGS } from '../data/artists'
 
 describe('DEMO_ARTISTS data integrity', () => {
+  it('provides eighteen distinct photographic pieces across six coherent portfolios', () => {
+    expect(DEMO_ARTISTS).toHaveLength(6)
+    const images = DEMO_ARTISTS.flatMap((a) => a.images)
+    expect(new Set(images).size).toBe(18)
+    for (const artist of DEMO_ARTISTS) {
+      expect(artist.images).toHaveLength(3)
+      expect(artist.images.every((src) => src.endsWith('-v4.webp'))).toBe(true)
+      expect(artist.styleNote).not.toMatch(/off-white line over deep black|Sacred geometry|Dotwork realism/)
+    }
+  })
+
+  it('keeps idea images and artist links in the refreshed portfolios', () => {
+    for (const idea of DEMO_IDEAS) {
+      const linked = DEMO_ARTISTS.filter((a) => idea.linkedArtists.includes(a.id))
+      expect(linked.length).toBe(idea.linkedArtists.length)
+      expect(idea.images.length).toBeGreaterThan(0)
+      for (const image of idea.images) expect(linked.flatMap((a) => a.images)).toContain(image.url)
+    }
+  })
   it('has 6-8 fictional artists', () => {
     expect(DEMO_ARTISTS.length).toBeGreaterThanOrEqual(6)
     expect(DEMO_ARTISTS.length).toBeLessThanOrEqual(8)

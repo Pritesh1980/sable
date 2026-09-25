@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import Brief from '../pages/Brief'
 
@@ -34,6 +34,39 @@ describe('Brief Ideas | Boards tabs', () => {
     renderBrief()
     expect(screen.getByText('Koru unfurling')).toBeInTheDocument()
     expect(screen.queryByText('Dark folklore')).not.toBeInTheDocument()
+  })
+
+  it('discloses generated demo references on Ideas and Boards', () => {
+    renderBrief({ props: { ideas: [{ ...ideas[0], images: [{ url: 'images/demo/mora.blackfern/fern-v4.webp' }] }] } })
+    expect(screen.getByText(/AI-generated imagery/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /boards/i }))
+    expect(screen.getAllByText(/AI-generated imagery/)).not.toHaveLength(0)
+  })
+
+  it('shows the generated-art notice inside an idea editor with a demo reference', () => {
+    renderBrief({ props: { ideas: [{ ...ideas[0], images: [{ url: 'images/demo/mora.blackfern/fern-v4.webp' }] }] } })
+    fireEvent.click(screen.getByText('Koru unfurling'))
+    expect(within(screen.getByRole('button', { name: '← Back' }).closest('.fixed')).getByText(/AI-generated imagery/)).toBeInTheDocument()
+  })
+
+  it('discloses an explicit demo Board cover without relying on idea images', () => {
+    renderBrief({
+      route: '/brief?tab=boards',
+      props: { boards: [{ ...boards[0], cover: 'images/demo/mora.blackfern/fern-v4.webp' }] },
+    })
+    const board = screen.getByRole('button', { name: /Dark folklore/i })
+    expect(within(board).getByText(/AI-generated imagery/)).toBeInTheDocument()
+    fireEvent.click(board)
+    expect(within(screen.getByRole('button', { name: '← Back' }).closest('.fixed')).getByText(/AI-generated imagery/)).toBeInTheDocument()
+  })
+
+  it('shows the generated-art notice inside a Board editor with a demo idea', () => {
+    renderBrief({
+      route: '/brief?tab=boards',
+      props: { ideas: [{ ...ideas[0], images: [{ url: 'images/demo/mora.blackfern/fern-v4.webp' }] }] },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /Dark folklore/i }))
+    expect(within(screen.getByRole('button', { name: '← Back' }).closest('.fixed')).getByText(/AI-generated imagery/)).toBeInTheDocument()
   })
 
   it('switches to Boards and back', () => {

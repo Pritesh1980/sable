@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import TagPill from './TagPill'
 import ArtistImage from './ArtistImage'
+import GeneratedArtworkNotice from './GeneratedArtworkNotice'
 import SimilarArtists from './SimilarArtists'
 import { STYLE_TAGS, DEFAULT_STUDIOS } from '../data/artists'
 import { uploadImages } from '../hooks/useImageUpload'
@@ -211,6 +212,8 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
             )}
           </div>
 
+          <GeneratedArtworkNotice images={images} className="mb-4" />
+
           {/* ── PHOTOS ── always editable */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-3">
@@ -419,11 +422,14 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
         >
           <ArtistImage
             src={imageSrc(images[lightbox])}
+            loading="eager"
+            sizes="100vw"
             label={artist.name || `@${artist.handle}`}
             className="max-w-full max-h-full object-contain"
             monogramClassName="text-8xl"
           />
           <button className="absolute top-5 right-5 text-cream-muted text-2xl">×</button>
+          <GeneratedArtworkNotice images={[images[lightbox]]} className="absolute top-5 left-4 bg-v2-ink/90 px-2 py-1" />
           {lightbox > 0 && (
             <button
               onClick={(e) => { e.stopPropagation(); setLightbox(lightbox - 1) }}

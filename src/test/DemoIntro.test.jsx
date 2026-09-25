@@ -21,6 +21,8 @@ describe('DemoIntro', () => {
     seedDemoSession()
     render(<DemoIntro />)
     expect(screen.getByText(/every tattoo artist you love/i)).toBeTruthy()
+    expect(screen.getByText(/AI-generated imagery/i)).toBeInTheDocument()
+    expect(screen.getByText(/demo updates reset artists and ideas/i)).toBeInTheDocument()
   })
 
   it('renders nothing for a real signed-in session', () => {

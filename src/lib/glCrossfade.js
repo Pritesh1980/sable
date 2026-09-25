@@ -55,6 +55,7 @@ void main() {
   vec4 from = sampleImage(uFrom, vUv + disp, uFromRes);
   vec4 to = sampleImage(uTo, vUv + disp, uToRes);
   gl_FragColor = mix(from, to, t);
+  #include <colorspace_fragment>
 }
 `
 

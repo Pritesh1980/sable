@@ -7,7 +7,7 @@ const label = (a) => a.name || `@${a.handle}`
 function Cover({ artist, size }) {
   return (
     <span className={`${size} rounded-xs overflow-hidden shrink-0 block`}>
-      <ArtistImage src={artist.images?.[0]} label={label(artist)} className="w-full h-full object-cover" monogramClassName="text-sm" />
+      <ArtistImage src={artist.images?.[0]} sizes="48px" label={label(artist)} className="w-full h-full object-cover" monogramClassName="text-sm" />
     </span>
   )
 }

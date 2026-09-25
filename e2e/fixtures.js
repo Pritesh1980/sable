@@ -8,8 +8,8 @@ import { test as base, expect } from '@playwright/test'
 // measure the typeface a phone actually renders, and a fallback font would be
 // measuring a different page.
 
-// A finished concept whose image is a committed demo SVG. Static paths are not
-// blob keys, so the concepts codec displays them as-is.
+// A finished concept whose image is a committed legacy demo SVG. Static paths
+// are not blob keys, so the concepts codec displays them as-is.
 export const DEMO_CONCEPT = {
   id: 'e2e-concept-1',
   prompt: 'Moth over a crescent moon',
@@ -118,7 +118,10 @@ export async function openResult(page) {
 // Brief → the demo idea that has a reference photo, open in the idea editor.
 export async function openIdeaWithPhoto(page) {
   await openDemo(page, '/brief')
-  await page.getByText('Night forest half-sleeve').first().click()
+  const title = await page.evaluate(() => JSON.parse(localStorage.getItem('tattoo_ideas') || '[]')
+    .find((idea) => idea.images?.length)?.title)
+  expect(title).toBeTruthy()
+  await page.getByText(title).first().click()
   await expect(page.getByRole('button', { name: 'Remove photo' })).toBeAttached()
 }
 
@@ -142,9 +145,24 @@ export async function expectWorksOffline(page, routes) {
       await expect(page.locator('#root')).not.toBeEmpty()
       await expect(page.getByRole('link', { name: 'Artists' }).or(page.getByRole('button', { name: 'Artists' })).first()).toBeVisible()
     }
-    // Images seen online come back from the cache too.
-    const broken = await page.locator('img[src*="images/demo/"]').evaluateAll((els) =>
-      els.filter((img) => !(img.complete && img.naturalWidth > 0)).map((img) => img.src))
+    // Lazy <img> elements below the fold are not complete until scrolled into
+    // view, even when cached. Request every shipped demo image directly while
+    // offline to prove the cache has both responsive sizes.
+    const { count, broken } = await page.evaluate(async () => {
+      const artists = JSON.parse(localStorage.getItem('tattoo_artists_meta') || '[]')
+      const full = artists.flatMap((artist) => artist.images || [])
+        .filter((src) => src.startsWith('images/demo/') && src.endsWith('.webp'))
+      const base = new URL(navigator.serviceWorker.controller.scriptURL).pathname.replace(/sw\.js$/, '')
+      const paths = full.flatMap((src) => [src, src.replace(/\.webp$/, '-thumb.webp')])
+      const results = await Promise.all(paths.map(async (src) => {
+        const url = new URL(src, location.origin + base).href
+        try { return (await fetch(url)).ok ? null : url } catch { return url }
+      }))
+      return { count: full.length, broken: results.filter(Boolean) }
+    })
+    if (await page.evaluate(() => localStorage.getItem('tattoo_demo_seed_version') !== null)) {
+      expect(count).toBe(18)
+    }
     expect(broken).toEqual([])
   } finally {
     await page.context().setOffline(false)

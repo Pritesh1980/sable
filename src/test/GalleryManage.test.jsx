@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import Gallery from '../pages/Gallery'
 
@@ -18,6 +18,23 @@ function renderGallery({ artists = baseArtists, setArtists = vi.fn(), route = '/
 }
 
 describe('Gallery manage mode', () => {
+  it('discloses generated artwork independently of editable notes and demo session', () => {
+    renderGallery({ artists: [{ ...baseArtists[0], notes: '', images: ['images/demo/mora.blackfern/fern-v4.webp'] }] })
+    expect(screen.getByText(/AI-generated imagery/)).toBeInTheDocument()
+  })
+
+  it('keeps the generated-art notice visible inside Browse', () => {
+    renderGallery({ artists: [{ ...baseArtists[0], images: ['images/demo/mora.blackfern/fern-v4.webp'] }] })
+    fireEvent.click(screen.getByRole('button', { name: 'Browse' }))
+    expect(within(screen.getByRole('button', { name: /back/i }).closest('.fixed')).getByText(/AI-generated imagery/)).toBeInTheDocument()
+  })
+
+  it('keeps the generated-art notice visible inside Rank', () => {
+    renderGallery({ artists: [{ ...baseArtists[0], images: ['images/demo/mora.blackfern/fern-v4.webp'] }] })
+    fireEvent.click(screen.getByRole('button', { name: 'Rank' }))
+    expect(within(screen.getByRole('button', { name: 'Cancel' }).closest('.fixed')).getByText(/AI-generated imagery/)).toBeInTheDocument()
+  })
+
   beforeEach(() => localStorage.clear())
 
   it('shows a Manage button even when there are no artists', () => {

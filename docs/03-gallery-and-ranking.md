@@ -4,6 +4,10 @@
 
 ← [Back to contents](README.md)
 
+The public demo uses synthetic portfolio photographs across botanical, surrealist,
+Japanese-inspired, tribal, colour-realism and brush-lettering styles. Its
+**AI-generated imagery** disclosure is separate from editable artist notes.
+
 ---
 
 The **Classic gallery** (**⋯ → Classic gallery**) is where structured browsing lives — the

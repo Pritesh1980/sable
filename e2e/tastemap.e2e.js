@@ -27,12 +27,15 @@ async function seedStyleIndex(page) {
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
     })
+    const artists = JSON.parse(localStorage.getItem('tattoo_artists_meta') || '[]')
+    const imagesById = new Map(artists.map((artist) => [artist.id, artist.images]))
     await new Promise((resolve, reject) => {
       const tx = db.transaction('vectors', 'readwrite')
       ids.forEach((id, artist) => {
-        for (let image = 0; image < 3; image += 1) {
-          tx.objectStore('vectors').put(vector(artist, image), `${model}:/images/demo/${id}/${image + 1}.svg`)
-        }
+        const images = imagesById.get(id)
+        if (images?.length !== 3) throw new Error(`Expected three demo images for ${id}`)
+        images.forEach((src, image) => tx.objectStore('vectors')
+          .put(vector(artist, image), `${model}:${new URL(src, location.origin).pathname}`))
       })
       tx.oncomplete = resolve
       tx.onerror = () => reject(tx.error)

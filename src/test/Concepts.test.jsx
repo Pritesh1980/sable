@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { describe, expect, it, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import Concepts from '../pages/Concepts'
 import { COMPOSER_DRAFT_KEY, loadComposerDraft, saveComposerDraft } from '../data/composerDraft'
@@ -31,6 +31,21 @@ describe('Concepts page', () => {
     ]
     render(<ConceptsHarness initialConcepts={concepts} />)
     expect(screen.getAllByRole('img')).toHaveLength(2)
+  })
+
+  it('labels a saved concept tile when it reuses shipped demo artwork', () => {
+    render(<ConceptsHarness initialConcepts={[
+      { id: 'demo', prompt: 'An hourglass', imageUrl: '/images/demo/vesper_noctis/hourglass-v4.webp', tags: [] },
+    ]} />)
+    expect(within(screen.getByAltText('An hourglass').closest('figure')).getByText(/AI-generated imagery/)).toBeInTheDocument()
+  })
+
+  it('keeps the demo artwork label visible in the full-screen concept viewer', () => {
+    render(<ConceptsHarness initialConcepts={[
+      { id: 'demo', prompt: 'An hourglass', imageUrl: '/images/demo/vesper_noctis/hourglass-v4.webp', tags: [] },
+    ]} />)
+    fireEvent.click(screen.getByAltText('An hourglass'))
+    expect(within(screen.getByRole('dialog')).getByText(/AI-generated imagery/)).toBeInTheDocument()
   })
 
   it('opens the full-screen viewer when a concept piece is clicked', () => {

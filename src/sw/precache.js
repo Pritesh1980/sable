@@ -9,9 +9,10 @@
 //   index.html / '/'  — already precached as APP_SHELL, served network-first
 //   sw.js             — the browser manages the SW script itself
 //   audit.html        — local curation tool, not part of the app
-//   images/**         — artist reference images; local-only and potentially huge
+//   images/artists/** — personal reference images; potentially huge
 //   guide/**          — doc screenshots; runtime-cached on demand
-const INCLUDE = [/^assets\/.+\.(js|css)$/, /^icons\/.+/, /^(manifest\.json|favicon\.svg|icons\.svg)$/]
+// The shipped demo WebPs are a bounded ~2.7 MiB set and must work offline.
+const INCLUDE = [/^assets\/.+\.(js|css)$/, /^icons\/.+/, /^(manifest\.json|favicon\.svg|icons\.svg)$/, /^images\/demo\/.+\.webp$/]
 
 // `base` is the deploy path ('/' at a root host, '/sable/' on GitHub Pages) —
 // the same value Vite prepends to built asset URLs, so cached keys match what

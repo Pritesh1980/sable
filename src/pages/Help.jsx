@@ -10,6 +10,7 @@ const SECTIONS = [
     blurb: 'The Wall, the full-screen viewer, and how to move around.',
     image: 'wall.png',
     steps: [
+      'The public demo contains six invented artists with AI-generated tattoo imagery. Its label stays visible on the Wall, gallery, viewer, ranking and image-bearing editors after you dismiss the introduction. Demo updates reset sample artists and ideas, including your edits; real accounts are untouched. Lettering examples are concepts, not language-verified tattoo stencils.',
       'Sign in with your email and password to open the app. Your artists, ideas, boards and concepts are tied to your account and follow you across devices — add something on your Mac and it appears on your iPhone.',
       'You open on the Wall: every photo from every artist in your collection, edge to edge. The artist’s name sits along the bottom of each tile on touch, and fades in on hover with a mouse; a red dot means it was added in the last 14 days.',
       'Pinned just under the bar is your Top 5 — the five artists you’ve ranked highest. Drag the rank number on any tile to reorder the five, or tap Rank ⤢ to open the full ranking board.',
@@ -44,6 +45,7 @@ const SECTIONS = [
     blurb: 'Rank from the Home Top 5, browse four ways, and filter by style.',
     image: 'gallery-grid.png',
     steps: [
+      'Demo portfolios span botanical, surrealist, Japanese-inspired, tribal, colour-realism and brush-lettering styles. The AI-generated imagery label follows the sample artwork into Browse and Rank, independently of editable notes.',
       'The quickest place to rank is the Home Wall: your Top 5 is pinned at the top. Drag the rank number on any tile to reorder the five, or tap Rank ⤢ to open the full ranking board — Top 5 pinned, everyone else below, with ▲ / ▼ on every row, Drop ↓ to push an artist out of the Top 5, and ↑ To top 5 to pull one in. Esc returns to the Wall.',
       'Open Drawer → Classic gallery for structured browsing. Switch views with the toggle: ☰ Filmstrip, ⊟ Compare, ⊞ Grid, ▦ Style Wall.',
       'Tap a style tag in the filter bar to show only artists with that tag; tap All to clear it.',
@@ -62,6 +64,7 @@ const SECTIONS = [
     image: 'brief-idea-editor.png',
     steps: [
       'Open Ideas and tap + to create an idea. Add a title, description, style tags, body placement and reference images. 3D print on a reference image turns it into a printable relief STL.',
+      'An AI-generated imagery label stays visible in an idea or board editor when it shows a shipped demo image; a Board cover is labeled even if its linked ideas have no demo images.',
       'With a Gemini key set and a reference image uploaded, Fill idea from image drafts the title, description, tags and placement from the image — only fields you left empty are filled.',
       'As you add style tags, matching artists appear ranked by overlap, status and rank — tap to link them to the idea.',
       'Use Copy brief to put a shareable, formatted summary on your clipboard.',
@@ -95,6 +98,7 @@ const SECTIONS = [
     image: 'concepts.png',
     steps: [
       'Switch to Concepts from the bar — or press G while viewing an artist full-screen, and the composer opens already steered to them.',
+      'If a saved concept reuses shipped demo artwork, its AI-generated imagery label appears on the tile and stays visible in the viewer.',
       'The composer is one panel: the steer card (tap change to pick another artist), your idea, a placement, then Generate image or Copy prompt instead. Your draft is kept on this device, so hopping out to another AI tab never loses it.',
       'No API key? Copy prompt, run it in ChatGPT, Claude, Gemini or AI Studio (great with a Google AI Pro subscription), then drop or paste the result into the composer — it saves to the wall exactly like a generated image.',
       'To generate in-app, open AI setup in the composer and add a paid OpenAI or Gemini API key (~$0.04/image, billing required; stored only on this device).',

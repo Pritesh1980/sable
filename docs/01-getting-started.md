@@ -13,9 +13,18 @@ with your own collection.
 
 If you don't have an account — or you just want a look around — use
 **No account? View the demo →** underneath the form. It loads a fully fictional
-collection (six invented artists with original artwork) that runs entirely in your
+collection (six invented artists with AI-generated tattoo imagery) that runs entirely in your
 browser; nothing syncs anywhere, and you can edit freely. To get back out, clear the
 site's storage or open a fresh private window.
+
+Demo updates replace the sample artists and ideas, including edits made to those
+samples. They do not replace a real account's collection. Export anything you want
+to keep before relying on the demo for your own planning.
+
+The artwork is synthetic, not a real tattoo artist's portfolio. An **AI-generated
+imagery** label remains on the Wall, gallery, image viewer, ranking and image-bearing
+editors even after you dismiss the introduction. Lettering examples are concepts,
+not language-verified stencils.
 
 The demo opens with a short strip across the top of the Wall explaining what you're
 looking at. Close it with **✕** and it stays closed on that device — it's an

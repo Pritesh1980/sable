@@ -71,6 +71,8 @@ export default function GlCrossfade({
     return (
       <div className="w-full h-full flex items-center justify-center">
         <ArtistImage
+          loading="eager"
+          sizes="100vw"
           src={src}
           label={label}
           className={fallbackImageClassName}

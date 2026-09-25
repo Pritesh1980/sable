@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useState } from 'react'
 import ArtistImage from './ArtistImage'
+import GeneratedArtworkNotice from './GeneratedArtworkNotice'
 import GlCrossfade from './GlCrossfade'
 import ViewerSheetToggle from './ViewerSheetToggle'
 import useWallKeyboard from '../hooks/useWallKeyboard'
@@ -200,10 +201,11 @@ export default function WallViewer({
   )
 
   const thumbnails = artistItems.map((item) => (
-    <img
+    <ArtistImage
       key={item.imageIndex}
       src={getItemSrc(item)}
-      alt={`${item.artistName} thumbnail ${item.imageIndex + 1}`}
+      label={`${item.artistName} thumbnail ${item.imageIndex + 1}`}
+      sizes="42px"
       onClick={() => setIndex(items.indexOf(item))}
       className={`h-14 w-[42px] shrink-0 object-cover rounded-xs cursor-pointer transition-opacity ${
         item === current ? 'opacity-100 outline outline-1 outline-v2-accent outline-offset-1' : 'opacity-45 hover:opacity-100'
@@ -244,6 +246,8 @@ export default function WallViewer({
           <div className="absolute inset-0 flex items-center justify-center">
             <ArtistImage
               key={`${current.artistId}-${current.imageIndex}`}
+              loading="eager"
+              sizes="100vw"
               src={getItemSrc(current)}
               label={`${current.artistName} — ${current.styles.join(', ')}`}
               className="max-w-[100vw] max-h-[100vh] object-contain animate-fade-in"
@@ -252,6 +256,11 @@ export default function WallViewer({
           </div>
         )}
       </div>
+
+      <GeneratedArtworkNotice
+        images={[getItemSrc(current)]}
+        className="absolute left-[max(1rem,env(safe-area-inset-left))] top-[calc(max(1rem,env(safe-area-inset-top))+3.5rem)] bg-v2-ink/90 rounded-xs px-2 py-1 pointer-events-none"
+      />
 
       {touch ? (
         <div className="absolute inset-0 pointer-events-none">

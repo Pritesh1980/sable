@@ -49,6 +49,7 @@ function RankTile({ artist, index }) {
       <span className="w-7 h-7 rounded-xs overflow-hidden shrink-0">
         <ArtistImage
           src={artist.images?.[0]}
+          sizes="28px"
           label={label(artist)}
           className="w-full h-full object-cover"
           monogramClassName="text-[0.625rem]"
