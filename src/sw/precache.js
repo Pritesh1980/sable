@@ -20,7 +20,14 @@ export function selectPrecacheAssets(files, base = '/') {
   const urls = files
     .filter((f) => INCLUDE.some((re) => re.test(f)))
     .map((f) => `${base}${f}`)
-  return [...new Set(urls)].sort()
+  return [...new Set(urls)].sort(byCodeUnit)
+}
+
+// What the default sort already did for strings, spelled out so it reads as
+// intended rather than as a forgotten compare function (SonarQube S2871).
+function byCodeUnit(a, b) {
+  if (a < b) return -1
+  return a > b ? 1 : 0
 }
 
 // Only hashed build output under `<base>assets/` is safe to sweep: anything from

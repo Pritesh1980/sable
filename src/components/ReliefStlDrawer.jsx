@@ -3,6 +3,7 @@ import { buildReliefStl, DEFAULT_RELIEF_SETTINGS } from '../data/reliefStl'
 import { CANVAS_READ_ERROR, imageToHeightmap, loadPhotoForRelief } from '../data/reliefImage'
 import ReliefMask from './ReliefMask'
 import ReliefPreview from './ReliefPreview'
+import { trimChars, trimEndChars } from '../data/textTrim'
 const IMAGE_LOAD_ERROR = 'Could not load this image for STL export.'
 
 const DEFAULT_DRAWER_SETTINGS = {
@@ -27,13 +28,8 @@ const SELECT_CLASS = 'w-full rounded-xs border border-ink-border bg-ink-muted px
 const LABEL_CLASS = 'mb-2 block font-mono text-[0.6875rem] uppercase tracking-widest text-cream-muted'
 
 function slugify(value) {
-  const slug = String(value || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60)
-    .replace(/-+$/g, '')
+  const dashed = String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')
+  const slug = trimEndChars(trimChars(dashed, '-').slice(0, 60), '-')
 
   return slug || 'concept'
 }

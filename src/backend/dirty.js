@@ -16,6 +16,7 @@
 // clear them only after the corresponding remote write succeeds, so a failed
 // or interrupted push is always visible to the next flush or mount.
 
+import { randomId } from '../data/randomId'
 import { nowStamp } from './sync'
 
 const DIRTY_PREFIX = 'tattoo_dirty_'
@@ -25,7 +26,7 @@ const GENERATION_PREFIX = 'tattoo_gen_'
 const ROWGEN_PREFIX = 'tattoo_rowgen_'
 
 function randomToken() {
-  return globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  return randomId()
 }
 
 // Stamp rows the edit actually touched (new id, or a new object for an id —
