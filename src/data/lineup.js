@@ -14,6 +14,8 @@
 // than trusted, and anything that does not look like an artist row (index
 // letters, nav chrome, prose) is dropped instead of becoming a fake entry.
 
+import { trimEndChars } from './textTrim'
+
 // A paste is user input; a stuck key or a whole-page copy should not write
 // megabytes into localStorage (and through it, into sync).
 export const MAX_LINEUP_ENTRIES = 1000
@@ -68,6 +70,9 @@ function richness(entry) {
   return (entry.name ? 2 : 0) + (entry.handle ? 4 : 0) + (entry.note ? 1 : 0)
 }
 
+// Stripped from the end of a name or note (with whitespace).
+const TRAILING_PUNCTUATION = ',;:.-–—|·•'
+
 function parseLine(line) {
   const raw = line.trim()
   if (!raw || raw.length > MAX_LINE_LENGTH) return null
@@ -90,9 +95,13 @@ function parseLine(line) {
     }
   }
 
-  // Separators a show's list uses between name, studio and country.
-  const [namePart = '', ...noteParts] = rest.split(/\s+[–—|·•]\s+|\s+-\s+/)
-  const clean = (s) => s.replace(/[()[\]]/g, ' ').replace(/[\s,;:.\-–—|·•]+$/, '').replace(/^[\s,;:\-–—|·•]+/, '').replace(/\s+/g, ' ').trim()
+  // Separators a show's list uses between name, studio and country. Whitespace
+  // is collapsed first so they can match one literal space either side: a
+  // `\s+` on both sides backtracks quadratically on a long run of spaces
+  // (SonarQube S8786), and the parts are whitespace-collapsed anyway.
+  const [namePart = '', ...noteParts] = rest.replace(/\s+/g, ' ').split(/ [–—|·•] | - /)
+  const clean = (s) => trimEndChars(s.replace(/[()[\]]/g, ' '), TRAILING_PUNCTUATION, { whitespace: true })
+    .replace(/^[\s,;:\-–—|·•]+/, '').replace(/\s+/g, ' ').trim()
   const name = clean(namePart)
   const note = clean(noteParts.join(' — '))
 

@@ -15,6 +15,8 @@
 //
 // Same hand-rolled IndexedDB pattern as backend/local/localBlobs.js.
 
+import { randomId } from './randomId'
+
 const DB_NAME = 'tattoo-winner-photos-v1'
 const STORE = 'photos'
 
@@ -39,7 +41,7 @@ function openDB() {
 }
 
 export function newPhotoId() {
-  return globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`
+  return randomId()
 }
 
 export async function putPhoto(id, dataUrl) {

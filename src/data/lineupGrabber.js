@@ -85,7 +85,8 @@ export function grabberBody() {
 
   var present = function (harvested) {
     var count = harvested ? harvested.split('\n').length : 0
-    try { if (win.navigator && win.navigator.clipboard) { win.navigator.clipboard.writeText(harvested) } } catch {}
+    /* writeText rejects (not throws) when the clipboard is refused; the textarea below is the fallback. */
+    try { if (win.navigator && win.navigator.clipboard) { win.navigator.clipboard.writeText(harvested).catch(function () {}) } } catch {}
 
     var panel = doc.createElement('div')
     panel.setAttribute('data-sable-grabber', '1')

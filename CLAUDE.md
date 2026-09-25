@@ -302,7 +302,13 @@ them. Keep messages terse and conventional (e.g. `feat(home): …`, `docs: …`)
   Config: `sonar-project.properties` (excludes the line-up seed). Coverage is only written
   when every test passes; locally add `--coverage.reportOnFailure` to see it anyway.
   **CodeScene** (hotspots: complex code that changes often) reads git history directly:
-  no files in the repo.
+  no files in the repo. Sonar conventions (Sept 2026): trim with `trimEndChars`/`trimChars`
+  (`src/data/textTrim.js`), not `.replace(/[set]+$/, '')`, and in the paste parsers match
+  single literal spaces after collapsing whitespace, not `\s+` either side of a separator.
+  Both forms backtrack quadratically (S8786); the 120-char line cap made it harmless, but the
+  scanner can't see the cap. IDs come from `randomId()` (`src/data/randomId.js`), never a
+  `Math.random` fallback. The bookmarklet's `javascript:`/eval finding is accepted on the
+  dashboard, not fixed.
 - `.claude/` is gitignored in this repo: rules/settings placed there load locally but aren't version-controlled — put anything you want shared/checked-in into `CLAUDE.md` itself.
 
 ### What to test

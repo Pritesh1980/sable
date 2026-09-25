@@ -1,3 +1,4 @@
+import { randomId } from '../data/randomId'
 import { backend } from '../backend'
 import { registerBlobUrl } from '../data/blobUrls'
 
@@ -25,12 +26,15 @@ export async function compressImages(files) {
 }
 
 function uuid() {
-  return globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`
+  return randomId()
 }
 
 function dataUrlToBlob(dataUrl) {
   const [meta, b64] = dataUrl.split(',')
-  const mime = meta.match(/:(.*?);/)?.[1] || 'image/jpeg'
+  // "data:image/png;base64" -> "image/png", by index rather than a lazy regex.
+  const colon = meta.indexOf(':')
+  const semi = meta.indexOf(';', colon + 1)
+  const mime = (colon >= 0 && semi > colon ? meta.slice(colon + 1, semi) : '') || 'image/jpeg'
   const bin = atob(b64)
   const arr = new Uint8Array(bin.length)
   for (let i = 0; i < bin.length; i += 1) arr[i] = bin.charCodeAt(i)

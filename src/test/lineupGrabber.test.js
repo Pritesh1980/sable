@@ -176,6 +176,31 @@ describe('the grabber, run on a line-up page', () => {
     expect(document.querySelector('[data-sable-grabber] textarea').value).toBe('Ate Wamz @atewamz')
   })
 
+  // writeText returns a promise: a refused clipboard rejects it rather than
+  // throwing, and the surrounding try cannot catch that. Left alone, it lands
+  // as an unhandled rejection on the show's page.
+  it('handles a clipboard that refuses by rejecting, not throwing', async () => {
+    const unhandled = []
+    const onUnhandled = (reason) => unhandled.push(reason)
+    process.on('unhandledRejection', onUnhandled)
+    try {
+      // A plain function, not vi.fn: a spy records how its returned promise
+      // settles, which attaches a handler and would hide exactly this bug.
+      Object.defineProperty(window.navigator, 'clipboard', {
+        value: { writeText: () => Promise.reject(new Error('denied')) },
+        configurable: true,
+      })
+      document.body.innerHTML = '<a href="https://instagram.com/atewamz">Ate Wamz</a>'
+      runGrabber()
+      vi.useRealTimers()
+      await new Promise((resolve) => setTimeout(resolve, 20))
+      expect(unhandled).toEqual([])
+      expect(document.querySelector('[data-sable-grabber] textarea').value).toBe('Ate Wamz @atewamz')
+    } finally {
+      process.off('unhandledRejection', onUnhandled)
+    }
+  })
+
   it('produces exactly what the importer parses — the whole point of it', () => {
     document.body.innerHTML = `
       <a href="https://instagram.com/oscarakermo/">Oscar Akermo</a>

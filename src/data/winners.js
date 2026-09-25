@@ -20,6 +20,7 @@
 // never committed — same rule that keeps public/images/artists/ out of git.
 
 import { normaliseHandle } from './lineup'
+import { trimEndChars } from './textTrim'
 
 // A results board is tens of rows, not hundreds; this is headroom, not a target.
 export const MAX_WINNER_ENTRIES = 200
@@ -79,7 +80,8 @@ const DAY_PREFIX = /^(mon|tues|wednes|thurs|fri|satur|sun)day\s*[-–—:|]\s*/i
 
 // The load-bearing phrase in a real results row. Everything before it is the
 // collector wearing the tattoo; everything after is the artist who made it.
-const TATTOOED_BY = /\s+tattooed\s+by\s+/i
+// Matched against whitespace-collapsed rows (see parseLine), hence single spaces.
+const TATTOOED_BY = / tattooed by /i
 
 // Rows in the copied block that are furniture rather than a result or a heading.
 const CHROME = new Set([
@@ -137,10 +139,11 @@ const PLACINGS = new Map([
   ['3', 3], ['3rd', 3], ['third', 3], ['bronze', 3], ['🥉', 3],
 ])
 
+// Stripped from the end of a name or note (with whitespace).
+const TRAILING_PUNCTUATION = ',;:.-–—|·•'
+
 function tidy(raw = '') {
-  return String(raw || '')
-    .replace(/[()[\]]/g, ' ')
-    .replace(/[\s,;:.\-–—|·•]+$/, '')
+  return trimEndChars(String(raw || '').replace(/[()[\]]/g, ' '), TRAILING_PUNCTUATION, { whitespace: true })
     .replace(/^[\s,;:\-–—|·•]+/, '')
     .replace(/\s+/g, ' ')
     .trim()
@@ -180,7 +183,9 @@ function richness(entry) {
   return (entry.name ? 2 : 0) + (entry.handle ? 4 : 0) + (entry.note ? 1 : 0) + (entry.placing ? 1 : 0)
 }
 
-const SEPARATOR = /\s*\|\s*|\s+[–—]\s+|\s+-\s+|\s*:\s+/
+// Single literal spaces, not `\s+`: rows are whitespace-collapsed first, and a
+// `\s+` either side backtracks quadratically on long runs (SonarQube S8786).
+const SEPARATOR = / ?\| ?| [–—] | - | ?: /
 
 // "<artist>, <studio>, <town>" or "<artist> - <studio>, <town>": the artist runs
 // up to whichever separator comes first, so a studio credited to two people
@@ -188,18 +193,20 @@ const SEPARATOR = /\s*\|\s*|\s+[–—]\s+|\s+-\s+|\s*:\s+/
 // not get glued onto the name.
 function splitArtistFromStudio(text) {
   const comma = text.indexOf(',')
-  const dash = text.search(/\s+[-–—]\s+/)
+  const dash = text.search(/ [-–—] /)
   const at = [comma, dash].filter((i) => i >= 0).sort((a, b) => a - b)[0]
   if (at === undefined) return { artist: tidy(text), note: '' }
-  const skip = at === dash ? text.slice(at).match(/^\s+[-–—]\s+/)[0].length : 1
+  const skip = at === dash ? 3 : 1
   return { artist: tidy(text.slice(0, at)), note: tidy(text.slice(at + skip)) }
 }
 
 function parseLine(line, runningCategory) {
   let raw = line.trim()
   if (!raw || raw.length > MAX_LINE_LENGTH) return null
-  if (CHROME.has(raw.toLowerCase().replace(/[:.]+$/, ''))) return null
-  raw = raw.replace(DAY_PREFIX, '')
+  if (CHROME.has(trimEndChars(raw.toLowerCase(), ':.'))) return null
+  // One space between words from here on, so the separators below can match a
+  // literal space (the length cap above is checked on the row as pasted).
+  raw = raw.replace(/\s+/g, ' ').replace(DAY_PREFIX, '')
 
   // The real-world row: "1st Place - Tia tattooed by Adam Blakey, New Mind,
   // Huddersfield." Handled ahead of the generic path because the phrase tells
@@ -233,7 +240,7 @@ function parseLine(line, runningCategory) {
     const found = normaliseHandle(handleMatch[0])
     if (found) {
       handle = found
-      rest = raw.replace(handleMatch[0], ' ')
+      rest = raw.replace(handleMatch[0], ' ').replace(/\s+/g, ' ')
     }
   }
 

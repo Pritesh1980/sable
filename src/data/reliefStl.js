@@ -1,3 +1,5 @@
+import { trimChars } from './textTrim'
+
 export const DEFAULT_RELIEF_SETTINGS = {
   widthMm: 80,
   maxReliefMm: 3,
@@ -320,11 +322,7 @@ function formatNumber(value) {
 }
 
 function sanitizeSolidName(solidName) {
-  return String(solidName || 'relief')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '')
+  return trimChars(String(solidName || 'relief').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_'), '_')
     || 'relief'
 }
 

@@ -9,6 +9,7 @@
 // match a saved artist, because the show's list carries no style data at all.
 import { normalizeArtistStatus } from './planning'
 import { indexLineup, parseLineup } from './lineup'
+import { trimEndChars } from './textTrim'
 
 // "No Regrets, Booth 315" / "Some Studio, Booth T39" / "Studio, Booth 153 - 158".
 const BOOTH_RE = /Booth\s+([A-Za-z]{0,2})(\d+)/i
@@ -37,11 +38,10 @@ export function preferredStyles(artists = []) {
 // existing anywhere. Strip punctuation and the generic suffix words, then
 // compare the leading run of tokens.
 function normalizeStudioText(s = '') {
-  return String(s)
-    // A line-up entry's studio text is the lead-in of its note ("No Regrets
-    // Studios, Booth 61") — drop the booth clause first, or it gets matched
-    // against too and never lines up with a bare studio name.
-    .split(/,?\s*Booth\b/i)[0]
+  // A line-up entry's studio text is the lead-in of its note ("No Regrets
+  // Studios, Booth 61") — drop the booth clause first, or it gets matched
+  // against too and never lines up with a bare studio name.
+  return beforeBooth(s)
     .toLowerCase()
     .replace(/[’']s\b/g, '')   // possessive: "London's" -> "London"
     .replace(/[’'.,]/g, '')
@@ -55,7 +55,18 @@ function normalizeStudioText(s = '') {
 // Regrets Studios, Booth 380"), so this is deliberately not run through
 // normalizeStudioText — that form is for matching, not for showing the user.
 function studioDisplayName(text = '') {
-  return String(text).split(/,?\s*Booth\b/i)[0].trim()
+  return beforeBooth(text).trim()
+}
+
+// Everything before the first "Booth", minus the ", " that introduces it: what
+// `.split(/,?\s*Booth\b/i)[0]` did, without the `\s*` that backtracks on a
+// long run of spaces (SonarQube S8786).
+function beforeBooth(text = '') {
+  const s = String(text)
+  const at = s.search(/Booth\b/i)
+  if (at < 0) return s
+  const head = trimEndChars(s.slice(0, at), '', { whitespace: true })
+  return head.endsWith(',') ? head.slice(0, -1) : head
 }
 
 export function buildStudioIndex(artists = [], studios = []) {
