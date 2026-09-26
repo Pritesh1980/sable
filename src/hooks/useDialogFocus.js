@@ -86,3 +86,33 @@ export default function useDialogFocus(open) {
 
   return containerRef
 }
+
+/**
+ * Escape closes this layer (#104). Put the returned ref on the overlay: on an
+ * `aria-modal` dialog it closes only when that dialog is the topmost one; on
+ * anything else (a popover) it closes only while no modal sits above the page.
+ * The Escape is marked handled, and one another layer already handled is left
+ * alone, so a stack peels one layer per press (see isTopmostDialog).
+ */
+export function useEscapeToClose(onClose, enabled = true) {
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!enabled) return undefined
+    function handleKeyDown(e) {
+      if (e.key !== 'Escape' || e.defaultPrevented) return
+      const node = ref.current
+      if (node?.getAttribute('aria-modal') === 'true') {
+        if (!isTopmostDialog(node)) return
+      } else if (document.querySelector('[aria-modal="true"]')) {
+        return
+      }
+      e.preventDefault()
+      onClose()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [onClose, enabled])
+
+  return ref
+}

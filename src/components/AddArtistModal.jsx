@@ -9,6 +9,7 @@ import { cosineSimilarity } from '../data/embeddings'
 import { buildTasteVector } from '../data/taste'
 import { loadVectors } from '../data/styleIndex'
 import { getEmbedder } from '../data/embedder'
+import { useEscapeToClose } from '../hooks/useDialogFocus'
 
 function emptyAiPrefill() {
   return { handle: null, name: null, styleNote: null, tags: new Set() }
@@ -25,6 +26,7 @@ function emptyAiPrefill() {
 // tags and a draft style note — never overwriting anything already typed —
 // and, when the on-device style index exists, scored against the taste model.
 export default function AddArtistModal({ artists = [], setArtists, userId, onClose, onManage, initial }) {
+  const dialogRef = useEscapeToClose(onClose)
   const [handle, setHandle] = useState(initial?.handle || '')
   const [name, setName] = useState(initial?.name || '')
   const [tags, setTags] = useState(initial?.tags || [])
@@ -294,6 +296,10 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
 
   return (
     <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Add artist"
       className="fixed inset-0 z-50 bg-v2-ink/90 backdrop-blur-xs flex items-start sm:items-center justify-center overflow-y-auto animate-fade-in"
       onClick={onClose}
     >

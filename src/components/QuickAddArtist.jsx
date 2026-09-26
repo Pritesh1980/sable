@@ -9,6 +9,7 @@ import { cosineSimilarity } from '../data/embeddings'
 import { buildTasteVector } from '../data/taste'
 import { loadVectors } from '../data/styleIndex'
 import { getEmbedder } from '../data/embedder'
+import { useEscapeToClose } from '../hooks/useDialogFocus'
 
 // One-step onboarding: paste a handle or Instagram URL, pick tags and a status,
 // done — no hunting for the row in the maintenance table afterwards.
@@ -23,6 +24,7 @@ import { getEmbedder } from '../data/embedder'
 // share sheet on Android, or an iOS Shortcut. It takes the identical intake
 // path as a hand-picked file; nothing here is share-specific.
 export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFile = null }) {
+  const dialogRef = useEscapeToClose(onClose)
   const handleId = useId()
   const nameId = useId()
   const noteId = useId()
@@ -178,7 +180,14 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-ink-black/95 flex items-start sm:items-center justify-center animate-fade-in overflow-y-auto" onClick={onClose}>
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Add artist"
+      className="fixed inset-0 z-50 bg-ink-black/95 flex items-start sm:items-center justify-center animate-fade-in overflow-y-auto"
+      onClick={onClose}
+    >
       <form
         data-testid="quickadd-form"
         onSubmit={submit}

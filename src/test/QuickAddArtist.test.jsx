@@ -94,6 +94,13 @@ describe('QuickAddArtist screenshot intake', () => {
     localStorage.clear()
   })
 
+  it('is a labelled dialog that Escape closes (#104)', () => {
+    const { onClose } = renderModal()
+    expect(screen.getByRole('dialog', { name: /add artist/i })).toBeInTheDocument()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
   it('links its field labels to the fields (#104)', () => {
     renderModal()
     expect(screen.getByLabelText(/^instagram \*$/i)).toHaveAttribute('placeholder', '@handle or Instagram URL')

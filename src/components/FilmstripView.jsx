@@ -3,11 +3,14 @@ import TagPill from './TagPill'
 import ArtistImage from './ArtistImage'
 import { DEFAULT_STUDIOS } from '../data/artists'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
+import { useEscapeToClose } from '../hooks/useDialogFocus'
+import { activateOnKey } from '../a11y/activate'
 
 function StatusPicker({ artist, onSetStatus, onClose }) {
   const current = normalizeArtistStatus(artist.status)
+  const ref = useEscapeToClose(onClose)
   return (
-    <div className="absolute top-full left-0 z-30 mt-1 bg-ink-card border border-ink-border rounded-xs shadow-2xl shadow-black/70 min-w-[148px]">
+    <div ref={ref} className="absolute top-full left-0 z-30 mt-1 bg-ink-card border border-ink-border rounded-xs shadow-2xl shadow-black/70 min-w-[148px]">
       {ARTIST_STATUSES.map((s) => (
         <button
           key={s.value}
@@ -102,8 +105,12 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onNudge, onSetStatus, 
 
       {/* Artist info */}
       <div
+        role="button"
+        tabIndex={0}
+        aria-label={`Open ${displayName}`}
         className="w-40 shrink-0 px-3 py-3 border-r border-ink-border/30 cursor-pointer flex flex-col justify-center"
         onClick={() => onOpen(artist)}
+        onKeyDown={activateOnKey(() => onOpen(artist))}
       >
         <h3 className="font-display text-cream text-base leading-tight truncate mb-0.5">{displayName}</h3>
         {/* #76: audited at 79-106 wide but only 17 tall. A negative margin to
@@ -125,7 +132,8 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onNudge, onSetStatus, 
         )}
 
         {/* Status chip — tap to change */}
-        <div className="relative" onClick={(e) => e.stopPropagation()}>
+        {/* Only keeps the chip's clicks from opening the artist; not a control. */}
+        <div role="presentation" className="relative" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={() => setStatusOpen((v) => !v)}
             className={`min-h-11 flex items-center text-[0.625rem] font-mono tracking-widest uppercase transition-opacity hover:opacity-70 ${currentStatus.tone}`}
@@ -134,7 +142,8 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onNudge, onSetStatus, 
           </button>
           {statusOpen && (
             <>
-              <div className="fixed inset-0 z-20" onClick={() => setStatusOpen(false)} />
+              {/* Tap-outside catcher; Escape closes the picker too (StatusPicker). */}
+              <div role="presentation" className="fixed inset-0 z-20" onClick={() => setStatusOpen(false)} />
               <StatusPicker artist={artist} onSetStatus={onSetStatus} onClose={() => setStatusOpen(false)} />
             </>
           )}
@@ -154,8 +163,12 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onNudge, onSetStatus, 
           artist.images.map((src, i) => (
             <div
               key={i}
+              role="button"
+              tabIndex={0}
+              aria-label={`Open ${displayName}`}
               className="shrink-0 w-24 h-24 lg:w-28 lg:h-28 xl:w-32 xl:h-32 rounded-xs overflow-hidden bg-ink-muted cursor-pointer hover:ring-1 hover:ring-cream-muted/30 transition-all"
               onClick={() => onOpen(artist)}
+              onKeyDown={activateOnKey(() => onOpen(artist))}
             >
               <ArtistImage src={src} sizes="128px" label={artist.name || `@${artist.handle}`} className="w-full h-full object-cover" monogramClassName="text-2xl" />
             </div>

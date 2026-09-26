@@ -22,6 +22,7 @@ import {
   normalizeArtistStatus,
   normalizeReferenceImages,
 } from '../data/planning'
+import { activateOnKey } from '../a11y/activate'
 
 const STATUS_DOTS = {
   idea: 'bg-cream-muted/40',
@@ -34,8 +35,11 @@ function IdeaCard({ idea, onOpen }) {
 
   return (
     <div
+      role="button"
+      tabIndex={0}
       className="bg-ink-card border border-ink-border rounded-xs p-4 cursor-pointer hover:border-cream-muted/50 transition-colors animate-slide-up"
       onClick={() => onOpen(idea)}
+      onKeyDown={activateOnKey(() => onOpen(idea))}
     >
       <div className="flex items-start justify-between mb-1">
         <h3 className="font-display text-cream text-lg leading-tight">{idea.title}</h3>
