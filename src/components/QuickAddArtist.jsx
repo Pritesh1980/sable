@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import TagPill from './TagPill'
 import { STYLE_TAGS, parseInstagramHandle } from '../data/artists'
 import { ARTIST_STATUSES } from '../data/planning'
@@ -23,6 +23,9 @@ import { getEmbedder } from '../data/embedder'
 // share sheet on Android, or an iOS Shortcut. It takes the identical intake
 // path as a hand-picked file; nothing here is share-specific.
 export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFile = null }) {
+  const handleId = useId()
+  const nameId = useId()
+  const noteId = useId()
   const [input, setInput] = useState('')
   const [name, setName] = useState('')
   const [tags, setTags] = useState([])
@@ -241,10 +244,11 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
           )}
         </div>
 
-        <label className="text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase block mb-1">
+        <label htmlFor={handleId} className="text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase block mb-1">
           Instagram *
         </label>
         <input
+          id={handleId}
           autoFocus
           className="w-full bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/40 font-mono placeholder-cream-muted/60 mb-3"
           placeholder="@handle or Instagram URL"
@@ -252,10 +256,11 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
           onChange={(e) => { setInput(e.target.value); setError('') }}
         />
 
-        <label className="text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase block mb-1">
+        <label htmlFor={nameId} className="text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase block mb-1">
           Display name
         </label>
         <input
+          id={nameId}
           className="w-full bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/40 font-body placeholder-cream-muted/60 mb-4"
           placeholder="Full name (optional)"
           value={name}
@@ -264,10 +269,11 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
 
         {styleNote && (
           <>
-            <label className="text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase block mb-1">
+            <label htmlFor={noteId} className="text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase block mb-1">
               Style note (AI draft)
             </label>
             <textarea
+              id={noteId}
               className="w-full bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/40 font-body placeholder-cream-muted/60 mb-4 resize-none"
               rows={2}
               value={styleNote}

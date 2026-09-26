@@ -94,6 +94,12 @@ describe('QuickAddArtist screenshot intake', () => {
     localStorage.clear()
   })
 
+  it('links its field labels to the fields (#104)', () => {
+    renderModal()
+    expect(screen.getByLabelText(/^instagram \*$/i)).toHaveAttribute('placeholder', '@handle or Instagram URL')
+    expect(screen.getByLabelText(/^display name$/i)).toHaveAttribute('placeholder', 'Full name (optional)')
+  })
+
   it('analyses a screenshot with the Gemini key and prefills the form', async () => {
     localStorage.setItem('gemini_api_key', 'test-key')
     analyzeScreenshotWithGemini.mockResolvedValue({
@@ -109,6 +115,8 @@ describe('QuickAddArtist screenshot intake', () => {
     expect(analyzeScreenshotWithGemini).toHaveBeenCalledWith('test-key', 'data:image/jpeg;base64,SHOT')
     expect(screen.getByPlaceholderText(/full name/i)).toHaveValue('Fresh Ink')
     expect(screen.getByDisplayValue('Bold brush blackwork.')).toBeInTheDocument()
+    // #104: the AI draft's label names its textarea.
+    expect(screen.getByLabelText(/style note/i)).toHaveValue('Bold brush blackwork.')
 
     fireEvent.click(screen.getByRole('button', { name: /^add artist$/i }))
     expect(onAdd).toHaveBeenCalledWith({
