@@ -8,6 +8,8 @@ import { uploadImages } from '../hooks/useImageUpload'
 import { useAuth } from '../context/useAuth'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
 import { imageSrc } from '../data/wall'
+import { useEscapeToClose } from '../hooks/useDialogFocus'
+import { activateOnKey } from '../a11y/activate'
 
 export default function ArtistDetail({ artist, onClose, onSave, attendingConventions = [], allArtists = [], onSelectArtist }) {
   const [images, setImages] = useState(artist.images || [])
@@ -32,6 +34,8 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
   const identityRef = useRef({ id: artist.id, generation: artist.generation })
   const [uploading, setUploading] = useState(false)
   const [lightbox, setLightbox] = useState(null)
+  const closeLightbox = () => setLightbox(null)
+  const lightboxRef = useEscapeToClose(closeLightbox, lightbox !== null)
   const [currentIdx, setCurrentIdx] = useState(0)
   const fileRef = useRef()
   // The list as it stands right now, not as it was when a render began. An
@@ -263,6 +267,10 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
               {images.map((src, idx) => (
                 <div
                   key={idx}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`View image ${idx + 1} full screen`}
+                  onKeyDown={activateOnKey(() => setLightbox(idx))}
                   className={`relative snap-center shrink-0 w-[88%] sm:w-[520px] aspect-[4/5] bg-ink-muted rounded-xs overflow-hidden cursor-pointer ${idx === 0 ? 'ring-1 ring-accent' : ''}`}
                   onClick={() => setLightbox(idx)}
                 >
@@ -417,8 +425,12 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
       {/* Lightbox */}
       {lightbox !== null && (
         <div
+          ref={lightboxRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Image viewer"
           className="fixed inset-0 z-60 bg-ink-black flex items-center justify-center"
-          onClick={() => setLightbox(null)}
+          onClick={closeLightbox}
         >
           <ArtistImage
             src={imageSrc(images[lightbox])}
@@ -428,16 +440,18 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
             className="max-w-full max-h-full object-contain"
             monogramClassName="text-8xl"
           />
-          <button className="absolute top-5 right-5 text-cream-muted text-2xl">×</button>
+          <button type="button" aria-label="Close" onClick={closeLightbox} className="absolute top-5 right-5 text-cream-muted text-2xl">×</button>
           <GeneratedArtworkNotice images={[images[lightbox]]} className="absolute top-5 left-4 bg-v2-ink/90 px-2 py-1" />
           {lightbox > 0 && (
             <button
+              aria-label="Previous image"
               onClick={(e) => { e.stopPropagation(); setLightbox(lightbox - 1) }}
               className="absolute left-4 top-1/2 -translate-y-1/2 text-cream-muted text-3xl px-2"
             >‹</button>
           )}
           {lightbox < images.length - 1 && (
             <button
+              aria-label="Next image"
               onClick={(e) => { e.stopPropagation(); setLightbox(lightbox + 1) }}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-cream-muted text-3xl px-2"
             >›</button>
