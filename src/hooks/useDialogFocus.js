@@ -116,3 +116,18 @@ export function useEscapeToClose(onClose, enabled = true) {
 
   return ref
 }
+
+/**
+ * Focus the returned ref's element when `open` turns true (#104). Stands in
+ * for the autoFocus attribute: focus moves because the user just opened a
+ * dialog or an inline editor (the WAI-ARIA dialog pattern), not on page load.
+ * Callers pass false where typing isn't the next step, e.g. opening an
+ * existing idea to read it, which on iPhone would pop the keyboard over it.
+ */
+export function useFocusOnOpen(open = true) {
+  const ref = useRef(null)
+  useEffect(() => {
+    if (open) ref.current?.focus()
+  }, [open])
+  return ref
+}

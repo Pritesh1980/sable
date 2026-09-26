@@ -9,7 +9,7 @@ import { cosineSimilarity } from '../data/embeddings'
 import { buildTasteVector } from '../data/taste'
 import { loadVectors } from '../data/styleIndex'
 import { getEmbedder } from '../data/embedder'
-import { useEscapeToClose } from '../hooks/useDialogFocus'
+import { useEscapeToClose, useFocusOnOpen } from '../hooks/useDialogFocus'
 
 // One-step onboarding: paste a handle or Instagram URL, pick tags and a status,
 // done — no hunting for the row in the maintenance table afterwards.
@@ -25,6 +25,7 @@ import { useEscapeToClose } from '../hooks/useDialogFocus'
 // path as a hand-picked file; nothing here is share-specific.
 export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFile = null }) {
   const dialogRef = useEscapeToClose(onClose)
+  const handleRef = useFocusOnOpen()
   const handleId = useId()
   const nameId = useId()
   const noteId = useId()
@@ -258,7 +259,7 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
         </label>
         <input
           id={handleId}
-          autoFocus
+          ref={handleRef}
           className="w-full bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/40 font-mono placeholder-cream-muted/60 mb-3"
           placeholder="@handle or Instagram URL"
           value={input}

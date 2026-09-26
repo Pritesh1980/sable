@@ -10,6 +10,7 @@ import {
   getBoardCover,
 } from '../data/boards'
 import { buildBoardBrief } from '../data/export'
+import { useFocusOnOpen } from '../hooks/useDialogFocus'
 
 function BoardCard({ board, ideas, onOpen }) {
   const cover = getBoardCover(board, ideas)
@@ -50,6 +51,7 @@ function BoardModal({ board, onClose, onSave, onDelete, ideas, artists }) {
   const [draft, setDraft] = useState({ ...BLANK_BOARD, ...board })
   const [copied, setCopied] = useState(false)
   const isNew = !board.id
+  const nameRef = useFocusOnOpen(isNew)
 
   const boardIdeas = getBoardIdeas(draft, ideas)
   const availableIdeas = ideas.filter((i) => !draft.ideaIds.includes(i.id))
@@ -116,7 +118,7 @@ function BoardModal({ board, onClose, onSave, onDelete, ideas, artists }) {
 
       <div className="flex-1 px-5 py-6 max-w-2xl mx-auto w-full space-y-6">
         <input
-          autoFocus
+          ref={nameRef}
           className="bg-transparent border-b border-ink-border text-cream font-display text-2xl w-full outline-hidden focus-visible:ring-2 focus-visible:ring-accent pb-1 placeholder-cream-muted/60"
           placeholder="Board name…"
           value={draft.name}

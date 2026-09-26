@@ -23,6 +23,7 @@ import {
   normalizeReferenceImages,
 } from '../data/planning'
 import { activateOnKey } from '../a11y/activate'
+import { useFocusOnOpen } from '../hooks/useDialogFocus'
 
 const STATUS_DOTS = {
   idea: 'bg-cream-muted/40',
@@ -84,6 +85,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
   const fileRef = useRef()
   const composerId = useId()
   const isNew = !idea.id
+  const titleRef = useFocusOnOpen(isNew)
 
   // Fill-from-image (issue #20): a Gemini vision call drafts title,
   // description, tags and placement from the first uploaded reference image
@@ -282,7 +284,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
       <div className="flex-1 px-5 py-6 max-w-2xl mx-auto w-full space-y-6">
         <div>
           <input
-            autoFocus
+            ref={titleRef}
             className="bg-transparent border-b border-ink-border text-cream font-display text-2xl w-full outline-hidden focus-visible:ring-2 focus-visible:ring-accent pb-1 placeholder-cream-muted/60"
             placeholder="Idea title…"
             value={draft.title}

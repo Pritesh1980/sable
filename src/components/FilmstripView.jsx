@@ -3,7 +3,7 @@ import TagPill from './TagPill'
 import ArtistImage from './ArtistImage'
 import { DEFAULT_STUDIOS } from '../data/artists'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
-import { useEscapeToClose } from '../hooks/useDialogFocus'
+import { useEscapeToClose, useFocusOnOpen } from '../hooks/useDialogFocus'
 import { activateOnKey } from '../a11y/activate'
 
 function StatusPicker({ artist, onSetStatus, onClose }) {
@@ -29,6 +29,7 @@ function StatusPicker({ artist, onSetStatus, onClose }) {
 function FilmstripRow({ artist, onOpen, index, onSetRank, onNudge, onSetStatus, isFirst, isLast, totalArtists, onRowMouseLeave }) {
   const scrollRef = useRef(null)
   const [editingRank, setEditingRank] = useState(false)
+  const rankInputRef = useFocusOnOpen(editingRank)
   const [rankInput, setRankInput] = useState('')
   const [statusOpen, setStatusOpen] = useState(false)
   const displayName = artist.name || `@${artist.handle}`
@@ -70,7 +71,7 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onNudge, onSetStatus, 
         </button>
         {editingRank ? (
           <input
-            autoFocus
+            ref={rankInputRef}
             type="number"
             min={1}
             max={totalArtists}
