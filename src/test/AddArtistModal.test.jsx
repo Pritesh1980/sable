@@ -55,6 +55,13 @@ function stageImages(...names) {
 }
 
 describe('AddArtistModal screenshot analysis', () => {
+  it('is a labelled dialog that Escape closes (#104)', () => {
+    const { onClose } = renderModal()
+    expect(screen.getByRole('dialog', { name: /add artist/i })).toBeInTheDocument()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     analyzeScreenshotWithGemini.mockReset()

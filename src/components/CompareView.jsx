@@ -2,6 +2,7 @@ import { useState } from 'react'
 import TagPill from './TagPill'
 import ArtistImage from './ArtistImage'
 import { DEFAULT_STUDIOS } from '../data/artists'
+import { activateOnKey } from '../a11y/activate'
 
 function CompareColumn({ artist, onOpen, onRemove }) {
   const displayName = artist.name || `@${artist.handle}`
@@ -13,7 +14,14 @@ function CompareColumn({ artist, onOpen, onRemove }) {
       {/* Sticky header */}
       <div className="sticky top-0 z-10 bg-ink-black border-b border-ink-border/50 px-4 py-3">
         <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0 cursor-pointer" onClick={() => onOpen(artist)}>
+          <div
+            role="button"
+            tabIndex={0}
+            aria-label={`Open ${displayName}`}
+            className="min-w-0 cursor-pointer"
+            onClick={() => onOpen(artist)}
+            onKeyDown={activateOnKey(() => onOpen(artist))}
+          >
             <h3 className="font-display text-cream text-lg leading-tight truncate">{displayName}</h3>
             <a
               href={instagramUrl}

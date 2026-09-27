@@ -68,8 +68,11 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
   // the opaque aspect-ratio box, so a ring drawn on the button would be
   // invisible there — focus-within reacts to the same focus from a div that
   // is actually on top, unclipped by nothing of its own overflow-hidden.
+  // role="presentation": the card-wide click is a pointer convenience; the
+  // inner button below is the keyboard/AT path (#30, #104).
   return (
     <div
+      role="presentation"
       style={{
         animationDelay: `${index * 0.04}s`,
         // #71 cross-model review: iOS's own long-press callout (image save/

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { buildDiscoveryPrompt, parseDiscoveryResponse, discoverArtistsWithGemini } from '../data/discovery'
 
 // The Consider shelf's trailing card: ask AI for a fresh batch of artists.
@@ -6,6 +6,7 @@ import { buildDiscoveryPrompt, parseDiscoveryResponse, discoverArtistsWithGemini
 // run it in any AI → paste the reply back. Results are marked unverified —
 // open each profile on Instagram before trusting it.
 export default function DiscoverMore({ artists, exclude = [], onResults }) {
+  const pasteId = useId()
   const [open, setOpen] = useState(false)
   const [pasted, setPasted] = useState('')
   const [copied, setCopied] = useState(false)
@@ -87,10 +88,11 @@ export default function DiscoverMore({ artists, exclude = [], onResults }) {
         </button>
       </div>
 
-      <label className="font-v2-ui text-v2-muted text-[0.65rem] uppercase tracking-[0.1em] block mt-3 mb-1">
+      <label htmlFor={pasteId} className="font-v2-ui text-v2-muted text-[0.65rem] uppercase tracking-[0.1em] block mt-3 mb-1">
         Paste the reply back
       </label>
       <textarea
+        id={pasteId}
         value={pasted}
         onChange={(e) => setPasted(e.target.value)}
         rows={3}

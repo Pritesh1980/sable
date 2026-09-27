@@ -87,7 +87,10 @@ export default function ArtistBrowse({ artists, startIndex = 0, onClose }) {
       </div>
 
       {/* Image */}
+      {/* Tap left/right half to page images: a pointer shortcut. The keyboard
+          pages with the arrow keys (see the keydown effect above). */}
       <div
+        role="presentation"
         className="flex-1 relative overflow-hidden cursor-pointer"
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}

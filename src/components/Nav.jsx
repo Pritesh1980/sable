@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router'
 import { useTheme } from '../context/useTheme'
 import { useAuth } from '../context/useAuth'
+import { useEscapeToClose } from '../hooks/useDialogFocus'
 
 // Four tabs mirror the workflow: see what's next, curate artists, match ideas,
 // generate concepts. Everything reference/admin lives under More.
@@ -21,6 +22,7 @@ const MORE_LINKS = [
 
 function MoreMenu({ onClose }) {
   const navigate = useNavigate()
+  const ref = useEscapeToClose(onClose)
 
   function go(to) {
     navigate(to)
@@ -28,8 +30,9 @@ function MoreMenu({ onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-40" onClick={onClose}>
+    <div ref={ref} role="dialog" aria-modal="true" aria-label="More" className="fixed inset-0 z-40" onClick={onClose}>
       <div
+        role="presentation"
         className="absolute bottom-[calc(env(safe-area-inset-bottom,0px)+3.5rem)] left-4 right-4 max-w-2xl mx-auto bg-ink-card border border-ink-border rounded-xs overflow-hidden animate-slide-up shadow-2xl shadow-black/60"
         onClick={(e) => e.stopPropagation()}
       >

@@ -74,6 +74,10 @@ The keyboard does the driving:
 | `I` | open the artist's **info & notes** (status, notes, linked ideas) |
 | `Esc` | back to the Wall |
 
+Outside the viewer, **Esc** closes whatever is on top (the add-artist sheet, the More
+menu, a full-screen photo on an artist's page, the status picker), one layer per press.
+Artist cards, thumbnails, Style Wall tiles and ideas open with **Tab** then **Enter**.
+
 **On a phone** the photo opens clean, with just **× Close** and the photo count along the
 top and a small **Details** handle at the bottom. Swipe instead of using the arrow keys:
 
