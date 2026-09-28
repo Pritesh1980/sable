@@ -1,7 +1,8 @@
 # Concepts: refinement with an authenticated image relay
 
 Date: 2026-09-28
-Status: revised after Claude's spec-only review; awaiting user review, not an implementation plan
+Status: revised after Claude's spec-only review; approved by the user on 2026-09-28.
+Implementation plan: `docs/superpowers/plans/2026-09-28-concept-refinement-relay.md`.
 
 ## Intent and approved direction
 
