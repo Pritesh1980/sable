@@ -134,4 +134,31 @@ describe('GitHub repository configuration', () => {
     // The shipped line-up seed is data held as text, not code to grade.
     expect(sonar).toContain('src/data/lineups/**')
   })
+  it('takes the Node version from .nvmrc everywhere', () => {
+    const want = readRepoFile('.nvmrc').trim()
+    expect(want).toMatch(/^\d+$/)
+    for (const wf of ['ci.yml', 'deploy-pages.yml', 'live-smoke.yml']) {
+      const workflow = readRepoFile(`.github/workflows/${wf}`)
+      expect(workflow, wf).toContain('node-version-file: .nvmrc')
+      expect(workflow, wf).not.toMatch(/node-version:\s*\d/)
+    }
+  })
+
+  it('prepares Claude Code web sessions with a SessionStart hook', () => {
+    const settings = JSON.parse(readRepoFile('.claude/settings.json'))
+    const commands = (settings.hooks.SessionStart || []).flatMap((h) => h.hooks.map((x) => x.command))
+    expect(commands).toContain('$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh')
+    // The existing Stop hook stays.
+    expect(JSON.stringify(settings.hooks.Stop)).toContain('docs-drift-check.sh')
+
+    const hook = readRepoFile('.claude/hooks/session-start.sh')
+    // Web sessions only; a laptop manages its own Node and node_modules.
+    expect(hook).toContain('CLAUDE_CODE_REMOTE')
+    expect(hook).toContain('.nvmrc')
+    // npm ci never rewrites package-lock.json; npm install can, and an agent
+    // could then commit the churn.
+    const code = hook.split('\n').filter((line) => !line.trim().startsWith('#')).join('\n')
+    expect(code).toContain('npm ci')
+    expect(code).not.toMatch(/npm install/)
+  })
 })

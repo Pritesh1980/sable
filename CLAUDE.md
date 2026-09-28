@@ -309,7 +309,16 @@ them. Keep messages terse and conventional (e.g. `feat(home): …`, `docs: …`)
   scanner can't see the cap. IDs come from `randomId()` (`src/data/randomId.js`), never a
   `Math.random` fallback. The bookmarklet's `javascript:`/eval finding is accepted on the
   dashboard, not fixed.
-- `.claude/` is gitignored in this repo: rules/settings placed there load locally but aren't version-controlled — put anything you want shared/checked-in into `CLAUDE.md` itself.
+- `.claude/` is gitignored in this repo except `.claude/settings.json` and
+  `.claude/hooks/session-start.sh`: other rules/settings placed there load locally but aren't
+  version-controlled — put anything else you want shared into `CLAUDE.md` itself.
+- **Node version**: `.nvmrc` is the single source (CI, Pages and live-smoke read it via
+  `node-version-file`). **Claude Code web sessions** run `.claude/hooks/session-start.sh`
+  first: it provisions that Node major if the container's is older (cached under
+  `~/.cache/sable-node`) and runs `npm ci` when `node_modules` doesn't match the lockfile.
+  Before it, web sessions ran Node 22 and `shareTarget.test.js` failed there only. The
+  Playwright browser still doesn't match the pinned `@playwright/test`; point a scratch config
+  at `/opt/pw-browsers/chromium-*/chrome-linux/chrome` via `launchOptions.executablePath`.
 
 ### What to test
 - **Pure functions** (data transforms, rank logic, defaults merging) — test these directly
