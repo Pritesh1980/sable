@@ -230,6 +230,7 @@ export default function BoardsSection({ boards, setBoards, ideas, artists, onGoT
           disabled={ideas.length === 0}
           className="w-10 h-10 rounded-full border border-ink-border text-cream-muted hover:text-cream hover:border-cream-muted/50 transition-colors flex items-center justify-center text-xl disabled:opacity-30 disabled:cursor-not-allowed"
           title={ideas.length === 0 ? 'Add ideas first' : 'New board'}
+          aria-label={ideas.length === 0 ? 'New board (add ideas first)' : 'New board'}
         >
           +
         </button>

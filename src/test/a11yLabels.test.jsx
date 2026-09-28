@@ -34,3 +34,22 @@ describe('form labels are linked to their controls', () => {
     expect(a.id).not.toBe(b.id)
   })
 })
+
+describe('icon-only buttons have names', () => {
+  // A "+" button whose name is "+" says nothing to a screen reader; the
+  // title attribute is only a description (#105 follow-up).
+  it('the new-idea and new-board buttons are named', async () => {
+    const { MemoryRouter } = await import('react-router')
+    const { default: Brief } = await import('../pages/Brief')
+    const idea = { id: 'i1', title: 'Koru', tags: [], images: [], status: 'idea', placement: '', description: '', linkedArtists: [] }
+    const { unmount } = render(
+      <MemoryRouter><Brief ideas={[idea]} setIdeas={vi.fn()} artists={[]} boards={[]} setBoards={vi.fn()} /></MemoryRouter>
+    )
+    expect(screen.getByRole('button', { name: 'New idea' })).toBeInTheDocument()
+    unmount()
+    render(
+      <MemoryRouter initialEntries={['/brief?tab=boards']}><Brief ideas={[idea]} setIdeas={vi.fn()} artists={[]} boards={[]} setBoards={vi.fn()} /></MemoryRouter>
+    )
+    expect(screen.getByRole('button', { name: 'New board' })).toBeInTheDocument()
+  })
+})

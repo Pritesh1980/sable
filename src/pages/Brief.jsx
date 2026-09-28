@@ -613,6 +613,7 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
             onClick={() => setModal(BLANK_IDEA)}
             className="w-11 h-11 rounded-full border border-ink-border text-cream-muted hover:text-cream hover:border-cream-muted/50 transition-colors flex items-center justify-center text-xl"
             title="New idea"
+            aria-label="New idea"
           >
             +
           </button>
