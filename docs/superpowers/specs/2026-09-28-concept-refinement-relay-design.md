@@ -1,7 +1,7 @@
 # Concepts: refinement with an authenticated image relay
 
 Date: 2026-09-28
-Status: written design for user review; not an implementation plan
+Status: revised after Claude's spec-only review; awaiting user review, not an implementation plan
 
 ## Intent and approved direction
 
@@ -31,10 +31,10 @@ Included:
 - A refinement composer within the existing concept/result view.
 - One selected source image, change instructions, and preservation instructions.
 - An owner-only paid image service with server-held provider secrets.
-- Routing existing text-to-image Concepts generation through that same service
-  in relay-enabled private builds.
 - Real authentication independent of the library's storage adapter.
 - Private, short-lived input/output storage and a durable job record.
+- Checked local result commits, storage-persistence status, and a lightweight
+  backup indicator for device-only paid results.
 - Inline variants, lineage, provenance, comparison, ratings, Best, and existing
   try-on hand-off after a result has been saved.
 - No-key/manual refinement through a prompt pack, reference export, and import.
@@ -42,8 +42,9 @@ Included:
   architecture/workflow documentation when implementation lands.
 
 Excluded: cloud provisioning/deployment, billing subscriptions, public access to
-paid generation, migrating the tattoo library, the AWS backend, masks/inpainting
-UI, batch generation, autonomous generation, a new gallery workspace, artist-style
+paid generation, migrating existing AI provider calls or the tattoo library,
+the AWS backend, masks/inpainting UI, batch generation, autonomous generation,
+a new gallery workspace, artist-style
 cloning, and claims that a generated image is tattoo-ready or linguistically valid.
 
 ## Current-system constraints
@@ -55,6 +56,15 @@ cloning, and claims that a generated image is tattoo-ready or linguistically val
   deliberately drops the SDK access token from that UI-facing object.
 - `src/context/AuthContext.jsx` purges user-owned local data on identity changes.
   That protection must remain intact.
+- `src/backend/local/localStore.js` derives its namespace from
+  `tattoo_local_session`, falling back to `anon`. That is not a valid namespace
+  source when real auth is paired with local storage.
+- `src/hooks/useStorage.js` swallows localStorage quota failures and exposes no
+  committed-save receipt; local store writes also log failures without rejecting.
+  Setting React state or awaiting the current `upsert` cannot prove a paid result
+  was saved. The new result-import path must address this explicitly.
+- `src/data/export.js` copies in-memory records, not blob-store bytes. Exporting
+  unresolved keys or temporary display URLs is not a portable image backup.
 - The GitHub Pages build is backend-free. Demo seeding and local sign-in must
   remain completely separate from paid authorization.
 - `src/pages/Concepts.jsx` currently performs direct DALL-E generation; Gemini
@@ -78,9 +88,21 @@ For the private app, allow `VITE_AUTH_BACKEND=supabase` independently of
 `VITE_BACKEND=local|supabase`. The default remains the current coupled selection;
 the new override supports real Supabase login with local store/blob adapters.
 Allow local auth/local storage, Supabase auth/local storage, and Supabase
-auth/Supabase storage; reject other combinations explicitly. Expose auth capabilities rather than
-inferring real authentication from `backend.kind` alone. Update every demo/local
-login affordance and boot seeding check to require the offline-auth capability.
+auth/Supabase storage; reject other combinations explicitly. Expose auth
+capabilities rather than inferring real authentication from `backend.kind` alone.
+Update every demo/local login affordance and boot seeding check to require the
+offline-auth capability.
+
+In real-auth/local-storage mode, inject the authoritative auth-session identity
+into the local store rather than reading `tattoo_local_session`. Capture the
+verified subject once at the start of each operation; use only that namespace
+through its asynchronous work. Missing identity rejects an operation instead of
+falling back to `anon`. Preserve the old namespace/legacy migration behavior only
+for offline-auth mode; never auto-claim legacy or anonymous rows for a real user.
+Local blob reads/removals also verify the captured owner's canonical key prefix.
+On sign-out/account switch, clear display caches and pending uploads as today,
+retain owner-namespaced authoritative local rows/blobs, and reload only the same
+subject's library after sign-in. Do not move personal bytes into a shared namespace.
 
 Supabase stays confined to its adapter. Add `auth.getAccessToken()` returning a
 current SDK-managed access token or null. The local adapter always returns null.
@@ -97,8 +119,19 @@ Asymmetric Supabase signing keys are the production prerequisite; use a maintain
 JWT verification library against a fixed configured JWKS endpoint, with bounded
 cache/rotation behavior. Never discover a JWKS URL from an untrusted token.
 
-Public demo builds have no relay configuration and no relay-backed paid actions. The relay
-also enforces the owner check, so manually calling its URL bypasses nothing.
+The private build is invite-only: disable public sign-ups and anonymous sign-ins,
+and gate library loading on the configured owner subject as well as a real session.
+Configure a 15-minute access-token lifetime and verify the issued `iat`/`exp`
+window in the activation smoke test. JWT signature verification alone does not
+immediately revoke a token on sign-out; a stolen token can remain usable until
+expiry. Quotas and short expiry limit that exposure, not active XSS or a stolen
+refresh token. Document an operator procedure to disable new submissions and
+undispatched paid jobs immediately without promising cancellation of provider
+work already sent. No service-role credentials are added to the browser.
+
+Public demo builds have no relay configuration and no relay-backed paid actions.
+The relay also enforces the owner check, so manually calling its URL bypasses
+nothing.
 The private app uses a separate origin initially: no automatic conversion of
 existing `local-<email>` identities or silent transfer of their stored data.
 Existing explicit backup/import remains the route for bringing a local library
@@ -119,8 +152,12 @@ and bounded preflight behavior. CORS is an additional browser control, not auth.
 3. Show the exact outgoing image and compiled instructions. Explain the named
    provider receives this image and text; unrelated boards, portfolio images,
    body photos, and library metadata are not included automatically.
-4. On **Generate one variation**, create a stable request ID and durable pending
-   marker before sending. One explicit click requests one image, not a batch.
+4. On **Generate one variation**, persist a stable request ID, exact prepared
+   source bytes, digest, compiled instructions, and captured owner/destination
+   in an owner-scoped IndexedDB pending record before sending. Failure to save
+   this record blocks submission with a recoverable storage message. One explicit
+   click requests one image, not a batch; retries never regenerate source bytes
+   from a mutable URL, canvas, or edited draft.
 5. Show job status. Preserve the draft and source while waiting or on failure.
    Backgrounding/closing the drawer does not mean provider work was cancelled.
 6. A completed result is imported through the ordinary blob/image codec and added
@@ -147,7 +184,7 @@ fallback following a possibly billed failure.
 API shape:
 
 - `GET /v1/image-capabilities`: authenticated supported operations/profile and
-  quota availability; no secrets.
+  quota availability plus server time for request-clock calibration; no secrets.
 - `POST /v1/image-jobs`: bounded multipart image + JSON instructions, with an
   `Idempotency-Key`. Return `202` and a job ID after durable acceptance.
 - `GET /v1/image-jobs`: bounded pending/recent-job reconciliation for this owner.
@@ -158,17 +195,42 @@ API shape:
   proven not yet dispatched. Running provider work has no promised cancellation.
 
 Persist the owner/request-ID uniqueness constraint and a server-computed hash of
-the normalized operation/instructions/image bytes. Reusing the same key/payload
-returns the same job; the same key with different content returns `409`.
+the canonical request JSON plus exact received image bytes, before provider
+normalization/re-encoding. Freeze the chosen server output profile on acceptance.
+Reusing the same key/payload returns the same job; the same key with different
+content returns `409`. Retries resend the saved pending payload byte-for-byte;
+intentional source/instruction edits require a new, explicitly confirmed request.
 Request keys include an issue timestamp and random nonce. Accept an unseen key
-only within five minutes of its issue time (with bounded clock skew); an older
-unseen key returns `410`. Known keys reconcile from the stored record. This makes
-old replay requests non-billable even after seven-day tombstones are removed.
+only within five minutes of its issue time, allowing at most 30 seconds of future
+skew. Compare against the server's timestamp when authenticated headers arrive,
+not when the body finishes; apply an independent upload deadline. A future key
+returns `key_clock_skew` with server time; an older unseen key returns `410` with
+`request_expired`. Calibrate client timestamps from the capabilities response.
+Known keys reconcile from the stored record. This makes old replay requests
+non-billable even after seven-day tombstones are removed.
+The timestamp is a stale-replay/UX guard, not protection against a malicious
+authenticated client; verified ownership and transactional quotas serve that role.
 An offline draft receives its request key only at online submission, not when
 the draft is first saved. An expired, definitely unaccepted key requires explicit
 resubmission confirmation; it is not silently replaced.
 Reserve quota and insert a job in one transaction. A single worker atomically
 claims an accepted job and writes `dispatching` before attempting the provider.
+
+After a provider response, validate and save the output before changing the job
+to `succeeded`: write job-keyed temporary files, fsync the image, atomically rename
+it into place, then write/fsync a completion manifest containing its digest,
+type, and size before atomic rename and directory fsync. Only then commit
+`succeeded` in SQLite
+with crash-safe synchronous settings. The manifest is the spool's completion
+marker, not mere existence of a partial image file. Disk/write failure leaves the
+job unacknowledged; report the failure without dispatching another paid attempt.
+
+On restart, before assigning `outcome_unknown`, reconcile `dispatching`/`running`
+jobs against complete, digest-validated output manifests: promote recoverable
+jobs to `succeeded` without calling the provider. Clean incomplete/orphan spool files
+under the retention policy. A crash before any complete output reaches disk can
+still lose a provider-paid result; state this limitation rather than claiming
+end-to-end exactly-once delivery or guaranteed recovery from every crash.
 
 Job states: `accepted`, `dispatching`, `running`, `succeeded`, `failed`,
 `outcome_unknown`, `expired`, `cancelled`. A crash/timeout after dispatch begins
@@ -181,8 +243,12 @@ replays; it does not magically make an external provider transaction exactly-onc
 the daily quota; only accepted/dispatching/running jobs occupy the active slot.
 
 On reload, reconcile pending IDs with the authenticated service. Missing local
-markers can recover via the recent-job listing. Refresh expired auth once via
-the adapter; retries of submission retain the same ID. Never retry a paid edit
+markers can recover via the recent-job listing, with explicit destination choice
+rather than an inferred concept. Once acceptance is confirmed, use status/result
+retrieval only and remove the temporary prepared-input bytes. Unconfirmed pending
+inputs expire locally after 24 hours; expiration never triggers paid resubmission.
+Refresh expired auth once via the adapter; retries of submission retain the same
+ID. Never retry a paid edit
 with a newly generated key merely because a fetch timed out.
 
 Initial limits: one active job per owner, ten accepted jobs per UTC day, no more
@@ -229,9 +295,50 @@ Use a deterministic variant identity derived from the job ID so repeat result
 downloads/reconciliation do not duplicate variants. Only acknowledge after blob
 bytes and canonical record have both been durably saved. On partial import failure,
 keep the server result recoverable; clean orphan local blobs through existing
-ownership-safe mechanisms. Purge pending client markers on identity change.
+ownership-safe mechanisms. Purge pending client markers and prepared-input bytes
+on identity change.
 Signing out does not cancel an already dispatched job; signing back in as the
 same verified owner may recover it within the retention window.
+
+### Checked local import and device-only durability
+
+Add a checked commit operation to the concept-storage boundary, coordinated with
+the existing edit/flush ordering rather than a parallel direct writer. It must
+reject blob, canonical-record, quota, and ownership failures. Return a receipt
+only after the blob transaction completes and the owner-scoped authoritative
+record can be read back with the expected job-derived variant ID and image key.
+React state updates, debounced flush scheduling, or existing log-only storage
+errors are not receipts. A relay acknowledgement is sent only from this checked
+path. A crash between local save and acknowledgement is safe to reconcile using
+the same deterministic variant ID; do not acknowledge on a best-effort cache write.
+
+On first private activation, query `navigator.storage.persisted()` and request
+`persist()` when available; show granted/denied/unavailable status without making
+it a prerequisite for manual workflows. Completed writes mean committed to this
+browser's storage, not backed up or immune to device loss/user deletion/eviction.
+If persistent mode is denied or unavailable, warn before the first paid submission
+that importing and acknowledging removes the relay copy and the library is
+device-only. Do not silently extend server retention as a substitute for backup.
+
+The Concepts view gets a compact backup indicator: no export requested, last
+export-requested time, and whether paid variants were saved since that request. Reuse the
+existing export action; no periodic automation or forced download after every job.
+Do not label an initiated browser download as a verified backup. A portable export
+must materialize locally stored image bytes from canonical keys, include variant
+lineage and generation/refinement metadata, and reject with a clear message if
+any required local image cannot be read. Already embedded image bytes need no
+second fetch. External portfolio/reference URLs stay labelled external references,
+not falsely advertised as backed-up image bytes; this slice does not add arbitrary
+relay fetching or solve third-party CORS. Never claim a portable paid-result
+backup containing only temporary URLs/unresolved blob keys. Verify restoration
+into a fresh origin with no access to the source browser's IndexedDB. This is a
+targeted prerequisite for device-only
+paid results, not a redesign of unrelated backup fields.
+
+The installed private PWA is the documented primary working location. Activation
+tests must check the actual Safari/home-screen storage behavior on the target
+iPhone and explain where the current library lives; do not assume that the two
+contexts either share or separate storage on every OS version.
 
 ## Saved data and compatibility
 
@@ -252,19 +359,17 @@ provider label. Existing concept-level artist matching remains unchanged.
 
 ## Existing AI features: explicit transition boundary
 
-New refinement uses the relay only. In a relay-enabled private build, existing
-text-to-image Concepts generation should also use the same one-output job path,
-with `operation: 'generate'` and no input image. This removes concept-generation
-dependence on browser API keys without maintaining two paid paths in that view.
+New refinement uses the relay only. Existing text-to-image generation, screenshot
+analysis, and generated skin-preview tools keep their current separate BYOK
+integrations in every build during this slice, with accurate disclosures. Do not
+remove shared OpenAI/Gemini settings or claim that all Sable AI keys have moved
+server-side. No new BYOK refinement endpoint is added. Non-relay builds gain the
+manual refinement fallback and retain their current generation behavior.
 
-This slice does not migrate screenshot analysis or generated skin-preview tools.
-Those existing features can still use their current separate BYOK integrations
-and must retain accurate disclosures. Do not claim that *all* Sable AI keys have
-moved server-side; do not remove shared Gemini settings those tools still need.
-No new BYOK refinement endpoint is added. Non-relay builds retain current existing
-generation behavior and the new manual refinement fallback. A subsequent security
-slice can migrate the remaining direct-provider features through the same service
-after their image/privacy contracts have been designed.
+Keep a versioned `operation` field in the job schema, but accept only `refine`
+in this service version and reject other operations. Migrating generation through
+the relay is a subsequent security slice, designed/tested separately; reserving
+an operation field does not authorize another provider route now.
 
 ## Subsequent slices, not first-slice acceptance requirements
 
@@ -292,22 +397,63 @@ Before implementation is called complete:
 - Unit tests cover auth/store selection, local token refusal, demo isolation,
   token refresh, prompt compilation, lineage/whitelist, codec round trips,
   deterministic imports, draft retention, and stale-owner/destination guards.
+  Include real-auth/local-store namespace isolation (A to B to A), private-mode
+  rejection of anonymous/legacy namespaces, prepared-byte reuse after reload,
+  checked-save rejection on quota failure, persistence denied/unavailable, and
+  portable backup/restore including image bytes and new metadata.
 - Service integration tests use a stub image provider and temporary disk/database:
   forged/expired/wrong-issuer/wrong-audience/anonymous/non-owner tokens; object
   ownership for every endpoint; malformed/oversized/decompression-bomb inputs;
-  quota concurrency; replay/conflict; crash before/after dispatch; uncertain
-  outcomes; acknowledgement, expiry, and cleanup.
+  quota concurrency; replay/conflict; clock skew and a body that completes after
+  the key's admission window; crash before/after dispatch, after output rename,
+  after manifest commit but before state commit, and after local import before
+  acknowledgement; corrupt/partial spool files; uncertain outcomes; expiry and
+  cleanup. A failed client save must leave the server result recoverable.
 - Browser tests run on a fake local service/auth seam with no production tokens,
   no paid provider calls, and no sync to a real account. Cover refinement,
   comparison, manual fallback, reload recovery, sign-out, deletion, and mobile UI.
+  Assert existing direct generation remains unchanged and the relay rejects
+  `generate`; test backup state messaging without claiming download completion.
 - Run unit tests, service tests, lint, root and `/sable/` builds, relevant browser
   tests, and documentation/Mermaid validation. Update the matching guide/Help
   section and recapture screenshots per `docs/MAINTAINING.md`.
 - Real activation is a separate approval: named host/account/region, persistent
   disk and TLS, Supabase project with asymmetric keys, verified owner subject,
-  private-app origin, backup/import check, retention cleanup verification,
-  provider key/model access, and spending controls. No defaults create resources
-  or execute paid calls.
+  private-app origin, portable backup/import check on the target iPhone, retention
+  cleanup verification, provider key/model access, and spending controls. Disable
+  public sign-ups/anonymous sign-ins, verify 15-minute issued token lifetime and
+  owner-only library access, and document the paid-service disable procedure.
+  Record the Supabase plan's inactivity-pausing behavior: either an explicitly
+  approved non-pausing plan, or acceptance of Free-plan pauses with a documented
+  availability check and manual recovery procedure. Do not keep a project awake
+  with artificial traffic or create monitoring/paid upgrades without approval.
+  No defaults create resources or execute paid calls.
+
+## Review disposition
+
+Claude reviewed only the original spec, not repository source. Its five findings
+were checked against the written design and official platform guidance; source
+compatibility checks below were performed locally, not exported to Claude.
+
+- Device-only durability: accepted. Add persistence status, honest backup signals,
+  portable image-bearing exports, and actual-iPhone activation checks. Requesting
+  persistent mode is not treated as an off-device backup guarantee.
+- Crash after provider completion: accepted. Commit a verifiable spool result
+  before database success and reconcile it at startup; document the remaining
+  pre-persistence loss window.
+- Retry conflicts/expiry: accepted. Preserve exact payload bytes, hash before
+  normalization, evaluate admission at header receipt, and expose clock errors.
+- Generation migration scope: accepted. Defer it; first service accepts refinement
+  only and preserves existing BYOK generation.
+- Supabase activation settings: accepted with a bounded operational choice.
+  Enforce invite-only settings/short token lifetime and document pausing/recovery;
+  neither a paid plan nor a monitoring automation is provisioned by this spec.
+- Additional local checks: `localStore.js` currently reads simulated auth at
+  lines 15-25 and hides save errors at lines 56-61; `useStorage.js` exposes no
+  commit receipt at line 332 and hides quota failures at lines 84-88/193-197.
+  The spec now requires authenticated owner scoping and a checked paid-result save.
+  `export.js` lines 36-47 copy records without materializing blob bytes; portable
+  backup validation is therefore an explicit first-slice prerequisite.
 
 ## Source basis
 
@@ -315,5 +461,9 @@ Browser-secret risk and server routing: [OpenAI API key safety](https://help.ope
 Editing capability and image-generation limitations: [OpenAI image generation guide](https://developers.openai.com/api/docs/guides/image-generation).
 Token verification and signing-key rotation: [Supabase JWT guidance](https://supabase.com/docs/guides/auth/jwts).
 Supabase compatibility scan: [official changelog](https://supabase.com/changelog).
+Token lifetime/revocation and availability: [Supabase sessions](https://supabase.com/docs/guides/auth/sessions),
+[sign-out behavior](https://supabase.com/docs/guides/auth/signout), and
+[production checklist](https://supabase.com/docs/guides/deployment/going-into-prod).
+Browser persistence/eviction: [WebKit storage policy](https://webkit.org/blog/14403/updates-to-storage-policy/).
 These sources inform the design; concrete SDK/model versions and deployment
 limits must be rechecked when the implementation plan is written.
