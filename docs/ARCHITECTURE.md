@@ -263,9 +263,10 @@ sequenceDiagram
   end
 
   Note over Hook,Remote: Later mount or edit after reconnect
-  Hook->>Sidecar: Read dirty state and pending deletes
   Hook->>Remote: List remote collection
   Remote-->>Hook: Return persisted rows
+  Note over Hook,Sidecar: Sidecars are read after the await, not before it
+  Hook->>Sidecar: Read dirty state and pending deletes
   Hook->>Hook: Filter tombstones and reconcile by updatedAt
   Hook->>Cache: Persist reconciled canonical value
   Hook-->>UI: Hydrate reconciled display value
@@ -279,6 +280,13 @@ delete survive closing the tab inside the debounce window. A successful push cle
 only the generation it actually sent: another tab's newer row remains pending. The
 row's own `editGen` is the proof, not a snapshot of the shared sidecar at flush start.
 This is acknowledgement safety, not live cross-tab state broadcasting.
+
+**The first pull reads the sidecars after the list call returns, not before it.** The
+remote list is an `await`, and the user can edit or delete a row while it is in flight.
+Reading dirty state and pending deletes first meant a mid-pull edit was overwritten by
+the older remote row, and an artist deleted mid-pull was resurrected by it. Ideas and
+concepts already read late; artists now do too (#101). The diagram above shows the
+corrected order.
 
 ### First paint must agree with the reconcile
 
@@ -330,6 +338,21 @@ never reaches `localStorage` or the remote store, and there is a test asserting 
 Legacy inline images migrate to blobs on first authenticated load.
 
 Documents stay small enough to sync cheaply; bytes move once.
+
+### A ref that cannot be resolved is not a ref that is gone
+
+Turning a `{ key }` into a displayable URL needs the bytes, and offline the bytes may
+not be reachable. Before #101 an unresolved ref simply vanished from the in-memory
+list, and the next save wrote that shortened list back — a device that merely
+*started* offline would then have removed its own photos from the server.
+
+Now the hook keeps what it could not resolve. Artists carry a side field,
+`unresolvedImages: [{ ref, index }]`; `canonicalizeArtist` reinserts each ref at its
+original position on save, skipping any whose identity is already present so a ref that
+resolves later is never saved twice. Concepts and their variants do the same through
+`unresolvedImageKey` in `imageCodec.js`. What the user sees is unchanged: a photo that
+cannot load is still hidden (making that visible is #102). What changed is that hiding
+is display-only and never reaches storage.
 
 ### The same split, without the sync half
 
@@ -686,6 +709,32 @@ applies to `src/data/lineup.js`, whose fixtures come from real pasted line-ups.
 When a parser's input is something a third party publishes, an invented fixture
 is a guess wearing a test's clothing.
 
+### What jsdom cannot see
+
+Vitest runs in jsdom, which has no layout, no real touch, no stacking order, no camera,
+no WebGL and no service worker. A separate Playwright suite (`e2e/`, `npm run test:e2e`)
+drives the *built* demo on an emulated iPhone, plus a desktop project and a second build
+under `/sable/`. It is its own CI job. It guards page width at 320–390px, swipes and
+pinches, which overlay is on top, the fake-camera try-on, the STL download parsed byte by
+byte, hover controls on touch, and starting offline. How to run it and what each file
+guards is in [MAINTAINING.md](MAINTAINING.md#browser-tests-e2e).
+
+It earns its keep: the Escape-stacking bug (one key press closed a drawer *and* the
+viewer beneath it) was invisible to Vitest, because real key presses let React flush
+between listeners and `fireEvent` does not.
+
+### A flake is a finding until proven otherwise
+
+Two specs failed intermittently under full-suite load and were long written off as a
+fake-IndexedDB artefact (#23). Both had real causes. `useArtistStorage` read an artist's
+images straight after mount, but artists paint with `images: []` and hydrate from
+IndexedDB afterwards, so the assertions now wait for them. `a11yAffordances` scanned each
+file for the tag around every expression, which is quadratic in file length; it hit the
+5 s timeout under load, and now runs in milliseconds with identical results. Looking for
+the second cause also exposed the offline data-loss bug described in §3. The protocol
+stays — re-run isolated, CI is the arbiter — with one addition: time a recurring flake
+(`npx vitest run --reporter=json`) before calling it environment.
+
 > **Running the suite with worktrees present.** Agent worktrees live inside the repo
 > (`.worktrees/`, `.claude/worktrees/`) and Vitest globs their copies from the repo
 > root, roughly doubling the reported totals. Use
@@ -728,9 +777,15 @@ is reliably offline from the second visit; a true cold-start guarantee is larger
 retire them on their own schedule. Documented as a known maintenance task with the
 deprecation page to check, rather than pretending the pin is permanent.
 
-**Two specs are flaky under parallel load.** Two suites fail intermittently on a
-loaded machine and always pass in isolation and on CI — a fake-IndexedDB timing
-artefact (#23). The protocol is written down: re-run isolated, and CI is the arbiter.
+**Load can still expose timing-sensitive specs.** The two long-standing flakes were
+root-caused and fixed (§9), but a loaded machine can still surface a different one. The
+protocol is written down: re-run isolated, CI is the arbiter, and time it before
+blaming the environment.
+
+**Photos that cannot load offline are hidden, not shown as placeholders.** A ref that
+cannot be resolved is kept in storage (§3) but the UI omits it, and a concept whose
+image is unreachable falls into "Drafts". Whether to show a placeholder instead is a
+design decision, tracked as #102.
 
 ---
 
@@ -746,4 +801,5 @@ artefact (#23). The protocol is written down: re-run isolated, and CI is the arb
 | `src/sw/` | Pure service-worker logic, contract-tested against `public/sw.js` |
 | `src/pages/`, `src/components/` | UI, 9 feature routes plus 2 legacy redirects and the share landing redirect |
 | `src/test/` | The suite, including the contract tests |
+| `e2e/`, `playwright.config.js` | Browser suite: emulated iPhone, desktop and `/sable/` sub-path projects; `smoke.live.js` targets the deployed demo |
 | `CLAUDE.md` | Agent-facing operations doc: conventions, review protocol, flake protocol |
