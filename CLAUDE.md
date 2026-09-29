@@ -47,7 +47,13 @@ This is a personal app for one user (the owner). (A read-only share link for the
   concept images use the same key-based blob storage via per-collection codecs
   (`src/data/imageCodec.js`) wired into `useStorage` — the in-memory value stays a
   displayable URL (so consumers like STL export are unchanged) while only `{ key }`
-  is persisted/synced. Device-local and NOT synced: `tattoo_theme`, `tattoo_font`,
+  is persisted/synced. **A ref that can't be resolved (offline) is kept, not dropped**
+  (#101): artists carry `unresolvedImages: [{ ref, index }]` and `canonicalizeArtist`
+  reinserts them at their old position on save (deduped by `refIdentity`); concepts do
+  the same via `unresolvedImageKey` in `imageCodec.js`. Never write a save path that
+  persists only the resolved list — a device that starts offline would delete its own
+  photos from the server. The first pull also reads dirty state / pending deletes
+  *after* `await store.list(...)`, not before. Device-local and NOT synced: `tattoo_theme`, `tattoo_font`,
   `openai_api_key`, `gemini_api_key`, the Taste Engine's embedding index
   (IndexedDB `tattoo-style-index-v1` — derivable from images, keyed by model id,
   rebuilt per device), `tattoo_convention_lineups`, `tattoo_convention_winners`,
@@ -287,6 +293,11 @@ them. Keep messages terse and conventional (e.g. `feat(home): …`, `docs: …`)
   overlay is on top, canvas/WebGL/camera, downloads, offline start, `basename`. Every run
   rebuilds. `E2E_REUSE=1` reuses whatever answers on :4179/:4180 instead, so rebuild
   first when you use it. How-to and gotchas: `docs/MAINTAINING.md#browser-tests-e2e`.
+- **Stacked overlays and Escape**: a layer that handles Escape calls `preventDefault()`
+  before closing, and any lower layer's key handler returns if `e.defaultPrevented ||
+  !isTopmostDialog(ref)` (`src/hooks/useDialogFocus.js`). jsdom's `fireEvent` doesn't let
+  React flush between listeners, so Vitest can't see this bug; `e2e/viewers.e2e.js` and
+  `src/test/escapeStacking.test.jsx` guard it.
 - **Live smoke test**: `e2e/smoke.live.js` + `playwright.live.config.js` hit the *deployed*
   Pages demo after each deploy and weekly (`live-smoke.yml`). This container's network
   policy may block `github.io`; point `LIVE_URL` at a local `/sable/` preview instead.
