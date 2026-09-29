@@ -1,5 +1,8 @@
+import { compileRefinementPrompt, validateRefinementRequest, variantIdForJob } from '../../shared/imageJobs'
+
 export const RESULT_VARIANT_PROVIDERS = [
   { id: 'chatgpt', label: 'ChatGPT' },
+  { id: 'openai', label: 'OpenAI' },
   { id: 'adobe-firefly', label: 'Adobe Firefly' },
   { id: 'gemini', label: 'Gemini' },
   { id: 'claude', label: 'Claude' },
@@ -30,6 +33,96 @@ function isVariantObject(variant) {
   return Boolean(variant) && typeof variant === 'object' && !Array.isArray(variant)
 }
 
+function invalidMetadata() {
+  throw new TypeError('invalid_variant_metadata')
+}
+
+function requireMetadata(condition) {
+  if (!condition) invalidMetadata()
+}
+
+function validMetadataText(value, maxLength = 256) {
+  return typeof value === 'string' && Boolean(value.trim()) && value.length <= maxLength
+}
+
+function matchesExactly(pattern, value) {
+  return typeof value === 'string' && pattern.exec(value)?.[0] === value
+}
+
+function validTimestamp(value) {
+  return typeof value === 'string' && Number.isFinite(Date.parse(value))
+    && new Date(value).toISOString() === value
+}
+
+function normaliseGeneration(input, trustedRelay, createdAt) {
+  requireMetadata(isVariantObject(input) && input.version === 1
+    && RESULT_VARIANT_PROVIDERS.some((item) => item.id === input.provider))
+  const generation = { version: 1, provider: input.provider }
+  for (const field of ['model', 'profileId']) {
+    if (input[field] !== undefined || trustedRelay) {
+      requireMetadata(field === 'model' ? validMetadataText(input[field], 128)
+        : matchesExactly(/^[a-z][a-z0-9-]{0,63}$/, input[field]))
+      generation[field] = input[field]
+    }
+  }
+  const timestamp = input.createdAt === undefined && !trustedRelay ? createdAt : input.createdAt
+  requireMetadata(validTimestamp(timestamp))
+  generation.createdAt = timestamp
+  generation.provenance = trustedRelay ? 'relay' : 'user-import'
+  if (trustedRelay) {
+    requireMetadata(input.provider === 'openai' && input.provenance === 'relay')
+    try {
+      variantIdForJob(input.jobId)
+    } catch {
+      invalidMetadata()
+    }
+    generation.jobId = input.jobId
+  }
+  return generation
+}
+
+// Saved metadata is intentionally smaller than the wire request. Build the
+// wire-only fields temporarily to reuse its exact-text and combined-size checks.
+function normaliseRefinement(input) {
+  requireMetadata(isVariantObject(input))
+  const { version, change, keep, palette } = input
+  try {
+    validateRefinementRequest({
+      version, operation: 'refine', profileId: 'openai-refine-v1', change, keep, palette,
+      prompt: compileRefinementPrompt({ change, keep, palette }),
+    })
+  } catch {
+    invalidMetadata()
+  }
+  return { version, change, keep, palette }
+}
+
+function normaliseMetadata(input, options, createdAt) {
+  const metadata = {}
+  if (input.operation !== undefined) {
+    requireMetadata(input.operation === 'refine')
+    metadata.operation = input.operation
+  }
+  for (const field of ['parentVariantId', 'sourceConceptId']) {
+    if (input[field] !== undefined) {
+      requireMetadata((field === 'parentVariantId' && input[field] === null) || validMetadataText(input[field]))
+      metadata[field] = input[field]
+    }
+  }
+  if (input.sourceImageDigest !== undefined) {
+    requireMetadata(matchesExactly(/^[0-9a-f]{64}$/, input.sourceImageDigest))
+    metadata.sourceImageDigest = input.sourceImageDigest
+  }
+  if (input.refinement !== undefined) metadata.refinement = normaliseRefinement(input.refinement)
+  // Only the owner-checked relay importer may opt in. User-selected provider
+  // labels and supplied provenance/jobId on the normal path are attribution only.
+  const trustedRelay = options.provenance === 'relay'
+  if (input.generation !== undefined || trustedRelay) {
+    metadata.generation = normaliseGeneration(input.generation, trustedRelay, createdAt)
+  }
+  return metadata
+}
+
 function generateVariantId() {
   if (typeof globalThis.crypto?.randomUUID === 'function') {
     return globalThis.crypto.randomUUID()
@@ -45,9 +138,15 @@ export function getProviderLabel(provider) {
 
 export function createConceptVariant(input, options = {}) {
   if (!hasVariantContent(input || {})) return null
-
+  const createdAt = options.createdAt || new Date().toISOString()
+  const metadata = normaliseMetadata(input, options, createdAt)
+  let id = options.id || generateVariantId()
+  if (options.provenance === 'relay') {
+    id = variantIdForJob(metadata.generation.jobId)
+    requireMetadata(options.id === undefined || options.id === id)
+  }
   return {
-    id: options.id || generateVariantId(),
+    id,
     provider: normaliseProvider(input.provider || 'other'),
     title: clean(input.title),
     imageUrl: clean(input.imageUrl),
@@ -55,7 +154,8 @@ export function createConceptVariant(input, options = {}) {
     notes: clean(input.notes),
     rating: normaliseRating(input.rating),
     isBest: Boolean(input.isBest),
-    createdAt: options.createdAt || new Date().toISOString(),
+    createdAt,
+    ...metadata,
   }
 }
 
@@ -80,6 +180,14 @@ export function addConceptVariant(concept, input, options = {}) {
     variant.isBest ? { ...item, isBest: false } : item
   ))
 
+  return { ...concept, variants: [variant, ...existing] }
+}
+
+// The caller supplies a normalized saved variant. Reconciliation must not
+// overwrite any user edits or change an existing Best choice.
+export function upsertRefinementVariant(concept, variant) {
+  const existing = getConceptVariants(concept)
+  if (existing.some((item) => item.id === variant.id)) return concept
   return { ...concept, variants: [variant, ...existing] }
 }
 

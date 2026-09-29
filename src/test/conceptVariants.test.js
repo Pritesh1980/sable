@@ -15,6 +15,7 @@ describe('RESULT_VARIANT_PROVIDERS', () => {
   it('contains supported AI result providers', () => {
     expect(RESULT_VARIANT_PROVIDERS).toEqual([
       { id: 'chatgpt', label: 'ChatGPT' },
+      { id: 'openai', label: 'OpenAI' },
       { id: 'adobe-firefly', label: 'Adobe Firefly' },
       { id: 'gemini', label: 'Gemini' },
       { id: 'claude', label: 'Claude' },
@@ -24,6 +25,112 @@ describe('RESULT_VARIANT_PROVIDERS', () => {
 
   it('falls back unknown provider labels to Other', () => {
     expect(getProviderLabel('mystery-ai')).toBe('Other')
+  })
+
+  it('preserves the OpenAI provider when saving an attributed manual result', () => {
+    expect(createConceptVariant({ provider: 'openai', imageUrl: '/manual.png' }).provider).toBe('openai')
+    expect(getProviderLabel('openai')).toBe('OpenAI')
+  })
+})
+
+describe('versioned refinement metadata', () => {
+  const jobId = '00000000-0000-4000-8000-000000000001'
+  const generation = {
+    version: 1, jobId, provider: 'openai', model: 'gpt-image-2.5-sunburst',
+    profileId: 'openai-refine-v1', createdAt: '2026-09-28T12:00:00.000Z', provenance: 'relay',
+  }
+  const refinement = { version: 1, change: '  Add 雾 🌫️\nCafe\u0301  ', keep: ' “永遠”\n ', palette: 'colour' }
+  const input = {
+    imageUrl: '/result.png', provider: 'openai', operation: 'refine',
+    parentVariantId: null, sourceConceptId: 'concept-1', sourceImageDigest: 'a'.repeat(64),
+    generation, refinement,
+  }
+
+  it('whitelists service metadata and preserves the exact Unicode instructions', () => {
+    const variant = createConceptVariant({
+      ...input, secret: 'drop',
+      generation: { ...generation, token: 'drop', nested: { key: 'drop' } },
+      refinement: { ...refinement, arbitrary: 'drop' },
+    }, { provenance: 'relay' })
+    expect(variant).toMatchObject({
+      id: 'relay:00000000-0000-4000-8000-000000000001', operation: 'refine',
+      parentVariantId: null, sourceConceptId: 'concept-1', sourceImageDigest: 'a'.repeat(64),
+    })
+    expect(variant.generation).toEqual(generation)
+    expect(variant.refinement).toEqual(refinement)
+    expect(variant).not.toHaveProperty('secret')
+    expect(variant.generation).not.toBe(generation)
+    expect(variant.refinement).not.toBe(refinement)
+  })
+
+  it('does not invent a parent or lineage on legacy or absent-parent inputs', () => {
+    const absent = createConceptVariant({ imageUrl: '/manual.png', operation: 'refine', refinement })
+    expect(absent).not.toHaveProperty('parentVariantId')
+    expect(absent).not.toHaveProperty('sourceConceptId')
+    expect(absent).not.toHaveProperty('generation')
+    const legacy = createConceptVariant({ imageUrl: '/old.png', provider: 'chatgpt' })
+    for (const field of ['operation', 'parentVariantId', 'sourceConceptId', 'sourceImageDigest', 'generation', 'refinement']) {
+      expect(legacy).not.toHaveProperty(field)
+    }
+  })
+
+  it('records user attribution without trusting a claimed relay provenance or job ID', () => {
+    const manual = addConceptVariant({ id: 'concept-1' }, input, { id: 'manual' }).variants[0]
+    expect(manual.id).toBe('manual')
+    expect(manual.generation).toEqual({
+      version: 1, provider: 'openai', model: 'gpt-image-2.5-sunburst',
+      profileId: 'openai-refine-v1', createdAt: '2026-09-28T12:00:00.000Z', provenance: 'user-import',
+    })
+    expect(createConceptVariant({ imageUrl: '/manual.png', provider: 'openai' })).not.toHaveProperty('generation')
+    expect(createConceptVariant({ imageUrl: '/manual.png', generation: { version: 1, provider: 'claude' } },
+      { createdAt: '2026-09-28T13:00:00.000Z' }).generation)
+      .toEqual({ version: 1, provider: 'claude', createdAt: '2026-09-28T13:00:00.000Z', provenance: 'user-import' })
+  })
+
+  it('binds trusted relay IDs to the validated job and rejects mismatches', () => {
+    expect(createConceptVariant(input, { provenance: 'relay', id: `relay:${jobId}` }).id).toBe(`relay:${jobId}`)
+    expect(() => createConceptVariant(input, { provenance: 'relay', id: 'manual' })).toThrow('invalid_variant_metadata')
+  })
+
+  it('rejects an explicitly invalid manual timestamp rather than replacing it with import time', () => {
+    expect(() => createConceptVariant({ ...input, generation: { ...generation, createdAt: null } }))
+      .toThrow('invalid_variant_metadata')
+  })
+
+  it('preserves valid parent and source identifiers without rewriting them', () => {
+    const variant = createConceptVariant({ ...input, parentVariantId: 'legacy-parent', sourceConceptId: 'source-concept' })
+    expect(variant.parentVariantId).toBe('legacy-parent')
+    expect(variant.sourceConceptId).toBe('source-concept')
+  })
+
+  it('admits the exact combined instruction limit without altering text', () => {
+    const instructions = { version: 1, change: 'a'.repeat(3999), keep: '永', palette: 'black' }
+    expect(createConceptVariant({ ...input, refinement: instructions }).refinement).toEqual(instructions)
+  })
+
+  it.each([
+    { operation: 'generate' }, { parentVariantId: '' }, { parentVariantId: 1 },
+    { sourceConceptId: '' }, { sourceConceptId: {} }, { sourceImageDigest: 'A'.repeat(64) },
+    { parentVariantId: 'a'.repeat(257) }, { sourceConceptId: '   ' }, { sourceImageDigest: `${'a'.repeat(64)}\n` },
+    { refinement: { ...refinement, version: 2 } }, { refinement: { ...refinement, change: ' ' } },
+    { refinement: { ...refinement, keep: null } }, { refinement: { ...refinement, palette: 'red' } },
+    { refinement: { ...refinement, change: 'a'.repeat(4001) } }, { refinement: [] },
+    { generation: { ...generation, version: 2 } }, { generation: { ...generation, provider: 'mystery' } },
+    { generation: { ...generation, createdAt: 'yesterday' } }, { generation: { ...generation, model: {} } },
+    { generation: { ...generation, profileId: 'bad profile' } }, { generation: [] },
+  ])('rejects malformed optional metadata case %#', (patch) => {
+    expect(() => createConceptVariant({ ...input, ...patch })).toThrow('invalid_variant_metadata')
+  })
+
+  it.each([
+    undefined, { ...generation, jobId: 'invalid' }, { ...generation, provider: 'chatgpt' },
+    { ...generation, provenance: 'user-import' }, { ...generation, model: '' },
+    { ...generation, profileId: undefined }, { ...generation, createdAt: undefined },
+    { ...generation, createdAt: '2026-02-30T12:00:00.000Z' },
+    { ...generation, jobId: `${jobId}\n` },
+  ])('rejects incomplete or non-service metadata on the trusted path case %#', (invalid) => {
+    expect(() => createConceptVariant({ ...input, generation: invalid }, { provenance: 'relay' }))
+      .toThrow('invalid_variant_metadata')
   })
 })
 

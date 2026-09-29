@@ -128,6 +128,37 @@ describe('opening the app offline (#101)', () => {
     // …but what gets cached and synced still points at the photos.
     expect(conceptsCodec.toCanonical(display)).toEqual([concept])
   })
+
+  it('preserves saved relay metadata and legacy variants through offline codec round trips', async () => {
+    vi.spyOn(backend.blobs, 'getUrl').mockRejectedValue(new Error('offline'))
+    const generation = {
+      version: 1, jobId: '00000000-0000-4000-8000-000000000001', provider: 'openai',
+      model: 'gpt-image-2.5-sunburst', profileId: 'openai-refine-v1',
+      createdAt: '2026-09-28T12:00:00.000Z', provenance: 'relay',
+    }
+    const concept = {
+      id: 'c1', imageUrl: 'user/u1/concepts/c1/main.png', prompt: 'moth',
+      variants: [
+        {
+          id: 'relay:00000000-0000-4000-8000-000000000001', provider: 'openai',
+          title: '', imageUrl: 'user/u1/concepts/c1/result.png', response: '',
+          notes: 'Discussed with artist', rating: 5, isBest: true, createdAt: generation.createdAt,
+          operation: 'refine', parentVariantId: 'removed-parent', sourceConceptId: 'c1',
+          sourceImageDigest: 'a'.repeat(64), generation,
+          refinement: { version: 1, change: '  雾 🌫️\nCafe\u0301 ', keep: ' “永遠” ', palette: 'colour' },
+        },
+        {
+          id: 'old', provider: 'adobe-firefly', title: '', imageUrl: '/old.png', response: '',
+          notes: '', rating: 3, isBest: false, createdAt: '2026-05-31T12:00:00.000Z',
+        },
+      ],
+    }
+    const display = await conceptsCodec.toDisplay([concept])
+    expect(display[0].variants[0].imageUrl).toBe('')
+    expect(display[0].variants[0].generation.provenance).toBe('relay')
+    expect(conceptsCodec.toCanonical(display)).toEqual([concept])
+    expect(conceptsCodec.toCanonical(display)[0].variants[1]).not.toHaveProperty('generation')
+  })
 })
 
 describe('the first pull after opening (#101)', () => {
