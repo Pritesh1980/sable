@@ -45,8 +45,8 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onNudge, onSetStatus, 
 
   function commitRank() {
     setEditingRank(false)
-    const n = parseInt(rankInput, 10)
-    if (!isNaN(n) && n >= 1 && n <= totalArtists && n !== artist.rank) {
+    const n = Number.parseInt(rankInput, 10)
+    if (!Number.isNaN(n) && n >= 1 && n <= totalArtists && n !== artist.rank) {
       onSetRank(artist.id, n)
     }
   }
