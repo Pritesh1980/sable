@@ -1,6 +1,6 @@
 import { randomId } from '../data/randomId'
 import { backend } from '../backend'
-import { registerBlobUrl } from '../data/blobUrls'
+import { keyForUrl, registerBlobUrl } from '../data/blobUrls'
 
 function compressImage(file, maxDim = 900, quality = 0.78) {
   return new Promise((resolve) => {
@@ -29,7 +29,7 @@ function uuid() {
   return randomId()
 }
 
-function dataUrlToBlob(dataUrl) {
+export function dataUrlToBlob(dataUrl) {
   const [meta, b64] = dataUrl.split(',')
   // "data:image/png;base64" -> "image/png", by index rather than a lazy regex.
   const colon = meta.indexOf(':')
@@ -79,4 +79,17 @@ export async function uploadDataUrl(dataUrl, { userId, scope, id }) {
     console.error('[tattoo] data-url upload failed:', e)
     return null
   }
+}
+
+// Upload every image that is still inline — a bare data URL, or a { url } ref
+// holding one — and register it, so canonicalization stores it as { key }.
+// Returns how many moved. One that fails stays inline; durable retry is #115.
+export async function uploadInlineImages(images = [], { userId, scope, id }) {
+  let moved = 0
+  for (const image of images) {
+    const url = typeof image === 'string' ? image : image?.url
+    if (!url?.startsWith('data:') || keyForUrl(url)) continue
+    if (await uploadDataUrl(url, { userId, scope, id })) moved += 1
+  }
+  return moved
 }

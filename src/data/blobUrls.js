@@ -28,13 +28,12 @@ function isFresh(entry) {
   return Date.now() - entry.cachedAt < ttlMs - margin
 }
 
+// A superseded url keeps its reverse mapping (#110): state resolved at
+// hydration can still hold it hours later, and canonicalizing an unmapped url
+// stores the raw expiring url in place of the key, on every device. One entry
+// per key per refresh, cleared with the rest at sign-out.
 export function registerBlobUrl(key, url) {
   if (!key) return
-  // Drop the old url's reverse mapping first — a key that gets re-resolved
-  // over a long session (every TTL refresh) would otherwise pile up entries
-  // for urls nothing points to any more.
-  const previous = keyToEntry.get(key)
-  if (previous?.url) urlToKey.delete(previous.url)
   keyToEntry.set(key, { url, cachedAt: Date.now() })
   if (url) urlToKey.set(url, key)
 }

@@ -54,7 +54,10 @@ This is a personal app for one user (the owner). (A read-only share link for the
   persists only the resolved list — a device that starts offline would delete its own
   photos from the server. The UI draws those refs as "Available when online" tiles
   (#102, `photoSlots` in `src/data/offlineImages.js`, `OfflinePhoto.jsx`); refs listed
-  before first hydration carry `pending: true` and must never be drawn. The first pull also reads dirty state / pending deletes
+  before first hydration carry `pending: true` and must never be drawn. Never drop a superseded URL's reverse mapping in
+  `blobUrls.js` (#110): state can still hold it, and canonicalizing an unmapped URL
+  stores the expiring URL in place of its key. Every add path uploads its image
+  (quick-add now does too); a failed upload is only retried durably once #115 lands. The first pull also reads dirty state / pending deletes
   *after* `await store.list(...)`, not before. Device-local and NOT synced: `tattoo_theme`, `tattoo_font`,
   `openai_api_key`, `gemini_api_key`, the Taste Engine's embedding index
   (IndexedDB `tattoo-style-index-v1` — derivable from images, keyed by model id,

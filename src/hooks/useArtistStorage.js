@@ -16,6 +16,7 @@ import {
   dropRowGenerations,
 } from '../backend/dirty'
 import { resolveBlobKey, keyForUrl, registerBlobUrl } from '../data/blobUrls'
+import { dataUrlToBlob } from './useImageUpload'
 
 const META_KEY = 'tattoo_artists_meta'
 const OLD_KEY = 'tattoo_artists'
@@ -321,7 +322,9 @@ async function migrateLegacyImages(userId, imageMap) {
       if (keyForUrl(img)) continue
       const key = `user/${userId}/artists/${artistId}/${crypto.randomUUID?.() || Date.now()}.jpg`
       try {
-        await backend.blobs.upload(userId, key, img, 'image/jpeg')
+        // Bytes, not the data-URL text: a string body is stored verbatim by a
+        // real blob store (#110); the local adapter merely tolerated it.
+        await backend.blobs.upload(userId, key, dataUrlToBlob(img), 'image/jpeg')
         registerBlobUrl(key, img)
         migrated.push({ artistId, key })
       } catch (e) {
