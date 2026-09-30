@@ -20,6 +20,9 @@ describe('isOwner', () => {
 // the owner — and OWNER_EMAIL's default is guessable. The seed is therefore
 // switchable off at build time, independently of who the owner is.
 describe('seedsOwnerData', () => {
+  it('never seeds real-auth libraries from an owner email match', () => {
+    expect(seedsOwnerData({ id: 'owner-sub', email: OWNER_EMAIL }, true, false)).toBe(false)
+  })
   it('follows isOwner when seeding is enabled (the default)', () => {
     expect(seedsOwnerData({ email: OWNER_EMAIL }, true)).toBe(true)
     expect(seedsOwnerData({ email: 'someone@else.com' }, true)).toBe(false)

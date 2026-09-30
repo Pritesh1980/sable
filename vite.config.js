@@ -25,6 +25,9 @@ export default defineConfig({
     // .env.local (e.g. VITE_BACKEND=supabase) leak into the suite.
     env: {
       VITE_BACKEND: 'local',
+      VITE_AUTH_BACKEND: 'local',
+      VITE_AI_RELAY_URL: '',
+      VITE_PRIVATE_OWNER_ID: '',
       VITE_OWNER_EMAIL: '',
       VITE_SUPABASE_URL: '',
       VITE_SUPABASE_ANON_KEY: '',

@@ -14,6 +14,7 @@ function createMockBackend() {
     kind: 'mock',
     auth: {
       async getSession() { return session },
+      async getAccessToken() { return null },
       async signIn({ email }) {
         session = { user: { id: `mock-${email}`, email } }
         listeners.forEach((cb) => cb(session))
@@ -56,12 +57,15 @@ describe.each(adapters)('backend contract: %s', (_name, make) => {
   describe('auth', () => {
     it('starts with no session, signs in, notifies, and signs out', async () => {
       expect(await backend.auth.getSession()).toBeNull()
+      expect(await backend.auth.getAccessToken()).toBeNull()
 
       const events = []
       const unsub = backend.auth.onAuthStateChange((s) => events.push(s))
 
       const session = await backend.auth.signIn({ email: 'owner@example.com', password: 'x' })
       expect(session.user.email).toBe('owner@example.com')
+      expect(session).toEqual({ user: { id: expect.any(String), email: 'owner@example.com' } })
+      expect(await backend.auth.getAccessToken({ forceRefresh: true })).toBeNull()
       expect(await backend.auth.getSession()).not.toBeNull()
       expect(events.at(-1)?.user).toBeTruthy()
 

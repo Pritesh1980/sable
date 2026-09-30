@@ -222,7 +222,7 @@ export default function Wall({ artists = [], ideas = [], setArtists = () => {}, 
               nothing. The full page load is also required — seeding runs at
               boot in main.jsx, before render. */}
           {canOfferDemo({
-            backendKind: backend.kind,
+            offlineAuth: backend.capabilities.offlineAuth,
             ownerSeedEnabled: OWNER_SEED_ENABLED,
             demoActive: isDemoSession(),
           }) && (

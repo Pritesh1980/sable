@@ -6,12 +6,12 @@
 // surrealist, Japanese-inspired, tribal, colour realism and brush lettering).
 // These are synthetic concepts, not evidence of any real artist's work.
 //
-// Entry point: visit any route with `?demo=1` on the local backend
-// (VITE_BACKEND=local, the default). Seeding writes the same localStorage keys
+// Entry point: visit any route with `?demo=1` using offline auth
+// (local/local, the default). Seeding writes the same localStorage keys
 // the app's local-first storage reads — the offline cache (`tattoo_*`) AND the
 // local backend's simulated remote store (`tattoo_remote_*`) — plus a local
 // demo session, so sync reconciles to exactly this dataset. It never runs over
-// an existing session and never touches non-local backends.
+// an existing session and never runs with real auth, even with local storage.
 
 import { backend } from '../backend'
 import { nowStamp } from '../backend/sync'
@@ -115,6 +115,7 @@ export function seedDemoData(storage = localStorage) {
 // sign-in can never look like one. Used to decide whether offering the demo
 // makes sense; never to grant anything.
 export function isDemoSession() {
+  if (!backend.capabilities.offlineAuth) return false
   try {
     return JSON.parse(localStorage.getItem('tattoo_local_session'))?.demo === true
   } catch {
@@ -130,8 +131,8 @@ export function isDemoSession() {
 // real ideas or boards belonging to a wall that merely has no artists yet.
 // `ownerSeedEnabled === false` is set by one thing only, the public demo
 // deploy, where accounts are throwaway and there is nothing to lose.
-export function canOfferDemo({ backendKind, ownerSeedEnabled, demoActive }) {
-  return backendKind === 'local' && ownerSeedEnabled === false && !demoActive
+export function canOfferDemo({ offlineAuth, ownerSeedEnabled, demoActive }) {
+  return offlineAuth === true && ownerSeedEnabled === false && !demoActive
 }
 
 // Two decisions, kept separate: first prove the session is the demo's own,
@@ -185,8 +186,8 @@ export function watchForDemoReseed(
 // session whose stored dataset predates the shipped files re-seeds on ANY boot
 // — an installed PWA launches from start_url '/' without the query. A real
 // user's session is never overwritten. Returns true if it seeded.
-export function maybeSeedDemo(location = window.location, backendKind = backend.kind) {
-  if (backendKind !== 'local') return false
+export function maybeSeedDemo(location = window.location, offlineAuth = backend.capabilities.offlineAuth) {
+  if (offlineAuth !== true) return false
   try {
     const raw = localStorage.getItem('tattoo_local_session')
     if (raw) {

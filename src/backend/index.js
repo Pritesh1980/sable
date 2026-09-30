@@ -1,7 +1,5 @@
-// createBackend() — the single seam the app talks to. Selects an adapter set by
-// VITE_BACKEND ('local' | 'supabase' | 'aws'), defaulting to 'local' so dev and
-// tests stay fully offline. The supabase adapter is loaded lazily so its SDK is
-// only pulled in when actually selected; 'aws' is a reserved future slot.
+// Storage and authentication are independent: real login need not enable sync.
+// Default local/local is offline; cloud storage always requires real auth.
 
 import { createLocalAuth } from './local/localAuth'
 import { createLocalStore } from './local/localStore'
@@ -10,35 +8,19 @@ import { createSupabaseAuth } from './supabase/supabaseAuth'
 import { createSupabaseStore } from './supabase/supabaseStore'
 import { createSupabaseBlobs } from './supabase/supabaseBlobs'
 
-function createLocalBackend() {
-  return {
-    kind: 'local',
-    auth: createLocalAuth(),
-    store: createLocalStore(),
-    blobs: createLocalBlobs(),
+export function createBackend(storageKind = import.meta.env?.VITE_BACKEND || 'local', options = {}) {
+  const authKind = options.authKind || import.meta.env?.VITE_AUTH_BACKEND || storageKind
+  if (!['local', 'supabase'].includes(storageKind) || !['local', 'supabase'].includes(authKind) ||
+      (storageKind === 'supabase' && authKind === 'local')) {
+    throw new Error('Unsupported auth/storage combination')
   }
-}
-
-export function createBackend(kind = import.meta.env?.VITE_BACKEND || 'local') {
-  switch (kind) {
-    case 'supabase':
-      return createSupabaseBackend()
-    case 'aws':
-      throw new Error('AWS backend not implemented yet — see src/backend/aws/')
-    case 'local':
-    default:
-      return createLocalBackend()
-  }
-}
-
-// The supabase client itself is constructed lazily inside these factories
-// (getSupabaseClient), so selecting 'local' never touches the SDK or env config.
-function createSupabaseBackend() {
   return {
-    kind: 'supabase',
-    auth: createSupabaseAuth(),
-    store: createSupabaseStore(),
-    blobs: createSupabaseBlobs(),
+    kind: storageKind,
+    capabilities: { offlineAuth: authKind === 'local', realAuth: authKind === 'supabase' },
+    privateOwnerId: options.ownerId ?? import.meta.env?.VITE_PRIVATE_OWNER_ID ?? '',
+    auth: authKind === 'local' ? createLocalAuth() : createSupabaseAuth(),
+    store: storageKind === 'local' ? createLocalStore() : createSupabaseStore(),
+    blobs: storageKind === 'local' ? createLocalBlobs() : createSupabaseBlobs(),
   }
 }
 

@@ -20,6 +20,8 @@
  * Authentication. No signUp — accounts are created admin-side (invite-only scope).
  * @typedef {Object} AuthClient
  * @property {() => Promise<Session|null>} getSession
+ * @property {(options?: {forceRefresh?: boolean}) => Promise<string|null>} getAccessToken
+ *   SDK-managed token for transport only; never included in a UI Session.
  * @property {(creds: {email: string, password: string}) => Promise<Session>} signIn
  * @property {() => Promise<void>} signOut
  * @property {(cb: (session: Session|null) => void) => (() => void)} onAuthStateChange
@@ -56,7 +58,9 @@
 
 /**
  * @typedef {Object} Backend
- * @property {string} kind  'local' | 'supabase' | 'aws'
+ * @property {string} kind  Storage adapter: 'local' | 'supabase'.
+ * @property {{offlineAuth: boolean, realAuth: boolean}} capabilities
+ * @property {string} privateOwnerId Configured immutable auth user id; empty denies real-auth access.
  * @property {AuthClient} auth
  * @property {RemoteStore} store
  * @property {BlobStore} blobs

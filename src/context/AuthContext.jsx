@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AuthContext } from './auth-context'
 import { backend } from '../backend'
 import { purgeLocalUserData } from '../backend/purge'
@@ -15,61 +15,78 @@ const LAST_USER_KEY = 'tattoo_last_user_id'
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
+  const transitionQueue = useRef(Promise.resolve())
 
   useEffect(() => {
     let mounted = true
-    // Whichever of getSession()/onAuthStateChange resolves first establishes
-    // the baseline identity; once set, a late-arriving getSession() result is
-    // stale and must not stomp over a real auth event that already landed
-    // (#28 review, codex).
     let baselineSet = false
     let prevUserId
+    let requestedUserId
+    let revision = 0
 
-    async function applyIdentity(nextUserId, nextSession) {
+    function applyIdentity(nextSession) {
+      if (!mounted) return
+      const nextUserId = nextSession?.user?.id || null
+      const currentRevision = ++revision
       if (!baselineSet) {
         baselineSet = true
         const lastKnown = localStorage.getItem(LAST_USER_KEY)
         prevUserId = lastKnown === null ? nextUserId : lastKnown
       }
-      if (prevUserId !== nextUserId) {
-        // Purge — and only then publish the new session — on any identity
-        // change, not just the explicit signOut() path: passive session
-        // expiry, a direct A→B swap with no null event in between, and a
-        // reload into a different account are all covered. Publishing before
-        // purge completes would let an A-owned read still in flight populate
-        // B's freshly-rendered state (#28 review, codex).
-        await purgeLocalUserData().catch((e) => console.error('[tattoo] purge on auth change failed:', e))
+      if (requestedUserId !== nextUserId) {
+        // Gate and invalidate immediately, before asynchronous cleanup. Task4's
+        // authoritative local owner scope supplies this optional bridge.
+        setLoading(true)
+        backend.setIdentity?.(null)
       }
-      prevUserId = nextUserId
-      try {
-        if (nextUserId) localStorage.setItem(LAST_USER_KEY, nextUserId)
-        else localStorage.removeItem(LAST_USER_KEY)
-      } catch (e) { console.error('[tattoo] failed to persist last user id:', e) }
-      if (mounted) setSession(nextSession)
+      requestedUserId = nextUserId
+
+      // Never await work in the SDK's onAuthStateChange callback. Purges run
+      // serially outside it; only the latest revision may publish an identity.
+      transitionQueue.current = transitionQueue.current.then(async () => {
+        if (!mounted || currentRevision !== revision) return
+        if (prevUserId !== nextUserId) {
+          await purgeLocalUserData()
+          prevUserId = nextUserId
+        }
+        if (!mounted || currentRevision !== revision) return
+        const allowed = !backend.capabilities.realAuth ||
+          (Boolean(backend.privateOwnerId) && nextUserId === backend.privateOwnerId)
+        backend.setIdentity?.(allowed ? nextUserId : null)
+        try {
+          if (nextUserId) localStorage.setItem(LAST_USER_KEY, nextUserId)
+          else localStorage.removeItem(LAST_USER_KEY)
+        } catch { console.error('[tattoo] failed to persist last user id') }
+        setSession(nextSession)
+        setLoading(false)
+      }).catch(() => {
+        // A failed purge must not open another owner's library. No raw auth or
+        // storage errors (which may contain secrets) are logged.
+        console.error('[tattoo] auth transition failed')
+      })
     }
 
+    const unsub = backend.auth.onAuthStateChange(applyIdentity)
     backend.auth
       .getSession()
       .then((s) => {
-        if (!mounted || baselineSet) return
-        return applyIdentity(s?.user?.id || null, s)
+        if (!mounted || revision !== 0) return
+        applyIdentity(s)
       })
-      .catch((e) => console.error('[tattoo] getSession failed:', e))
-      .finally(() => { if (mounted) setLoading(false) })
-
-    const unsub = backend.auth.onAuthStateChange((s) => {
-      if (!mounted) return
-      applyIdentity(s?.user?.id || null, s)
-    })
-    return () => { mounted = false; unsub?.() }
+      .catch(() => {
+        if (!mounted || revision !== 0) return
+        console.error('[tattoo] getSession failed')
+        applyIdentity(null)
+      })
+    return () => { mounted = false; revision += 1; backend.setIdentity?.(null); unsub?.() }
   }, [])
 
   const signIn = useCallback((creds) => backend.auth.signIn(creds), [])
   const signOut = useCallback(async () => {
     await backend.auth.signOut()
-    // Belt-and-braces: the onAuthStateChange handler above already purges on
-    // this transition, but doesn't rely on adapter timing guarantees here too.
-    await purgeLocalUserData()
+    // The event's serialized purge is the only cleanup lane. A second purge
+    // here could finish late and clear the next account's newly mounted data.
+    await transitionQueue.current
   }, [])
 
   const value = {

@@ -1,10 +1,231 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { useEffect, useState } from 'react'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import { AuthProvider } from '../context/AuthContext'
 import { useAuth } from '../context/useAuth'
 import { backend } from '../backend'
 import * as purgeModule from '../backend/purge'
 import ProtectedRoute from '../components/ProtectedRoute'
+
+const defaultCapabilities = backend.capabilities
+const defaultOwner = backend.privateOwnerId
+afterEach(() => {
+  vi.restoreAllMocks()
+  backend.capabilities = defaultCapabilities
+  backend.privateOwnerId = defaultOwner
+})
+
+function deferred() {
+  let resolve, reject
+  const promise = new Promise((res, rej) => { resolve = res; reject = rej })
+  return { promise, resolve, reject }
+}
+
+const account = (id) => ({ user: { id, email: `${id}@example.com` } })
+
+function controlAuth(initial = account('a')) {
+  let listener
+  vi.spyOn(backend.auth, 'getSession').mockResolvedValue(initial)
+  vi.spyOn(backend.auth, 'onAuthStateChange').mockImplementation((cb) => {
+    listener = cb
+    return () => { listener = null }
+  })
+  return (session) => listener?.(session)
+}
+
+describe('private owner gate', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    backend.capabilities = { offlineAuth: false, realAuth: true }
+    backend.privateOwnerId = 'owner'
+  })
+
+  it.each(['intruder', ''])('does not mount data hooks for unauthorized identity %s', async (id) => {
+    controlAuth(account(id))
+    const mounted = vi.fn()
+    function Data() { useEffect(mounted, []); return <div>private data</div> }
+    render(<AuthProvider><ProtectedRoute><Data /></ProtectedRoute></AuthProvider>)
+    await screen.findByText('Access denied')
+    expect(mounted).not.toHaveBeenCalled()
+    expect(screen.queryByText('private data')).not.toBeInTheDocument()
+  })
+
+  it('fails closed when the configured owner is missing', async () => {
+    backend.privateOwnerId = ''
+    controlAuth(account('owner'))
+    render(<Gated />)
+    await screen.findByText('Private access is not configured')
+    expect(screen.queryByText('secret content')).not.toBeInTheDocument()
+  })
+
+  it('admits the exact configured owner, not the email', async () => {
+    controlAuth({ user: { id: 'owner', email: 'different@example.com' } })
+    render(<Gated />)
+    await screen.findByText('secret content')
+  })
+
+  it('offers no demo on real auth with local storage and permits signing out after denial', async () => {
+    const emit = controlAuth(null)
+    vi.spyOn(backend.auth, 'signOut').mockImplementation(async () => { emit(null) })
+    render(<Gated />)
+    await screen.findByRole('button', { name: 'Sign in' })
+    expect(screen.queryByRole('link', { name: /demo/i })).not.toBeInTheDocument()
+    await act(async () => { emit(account('intruder')) })
+    fireEvent.click(await screen.findByRole('button', { name: 'Sign out' }))
+    await screen.findByRole('button', { name: 'Sign in' })
+  })
+})
+
+describe('serialized identity transitions', () => {
+  beforeEach(() => localStorage.clear())
+
+  function OwnerData() {
+    const { user } = useAuth()
+    const [mountedFor] = useState(user.id)
+    return <div>data:{user.id}, mounted:{mountedFor}</div>
+  }
+  const mountData = () => render(<AuthProvider><ProtectedRoute><OwnerData /></ProtectedRoute></AuthProvider>)
+
+  it('unmounts data immediately during a swap and remounts after purge', async () => {
+    const emit = controlAuth()
+    const purge = deferred()
+    vi.spyOn(purgeModule, 'purgeLocalUserData').mockReturnValue(purge.promise)
+    mountData()
+    await screen.findByText('data:a, mounted:a')
+    let returned
+    act(() => { returned = emit(account('b')) })
+    expect(returned).toBeUndefined() // SDK callbacks must remain synchronous.
+    expect(screen.queryByText('data:a, mounted:a')).not.toBeInTheDocument()
+    expect(screen.queryByText('data:b, mounted:b')).not.toBeInTheDocument()
+    await act(async () => { purge.resolve() })
+    await screen.findByText('data:b, mounted:b')
+  })
+
+  it('keeps a same-owner token event mounted without purging', async () => {
+    const emit = controlAuth()
+    const purge = vi.spyOn(purgeModule, 'purgeLocalUserData')
+    mountData()
+    await screen.findByText('data:a, mounted:a')
+    await act(async () => { emit(account('a')) })
+    expect(screen.getByText('data:a, mounted:a')).toBeInTheDocument()
+    expect(purge).not.toHaveBeenCalled()
+  })
+
+  it('remounts owner data even when an immediate swap is batched into one render', async () => {
+    const emit = controlAuth()
+    vi.spyOn(purgeModule, 'purgeLocalUserData').mockResolvedValue()
+    mountData()
+    await screen.findByText('data:a, mounted:a')
+    await act(async () => { emit(account('b')) })
+    expect(screen.getByText('data:b, mounted:b')).toBeInTheDocument()
+  })
+
+  it('a late explicit sign-out completion cannot purge a subsequently signed-in account', async () => {
+    const emit = controlAuth()
+    const sdkSignOut = deferred()
+    vi.spyOn(backend.auth, 'signOut').mockImplementation(() => {
+      emit(null)
+      return sdkSignOut.promise
+    })
+    let signOut
+    function Controls() {
+      const auth = useAuth()
+      useEffect(() => { signOut = auth.signOut }, [auth.signOut])
+      return null
+    }
+    render(<AuthProvider><Controls /><ProtectedRoute><OwnerData /></ProtectedRoute></AuthProvider>)
+    await screen.findByText('data:a, mounted:a')
+    let signingOut
+    await act(async () => { signingOut = signOut() })
+    await screen.findByRole('button', { name: 'Sign in' })
+    await act(async () => { emit(account('b')) })
+    await screen.findByText('data:b, mounted:b')
+    localStorage.setItem('tattoo_ideas', '[{"id":"belongs-to-b"}]')
+    await act(async () => { sdkSignOut.resolve(); await signingOut })
+    expect(localStorage.getItem('tattoo_ideas')).toBe('[{"id":"belongs-to-b"}]')
+    expect(screen.getByText('data:b, mounted:b')).toBeInTheDocument()
+  })
+
+  it('does not open a cached identity when the SDK session lookup fails', async () => {
+    controlAuth()
+    backend.auth.getSession.mockRejectedValue(new Error('SDK secret error detail'))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    mountData()
+    await screen.findByRole('button', { name: 'Sign in' })
+    expect(screen.queryByText(/data:/)).not.toBeInTheDocument()
+    expect(console.error).toHaveBeenCalledWith('[tattoo] getSession failed')
+  })
+
+  it('serializes A→B→C purges and never publishes B after C arrives', async () => {
+    const emit = controlAuth()
+    const first = deferred(), second = deferred()
+    const purge = vi.spyOn(purgeModule, 'purgeLocalUserData')
+      .mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
+    mountData()
+    await screen.findByText('data:a, mounted:a')
+    await act(async () => { emit(account('b')) })
+    await act(async () => { emit(account('c')) })
+    expect(purge).toHaveBeenCalledTimes(1)
+    await act(async () => { first.resolve() })
+    expect(screen.queryByText(/data:/)).not.toBeInTheDocument()
+    expect(localStorage.getItem('tattoo_last_user_id')).toBe('a')
+    expect(purge).toHaveBeenCalledTimes(2)
+    await act(async () => { second.resolve() })
+    await screen.findByText('data:c, mounted:c')
+    expect(localStorage.getItem('tattoo_last_user_id')).toBe('c')
+  })
+
+  it('does not clear loading when stale getSession resolves during a newer purge', async () => {
+    const emit = controlAuth()
+    const cached = deferred(), purge = deferred()
+    backend.auth.getSession.mockReturnValue(cached.promise)
+    localStorage.setItem('tattoo_last_user_id', 'a')
+    vi.spyOn(purgeModule, 'purgeLocalUserData').mockReturnValue(purge.promise)
+    mountData()
+    await act(async () => { emit(account('b')) })
+    await act(async () => { cached.resolve(account('a')) })
+    expect(screen.queryByText(/data:/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Sign in' })).not.toBeInTheDocument()
+    await act(async () => { purge.resolve() })
+    await screen.findByText('data:b, mounted:b')
+  })
+
+  it('does not publish an older cached identity whose purge finishes after an event', async () => {
+    localStorage.setItem('tattoo_last_user_id', 'old')
+    const emit = controlAuth(account('a'))
+    const first = deferred(), second = deferred()
+    vi.spyOn(purgeModule, 'purgeLocalUserData').mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
+    mountData()
+    await act(async () => {})
+    await act(async () => { emit(account('b')); first.resolve() })
+    expect(screen.queryByText(/data:/)).not.toBeInTheDocument()
+    await act(async () => { second.resolve() })
+    await screen.findByText('data:b, mounted:b')
+  })
+
+  it('keeps the gate closed if purge rejects', async () => {
+    const emit = controlAuth()
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(purgeModule, 'purgeLocalUserData').mockRejectedValue(new Error('purge failed'))
+    mountData()
+    await screen.findByText('data:a, mounted:a')
+    await act(async () => { emit(account('b')) })
+    expect(screen.queryByText(/data:/)).not.toBeInTheDocument()
+    expect(localStorage.getItem('tattoo_last_user_id')).toBe('a')
+  })
+
+  it('does not publish or persist a pending transition after unmount', async () => {
+    const emit = controlAuth()
+    const purge = deferred()
+    vi.spyOn(purgeModule, 'purgeLocalUserData').mockReturnValue(purge.promise)
+    const view = mountData()
+    await screen.findByText('data:a, mounted:a')
+    await act(async () => { emit(account('b')) })
+    view.unmount()
+    await act(async () => { purge.resolve() })
+    expect(localStorage.getItem('tattoo_last_user_id')).toBe('a')
+  })
+})
 
 function Gated() {
   return (

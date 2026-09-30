@@ -39,6 +39,9 @@ export function createLocalAuth() {
   }
 
   return {
+    async getAccessToken() {
+      return null
+    },
     async getSession() {
       return read()
     },

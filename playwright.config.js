@@ -15,7 +15,10 @@ const CI = Boolean(process.env.CI)
 const reuseExistingServer = !CI && Boolean(process.env.E2E_REUSE)
 
 // Never a developer's .env.local Supabase: offline local backend only.
-const env = { VITE_BACKEND: 'local', VITE_OWNER_EMAIL: '', VITE_SUPABASE_URL: '', VITE_SUPABASE_ANON_KEY: '' }
+const env = {
+  VITE_BACKEND: 'local', VITE_AUTH_BACKEND: 'local', VITE_AI_RELAY_URL: '',
+  VITE_PRIVATE_OWNER_ID: '', VITE_OWNER_EMAIL: '', VITE_SUPABASE_URL: '', VITE_SUPABASE_ANON_KEY: '',
+}
 
 const iphone = {
   browserName: 'chromium',

@@ -11,14 +11,15 @@ const SECTIONS = [
     image: 'wall.png',
     steps: [
       'The public demo contains six invented artists with AI-generated tattoo imagery. Its label stays visible on the Wall, gallery, viewer, ranking and image-bearing editors after you dismiss the introduction. Demo updates reset sample artists and ideas, including your edits; real accounts are untouched. Lettering examples are concepts, not language-verified tattoo stencils.',
-      'Sign in with your email and password to open the app. Your artists, ideas, boards and concepts are tied to your account and follow you across devices — add something on your Mac and it appears on your iPhone.',
+      'Private builds use invite-only email/password login and open only for the configured owner. Other accounts see Access denied and can sign out; a missing owner configuration keeps the library closed. The public demo is offered only in offline builds.',
+      'Login and storage are separate. With device-local storage, artists, ideas, boards and concepts stay in this browser even with a real account. Signing in on your iPhone does not copy your Mac’s library; only cloud-storage builds sync across devices.',
       'You open on the Wall: every photo from every artist in your collection, edge to edge. The artist’s name sits along the bottom of each tile on touch, and fades in on hover with a mouse; a red dot means it was added in the last 14 days.',
       'Pinned just under the bar is your Top 5 — the five artists you’ve ranked highest. Drag the rank number on any tile to reorder the five, or tap Rank ⤢ to open the full ranking board.',
       'Click any photo and it fills the screen. Arrow keys drive it: ←/→ moves through this artist’s work, ↑/↓ jumps between artists, G generates a concept in this artist’s style, I opens their info & notes, Esc returns to the Wall. On a phone, swipe instead: left/right for this artist’s photos, up for the next artist, down to close. Tap the photo (or Details) for the panel with Previous/Next artist, Generate and Info & notes. Pinch to zoom still works.',
       'Leave the mouse still and the viewer’s controls fade away, leaving just the image; move it or press a key and they return. The @handle link opens the artist’s Instagram in a new tab.',
       'The bar at the top switches between Artists and Concepts, adds an artist, and opens the ⋯ Drawer — home of the Classic gallery, Ideas, Pipeline, Radar, Studios, Settings and this Help page.',
       'The old Home dashboard lives at Drawer → Pipeline, unchanged: Top 5 coverflow, shortlist pipeline, idea stats and matches. On the classic pages the familiar bottom bar is still there, with the A+/A− text size, ◑/◐ theme and ⏻ sign-out controls at its right end. Tap the Sable logo at the top-left of any classic page to return to the Home Wall.',
-      'Your artists, studios and conventions come pre-loaded. Ideas, boards and concepts start empty — you build those.',
+      'Studios and conventions come pre-loaded. The public demo includes fictional artists; offline owner builds can include a curated starter list. Real-auth libraries do not seed artists from an email match. Ideas, boards and concepts are yours to build.',
     ],
   },
   {

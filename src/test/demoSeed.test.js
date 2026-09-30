@@ -13,6 +13,26 @@ import {
   watchForDemoReseed,
 } from '../data/demoSeed'
 import { DEFAULT_ARTISTS, STYLE_TAGS } from '../data/artists'
+import { backend } from '../backend'
+
+it('real auth with local storage cannot seed or offer demo, even with a stored demo session', () => {
+  const previous = backend.capabilities
+  backend.capabilities = { offlineAuth: false, realAuth: true }
+  localStorage.clear()
+  try {
+    expect(backend.kind).toBe('local')
+    expect(maybeSeedDemo({ search: '?demo=1' })).toBe(false)
+    expect(localStorage.getItem('tattoo_artists_meta')).toBeNull()
+    expect(canOfferDemo({ offlineAuth: backend.capabilities.offlineAuth, ownerSeedEnabled: false, demoActive: false })).toBe(false)
+    localStorage.setItem('tattoo_local_session', JSON.stringify(DEMO_SESSION))
+    localStorage.setItem('tattoo_demo_seed_version', '1')
+    expect(maybeSeedDemo({ search: '?demo=1' })).toBe(false)
+    expect(isDemoSession()).toBe(false)
+  } finally {
+    backend.capabilities = previous
+    localStorage.clear()
+  }
+})
 
 describe('DEMO_ARTISTS data integrity', () => {
   it('provides eighteen distinct photographic pieces across six coherent portfolios', () => {
@@ -121,7 +141,7 @@ describe('isDemoSession', () => {
 // seeding overwrites the tattoo_* keys — so this is deliberately limited to the
 // public demo build, the only place with nothing to lose.
 describe('canOfferDemo', () => {
-  const demoBuild = { backendKind: 'local', ownerSeedEnabled: false, demoActive: false }
+  const demoBuild = { offlineAuth: true, ownerSeedEnabled: false, demoActive: false }
 
   it('offers it on the public demo build to a non-demo session', () => {
     expect(canOfferDemo(demoBuild)).toBe(true)
@@ -136,7 +156,7 @@ describe('canOfferDemo', () => {
   })
 
   it('never offers it on a real backend, where ?demo=1 does nothing', () => {
-    expect(canOfferDemo({ ...demoBuild, backendKind: 'supabase' })).toBe(false)
+    expect(canOfferDemo({ ...demoBuild, offlineAuth: false })).toBe(false)
   })
 })
 
@@ -180,12 +200,12 @@ describe('maybeSeedDemo', () => {
   beforeEach(() => localStorage.clear())
 
   it('seeds when ?demo=1 and no session exists', () => {
-    expect(maybeSeedDemo({ search: '?demo=1' }, 'local')).toBe(true)
+    expect(maybeSeedDemo({ search: '?demo=1' }, true)).toBe(true)
     expect(localStorage.getItem('tattoo_artists_meta')).toBeTruthy()
   })
 
   it('does nothing without the demo flag', () => {
-    expect(maybeSeedDemo({ search: '' }, 'local')).toBe(false)
+    expect(maybeSeedDemo({ search: '' }, true)).toBe(false)
     expect(localStorage.getItem('tattoo_artists_meta')).toBeNull()
   })
 
@@ -194,44 +214,44 @@ describe('maybeSeedDemo', () => {
       'tattoo_local_session',
       JSON.stringify({ user: { id: 'local-me@x.com', email: 'me@x.com' } })
     )
-    expect(maybeSeedDemo({ search: '?demo=1' }, 'local')).toBe(false)
+    expect(maybeSeedDemo({ search: '?demo=1' }, true)).toBe(false)
     expect(localStorage.getItem('tattoo_artists_meta')).toBeNull()
   })
 
   it('is idempotent: a second visit with ?demo=1 keeps demo-session edits', () => {
-    maybeSeedDemo({ search: '?demo=1' }, 'local')
+    maybeSeedDemo({ search: '?demo=1' }, true)
     const edited = JSON.parse(localStorage.getItem('tattoo_artists_meta'))
     edited[0] = { ...edited[0], notes: 'edited in demo' }
     localStorage.setItem('tattoo_artists_meta', JSON.stringify(edited))
-    expect(maybeSeedDemo({ search: '?demo=1' }, 'local')).toBe(false)
+    expect(maybeSeedDemo({ search: '?demo=1' }, true)).toBe(false)
     expect(JSON.parse(localStorage.getItem('tattoo_artists_meta'))[0].notes).toBe('edited in demo')
   })
 
-  it('only runs against the local backend', () => {
-    expect(maybeSeedDemo({ search: '?demo=1' }, 'supabase')).toBe(false)
+  it('does not run without offline auth', () => {
+    expect(maybeSeedDemo({ search: '?demo=1' }, false)).toBe(false)
     expect(localStorage.getItem('tattoo_artists_meta')).toBeNull()
   })
 
   it('records the current seed version when seeding', () => {
-    maybeSeedDemo({ search: '?demo=1' }, 'local')
+    maybeSeedDemo({ search: '?demo=1' }, true)
     expect(Number(localStorage.getItem('tattoo_demo_seed_version'))).toBe(DEMO_SEED_VERSION)
   })
 
   it('re-seeds a stale DEMO session so returning visitors see the current dataset', () => {
-    maybeSeedDemo({ search: '?demo=1' }, 'local')
+    maybeSeedDemo({ search: '?demo=1' }, true)
     // simulate a visitor from an older deploy: outdated version + edited data
     localStorage.setItem('tattoo_demo_seed_version', String(DEMO_SEED_VERSION - 1))
     localStorage.setItem('tattoo_artists_meta', JSON.stringify([{ id: 'old-artist' }]))
-    expect(maybeSeedDemo({ search: '?demo=1' }, 'local')).toBe(true)
+    expect(maybeSeedDemo({ search: '?demo=1' }, true)).toBe(true)
     const meta = JSON.parse(localStorage.getItem('tattoo_artists_meta'))
     expect(meta.map((a) => a.id)).toEqual(DEMO_ARTISTS.map((a) => a.id))
     expect(Number(localStorage.getItem('tattoo_demo_seed_version'))).toBe(DEMO_SEED_VERSION)
   })
 
   it('treats a pre-versioning demo session (no version key) as stale', () => {
-    maybeSeedDemo({ search: '?demo=1' }, 'local')
+    maybeSeedDemo({ search: '?demo=1' }, true)
     localStorage.removeItem('tattoo_demo_seed_version')
-    expect(maybeSeedDemo({ search: '?demo=1' }, 'local')).toBe(true)
+    expect(maybeSeedDemo({ search: '?demo=1' }, true)).toBe(true)
   })
 
   it('an outdated version key never causes a REAL user session to be touched', () => {
@@ -240,28 +260,28 @@ describe('maybeSeedDemo', () => {
       JSON.stringify({ user: { id: 'local-me@x.com', email: 'me@x.com' } })
     )
     localStorage.setItem('tattoo_demo_seed_version', '0')
-    expect(maybeSeedDemo({ search: '?demo=1' }, 'local')).toBe(false)
+    expect(maybeSeedDemo({ search: '?demo=1' }, true)).toBe(false)
     expect(localStorage.getItem('tattoo_artists_meta')).toBeNull()
   })
 
   it('marks the seeded session as demo — a shape the login form never writes', () => {
-    maybeSeedDemo({ search: '?demo=1' }, 'local')
+    maybeSeedDemo({ search: '?demo=1' }, true)
     expect(JSON.parse(localStorage.getItem('tattoo_local_session')).demo).toBe(true)
   })
 
   it('re-seeds a stale demo session even without ?demo=1 (installed PWA boots at /)', () => {
-    maybeSeedDemo({ search: '?demo=1' }, 'local')
+    maybeSeedDemo({ search: '?demo=1' }, true)
     localStorage.setItem('tattoo_demo_seed_version', String(DEMO_SEED_VERSION - 1))
     localStorage.setItem('tattoo_artists_meta', JSON.stringify([{ id: 'old-artist' }]))
-    expect(maybeSeedDemo({ search: '' }, 'local')).toBe(true)
+    expect(maybeSeedDemo({ search: '' }, true)).toBe(true)
     expect(JSON.parse(localStorage.getItem('tattoo_artists_meta')).map((a) => a.id))
       .toEqual(DEMO_ARTISTS.map((a) => a.id))
   })
 
   it('a current demo session booting without the query keeps its edits', () => {
-    maybeSeedDemo({ search: '?demo=1' }, 'local')
+    maybeSeedDemo({ search: '?demo=1' }, true)
     localStorage.setItem('tattoo_artists_meta', JSON.stringify([{ id: 'edited' }]))
-    expect(maybeSeedDemo({ search: '' }, 'local')).toBe(false)
+    expect(maybeSeedDemo({ search: '' }, true)).toBe(false)
     expect(JSON.parse(localStorage.getItem('tattoo_artists_meta'))[0].id).toBe('edited')
   })
 
@@ -274,29 +294,29 @@ describe('maybeSeedDemo', () => {
     )
     localStorage.setItem('tattoo_demo_seed_version', String(DEMO_SEED_VERSION))
     localStorage.setItem('tattoo_artists_meta', JSON.stringify([{ id: 'their-artist' }]))
-    expect(maybeSeedDemo({ search: '?demo=1' }, 'local')).toBe(false)
+    expect(maybeSeedDemo({ search: '?demo=1' }, true)).toBe(false)
     expect(JSON.parse(localStorage.getItem('tattoo_artists_meta'))[0].id).toBe('their-artist')
   })
 
   it('legacy v1 demo session (no marker, no version key) still re-seeds', () => {
     localStorage.setItem('tattoo_local_session', JSON.stringify({ user: { ...DEMO_SESSION.user } }))
     localStorage.setItem('tattoo_artists_meta', JSON.stringify([{ id: 'v1-artist' }]))
-    expect(maybeSeedDemo({ search: '?demo=1' }, 'local')).toBe(true)
+    expect(maybeSeedDemo({ search: '?demo=1' }, true)).toBe(true)
     expect(JSON.parse(localStorage.getItem('tattoo_local_session')).demo).toBe(true)
   })
 
   it('treats a garbage version value on a demo session as stale', () => {
-    maybeSeedDemo({ search: '?demo=1' }, 'local')
+    maybeSeedDemo({ search: '?demo=1' }, true)
     localStorage.setItem('tattoo_demo_seed_version', 'v1')
-    expect(maybeSeedDemo({ search: '?demo=1' }, 'local')).toBe(true)
+    expect(maybeSeedDemo({ search: '?demo=1' }, true)).toBe(true)
     expect(Number(localStorage.getItem('tattoo_demo_seed_version'))).toBe(DEMO_SEED_VERSION)
   })
 
   it('never downgrades: a version from a newer deploy is left alone', () => {
-    maybeSeedDemo({ search: '?demo=1' }, 'local')
+    maybeSeedDemo({ search: '?demo=1' }, true)
     localStorage.setItem('tattoo_demo_seed_version', String(DEMO_SEED_VERSION + 1))
     localStorage.setItem('tattoo_artists_meta', JSON.stringify([{ id: 'newer' }]))
-    expect(maybeSeedDemo({ search: '?demo=1' }, 'local')).toBe(false)
+    expect(maybeSeedDemo({ search: '?demo=1' }, true)).toBe(false)
     expect(JSON.parse(localStorage.getItem('tattoo_artists_meta'))[0].id).toBe('newer')
   })
 })

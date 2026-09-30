@@ -363,10 +363,10 @@ export function useArtistStorage() {
   // ProtectedRoute, which holds a spinner until the session resolves. A lazy
   // initializer captures that decision for the life of the mount; sign-out nulls
   // the user (unmounting AppShell) and purges the cache, so the next sign-in
-  // re-runs this. A direct A→B session swap with no committed null in between
-  // would keep A's decision until the effect re-runs — tracked in #28.
+  // re-runs this. ProtectedRoute also keys the mounted tree by identity, so
+  // even a batched direct A→B swap starts a fresh hook instance.
   const [artists, setArtistsRaw] = useState(() => {
-    const owner = seedsOwnerData(user)
+    const owner = seedsOwnerData(user, undefined, backend.capabilities.offlineAuth)
     const meta = initialRawCache
       ? (owner ? applyDefaults(initialRawCache) : initialRawCache)
       : (owner ? DEFAULT_ARTISTS : [])
@@ -391,15 +391,16 @@ export function useArtistStorage() {
   // it's already settled by mount (see the comment on the `artists` lazy
   // initializer above). Re-running on every identity change would re-migrate
   // and re-load on every sign-in, which is wrong, not just untidy — pinned
-  // by a regression test in useArtistStorage.test.js. The remaining
-  // direct-A-to-B-swap gap (no committed null in between, so this effect
-  // never gets a fresh mount at all) is tracked separately in #28.
+  // by a regression test in useArtistStorage.test.js. ProtectedRoute's keyed
+  // identity boundary also gives direct account swaps a fresh mount.
   useEffect(() => {
     let cancelled = false
     async function init() {
       try {
         const oldRaw = localStorage.getItem(OLD_KEY)
-        if (oldRaw) {
+        // The legacy namespace has no verified owner. Only offline auth keeps
+        // its compatibility migration; a real account cannot claim or seed it.
+        if (oldRaw && backend.capabilities.offlineAuth) {
           const old = JSON.parse(oldRaw)
           await Promise.all(
             old.filter((a) => a.images?.length).map((a) => dbPut(a.id, a.images))
@@ -414,7 +415,7 @@ export function useArtistStorage() {
         imageMapRef.current = imageMap
         // Canonical, so rows still unhydrated contribute their pending refs
         // rather than their empty first-paint images (#101).
-        const built = await buildArtists(artistsRef.current.map(canonicalizeArtist), imageMap, seedsOwnerData(user))
+        const built = await buildArtists(artistsRef.current.map(canonicalizeArtist), imageMap, seedsOwnerData(user, undefined, backend.capabilities.offlineAuth))
         if (!cancelled) setArtistsRaw(built)
       } catch (e) {
         console.error('[tattoo] Failed to load images:', e)
@@ -464,7 +465,7 @@ export function useArtistStorage() {
         const remote = pendingDeletes.length
           ? remoteAll.filter((r) => !pendingDeletes.includes(r.id))
           : remoteAll
-        const owner = seedsOwnerData(user)
+        const owner = seedsOwnerData(user, undefined, backend.capabilities.offlineAuth)
         // The owner additionally gets DEFAULT_ARTISTS folded in; non-owners
         // never do (their first paint never included them either).
         let nextMeta
@@ -517,7 +518,7 @@ export function useArtistStorage() {
 
         if (cancelled) return
         syncedRef.current = nextMeta
-        const built = await buildArtists(nextMeta, imageMapRef.current, seedsOwnerData(user))
+        const built = await buildArtists(nextMeta, imageMapRef.current, seedsOwnerData(user, undefined, backend.capabilities.offlineAuth))
         if (cancelled) return
         setArtistsRaw(built)
 

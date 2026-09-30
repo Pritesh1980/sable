@@ -95,8 +95,8 @@ export default function Login() {
             so the form alone is a dead end. `?demo=1` is what seeds the demo
             dataset AND its session — a plain anchor, not a router link,
             because maybeSeedDemo only runs at boot in main.jsx. Hidden on
-            real backends, where the query does nothing. */}
-        {backend.kind === 'local' && (
+            real-auth builds, even with device-local storage. */}
+        {backend.capabilities.offlineAuth && (
           <p className="mt-8 text-center animate-slide-up">
             <a
               href={`${import.meta.env.BASE_URL}?demo=1`}

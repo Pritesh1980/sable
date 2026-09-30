@@ -8,8 +8,16 @@ export function createSupabaseAuth() {
   const sb = getSupabaseClient()
   return {
     async getSession() {
-      const { data } = await sb.auth.getSession()
+      const { data, error } = await sb.auth.getSession()
+      if (error) throw error
       return toSession(data.session)
+    },
+    async getAccessToken({ forceRefresh = false } = {}) {
+      const { data, error } = forceRefresh
+        ? await sb.auth.refreshSession()
+        : await sb.auth.getSession()
+      if (error) throw error
+      return data.session?.access_token || null
     },
     async signIn({ email, password }) {
       const { data, error } = await sb.auth.signInWithPassword({ email, password })

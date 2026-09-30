@@ -32,6 +32,10 @@ jobs:
       - run: npm run build
         env:
           VITE_BASE: /sable/
+          VITE_BACKEND: local
+          VITE_AUTH_BACKEND: local
+          VITE_AI_RELAY_URL: ''
+          VITE_PRIVATE_OWNER_ID: ''
           # The curated reference images are gitignored third-party work, so
           # they are not in this build. Seeding DEFAULT_ARTISTS here would show
           # anyone who signs in as the owner a wall of broken monograms — and

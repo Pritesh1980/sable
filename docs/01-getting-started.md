@@ -11,7 +11,15 @@
 Sable opens on a sign-in screen. Enter your account details and you land on the Wall
 with your own collection.
 
-If you don't have an account — or you just want a look around — use
+Private builds use invite-only login and allow only the configured owner account.
+Another account sees **Access denied** and can sign out; if no owner is configured,
+the library stays closed. These builds do not offer the public demo.
+
+Login and storage are separate. With device-local storage, your collection stays in
+this browser even when you use a real account; signing in on another device does not
+bring it across. Cross-device sync is available only in a cloud-storage build.
+
+On the offline/public demo build, if you just want a look around, use
 **No account? View the demo →** underneath the form. It loads a fully fictional
 collection (six invented artists with AI-generated tattoo imagery) that runs entirely in your
 browser; nothing syncs anywhere, and you can edit freely. To get back out, clear the
@@ -136,10 +144,13 @@ On a wide screen it spreads into a multi-column layout:
 
 You don't start from a blank app:
 
-- **Artists**, **Studios** and **Conventions** are pre-loaded so you can explore immediately.
+- **Studios** and **Conventions** are pre-loaded. The public demo has fictional
+  artists; offline owner builds can include a curated starter list. Real-auth
+  libraries do not seed artists from an account's email address.
 - **Ideas**, **Boards** and **AI concepts** start empty — those are yours to build.
 
-> **Tip:** your data syncs to your account, and **Drawer → Settings → Export Backup** gives
+> **Tip:** device-local data does not sync; cloud-storage builds sync to your account.
+> **Drawer → Settings → Export Backup** gives
 > you a restore point you control (see [Settings, backup & restore](07-backup-and-settings.md)).
 
 ---
