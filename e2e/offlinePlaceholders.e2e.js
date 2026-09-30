@@ -9,16 +9,27 @@ const offlineTile = (scope) => scope.getByRole('img', { name: 'Photo available w
 test('an artist photo that cannot load keeps its place as a tile', async ({ page }) => {
   await page.goto('/?demo=1')
   await expect.poll(() => page.evaluate(() => localStorage.getItem('tattoo_local_session'))).not.toBeNull()
-  await page.evaluate((key) => {
+  // Edit the stored artists from a same-origin page with no app running, so
+  // the demo page's own sync can't write over the edit. Both the offline cache
+  // and the local backend's remote copy get the photo; the remote key is
+  // namespaced per user, so match it rather than hard-coding it.
+  await page.goto('/manifest.json')
+  const patched = await page.evaluate((key) => {
     localStorage.setItem('tattoo_demo_intro_dismissed', '1')
-    for (const store of ['tattoo_artists_meta', 'tattoo_remote_artistsMeta']) {
-      const rows = JSON.parse(localStorage.getItem(store) || '[]')
-      const vesper = rows.find((a) => a.name === 'Vesper Ash')
-      if (vesper) vesper.images = [...vesper.images.slice(0, 1), { key }, ...vesper.images.slice(1)]
+    const stores = Object.keys(localStorage).filter((k) => k === 'tattoo_artists_meta' || /^tattoo_remote_.*artistsMeta$/.test(k))
+    for (const store of stores) {
+      const rows = JSON.parse(localStorage.getItem(store))
+      const vesper = rows.find((a) => a.id === 'vesper_noctis')
+      vesper.images = [...vesper.images.slice(0, 1), { key }, ...vesper.images.slice(1)]
       localStorage.setItem(store, JSON.stringify(rows))
     }
+    return stores.length
   }, MISSING)
+  expect(patched).toBe(2)
   await page.goto('/gallery')
+  // The detail sheet snapshots its photos when it opens, so open it only once
+  // the gallery has hydrated (real photos rendered, not monograms).
+  await expect(page.locator('img[src*="vesper_noctis/"]').first()).toBeAttached()
   await page.getByText('Vesper Ash').first().tap()
 
   const detail = page.locator('.fixed.inset-0.z-50')

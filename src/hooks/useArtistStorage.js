@@ -421,7 +421,7 @@ export function useArtistStorage() {
         console.error('[tattoo] Failed to load images:', e)
       }
     }
-    init()
+    void init()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -432,7 +432,7 @@ export function useArtistStorage() {
   useEffect(() => {
     if (!user) return undefined
     let cancelled = false
-    ;(async () => {
+    void (async () => {
       try {
         // One-time migration of legacy IndexedDB data-URLs → blob storage so they
         // gain keys and can sync across devices.
