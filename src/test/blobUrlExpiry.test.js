@@ -100,11 +100,14 @@ describe('review follow-ups (#29)', () => {
     await vi.waitFor(() => expect(getCachedBlobUrl('k1')).toBe('https://signed.example/second'))
   })
 
-  it('does not leak the old url in the reverse map once a key is re-registered', () => {
+  // State resolved at hydration can still hold the old url, and canonicalizing
+  // an unmapped url stores it in place of the key (#110) — so a superseded url
+  // keeps its mapping. The map grows by one entry per key per refresh.
+  it('keeps a superseded url mapped to its key once the key is re-registered', () => {
     registerBlobUrl('k1', 'https://signed.example/old')
     registerBlobUrl('k1', 'https://signed.example/new')
 
-    expect(keyForUrl('https://signed.example/old')).toBeNull()
+    expect(keyForUrl('https://signed.example/old')).toBe('k1')
     expect(keyForUrl('https://signed.example/new')).toBe('k1')
   })
 
@@ -131,11 +134,9 @@ describe('review follow-ups (#29)', () => {
 // path an <img>'s onError calls into: given the URL that just failed, hand
 // back a fresh one if the underlying key can actually produce a different
 // one, or null if there's nothing more to try (so the caller falls through
-// to its normal broken-image handling instead of retrying forever). Because
-// keyForUrl only ever tracks a key's *current* url (older ones are dropped
-// on purpose, #29), this can only recover a url that's still the most
-// recently resolved one for its key — see the "superseded" test below for
-// the one case that's a known, accepted gap rather than a bug.
+// to its normal broken-image handling instead of retrying forever). Since
+// #110 a superseded url keeps its reverse mapping, so this also recovers a
+// url whose key has already been refreshed by someone else.
 describe('refreshedBlobUrl (#82)', () => {
   it('returns a fresh url when the failed url maps to a key whose cache entry has expired', async () => {
     backend.blobs.urlTtlMs = 3600_000
@@ -150,15 +151,10 @@ describe('refreshedBlobUrl (#82)', () => {
     expect(refreshed).toBe('https://signed.example/second')
   })
 
-  // registerBlobUrl deliberately drops a superseded url's reverse mapping
-  // once a key resolves to something new (#29 — otherwise it leaks an entry
-  // per refresh over a long session). That means a url this component never
-  // even displayed the *most recent* resolution of can't be traced back to
-  // its key any more by the time onError fires — a known, accepted gap this
-  // is not attempting to close, since doing so would mean never cleaning up
-  // the reverse map at all. It degrades safely: null, same as a genuinely
-  // broken image, not a crash or a wrong result.
-  it('returns null for a url that was superseded before it ever failed to load', async () => {
+  // Until #110 a superseded url lost its reverse mapping, so this returned
+  // null — an accepted gap then, and the same dropped mapping that let an
+  // expired url be saved in place of its key. The mapping is now kept.
+  it('recovers a url that was superseded before it failed to load', async () => {
     backend.blobs.urlTtlMs = 3600_000
     vi.useFakeTimers()
     getUrl.mockResolvedValueOnce('https://signed.example/first')
@@ -168,10 +164,10 @@ describe('refreshedBlobUrl (#82)', () => {
     getUrl.mockResolvedValueOnce('https://signed.example/second')
     await resolveBlobKey('k1')
 
-    // A stale <img> still showing `first` finally errors — but `first`'s
-    // reverse mapping is already gone, superseded by `second` above.
+    // A stale <img> still showing `first` finally errors; `first` still maps
+    // to k1, whose cache already holds `second`.
     const refreshed = await refreshedBlobUrl(first)
-    expect(refreshed).toBeNull()
+    expect(refreshed).toBe('https://signed.example/second')
   })
 
   it('returns null for a url with no known key (a static path, or never uploaded)', async () => {

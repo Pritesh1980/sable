@@ -199,7 +199,7 @@ Things this suite taught that are easy to get wrong:
   `preventDefault()` the Escape they handle, and lower layers skip handled events
   (`isTopmostDialog` in `useDialogFocus.js` covers the reverse order).
 - **Seed stored data from a page where the app isn't running.** The local backend's
-  remote copy is namespaced per user (`tattoo_remote_<email>_<collection>`), so match
+  remote copy is namespaced per user id (`tattoo_remote_<userId>_<collection>`; local sign-in uses `local-<email>` as the id), so match
   the key rather than hard-coding it, and fail if nothing matched. Edit from a
   same-origin static page (`/manifest.json`): an edit made inside the running demo
   can be overwritten by the page's own sync, and only on a slower machine (CI).

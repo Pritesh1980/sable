@@ -357,6 +357,15 @@ artist carousel, and a concept with an `unresolvedImageKey` stays on the wall as
 offline piece rather than dropping into Drafts. Refs listed before first hydration carry
 `pending: true` and are never drawn, so a normal online start shows no placeholder flash.
 
+### An old URL must still lead back to its key
+
+Saving turns display values back into refs through the URL→key map in
+`src/data/blobUrls.js`, and a signed URL resolved at hydration can still be in state
+long after its TTL refresh. So a superseded URL keeps its mapping for the session
+(#110). Dropping it, as the map once did to stay small, meant the next save stored
+the expiring URL in place of the key, and last-write-wins spread that to every
+device. Keeping refs in state, planned in #109, removes the reverse map altogether.
+
 ### The same split, without the sync half
 
 Photos of competition-winning tattoos (`src/data/winnerPhotos.js`) take a shorter

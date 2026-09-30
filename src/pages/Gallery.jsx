@@ -31,6 +31,8 @@ import AddArtistForm from '../components/AddArtistForm'
 import ArtistTable from '../components/ArtistTable'
 import QuickAddArtist from '../components/QuickAddArtist'
 import { STYLE_TAGS, createArtist } from '../data/artists'
+import { uploadInlineImages } from '../hooks/useImageUpload'
+import { useAuth } from '../context/useAuth'
 
 function ArtistGrid({ items, sensors, onDragStart, onDragEnd, onDragCancel, onOpen, onSaveImages, editing, onLongPress }) {
   return (
@@ -82,6 +84,7 @@ function ArtistGrid({ items, sensors, onDragStart, onDragEnd, onDragCancel, onOp
 }
 
 export default function Gallery({ artists, setArtists, mergedConventions = [] }) {
+  const { user } = useAuth() || {}
   const [searchParams] = useSearchParams()
   const [activeTag, setActiveTag] = useState(null)
   const [selected, setSelected] = useState(null)
@@ -243,6 +246,14 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
     const artist = createArtist(draft, artists)
     if (!artist) return
     setArtists((prev) => [...prev, artist])
+    // Quick-add and the share target hand over the screenshot as an inline
+    // data URL, which the sync layer can't store. Upload it, then re-save the
+    // artist so the next flush writes its { key } (#110).
+    uploadInlineImages(artist.images, { userId: user?.id, scope: 'artists', id: artist.id })
+      .then((moved) => {
+        if (moved) setArtists((prev) => prev.map((a) => (a.id === artist.id ? { ...a } : a)))
+      })
+      .catch((e) => console.error('[tattoo] quick-add upload failed:', e))
   }
 
   function updateArtist(id, patch) {
