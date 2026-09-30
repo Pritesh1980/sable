@@ -150,10 +150,11 @@ function canonicalizeArtist(a) {
 }
 
 // An artist as first painted, before any photo has been resolved: nothing to
-// show yet, every ref pending.
+// show yet, every ref pending. `pending` keeps these from being drawn as
+// "available when online" placeholders (#102) — they are just loading.
 function unhydrated(a) {
   const refs = Array.isArray(a.images) ? a.images : []
-  return { ...a, images: [], unresolvedImages: refs.map((ref, index) => ({ ref, index })) }
+  return { ...a, images: [], unresolvedImages: refs.map((ref, index) => ({ ref, index, pending: true })) }
 }
 
 // Stable string identity for a canonical image ref, used only to compare

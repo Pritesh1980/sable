@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import TagPill from './TagPill'
 import ArtistImage from './ArtistImage'
+import OfflinePhoto from './OfflinePhoto'
 import GeneratedArtworkNotice from './GeneratedArtworkNotice'
 import SimilarArtists from './SimilarArtists'
 import { STYLE_TAGS, DEFAULT_STUDIOS } from '../data/artists'
@@ -8,6 +9,7 @@ import { uploadImages } from '../hooks/useImageUpload'
 import { useAuth } from '../context/useAuth'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
 import { imageSrc } from '../data/wall'
+import { photoSlots, fromSlots } from '../data/offlineImages'
 import { useEscapeToClose } from '../hooks/useDialogFocus'
 import { activateOnKey } from '../a11y/activate'
 
@@ -46,17 +48,26 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
   const imagesRef = useRef(artist.images || [])
   const carouselRef = useRef(null)
   const { user } = useAuth() || {}
+  // Photos that can't load right now keep their place as placeholders (#102).
+  // Snapshotted like `images`, since their positions are relative to it.
+  // Refs still waiting for first hydration aren't placeholders and aren't ours
+  // to reposition, so a save then leaves the stored list alone.
+  const [unresolved, setUnresolved] = useState(artist.unresolvedImages)
+  const unresolvedRef = useRef(artist.unresolvedImages)
+  const [ownsUnresolved] = useState(() =>
+    Boolean(artist.unresolvedImages?.length) && !artist.unresolvedImages.some((u) => u.pending))
+  const slots = photoSlots(images, unresolved)
 
   useEffect(() => {
     const el = carouselRef.current
-    if (!el || images.length === 0) return
+    if (!el || slots.length === 0) return
     function onScroll() {
-      const itemWidth = el.scrollWidth / images.length
+      const itemWidth = el.scrollWidth / slots.length
       if (itemWidth > 0) setCurrentIdx(Math.round(el.scrollLeft / itemWidth))
     }
     el.addEventListener('scroll', onScroll, { passive: true })
     return () => el.removeEventListener('scroll', onScroll)
-  }, [images.length])
+  }, [slots.length])
 
   const instagramUrl = `https://www.instagram.com/${artist.handle}/`
   const currentStatus = ARTIST_STATUSES.find((s) => s.value === normalizeArtistStatus(artist.status))
@@ -66,10 +77,16 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
   // captured whenever the upload/remove/reorder started — silently revert a
   // tag or status change that had landed in the meantime through a different
   // auto-save.
-  function saveImages(newImages) {
+  function saveImages(newImages, newUnresolved = unresolvedRef.current) {
     imagesRef.current = newImages
+    unresolvedRef.current = newUnresolved
     setImages(newImages)
-    onSave(identityRef.current.id, identityRef.current.generation, (current) => ({ ...current, images: newImages }))
+    setUnresolved(newUnresolved)
+    onSave(identityRef.current.id, identityRef.current.generation, (current) => (
+      ownsUnresolved
+        ? { ...current, images: newImages, unresolvedImages: newUnresolved }
+        : { ...current, images: newImages }
+    ))
   }
 
   async function handleFiles(e) {
@@ -85,15 +102,18 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
     }
   }
 
-  function removeImage(idx) {
+  // Both act on slot positions, placeholders included, so an offline photo
+  // keeps its place relative to its neighbours.
+  function removeImage(pos) {
     if (!window.confirm('Remove this photo?')) return
-    saveImages(images.filter((_, i) => i !== idx))
+    const next = fromSlots(slots.filter((_, i) => i !== pos))
+    saveImages(next.images, next.unresolvedImages)
   }
 
-  function setCover(idx) {
-    if (idx === 0) return
-    const reordered = [images[idx], ...images.filter((_, i) => i !== idx)]
-    saveImages(reordered)
+  function setCover(pos) {
+    if (pos === 0) return
+    const next = fromSlots([slots[pos], ...slots.filter((_, i) => i !== pos)])
+    saveImages(next.images, next.unresolvedImages)
   }
 
   function toggleTag(tag) {
@@ -223,9 +243,9 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-mono text-cream-muted tracking-widest uppercase">
                 Photos
-                {images.length > 0 && (
+                {slots.length > 0 && (
                   <span className="text-cream-muted/90 ml-2">
-                    {currentIdx + 1} / {images.length}
+                    {Math.min(currentIdx, slots.length - 1) + 1} / {slots.length}
                   </span>
                 )}
               </p>
@@ -258,41 +278,48 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
         </div>
 
         {/* Carousel — escapes the max-w-screen-sm content column */}
-        {images.length > 0 && (
+        {slots.length > 0 && (
           <div className="mb-8">
             <div
               ref={carouselRef}
               className="flex gap-3 overflow-x-auto snap-x snap-mandatory px-5 pb-3"
             >
-              {images.map((src, idx) => (
+              {slots.map((slot, pos) => slot.kind === 'offline' ? (
                 <div
-                  key={idx}
+                  key={`offline-${pos}`}
+                  className={`relative snap-center shrink-0 w-[88%] sm:w-[520px] aspect-[4/5] rounded-xs overflow-hidden ${pos === 0 ? 'ring-1 ring-accent' : ''}`}
+                >
+                  <OfflinePhoto className="w-full h-full" />
+                </div>
+              ) : (
+                <div
+                  key={`image-${slot.imageIndex}`}
                   role="button"
                   tabIndex={0}
-                  aria-label={`View image ${idx + 1} full screen`}
-                  onKeyDown={activateOnKey(() => setLightbox(idx))}
-                  className={`relative snap-center shrink-0 w-[88%] sm:w-[520px] aspect-[4/5] bg-ink-muted rounded-xs overflow-hidden cursor-pointer ${idx === 0 ? 'ring-1 ring-accent' : ''}`}
-                  onClick={() => setLightbox(idx)}
+                  aria-label={`View image ${pos + 1} full screen`}
+                  onKeyDown={activateOnKey(() => setLightbox(slot.imageIndex))}
+                  className={`relative snap-center shrink-0 w-[88%] sm:w-[520px] aspect-[4/5] bg-ink-muted rounded-xs overflow-hidden cursor-pointer ${pos === 0 ? 'ring-1 ring-accent' : ''}`}
+                  onClick={() => setLightbox(slot.imageIndex)}
                 >
-                  <ArtistImage src={src} label={artist.name || `@${artist.handle}`} className="w-full h-full object-cover" monogramClassName="text-6xl" loading="lazy" />
+                  <ArtistImage src={slot.src} label={artist.name || `@${artist.handle}`} className="w-full h-full object-cover" monogramClassName="text-6xl" loading="lazy" />
 
-                  {idx === 0 && (
+                  {pos === 0 && (
                     <div className="absolute top-3 left-3 bg-accent/80 text-cream text-[0.6875rem] font-mono tracking-widest px-2 py-1 rounded-xs uppercase">
                       Cover
                     </div>
                   )}
 
                   <div className="absolute top-3 right-3 flex gap-1.5">
-                    {idx !== 0 && (
+                    {pos !== 0 && (
                       <button
-                        onClick={(e) => { e.stopPropagation(); setCover(idx) }}
+                        onClick={(e) => { e.stopPropagation(); setCover(pos) }}
                         className="text-[0.6875rem] font-mono text-cream tracking-widest uppercase bg-ink-black/70 hover:bg-ink-black px-2.5 py-1 rounded-xs transition-colors backdrop-blur-xs"
                       >
                         Set cover
                       </button>
                     )}
                     <button
-                      onClick={(e) => { e.stopPropagation(); removeImage(idx) }}
+                      onClick={(e) => { e.stopPropagation(); removeImage(pos) }}
                       className="w-7 h-7 flex items-center justify-center text-accent text-xl leading-none bg-ink-black/70 hover:bg-ink-black rounded-xs transition-colors backdrop-blur-xs"
                       title="Remove photo"
                     >×</button>
@@ -302,13 +329,13 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
             </div>
 
             {/* Dot indicator */}
-            {images.length > 1 && (
+            {slots.length > 1 && (
               <div className="flex justify-center gap-1.5 mt-2">
-                {images.map((_, idx) => (
+                {slots.map((_, pos) => (
                   <span
-                    key={idx}
+                    key={pos}
                     className={`h-1 rounded-full transition-all ${
-                      idx === currentIdx ? 'w-4 bg-accent' : 'w-1 bg-cream-muted/30'
+                      pos === currentIdx ? 'w-4 bg-accent' : 'w-1 bg-cream-muted/30'
                     }`}
                   />
                 ))}

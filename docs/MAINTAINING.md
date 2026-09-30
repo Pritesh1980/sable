@@ -158,6 +158,7 @@ Three projects: **iphone** (390×844, `isMobile`, touch; runs almost everything)
 | `tastemap` | Map from a seeded style index (no 90MB model in CI); tap through to the artist |
 | `hover` / `hover.desktop` | `can-hover` controls visible on a phone and hover-revealed on desktop (#49) |
 | `offline` | Once installed, the app opens every main route with the network off, images included |
+| `offlinePlaceholders` | A photo that can't load keeps its place as an "Available when online" tile; an offline concept stays on the wall and doesn't open the viewer |
 | `routes.subpath` | Deep links, redirects, image paths, the manifest and offline start under `/sable/` |
 
 ### Live demo smoke test

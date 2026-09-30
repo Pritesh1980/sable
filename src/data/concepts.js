@@ -11,9 +11,15 @@ function conceptTitle(concept) {
 // Only concepts with a saved image render on the wall — text-only responses
 // and empty paste-pending concepts stay in the composer's paste zone until an
 // image lands.
+// A concept whose saved image can't be fetched right now (`unresolvedImageKey`)
+// still belongs on the wall, as an offline piece — it is not a draft (#102).
+export function isDraftConcept(concept) {
+  return !concept.imageUrl && !concept.unresolvedImageKey
+}
+
 export function buildConceptWallItems(concepts = [], artists = []) {
   return concepts
-    .filter((c) => c.imageUrl)
+    .filter((c) => !isDraftConcept(c))
     .map((concept) => {
       const steerArtist = artists.find((a) => a.id === concept.steerArtistId)
       return {
@@ -25,6 +31,7 @@ export function buildConceptWallItems(concepts = [], artists = []) {
         steerArtistId: concept.steerArtistId || '',
         steerArtistName: steerArtist ? (steerArtist.name || `@${steerArtist.handle}`) : '',
         variantsCount: getConceptVariants(concept).length,
+        offline: !concept.imageUrl,
       }
     })
 }

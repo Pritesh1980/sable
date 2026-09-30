@@ -14,7 +14,7 @@ import {
   removeConceptVariant,
   updateVariantRating,
 } from '../data/conceptVariants'
-import { buildConceptWallItems } from '../data/concepts'
+import { buildConceptWallItems, isDraftConcept } from '../data/concepts'
 import { clearComposerDraft, loadComposerDraft, saveComposerDraft } from '../data/composerDraft'
 import { generateImageWithGemini } from '../data/geminiImage'
 import { buildImagePrompt, buildTextPrompt } from '../data/conceptPrompts'
@@ -298,13 +298,16 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
   }
 
   const wallItems = useMemo(() => buildConceptWallItems(concepts, artists), [concepts, artists])
-  // Concepts without a saved image can't live on an image wall — a pasted-back
+  // The viewer only swipes through pieces it can show; an offline piece holds
+  // its place on the wall but can't be opened until its image loads (#102).
+  const viewerItems = useMemo(() => wallItems.filter((item) => !item.offline), [wallItems])
+  // Concepts that never had an image can't live on an image wall — a pasted-back
   // result (or a prompt pack awaiting one) stays here until it has one.
-  const draftConcepts = useMemo(() => concepts.filter((c) => !c.imageUrl), [concepts])
+  const draftConcepts = useMemo(() => concepts.filter(isDraftConcept), [concepts])
   const viewerOpen = viewerIndex !== null
 
   function openViewer(item) {
-    setViewerIndex(wallItems.indexOf(item))
+    setViewerIndex(viewerItems.indexOf(item))
   }
 
   function handleDeleteFromViewer(id) {
@@ -449,7 +452,7 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
       {viewerOpen && (
         <ConceptViewer
           key={viewerIndex}
-          items={wallItems}
+          items={viewerItems}
           initialIndex={viewerIndex}
           artists={artists}
           open={viewerOpen}

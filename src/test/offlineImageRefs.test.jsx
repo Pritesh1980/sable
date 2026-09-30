@@ -84,6 +84,32 @@ describe('opening the app offline (#101)', () => {
     noDuplicates(cachedRow(firstId).images)
   })
 
+  // #102 draws a placeholder for every non-pending unresolved photo, so a photo
+  // that is merely not hydrated yet must never look unresolved.
+  it('online, never marks a photo that is only loading as unavailable', async () => {
+    seedReturningUser()
+    const photo = 'data:image/jpeg;base64,b3duLXBob3Rv'
+    await backend.blobs.upload('u1', KEY, photo, 'image/jpeg')
+    const seen = []
+    const { result } = renderHook(() => {
+      const value = useArtistStorage()
+      seen.push(value?.[0]?.find((a) => a.id === firstId)?.unresolvedImages)
+      return value
+    }, { wrapper })
+
+    await waitFor(() => expect(stateRow(result, firstId).images[0]).toBe(photo))
+    const everSeen = seen.flat().filter(Boolean)
+    expect(everSeen.length).toBeGreaterThan(0)
+    for (const entry of everSeen) expect(entry.pending).toBe(true)
+  })
+
+  it('offline, marks the photo it could not load as unavailable', async () => {
+    seedReturningUser()
+    goOffline()
+    const result = await mount()
+    expect(stateRow(result, firstId).unresolvedImages).toEqual([{ ref: { key: KEY }, index: 0 }])
+  })
+
   it('keeps it through an edit made while offline', async () => {
     seedReturningUser()
     goOffline()
