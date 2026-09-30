@@ -52,7 +52,9 @@ This is a personal app for one user (the owner). (A read-only share link for the
   reinserts them at their old position on save (deduped by `refIdentity`); concepts do
   the same via `unresolvedImageKey` in `imageCodec.js`. Never write a save path that
   persists only the resolved list — a device that starts offline would delete its own
-  photos from the server. The first pull also reads dirty state / pending deletes
+  photos from the server. The UI draws those refs as "Available when online" tiles
+  (#102, `photoSlots` in `src/data/offlineImages.js`, `OfflinePhoto.jsx`); refs listed
+  before first hydration carry `pending: true` and must never be drawn. The first pull also reads dirty state / pending deletes
   *after* `await store.list(...)`, not before. Device-local and NOT synced: `tattoo_theme`, `tattoo_font`,
   `openai_api_key`, `gemini_api_key`, the Taste Engine's embedding index
   (IndexedDB `tattoo-style-index-v1` — derivable from images, keyed by model id,

@@ -158,6 +158,7 @@ Three projects: **iphone** (390×844, `isMobile`, touch; runs almost everything)
 | `tastemap` | Map from a seeded style index (no 90MB model in CI); tap through to the artist |
 | `hover` / `hover.desktop` | `can-hover` controls visible on a phone and hover-revealed on desktop (#49) |
 | `offline` | Once installed, the app opens every main route with the network off, images included |
+| `offlinePlaceholders` | A photo that can't load keeps its place as an "Available when online" tile; an offline concept stays on the wall and doesn't open the viewer |
 | `routes.subpath` | Deep links, redirects, image paths, the manifest and offline start under `/sable/` |
 
 ### Live demo smoke test
@@ -197,6 +198,11 @@ Things this suite taught that are easy to get wrong:
   removed the closed drawer before the viewer's `window` listener ran. Layers now
   `preventDefault()` the Escape they handle, and lower layers skip handled events
   (`isTopmostDialog` in `useDialogFocus.js` covers the reverse order).
+- **Seed stored data from a page where the app isn't running.** The local backend's
+  remote copy is namespaced per user (`tattoo_remote_<email>_<collection>`), so match
+  the key rather than hard-coding it, and fail if nothing matched. Edit from a
+  same-origin static page (`/manifest.json`): an edit made inside the running demo
+  can be overwritten by the page's own sync, and only on a slower machine (CI).
 - **Check a new guard can fail.** Each one here was mutation-checked: revert the fix,
   rebuild, watch it go red.
 

@@ -150,10 +150,11 @@ function canonicalizeArtist(a) {
 }
 
 // An artist as first painted, before any photo has been resolved: nothing to
-// show yet, every ref pending.
+// show yet, every ref pending. `pending` keeps these from being drawn as
+// "available when online" placeholders (#102) — they are just loading.
 function unhydrated(a) {
   const refs = Array.isArray(a.images) ? a.images : []
-  return { ...a, images: [], unresolvedImages: refs.map((ref, index) => ({ ref, index })) }
+  return { ...a, images: [], unresolvedImages: refs.map((ref, index) => ({ ref, index, pending: true })) }
 }
 
 // Stable string identity for a canonical image ref, used only to compare
@@ -420,7 +421,7 @@ export function useArtistStorage() {
         console.error('[tattoo] Failed to load images:', e)
       }
     }
-    init()
+    void init()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -431,7 +432,7 @@ export function useArtistStorage() {
   useEffect(() => {
     if (!user) return undefined
     let cancelled = false
-    ;(async () => {
+    void (async () => {
       try {
         // One-time migration of legacy IndexedDB data-URLs → blob storage so they
         // gain keys and can sync across devices.

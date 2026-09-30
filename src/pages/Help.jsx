@@ -118,6 +118,7 @@ const SECTIONS = [
     image: 'settings.png',
     steps: [
       'Your data is saved to your account and synced across your devices automatically; a local copy is also kept on each device so the app works offline.',
+      'Offline, a photo this device has not loaded yet shows as an "Available when online" tile in its usual place and fills in once you reconnect. Nothing is lost.',
       'Drawer → Settings shows your account (with sign out) and the backup tools.',
       'Use Export Backup to download a JSON file containing artists, ideas, boards, concepts, notes, ranks, tags and saved images.',
       'Use Import Backup to restore from a previously exported file — this replaces the current data.',

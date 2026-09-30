@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import OfflinePhoto from './OfflinePhoto'
 import {
   RESULT_VARIANT_PROVIDERS,
   getConceptVariants,
@@ -318,6 +319,8 @@ function VariantDetails({
               alt={`${title} result`}
               className="aspect-[4/3] w-full rounded-xs border border-ink-border object-cover"
             />
+          ) : variant.unresolvedImageKey ? (
+            <OfflinePhoto className="aspect-[4/3] w-full rounded-xs border border-ink-border" />
           ) : (
             <div className="flex aspect-[4/3] w-full items-center justify-center rounded-xs border border-dashed border-ink-border bg-ink-muted/40 text-xs text-cream-muted">
               No image saved
@@ -450,6 +453,8 @@ function VariantCard({
             alt={`${title} thumbnail`}
             className="h-20 w-full rounded-xs border border-ink-border object-cover sm:h-16"
           />
+        ) : variant.unresolvedImageKey ? (
+          <OfflinePhoto compact className="h-20 w-full rounded-xs border border-ink-border sm:h-16" />
         ) : (
           <div className="flex h-20 w-full items-center justify-center rounded-xs border border-dashed border-ink-border bg-ink-muted/40 font-mono text-[0.625rem] uppercase tracking-widest text-cream-muted/50 sm:h-16">
             No image

@@ -351,8 +351,11 @@ Now the hook keeps what it could not resolve. Artists carry a side field,
 original position on save, skipping any whose identity is already present so a ref that
 resolves later is never saved twice. Concepts and their variants do the same through
 `unresolvedImageKey` in `imageCodec.js`. What the user sees is unchanged: a photo that
-cannot load is still hidden (making that visible is #102). What changed is that hiding
-is display-only and never reaches storage.
+cannot load is drawn as an "Available when online" tile at its original position
+(#102): `photoSlots` (`src/data/offlineImages.js`) rebuilds the canonical order for the
+artist carousel, and a concept with an `unresolvedImageKey` stays on the wall as an
+offline piece rather than dropping into Drafts. Refs listed before first hydration carry
+`pending: true` and are never drawn, so a normal online start shows no placeholder flash.
 
 ### The same split, without the sync half
 
@@ -782,10 +785,11 @@ root-caused and fixed (§9), but a loaded machine can still surface a different 
 protocol is written down: re-run isolated, CI is the arbiter, and time it before
 blaming the environment.
 
-**Photos that cannot load offline are hidden, not shown as placeholders.** A ref that
-cannot be resolved is kept in storage (§3) but the UI omits it, and a concept whose
-image is unreachable falls into "Drafts". Whether to show a placeholder instead is a
-design decision, tracked as #102.
+**Offline placeholders appear only where the photo set is the point.** The artist
+detail carousel, the Concepts wall and variant cards show "Available when online" tiles
+(§3). Card and wall views that show a single cover fall back to the next loaded photo or
+the monogram instead. In the carousel, remove and set cover act on the whole slot
+sequence (`fromSlots`), so an offline photo keeps its place relative to its neighbours.
 
 ---
 
