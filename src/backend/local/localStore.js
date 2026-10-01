@@ -4,6 +4,8 @@
 // contract tests run against it and faithfully exercises the sync/reconcile path
 // offline.
 
+import { createOwnerScope } from '../ownerScope'
+
 const PREFIX = 'tattoo_remote_'
 const SESSION_KEY = 'tattoo_local_session'
 const ANON_NAMESPACE = 'anon'
@@ -12,17 +14,13 @@ const ANON_NAMESPACE = 'anon'
 // local backend don't see each other's "remote" rows (#28). Falls back to a
 // single fixed namespace when signed out, matching today's behavior exactly
 // for the common no-auth dev/demo case.
-function currentUserNamespace() {
+export function currentUserNamespace() {
   try {
     const session = JSON.parse(localStorage.getItem(SESSION_KEY))
     return session?.user?.id || ANON_NAMESPACE
   } catch {
     return ANON_NAMESPACE
   }
-}
-
-function storageKey(collection) {
-  return `${PREFIX}${currentUserNamespace()}_${collection}`
 }
 
 // #28 review (codex + agy): before namespacing, every collection lived under
@@ -42,43 +40,74 @@ function migrateLegacy(collection, key) {
   }
 }
 
-function load(collection) {
-  const key = storageKey(collection)
+function storageFailure() {
+  return Object.assign(new Error('Local storage unavailable'), { code: 'storage_failed' })
+}
+
+function load(collection, key, allowLegacy) {
   try {
     const raw = localStorage.getItem(key)
-    if (raw !== null) return JSON.parse(raw) || []
-    return migrateLegacy(collection, key) || []
+    if (raw !== null) {
+      const rows = JSON.parse(raw)
+      if (!allowLegacy && (!Array.isArray(rows) || rows.some((r) => !r || typeof r !== 'object' || Array.isArray(r) || !r.id))) {
+        throw storageFailure()
+      }
+      return rows || []
+    }
+    return allowLegacy ? migrateLegacy(collection, key) || [] : []
   } catch {
+    if (!allowLegacy) throw storageFailure()
     return []
   }
 }
 
-function save(collection, rows) {
+function save(key, rows, allowLegacy) {
   try {
-    localStorage.setItem(storageKey(collection), JSON.stringify(rows))
+    localStorage.setItem(key, JSON.stringify(rows))
   } catch (e) {
+    if (!allowLegacy) throw storageFailure()
     console.error('[tattoo] local store save failed:', e)
   }
 }
 
-export function createLocalStore() {
+export function createLocalStore({ ownerScope, allowLegacy = !ownerScope } = {}) {
+  const scope = ownerScope || createOwnerScope({
+    privateMode: !allowLegacy,
+    getOwnerId: allowLegacy ? currentUserNamespace : () => null,
+  })
+  function capture(collection) {
+    const snapshot = scope.capture()
+    return { snapshot, key: `${PREFIX}${snapshot.ownerId}_${collection}` }
+  }
+  function read(collection, operation) {
+    const rows = load(collection, operation.key, allowLegacy)
+    scope.assertCurrent(operation.snapshot)
+    return rows
+  }
+  function write(operation, rows) {
+    scope.assertCurrent(operation.snapshot)
+    save(operation.key, rows, allowLegacy)
+    scope.assertCurrent(operation.snapshot)
+  }
   return {
     async list(collection) {
-      return load(collection)
+      return read(collection, capture(collection))
     },
     async upsert(collection, rows = []) {
-      const byId = new Map(load(collection).map((r) => [r.id, r]))
+      const operation = capture(collection)
+      const byId = new Map(read(collection, operation).map((r) => [r.id, r]))
       for (const r of rows) byId.set(r.id, r)
       const next = Array.from(byId.values())
-      save(collection, next)
+      write(operation, next)
       return next
     },
     async remove(collection, ids = []) {
+      const operation = capture(collection)
       const idSet = new Set(ids)
-      save(collection, load(collection).filter((r) => !idSet.has(r.id)))
+      write(operation, read(collection, operation).filter((r) => !idSet.has(r.id)))
     },
     async pull(collection, since) {
-      const rows = load(collection)
+      const rows = read(collection, capture(collection))
       if (!since) return rows
       return rows.filter((r) => String(r.updatedAt || '') > String(since))
     },

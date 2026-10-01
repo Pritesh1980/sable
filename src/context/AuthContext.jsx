@@ -34,10 +34,10 @@ export function AuthProvider({ children }) {
         prevUserId = lastKnown === null ? nextUserId : lastKnown
       }
       if (requestedUserId !== nextUserId) {
-        // Gate and invalidate immediately, before asynchronous cleanup. Task4's
-        // authoritative local owner scope supplies this optional bridge.
+        // Gate and invalidate the authoritative owner immediately, before any
+        // asynchronous cleanup or publication of the next session.
         setLoading(true)
-        backend.setIdentity?.(null)
+        backend.setIdentity(null)
       }
       requestedUserId = nextUserId
 
@@ -52,7 +52,7 @@ export function AuthProvider({ children }) {
         if (!mounted || currentRevision !== revision) return
         const allowed = !backend.capabilities.realAuth ||
           (Boolean(backend.privateOwnerId) && nextUserId === backend.privateOwnerId)
-        backend.setIdentity?.(allowed ? nextUserId : null)
+        backend.setIdentity(allowed ? nextUserId : null)
         try {
           if (nextUserId) localStorage.setItem(LAST_USER_KEY, nextUserId)
           else localStorage.removeItem(LAST_USER_KEY)
@@ -78,7 +78,7 @@ export function AuthProvider({ children }) {
         console.error('[tattoo] getSession failed')
         applyIdentity(null)
       })
-    return () => { mounted = false; revision += 1; backend.setIdentity?.(null); unsub?.() }
+    return () => { mounted = false; revision += 1; backend.setIdentity(null); unsub?.() }
   }, [])
 
   const signIn = useCallback((creds) => backend.auth.signIn(creds), [])

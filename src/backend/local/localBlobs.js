@@ -3,6 +3,8 @@
 // getUrl can return a directly-usable, offline value with no Object URL
 // lifecycle to manage (and so it works under jsdom/fake-indexeddb in tests).
 
+import { createOwnerScope } from '../ownerScope'
+
 const DB_NAME = 'tattoo-blobs-v1'
 const STORE = 'blobs'
 
@@ -21,8 +23,9 @@ function openDB() {
   })
 }
 
-async function dbPut(key, value) {
+async function dbPut(key, value, assertCurrent) {
   const db = await openDB()
+  try { assertCurrent() } catch (e) { db.close(); throw e }
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE, 'readwrite')
     tx.objectStore(STORE).put(value, key)
@@ -31,8 +34,9 @@ async function dbPut(key, value) {
   })
 }
 
-async function dbGet(key) {
+async function dbGet(key, assertCurrent) {
   const db = await openDB()
+  try { assertCurrent() } catch (e) { db.close(); throw e }
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE, 'readonly')
     const req = tx.objectStore(STORE).get(key)
@@ -41,8 +45,9 @@ async function dbGet(key) {
   })
 }
 
-async function dbDelete(key) {
+async function dbDelete(key, assertCurrent) {
   const db = await openDB()
+  try { assertCurrent() } catch (e) { db.close(); throw e }
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE, 'readwrite')
     tx.objectStore(STORE).delete(key)
@@ -62,17 +67,35 @@ function blobToDataUrl(blob) {
   })
 }
 
-export function createLocalBlobs() {
+export function createLocalBlobs({ ownerScope, allowLegacy = !ownerScope } = {}) {
+  const scope = ownerScope || createOwnerScope({ privateMode: !allowLegacy, getOwnerId: () => null })
+  function capture(key, upload) {
+    const snapshot = scope.capture()
+    if (!allowLegacy && (typeof key !== 'string' || !key.startsWith(`user/${snapshot.ownerId}/`) ||
+        (upload && upload.userId !== snapshot.ownerId))) {
+      throw Object.assign(new Error('Blob owner mismatch'), { code: 'owner_changed' })
+    }
+    return () => scope.assertCurrent(snapshot)
+  }
   return {
-    async upload(_userId, key, blob) {
-      await dbPut(key, await blobToDataUrl(blob))
+    async upload(userId, key, blob) {
+      const assertCurrent = capture(key, { userId })
+      const data = await blobToDataUrl(blob)
+      assertCurrent()
+      await dbPut(key, data, assertCurrent)
+      assertCurrent()
       return { key }
     },
     async getUrl(key) {
-      return dbGet(key)
+      const assertCurrent = capture(key)
+      const url = await dbGet(key, assertCurrent)
+      assertCurrent()
+      return url
     },
     async remove(key) {
-      await dbDelete(key)
+      const assertCurrent = capture(key)
+      await dbDelete(key, assertCurrent)
+      assertCurrent()
     },
   }
 }

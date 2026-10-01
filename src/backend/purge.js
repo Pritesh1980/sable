@@ -57,9 +57,9 @@ export async function purgeLocalUserData() {
     console.error('[tattoo] purge localStorage failed:', e)
   }
   clearBlobUrls()
-  // Display image cache only — the simulated remote (tattoo-blobs-v1) stays;
-  // its blob keys are already per-user-namespaced (user/<userId>/...) so it
-  // doesn't leak between accounts the way an unnamespaced cache would.
+  // Display image cache only — canonical rows (tattoo_remote_<owner>_*) and
+  // tattoo-blobs-v1 stay. Private adapters enforce their captured owner; these
+  // are the only durable copy for real-auth/local-storage accounts, not caches.
   await deleteDatabaseAsync('tattoo-images-v1')
   // An uncollected shared screenshot is this user's content sitting in an
   // origin-scoped cache — without this, A shares, closes before collecting,

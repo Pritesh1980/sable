@@ -14,6 +14,7 @@ const REFRESH_MARGIN_MS = 60_000
 const keyToEntry = new Map() // key -> { url, cachedAt }
 const urlToKey = new Map()
 const inflight = new Map()
+let cacheEpoch = 0
 
 // Only some backends' URLs expire (Supabase signed URLs; `urlTtlMs` on
 // backend.blobs). Others — local's data: URLs, browser object URLs — have no
@@ -66,21 +67,25 @@ export async function resolveBlobKey(key) {
   const cached = keyToEntry.get(key)
   if (cached && isFresh(cached)) return cached.url
   if (inflight.has(key)) return inflight.get(key)
+  const epoch = cacheEpoch
   const p = backend.blobs
     .getUrl(key)
     .then((url) => {
+      if (epoch !== cacheEpoch) return ''
       registerBlobUrl(key, url)
-      inflight.delete(key)
       return url
     })
-    .catch((e) => {
-      inflight.delete(key)
-      console.error('[tattoo] blob resolve failed:', key, e)
+    .catch(() => {
+      if (epoch !== cacheEpoch) return ''
+      console.error('[tattoo] blob resolve failed')
       // A transient failure (offline for a moment right at the refresh
       // margin) shouldn't blank an image that was still displaying fine a
       // moment ago — fall back to whatever was last cached, stale or not,
       // over surfacing a broken image for a URL that may still work.
       return cached?.url || ''
+    })
+    .finally(() => {
+      if (inflight.get(key) === p) inflight.delete(key)
     })
   inflight.set(key, p)
   return p
@@ -105,6 +110,7 @@ export async function refreshedBlobUrl(failedUrl) {
 }
 
 export function clearBlobUrls() {
+  cacheEpoch += 1
   keyToEntry.clear()
   urlToKey.clear()
   inflight.clear()

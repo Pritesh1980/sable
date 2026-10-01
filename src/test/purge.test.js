@@ -1,9 +1,37 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { purgeLocalUserData } from '../backend/purge'
 import { SHARE_CACHE } from '../sw/shareTarget'
+import { createOwnerScope } from '../backend/ownerScope'
+import { createLocalStore } from '../backend/local/localStore'
+import { createLocalBlobs } from '../backend/local/localBlobs'
+import { backend } from '../backend'
+import { getCachedBlobUrl, keyForUrl, registerBlobUrl, resolveBlobKey } from '../data/blobUrls'
 
 describe('purgeLocalUserData', () => {
   beforeEach(() => localStorage.clear())
+
+  it('retains private canonical rows and bytes while invalidating display resolutions', async () => {
+    const ownerScope = createOwnerScope({ privateMode: true, getOwnerId: () => 'A' })
+    const store = createLocalStore({ ownerScope, allowLegacy: false })
+    const blobs = createLocalBlobs({ ownerScope, allowLegacy: false })
+    const key = 'user/A/concepts/purge/image.png'
+    const bytes = 'data:image/png;base64,YQ=='
+    await store.upsert('concepts', [{ id: 'retained', image: { key } }])
+    await blobs.upload('A', key, bytes)
+    registerBlobUrl(key, bytes)
+    let finish
+    const spy = vi.spyOn(backend.blobs, 'getUrl').mockReturnValueOnce(new Promise((resolve) => { finish = resolve }))
+    const pending = resolveBlobKey('user/A/concepts/purge/pending.png')
+    await purgeLocalUserData()
+    finish('late-display-url')
+    expect(await pending).toBe('')
+    expect(getCachedBlobUrl(key)).toBe('')
+    expect(keyForUrl(bytes)).toBeNull()
+    expect(keyForUrl('late-display-url')).toBeNull()
+    expect(await store.list('concepts')).toEqual([{ id: 'retained', image: { key } }])
+    expect(await blobs.getUrl(key)).toBe(bytes)
+    spy.mockRestore()
+  })
 
   // Review finding (codex): an uncollected shared screenshot lives in an
   // origin-scoped cache, so without this A shares, closes before collecting,

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createBackend } from '../backend'
 
 // #28: local/localStore.js namespaced everything under one global
@@ -7,6 +7,17 @@ import { createBackend } from '../backend'
 // simulated remote rows.
 describe('local store per-user isolation (#28)', () => {
   beforeEach(() => localStorage.clear())
+  afterEach(() => vi.restoreAllMocks())
+
+  it('preserves tolerant corrupt-read and failed-write behavior for ordinary offline use', async () => {
+    const { store } = createBackend('local')
+    localStorage.setItem('tattoo_remote_anon_ideas', '{broken')
+    expect(await store.list('ideas')).toEqual([])
+    vi.spyOn(localStorage, 'setItem').mockImplementation(() => { throw new Error('quota') })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    await expect(store.upsert('ideas', [{ id: 'offline' }])).resolves.toEqual([{ id: 'offline' }])
+    expect(localStorage.getItem('tattoo_remote_anon_ideas')).toBe('{broken')
+  })
 
   it('does not let one user see another user\'s upserted rows', async () => {
     const backend = createBackend('local')
