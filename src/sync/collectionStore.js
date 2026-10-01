@@ -110,6 +110,7 @@ export function createCollectionStore({
   let hydrated = !codecArg
   let synced = null // the rows last known to match the remote
   let pushTimer = null
+  let unarmed = false // an edit was made with no user, so no push was scheduled for it
   // Flushes are chained so two can never be in flight at once — with a real
   // async backend an older flush completing last would overwrite newer remote
   // rows and regress the synced baseline.
@@ -207,12 +208,18 @@ export function createCollectionStore({
     // The offline cache is written here, at edit time — not after React commits.
     writeCache(key, codec.toCanonical(value))
     emit()
-    if (user && collection) {
-      clearTimeout(pushTimer)
-      pushTimer = setTimeout(() => {
-        flush().catch((e) => console.error(`[tattoo] sync push failed for ${collection}:`, e))
-      }, PUSH_DEBOUNCE_MS)
-    }
+    if (user && collection) armPush()
+    // No user yet (an edit before the first start): remember it, so the start
+    // that brings a user schedules the push this edit could not.
+    else if (collection) unarmed = true
+  }
+
+  function armPush() {
+    unarmed = false
+    clearTimeout(pushTimer)
+    pushTimer = setTimeout(() => {
+      flush().catch((e) => console.error(`[tattoo] sync push failed for ${collection}:`, e))
+    }, PUSH_DEBOUNCE_MS)
   }
 
   async function runFlush(flushUser) {
@@ -309,30 +316,43 @@ export function createCollectionStore({
     try {
       const remoteRows = await backend.store.list(collection)
       if (!live()) return
-      // Rows deleted locally but not yet remotely must not ride back in on the
-      // pull; the remove is retried below instead. A pending delete for an id
-      // present in the local value was superseded by a re-add. Read after the
-      // list await, not before: a delete made while the pull was in flight must
-      // count too (#86 review).
-      const localIds = new Set(rowIds(value))
-      const allPending = readPendingDeletes(key)
-      const superseded = allPending.filter((id) => localIds.has(id))
-      if (superseded.length) clearPendingDeletes(key, superseded)
-      const pendingDeletes = allPending.filter((id) => !localIds.has(id))
-      const usableRemote = pendingDeletes.length
-        ? remoteRows.filter((r) => !pendingDeletes.includes(r.id))
-        : remoteRows
-      const reconciled = reconcileValue(collection, value, usableRemote, readStamp(key))
-      // Rows that predate edit-time stamping get one now, once — otherwise every
-      // flush would fallback-restamp them, outranking other devices.
-      const merged = Array.isArray(reconciled)
-        ? reconciled.map((r) =>
-            r && typeof r === 'object' && !r.updatedAt ? { ...r, updatedAt: nowStamp() } : r
-          )
-        : reconciled
+      // An edit that lands while toDisplay converts the rows would be overwritten
+      // by the converted result, so recompute from the newer value and the same
+      // remote rows; if edits keep arriving, stand down — each edit queued its
+      // own push and made itself durable, and the next pull reconciles again.
+      let pendingDeletes = []
+      let merged
+      let display
+      for (let round = 0; ; round += 1) {
+        // Rows deleted locally but not yet remotely must not ride back in on the
+        // pull; the remove is retried below instead. A pending delete for an id
+        // present in the local value was superseded by a re-add. Read after the
+        // list await, not before: a delete made while the pull was in flight must
+        // count too (#86 review).
+        const seq = editSeq
+        const localIds = new Set(rowIds(value))
+        const allPending = readPendingDeletes(key)
+        const superseded = allPending.filter((id) => localIds.has(id))
+        if (superseded.length) clearPendingDeletes(key, superseded)
+        pendingDeletes = allPending.filter((id) => !localIds.has(id))
+        const usableRemote = pendingDeletes.length
+          ? remoteRows.filter((r) => !pendingDeletes.includes(r.id))
+          : remoteRows
+        const reconciled = reconcileValue(collection, value, usableRemote, readStamp(key))
+        // Rows that predate edit-time stamping get one now, once — otherwise every
+        // flush would fallback-restamp them, outranking other devices.
+        merged = Array.isArray(reconciled)
+          ? reconciled.map((r) =>
+              r && typeof r === 'object' && !r.updatedAt ? { ...r, updatedAt: nowStamp() } : r
+            )
+          : reconciled
+        display = await codec.toDisplay(merged)
+        if (!live()) return
+        if (editSeq === seq) break
+        if (round >= 2) return
+      }
+      // Published only now: a pull whose epoch ended must not move the baseline.
       synced = merged
-      const display = await codec.toDisplay(merged)
-      if (!live()) return
       replace(display)
 
       const retried = pendingDeletes.length
@@ -365,6 +385,7 @@ export function createCollectionStore({
     const replay = parked
     parked = []
     replay.forEach(applyEdit)
+    if (startUser && collection && unarmed) armPush()
     return Promise.resolve().then(() => {
       if (!live()) return undefined
       const work = []

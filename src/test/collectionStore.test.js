@@ -565,6 +565,62 @@ describe('start and stop', () => {
     expect(cached(KEY)[0].title).toBe('fresh')
   })
 
+  it('does not publish a stopped pull’s rows as the synced baseline', async () => {
+    const be = fakeBackend({ ideas: [{ id: 'r', title: 'remote', updatedAt: LATER }] })
+    const slow = gate()
+    const codec = {
+      toCanonical: (v) => v,
+      toDisplay: async (v) => {
+        if (Array.isArray(v) && v.some((r) => r.id === 'r')) await slow.wait()
+        return v
+      },
+      ensureUploaded: async () => 0,
+    }
+    const store = makeStore({ key: KEY, defaultValue: [], backend: be, codec })
+
+    const first = store.start(USER)
+    await slow.reached
+    store.stop()
+    // The next start never hears back from the remote.
+    be.store.list.mockImplementationOnce(() => new Promise(() => {}))
+    store.start(USER)
+    store.set([{ id: 'a', title: 'mine' }])
+    await store.flush()
+    // A polluted baseline would read row `r` as deleted here and remove it.
+    expect(be.store.remove).not.toHaveBeenCalled()
+
+    slow.release()
+    await first
+  })
+
+  it('keeps an edit made while the pull converts its rows, and still brings the remote in', async () => {
+    cache(KEY, [{ id: 'a', title: 'cached', updatedAt: OLD }])
+    const be = fakeBackend({ ideas: [{ id: 'r', title: 'remote', updatedAt: LATER }] })
+    const slow = gate()
+    let armed = true
+    const codec = {
+      toCanonical: (v) => v,
+      toDisplay: async (v) => {
+        if (armed && Array.isArray(v) && v.some((r) => r.id === 'r')) {
+          armed = false
+          await slow.wait()
+        }
+        return v
+      },
+      ensureUploaded: async () => 0,
+    }
+    const store = makeStore({ key: KEY, defaultValue: [], backend: be, codec })
+
+    const started = store.start(USER)
+    await slow.reached
+    store.set((rows) => [...rows, { id: 'b', title: 'edited meanwhile' }])
+    slow.release()
+    await started
+
+    expect(ids(store.getSnapshot()).sort()).toEqual(['a', 'b', 'r'])
+    expect(ids(cached(KEY)).sort()).toEqual(['a', 'b', 'r'])
+  })
+
   it('discards a hydration from a start that was stopped', async () => {
     cache(KEY, [{ id: 'a', title: 'cached', updatedAt: OLD }])
     const gates = [gate(), gate()]
@@ -705,6 +761,19 @@ describe('start and stop', () => {
     store.set([{ id: 'a' }])
     expect(ids(store.getSnapshot())).toEqual(['a'])
     expect(ids(cached(KEY))).toEqual(['a'])
+  })
+
+  it('arms the push for an edit made before the first start, once a user arrives', async () => {
+    const be = fakeBackend()
+    // The first pull never answers, so only the debounced push can reach the remote.
+    be.store.list.mockImplementationOnce(() => new Promise(() => {}))
+    const store = makeStore({ key: KEY, defaultValue: [], backend: be })
+
+    store.set([{ id: 'a', title: 'early' }])
+    store.start(USER)
+    await vi.advanceTimersByTimeAsync(PUSH_DEBOUNCE_MS)
+    expect(be.store.upsert).toHaveBeenCalledTimes(1)
+    expect(ids(await be.store.list('ideas'))).toEqual(['a'])
   })
 
   it('applies an edit made while stopped when it restarts — StrictMode re-runs child effects first', async () => {
