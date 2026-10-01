@@ -22,7 +22,8 @@ export function useStorage(key, defaultValue, codec) {
   const [store] = useState(() => createCollectionStore({ key, defaultValue, codec }))
 
   useEffect(() => {
-    store.start(user)
+    // Fire and forget: hydrate and pull catch and log their own failures.
+    void store.start(user)
     return () => store.stop()
   }, [store, user])
 
