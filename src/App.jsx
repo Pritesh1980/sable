@@ -5,6 +5,7 @@ import Nav from './components/Nav'
 import Drawer from './components/Drawer'
 import Wall from './pages/Wall'
 import ProtectedRoute from './components/ProtectedRoute'
+import { useAuth } from './context/useAuth'
 import { useStorage } from './hooks/useStorage'
 import { useArtistStorage } from './hooks/useArtistStorage'
 import { ideasCodec, conceptsCodec } from './data/imageCodec'
@@ -22,12 +23,15 @@ const Concepts = lazy(() => import('./pages/Concepts'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Help = lazy(() => import('./pages/Help'))
 
-// Gate first so the data hooks (which sync per-user once wired) only mount for a
-// signed-in user.
+// Gate first so the data hooks only mount for a signed-in user. Keyed by that
+// user: every collection store under the shell belongs to one identity, so a
+// sign-in as someone else remounts the shell instead of handing the previous
+// user's in-memory data to the new one (#111).
 export default function App() {
+  const { user } = useAuth()
   return (
     <ProtectedRoute>
-      <AppShell />
+      <AppShell key={user?.id} />
     </ProtectedRoute>
   )
 }

@@ -40,8 +40,16 @@ This is a personal app for one user (the owner). (A read-only share link for the
   `DEFAULT_ARTISTS`; other accounts start empty.
 - **Storage**: local-first-with-sync. localStorage (`tattoo_*` keys) + IndexedDB stay
   as an offline cache; changes mirror to the backend document store and reconcile by
-  last-write-wins on `updatedAt` (`src/backend/sync.js`, wired into `useStorage` /
-  `useArtistStorage`). Images are referenced by small canonical `{ key }` refs in
+  last-write-wins on `updatedAt` (`src/backend/sync.js`). The protocol runs in one
+  framework-free engine, `src/sync/collectionStore.js` (#111), bound to React by
+  `useCollection` (`useSyncExternalStore`, stable setter); `useStorage` is a thin
+  wrapper over it, and `useArtistStorage` keeps its own copy until #112. Its lifecycle
+  is load-bearing: creating a store only reads the cache (StrictMode runs lazy
+  initialisers twice), each `start(user)` opens an epoch so a stopped start's pull or
+  hydration is discarded, an edit writes the cache before `set` returns, a late
+  hydration never overwrites an edit or the pull, and an edit made while stopped is
+  parked (replayed on restart, dropped on a real unmount). Stores are per user: `AppShell` is
+  keyed by `user.id`, so never hand a running store a different user. Images are referenced by small canonical `{ key }` refs in
   synced data with bytes in blob storage (`src/data/blobUrls.js`, `uploadImages`);
   legacy IndexedDB/inline images migrate to blobs on first authed load. Idea and
   concept images use the same key-based blob storage via per-collection codecs

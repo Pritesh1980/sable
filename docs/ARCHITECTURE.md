@@ -125,7 +125,9 @@ reconcile *and* the first render — see §2.
 `AppShell` is the composition root for user data. It mounts only after
 `ProtectedRoute` has resolved an authenticated user, owns five synced collections and
 two device-only convention collections,
-and passes them down to route-level pages. The Wall is eager for first paint; every
+and passes them down to route-level pages. It is keyed by the user's id, so signing in
+as someone else remounts it, and every collection store with it, rather than handing
+one user's in-memory data to the next (§10). The Wall is eager for first paint; every
 other page is lazy-loaded on first navigation and cached by the service worker after
 delivery.
 
@@ -135,7 +137,7 @@ flowchart TB
   PROVIDERS["AuthProvider → ThemeProvider<br/>BrowserRouter with deploy basename"]
   GATE{"ProtectedRoute"}
   LOGIN["Login"]
-  SHELL["AppShell<br/>shared data and navigation"]
+  SHELL["AppShell, keyed by user id<br/>shared data and navigation"]
   STATE["useArtistStorage<br/>useStorage: ideas · concepts · boards · convention overrides"]
   LOCALSTATE["Device-only useStorage<br/>convention lineups · winners"]
   UNDO["UndoProvider<br/>one shared offer above routes"]
@@ -213,8 +215,8 @@ the device immediately; reconciliation is a background concern. The engineering 
 what happens when the network is absent, then the app mounts or the user edits after
 connectivity returns.
 
-1. **The edit applies locally first.** State updates, metadata cache is written. No
-   spinner, no network in the path.
+1. **The edit applies locally first.** State updates and the metadata cache is written
+   in the same call, before React re-renders. No spinner, no network in the path.
 2. **Changed rows are stamped, once.** Only genuinely-edited records get a fresh
    `updatedAt` (`stampChangedRows`, `src/backend/dirty.js`). Over-stamping would let
    untouched rows outrank real edits made on another device.
@@ -288,6 +290,41 @@ the older remote row, and an artist deleted mid-pull was resurrected by it. Idea
 concepts already read late; artists now do too (#101). The diagram above shows the
 corrected order.
 
+### One engine, and its lifecycle
+
+The protocol above lives in one place, `src/sync/collectionStore.js` (#111): a
+framework-free store per collection, bound to React by `useCollection`
+(`useSyncExternalStore`, with a setter that never changes). `useStorage` is a thin
+wrapper that creates one per component and starts it with the signed-in user; it backs
+ideas, concepts, boards, attendance and the device-only stores. `useArtistStorage`
+still runs its own copy of the protocol until artists move onto the engine (#112).
+`src/test/collectionStore.test.js` pins each rule without React.
+
+`set(updater)` does the stamping, tombstones and generations outside any React updater
+and writes the offline cache before it returns. Previously the cache was written in an
+effect after the render, so this is strictly more durable. A store with no backend
+collection only persists.
+
+The lifecycle is written down because React runs it twice in development:
+
+- **Creating a store has no side effects.** It only reads the offline cache, because
+  StrictMode calls lazy initialisers twice.
+- **`start(user)` and `stop()` are re-entrant.** Each start opens an epoch, and a
+  hydration or pull result from an older epoch is discarded, as the hook's per-effect
+  `cancelled` flags used to do. A start's work begins a microtask later, so StrictMode's
+  start → stop → start in development lists the remote once, not twice.
+- **Hydration is independent of the first pull.** Cached refs resolve to display URLs
+  even while `list()` hangs offline. A hydration that loses the race to an edit or to
+  the pull is dropped rather than applied over them, so a late one can never undo an
+  edit or hide rows the pull brought in.
+- **`stop()` cancels the pending push but not a flush in flight.** That flush still lands
+  and clears its own tombstones and generations. Anything still unconfirmed is pushed
+  by the next start's pull, from the durable sidecars. An edit made while stopped is
+  parked, as React treats a state update: applied if the store starts again
+  (StrictMode's dev remount re-runs child effects before the shell's), dropped if its
+  owner has really unmounted. So a slow callback finishing after sign-out cannot write
+  into the cache the next account reads.
+
 ### First paint must agree with the reconcile
 
 A subtle class of bug lives here. `useArtistStorage` renders from the local cache
@@ -304,8 +341,8 @@ owner-seed flag.
 This is safe because `App.jsx` mounts `AppShell` inside `ProtectedRoute`, which holds
 a spinner until the session resolves — so `user` is known before the hook's first
 render. An explicit sign-out nulls the user and purges local caches, so signing in
-again remounts and re-runs the initializer. A direct signed-in identity swap is a
-different path; its remaining limitation is recorded in §10.
+again remounts and re-runs the initializer. A direct signed-in identity swap remounts
+it too, because the shell is keyed by the user's id (§10).
 
 The guarantee is **membership parity with the cache**, not with the final state: a
 later pull can still add remote rows the cache never had, and images hydrate
@@ -772,11 +809,14 @@ unconfirmed edit. Singleton generations protect the attendance map similarly. Ta
 can still hold different in-memory collections; these guards do not provide a shared
 live view or conflict-free merging.
 
-**Identity changes purge caches, but the shell is not keyed by identity.**
-`AuthProvider` now tracks the last user across reloads and purges before publishing a
-different identity, including passive transitions. `ProtectedRoute` still returns the
-same unkeyed shell on a direct signed-in A-to-B transition; do not equate cache purge
-with a guaranteed fresh mount of every in-memory state owner.
+**Identity changes purge caches and remount the shell.** `AuthProvider` tracks the last
+user across reloads and purges before publishing a different identity, including
+passive transitions. `App.jsx` keys `AppShell` by the user's id (#111), so a direct
+signed-in A-to-B transition also remounts every in-memory state owner: B's collection
+stores start from the purged cache, and stopping A's discards their in-flight pulls.
+One narrow gap remains. A push A's store had already started, for instance parked in an
+image upload, is not cancelled, and both adapters attribute a write to whoever is signed
+in when it lands.
 
 **Winner-photo cleanup is incomplete.** Sign-out removes winners metadata but the
 current purge path leaves the separate photo database untouched (§3).
@@ -807,7 +847,8 @@ sequence (`fromSlots`), so an offline photo keeps its place relative to its neig
 | Path | Role |
 |---|---|
 | `src/backend/` | The vendor boundary: `index.js` factory, `sync.js`, `dirty.js`, `owner.js`, `purge.js`, `local/`, `supabase/` |
-| `src/hooks/` | `useStorage.js`, `useArtistStorage.js` — local-first read/write and reconcile |
+| `src/sync/` | `collectionStore.js` — the local-first sync engine (edit-time stamping, tombstones and generations, first pull, chained pushes, start/stop epochs); `useCollection.js` — its React binding |
+| `src/hooks/` | `useStorage.js` — thin wrapper over the engine; `useArtistStorage.js` — artists, on their own copy of the protocol until #112 |
 | `src/data/` | Domain logic: planning, embeddings, taste, staged screenshot intake, convention ingestion and Top picks, demo seed |
 | `src/data/lineups/` | Shipped roster and curated picks; floorplan coordinates are data-only, not a runtime map |
 | `src/context/UndoContext.jsx` | Shared, time-bounded undo offer and restoration feedback |

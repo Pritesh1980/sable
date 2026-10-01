@@ -35,7 +35,13 @@ describe('useStorage sync', () => {
     // against older remote rows if the user signs in later.
     expect(stored).toMatchObject([{ id: 'x', title: 'local only' }])
     expect(stored[0].updatedAt).toBeTruthy()
-    expect(localStorage.getItem('tattoo_remote_ideas')).toBeNull()
+    // Past the push debounce, nothing reached the simulated remote. It is
+    // namespaced per user (`tattoo_remote_<userId>_<collection>`, `anon` when
+    // signed out), so the old un-namespaced key could never catch a write.
+    await act(() => new Promise((r) => setTimeout(r, 700)))
+    expect(await backend.store.list('ideas')).toEqual([])
+    const keys = Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i))
+    expect(keys.filter((k) => k.startsWith('tattoo_remote_'))).toEqual([])
   })
 
   it('pushes a user edit to the remote store when authed', async () => {
