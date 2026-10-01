@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { AuthContext } from './auth-context'
 import { backend } from '../backend'
 import { purgeLocalUserData } from '../backend/purge'
+import { clearBlobUrls } from '../data/blobUrls'
 
 // Persists the last-known signed-in identity across reloads (deliberately NOT
 // in purge.js's PURGE_KEYS — it's the bookkeeping marker purge itself relies
@@ -38,6 +39,9 @@ export function AuthProvider({ children }) {
         // asynchronous cleanup or publication of the next session.
         setLoading(true)
         backend.setIdentity(null)
+        // A→null→A can skip the queued purge entirely. Invalidate display
+        // work here as well, even when the eventual owner is unchanged.
+        clearBlobUrls()
       }
       requestedUserId = nextUserId
 
@@ -78,7 +82,13 @@ export function AuthProvider({ children }) {
         console.error('[tattoo] getSession failed')
         applyIdentity(null)
       })
-    return () => { mounted = false; revision += 1; backend.setIdentity(null); unsub?.() }
+    return () => {
+      mounted = false
+      revision += 1
+      backend.setIdentity(null)
+      clearBlobUrls()
+      unsub?.()
+    }
   }, [])
 
   const signIn = useCallback((creds) => backend.auth.signIn(creds), [])

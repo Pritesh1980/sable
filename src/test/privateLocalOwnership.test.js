@@ -146,6 +146,94 @@ describe('private local ownership', () => {
   })
 })
 
+describe.each(['supabase', 'local'])('auth display invalidation with %s auth', (authKind) => {
+  const key = 'user/A/concepts/auth-delayed/image.png'
+  const cachedKey = 'user/A/concepts/auth-cached/image.png'
+  let previousCapabilities, previousOwner, emit
+
+  beforeEach(() => {
+    const b = createBackend('local', { authKind, ownerId: 'A' })
+    previousCapabilities = backend.capabilities
+    previousOwner = backend.privateOwnerId
+    backend.capabilities = b.capabilities
+    backend.privateOwnerId = b.privateOwnerId
+    vi.spyOn(backend, 'setIdentity').mockImplementation(b.setIdentity)
+    vi.spyOn(backend.auth, 'onAuthStateChange').mockImplementation((cb) => { emit = cb; return () => {} })
+    vi.spyOn(backend.auth, 'getSession').mockResolvedValue({ user: { id: 'A' } })
+  })
+  afterEach(() => {
+    backend.capabilities = previousCapabilities
+    backend.privateOwnerId = previousOwner
+  })
+
+  async function mountAuth() {
+    const view = renderHook(() => useAuth(), { wrapper: ({ children }) => createElement(AuthProvider, null, children) })
+    await waitFor(() => expect(view.result.current.loading).toBe(false))
+    return view
+  }
+
+  it.each(['success', 'failure'])('discards old resolver %s after batched A→null→A without a purge', async (result) => {
+    const view = await mountAuth()
+    try {
+      const old = deferred(), fresh = deferred()
+      vi.spyOn(backend.blobs, 'getUrl').mockReturnValueOnce(old.promise).mockReturnValueOnce(fresh.promise)
+      registerBlobUrl(cachedKey, 'cached-before-logout')
+      const pending = resolveBlobKey(key)
+      // Both events arrive before the serialized queue runs. The final owner
+      // equals prevUserId, so the queue does not call purgeLocalUserData.
+      act(() => { emit(null); emit({ user: { id: 'A' } }) })
+      const cacheDuringTransition = getCachedBlobUrl(cachedKey)
+      await waitFor(() => expect(view.result.current.loading).toBe(false))
+      const afterLogin = resolveBlobKey(key)
+      if (result === 'success') old.resolve('old-session-url')
+      else old.reject(new Error('old-session-error'))
+      const oldResult = await pending
+      // This third lookup must still share fresh work after old work settles.
+      const sharedFresh = resolveBlobKey(key)
+      fresh.resolve('new-session-url')
+      expect(oldResult).toBe('')
+      expect(await afterLogin).toBe('new-session-url')
+      expect(await sharedFresh).toBe('new-session-url')
+      expect(cacheDuringTransition).toBe('')
+      expect(keyForUrl('cached-before-logout')).toBeNull()
+      expect(keyForUrl('old-session-url')).toBeNull()
+      expect(getCachedBlobUrl(key)).toBe('new-session-url')
+    } finally { view.unmount() }
+  })
+
+  it('invalidates display work when the auth provider unmounts', async () => {
+    const view = await mountAuth()
+    const old = deferred()
+    vi.spyOn(backend.blobs, 'getUrl').mockReturnValueOnce(old.promise)
+    registerBlobUrl(cachedKey, 'cached-before-unmount')
+    const pending = resolveBlobKey(key)
+    view.unmount()
+    old.resolve('late-after-unmount')
+    expect(await pending).toBe('')
+    expect(getCachedBlobUrl(cachedKey)).toBe('')
+    expect(keyForUrl('cached-before-unmount')).toBeNull()
+    expect(keyForUrl('late-after-unmount')).toBeNull()
+  })
+
+  it('preserves cached and inflight display work for a same-owner token refresh', async () => {
+    const view = await mountAuth()
+    try {
+      const current = deferred()
+      const getUrl = vi.spyOn(backend.blobs, 'getUrl').mockReturnValue(current.promise)
+      registerBlobUrl(cachedKey, 'still-valid')
+      const pending = resolveBlobKey(key)
+      await act(async () => { emit({ user: { id: 'A' } }) })
+      const shared = resolveBlobKey(key)
+      current.resolve('current-session-url')
+      expect(await pending).toBe('current-session-url')
+      expect(await shared).toBe('current-session-url')
+      expect(getUrl).toHaveBeenCalledTimes(1)
+      expect(getCachedBlobUrl(cachedKey)).toBe('still-valid')
+      expect(keyForUrl('still-valid')).toBe(cachedKey)
+    } finally { view.unmount() }
+  })
+})
+
 describe('private canonical blobs', () => {
   const ownKey = 'user/A/concepts/c/owned.png'
   const bytes = 'data:image/png;base64,YQ=='
