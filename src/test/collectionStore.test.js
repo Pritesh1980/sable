@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createCollectionStore, PUSH_DEBOUNCE_MS } from '../sync/collectionStore'
+import { stageImage } from '../data/imageStaging'
+import { readOutbox } from '../data/stagedImageStore'
+import { backend as appBackend } from '../backend'
 import {
   readPendingDeletes,
   readRowGenerations,
@@ -387,6 +390,27 @@ describe('a flush', () => {
     // With nothing landing in between, the next flush confirms it.
     await store.flush()
     expect(isDirty(SINGLETON_KEY)).toBe(false)
+  })
+})
+
+describe('a flush and the upload outbox (#115)', () => {
+  it('retries a queued photo upload, with no launch and no online event', async () => {
+    const PHOTO = 'data:image/jpeg;base64,cXVldWVkIHBob3Rv'
+    const upload = vi.spyOn(appBackend.blobs, 'upload').mockRejectedValue(new Error('offline'))
+    await stageImage(PHOTO, { userId: USER.id, scope: 'ideas', id: 'a' })
+    await vi.waitFor(() => expect(upload).toHaveBeenCalled())
+    await vi.waitFor(() => expect(readOutbox()).toHaveLength(1))
+    upload.mockReset()
+    upload.mockResolvedValue(undefined)
+
+    const be = fakeBackend()
+    const store = makeStore({ key: KEY, defaultValue: [], backend: be })
+    await store.start(USER)
+    store.set([{ id: 'a', title: 'Dragon' }])
+    await store.flush()
+
+    await vi.waitFor(() => expect(upload).toHaveBeenCalledTimes(1))
+    await vi.waitFor(() => expect(readOutbox()).toEqual([]))
   })
 })
 
