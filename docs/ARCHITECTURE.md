@@ -403,6 +403,18 @@ long after its TTL refresh. So a superseded URL keeps its mapping for the sessio
 the expiring URL in place of the key, and last-write-wins spread that to every
 device. Keeping refs in state, planned in #109, removes the reverse map altogether.
 
+### Bytes are staged before the key exists
+
+Every add path (`withStagedImages` / `stageImages` in `src/data/imageStaging.js`) writes
+the bytes to IndexedDB (`tattoo-staged-images-v1`) and an entry to the
+`tattoo_upload_outbox` list before the `{ key }` ref reaches state, so base64 never
+reaches localStorage or the remote and a photo added offline survives a reload.
+`resolveBlobKey` consults staged bytes before the backend, so a staged photo displays
+immediately. `drainOutbox` uploads on launch, on the `online` event and at the start of
+every flush, and drops an entry from the outbox only after the upload is confirmed. The device copy of the bytes is kept after that, because the display cache holds only `{ key }` and the copy is what keeps the photo visible on an offline reload. The IndexedDB
+display cache stores keyed photos as `{ key }`, not a data URL, so a reload cannot show
+the same photo twice. Both stores are device-local and purged on sign-out.
+
 ### The same split, without the sync half
 
 Photos of competition-winning tattoos (`src/data/winnerPhotos.js`) take a shorter

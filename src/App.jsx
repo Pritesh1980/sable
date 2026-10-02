@@ -1,6 +1,7 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router'
 import { UndoProvider } from './context/UndoContext'
+import { watchUploadOutbox } from './data/imageStaging'
 import Nav from './components/Nav'
 import Drawer from './components/Drawer'
 import Wall from './pages/Wall'
@@ -53,6 +54,10 @@ function AppShell() {
   const mergedConventions = mergeConventionOverrides(conventionOverrides)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const navigate = useNavigate()
+  // Photos staged while uploads were failing upload on launch and whenever
+  // the browser comes back online, not only at the next edit (#115).
+  const userId = useAuth()?.user?.id
+  useEffect(() => watchUploadOutbox(userId), [userId])
 
   return (
     <div className="bg-ink-black min-h-screen pb-20">

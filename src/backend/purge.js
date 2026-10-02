@@ -1,4 +1,5 @@
 import { clearBlobUrls } from '../data/blobUrls'
+import { DEVICE_COPIES_KEY, STAGED_IMAGES_DB, UPLOAD_OUTBOX_KEY } from '../data/stagedImageStore'
 import { purgeDirtySidecars } from './dirty'
 import { SHARE_CACHE } from '../sw/shareTarget'
 
@@ -19,6 +20,10 @@ const PURGE_KEYS = [
   // them.
   'tattoo_convention_winners',
   'tattoo_img_migrated_v1',
+  // Photos still waiting to upload (#115): the queue here, the bytes in
+  // STAGED_IMAGES_DB below. Unsynced, like the dirty sidecars, so they go too.
+  UPLOAD_OUTBOX_KEY,
+  DEVICE_COPIES_KEY,
 ]
 
 // Deletes an IndexedDB database and waits for the outcome instead of firing
@@ -61,6 +66,7 @@ export async function purgeLocalUserData() {
   // its blob keys are already per-user-namespaced (user/<userId>/...) so it
   // doesn't leak between accounts the way an unnamespaced cache would.
   await deleteDatabaseAsync('tattoo-images-v1')
+  await deleteDatabaseAsync(STAGED_IMAGES_DB)
   // An uncollected shared screenshot is this user's content sitting in an
   // origin-scoped cache — without this, A shares, closes before collecting,
   // and B signs in and picks up A's image from /share.

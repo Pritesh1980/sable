@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { createElement } from 'react'
 import { useArtistStorage, canonicalizeImages } from '../hooks/useArtistStorage'
-import { uploadInlineImages } from '../hooks/useImageUpload'
+import { withStagedImages } from '../data/imageStaging'
 import { AuthProvider } from '../context/AuthContext'
 import { useAuth } from '../context/useAuth'
 import { DEFAULT_ARTISTS } from '../data/artists'
@@ -101,38 +101,45 @@ describe('an expired signed URL is never saved in place of its key (#110, bug 1)
   })
 })
 
-describe('inline screenshots get uploaded (#110, bug 2)', () => {
+// Since #115 the screenshot is staged (a key and a durable copy) before the
+// artist is added, rather than uploaded afterwards.
+describe('inline screenshots get a key (#110, bug 2)', () => {
   const A = 'data:image/jpeg;base64,c2hvdEE='
   const B = 'data:image/jpeg;base64,c2hvdEI='
 
-  it('uploads bare and { url } data URLs, registering each under a per-artist key', async () => {
-    const moved = await uploadInlineImages([A, { url: B, addedAt: STAMP }, { key: KEY }, 'images/demo/x.webp'], {
+  it('stages bare and { url } data URLs, registering each under a per-artist key', async () => {
+    const commit = vi.fn()
+    await withStagedImages([A, { url: B, addedAt: STAMP }, { key: KEY }, 'images/demo/x.webp'], {
       userId: 'u1', scope: 'artists', id: 'new.artist',
-    })
+    }, commit)
 
-    expect(moved).toBe(2)
+    expect(commit).toHaveBeenCalledTimes(1)
     expect(keyForUrl(A)).toMatch(/^user\/u1\/artists\/new\.artist\//)
     expect(keyForUrl(B)).toMatch(/^user\/u1\/artists\/new\.artist\//)
   })
 
-  it('skips images that are already uploaded, and does nothing without a user', async () => {
+  it('skips images that already have a key, and does nothing without a user', async () => {
     registerBlobUrl(KEY, A)
     const upload = vi.spyOn(backend.blobs, 'upload')
+    const commit = vi.fn()
 
-    expect(await uploadInlineImages([A], { userId: 'u1', scope: 'artists', id: 'a' })).toBe(0)
-    expect(await uploadInlineImages([B], { userId: undefined, scope: 'artists', id: 'a' })).toBe(0)
+    withStagedImages([A], { userId: 'u1', scope: 'artists', id: 'a' }, commit)
+    withStagedImages([B], { userId: undefined, scope: 'artists', id: 'a' }, commit)
+
+    expect(commit).toHaveBeenCalledTimes(2)
+    expect(keyForUrl(B)).toBeNull()
     expect(upload).not.toHaveBeenCalled()
   })
 
-  it('once uploaded, a quick-added artist reaches the remote with { key }, not a dropped photo', async () => {
+  it('a quick-added artist reaches the remote with { key }, not a dropped photo', async () => {
     seedReturningUser()
     const { result } = renderHook(() => useArtistStorage(), { wrapper })
     await waitFor(() => expect(stateRow(result, firstId)?.images.length).toBeGreaterThan(0))
 
     const artist = { id: 'new.artist', handle: 'new.artist', name: '', tags: [], images: [A], rank: 99, status: 'researching', notes: '' }
-    act(() => result.current[1]((prev) => [...prev, artist]))
-    expect(await uploadInlineImages(artist.images, { userId: 'u1', scope: 'artists', id: artist.id })).toBe(1)
-    act(() => result.current[1]((prev) => prev.map((a) => (a.id === artist.id ? { ...a } : a))))
+    await withStagedImages(artist.images, { userId: 'u1', scope: 'artists', id: artist.id }, () => {
+      act(() => result.current[1]((prev) => [...prev, artist]))
+    })
 
     await waitFor(async () => {
       const remote = (await backend.store.list('artistsMeta')).find((r) => r.id === 'new.artist')

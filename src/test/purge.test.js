@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { purgeLocalUserData } from '../backend/purge'
 import { SHARE_CACHE } from '../sw/shareTarget'
+import { stageImage } from '../data/imageStaging'
+import { STAGED_IMAGES_DB, UPLOAD_OUTBOX_KEY, DEVICE_COPIES_KEY, readOutbox } from '../data/stagedImageStore'
+import { backend } from '../backend'
 
 describe('purgeLocalUserData', () => {
   beforeEach(() => localStorage.clear())
@@ -34,6 +37,31 @@ describe('purgeLocalUserData', () => {
     expect(localStorage.getItem('tattoo_ideas')).toBeNull()
     expect(localStorage.getItem('tattoo_artists_meta')).toBeNull()
     expect(localStorage.getItem('tattoo_img_migrated_v1')).toBeNull()
+  })
+
+  // #115: a photo still waiting to upload is the signed-out user's content.
+  it('clears photos still waiting to upload: the staged bytes and the outbox', async () => {
+    vi.spyOn(backend.blobs, 'upload').mockRejectedValue(new Error('offline'))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    await stageImage('data:image/jpeg;base64,cGVuZGluZw==', { userId: 'u1', scope: 'artists', id: 'a1' })
+    expect(readOutbox()).toHaveLength(1)
+
+    await purgeLocalUserData()
+
+    expect(readOutbox()).toEqual([])
+    expect(localStorage.getItem(UPLOAD_OUTBOX_KEY)).toBeNull()
+    expect(localStorage.getItem(DEVICE_COPIES_KEY)).toBeNull()
+    const reopen = indexedDB.open(STAGED_IMAGES_DB)
+    let upgraded = false
+    reopen.onupgradeneeded = () => { upgraded = true }
+    const db = await new Promise((resolve, reject) => {
+      reopen.onsuccess = () => resolve(reopen.result)
+      reopen.onerror = () => reject(reopen.error)
+    })
+    // A fresh upgrade proves the staged bytes went with the database.
+    expect(upgraded).toBe(true)
+    db.close()
+    vi.restoreAllMocks()
   })
 
   it('preserves device prefs, API keys, and the local simulated remote', async () => {

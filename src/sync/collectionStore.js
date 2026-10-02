@@ -27,6 +27,7 @@
 // device-local: edits are persisted and nothing else.
 
 import { backend as appBackend } from '../backend'
+import { drainOutbox } from '../data/imageStaging'
 import {
   collectionFor,
   reconcileValue,
@@ -224,6 +225,9 @@ export function createCollectionStore({
 
   async function runFlush(flushUser) {
     if (!flushUser || !collection) return
+    // Photos still waiting to upload get another try with every sync attempt
+    // (#115); the rows carry their keys and needn't wait for the bytes.
+    void drainOutbox({ userId: flushUser.id })
     // Snapshot the shared, opaque edit generation before any async work. Another
     // tab editing the same key mid-flush moves it (#35). Singletons only — list
     // collections confirm per row instead (#84).

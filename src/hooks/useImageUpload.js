@@ -1,6 +1,7 @@
-import { randomId } from '../data/randomId'
-import { backend } from '../backend'
-import { keyForUrl, registerBlobUrl } from '../data/blobUrls'
+import { stageImage, stageImages } from '../data/imageStaging'
+
+// Kept here for the callers that already import it from this module.
+export { dataUrlToBlob } from '../data/imageStaging'
 
 function compressImage(file, maxDim = 900, quality = 0.78) {
   return new Promise((resolve) => {
@@ -25,71 +26,22 @@ export async function compressImages(files) {
   return Promise.all(Array.from(files).map((f) => compressImage(f)))
 }
 
-function uuid() {
-  return randomId()
-}
-
-export function dataUrlToBlob(dataUrl) {
-  const [meta, b64] = dataUrl.split(',')
-  // "data:image/png;base64" -> "image/png", by index rather than a lazy regex.
-  const colon = meta.indexOf(':')
-  const semi = meta.indexOf(';', colon + 1)
-  const mime = (colon >= 0 && semi > colon ? meta.slice(colon + 1, semi) : '') || 'image/jpeg'
-  const bin = atob(b64)
-  const arr = new Uint8Array(bin.length)
-  for (let i = 0; i < bin.length; i += 1) arr[i] = bin.charCodeAt(i)
-  return new Blob([arr], { type: mime })
-}
-
-// Compress the given files, upload each to blob storage under a canonical
-// per-user key, register the resolved URL in the cache, and return the
-// displayable URL strings. Callers store these strings exactly as they stored
-// compressImages() output before; the storage hooks map them back to keys on
-// persist. `scope` is one of 'artists' | 'ideas' | 'concepts'.
+// Compress the given files and stage each under a canonical per-user key
+// (src/data/imageStaging.js): the bytes are kept on this device and queued for
+// upload before this returns, so a photo added while uploads fail still
+// survives a reload (#115). Returns the displayable URL strings; callers store
+// them exactly as they stored compressImages() output before, and the storage
+// hooks map them back to keys on persist. Signed out, the compressed data URLs
+// come back unregistered, as they always did. `scope` is one of
+// 'artists' | 'ideas' | 'concepts'.
 export async function uploadImages(files, { userId, scope, id }) {
-  const dataUrls = await compressImages(files)
-  // No signed-in user → keep the compressed data-URLs locally (they live in the
-  // offline cache and get migrated to blobs on the next authed load).
-  if (!userId) return dataUrls
-  return Promise.all(
-    dataUrls.map(async (dataUrl) => {
-      const key = `user/${userId}/${scope}/${id}/${uuid()}.jpg`
-      try {
-        await backend.blobs.upload(userId, key, dataUrlToBlob(dataUrl), 'image/jpeg')
-        registerBlobUrl(key, dataUrl)
-      } catch (e) {
-        console.error('[tattoo] image upload failed:', e)
-      }
-      return dataUrl
-    })
-  )
+  return stageImages(await compressImages(files), { userId, scope, id })
 }
 
-// Upload an already-compressed data-URL (no re-compression) to blob storage and
-// register key↔url. Returns the key, or null if it couldn't/shouldn't upload.
-// Used by the storage-layer image codecs to move inline data-URLs to blobs.
+// Stage an already-compressed data URL (no re-compression) and return its key,
+// or null if it couldn't or shouldn't be staged. Used by the storage-layer
+// image codecs to move inline data URLs out of documents.
 export async function uploadDataUrl(dataUrl, { userId, scope, id }) {
   if (!userId || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) return null
-  const key = `user/${userId}/${scope}/${id}/${uuid()}.jpg`
-  try {
-    await backend.blobs.upload(userId, key, dataUrlToBlob(dataUrl), 'image/jpeg')
-    registerBlobUrl(key, dataUrl)
-    return key
-  } catch (e) {
-    console.error('[tattoo] data-url upload failed:', e)
-    return null
-  }
-}
-
-// Upload every image that is still inline — a bare data URL, or a { url } ref
-// holding one — and register it, so canonicalization stores it as { key }.
-// Returns how many moved. One that fails stays inline; durable retry is #115.
-export async function uploadInlineImages(images = [], { userId, scope, id }) {
-  let moved = 0
-  for (const image of images) {
-    const url = typeof image === 'string' ? image : image?.url
-    if (!url?.startsWith('data:') || keyForUrl(url)) continue
-    if (await uploadDataUrl(url, { userId, scope, id })) moved += 1
-  }
-  return moved
+  return (await stageImage(dataUrl, { userId, scope, id })).key
 }

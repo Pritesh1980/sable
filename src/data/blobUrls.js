@@ -1,10 +1,13 @@
 import { backend } from '../backend'
+import { readStagedImage } from './stagedImageStore'
 
 // Resolved-URL cache for blob-backed images. Image *keys* are the canonical,
 // synced reference (small, vendor-neutral); a displayable URL is short-lived and
 // derived at runtime via backend.blobs.getUrl. The storage hooks resolve keys to
 // URL strings on load so the rest of the app keeps rendering plain string srcs,
-// and map URL strings back to keys on persist via the reverse map.
+// and map URL strings back to keys on persist via the reverse map. A photo
+// still waiting to upload resolves from the bytes staged on this device first
+// (src/data/imageStaging.js, #115), so it shows offline and after a reload.
 
 // How much earlier than the backend's own TTL to treat a cached URL as due
 // for a refresh (#29) — small compared to real TTLs (Supabase signed URLs are
@@ -59,14 +62,15 @@ export function keyForUrl(url) {
 // Resolve a key to a displayable URL, caching the result and de-duping in-flight
 // requests for the same key. A cache hit past the backend's TTL is treated as a
 // miss so a long-running session refreshes an expiring signed URL rather than
-// holding a broken one indefinitely (#29).
+// holding a broken one indefinitely (#29). Staged bytes come first: the backend
+// may not have the photo yet, and offline it can't be asked.
 export async function resolveBlobKey(key) {
   if (!key) return ''
   const cached = keyToEntry.get(key)
   if (cached && isFresh(cached)) return cached.url
   if (inflight.has(key)) return inflight.get(key)
-  const p = backend.blobs
-    .getUrl(key)
+  const p = readStagedImage(key)
+    .then((staged) => staged || backend.blobs.getUrl(key))
     .then((url) => {
       registerBlobUrl(key, url)
       inflight.delete(key)

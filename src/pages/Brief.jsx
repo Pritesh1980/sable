@@ -11,6 +11,8 @@ import { STYLE_TAGS, PLACEMENTS } from '../data/artists'
 import { IDEA_STATUSES, matchArtistsToIdea } from '../data/brief'
 import { buildIdeaBrief } from '../data/export'
 import { compressImages } from '../hooks/useImageUpload'
+import { stageImages, withStagedImages } from '../data/imageStaging'
+import { useAuth } from '../context/useAuth'
 import { useUndoableRemoval } from '../hooks/useUndoableRemoval'
 import { analyzeIdeaImageWithGemini } from '../data/screenshotIntake'
 import {
@@ -86,6 +88,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
   const composerId = useId()
   const isNew = !idea.id
   const titleRef = useFocusOnOpen(isNew)
+  const userId = useAuth()?.user?.id
 
   // Fill-from-image (issue #20): a Gemini vision call drafts title,
   // description, tags and placement from the first uploaded reference image
@@ -157,8 +160,15 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
   function addImage() {
     const url = newImage.trim()
     if (url) {
-      touch('images')
-      setDraft((d) => ({ ...d, images: [...(d.images || []), { url, note: '' }] }))
+      // A pasted data URL is staged like an attached file; a web URL goes in
+      // at once.
+      // Save stays disabled until it lands, or the idea would save without it.
+      setUploading(true)
+      const staging = withStagedImages([url], { userId, scope: 'ideas', id: idea.id || 'misc' }, () => {
+        touch('images')
+        setDraft((d) => ({ ...d, images: [...(d.images || []), { url, note: '' }] }))
+      })
+      void Promise.resolve(staging).finally(() => setUploading(false))
     }
     setNewImage('')
   }
@@ -168,11 +178,18 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
     if (!files?.length) return
     setUploading(true)
     try {
-      const compressed = await compressImages(files)
+      // Staged before they join the draft (#115): saved, the idea stores each
+      // photo's { key }, never its base64, and the bytes wait on this device
+      // until the upload lands. A new idea has no id yet, hence 'misc'.
+      const urls = await stageImages(await compressImages(files), {
+        userId,
+        scope: 'ideas',
+        id: idea.id || 'misc',
+      })
       touch('images')
       setDraft((d) => ({
         ...d,
-        images: [...(d.images || []), ...compressed.map((url) => ({ url, note: '' }))],
+        images: [...(d.images || []), ...urls.map((url) => ({ url, note: '' }))],
       }))
     } finally {
       setUploading(false)
@@ -273,7 +290,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
             >
               {copied ? 'Copied' : 'Copy brief'}
             </button>
-            <button onClick={save} className="text-accent hover:text-accent-hover text-sm font-body transition-colors">
+            <button onClick={save} disabled={uploading} className="text-accent hover:text-accent-hover text-sm font-body transition-colors disabled:opacity-40">
               {isNew ? 'Add' : 'Save'}
             </button>
           </div>

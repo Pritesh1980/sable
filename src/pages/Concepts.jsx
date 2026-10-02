@@ -18,6 +18,8 @@ import { buildConceptWallItems, isDraftConcept } from '../data/concepts'
 import { clearComposerDraft, loadComposerDraft, saveComposerDraft } from '../data/composerDraft'
 import { generateImageWithGemini } from '../data/geminiImage'
 import { buildImagePrompt, buildTextPrompt } from '../data/conceptPrompts'
+import { stageImage, withStagedImages } from '../data/imageStaging'
+import { useAuth } from '../context/useAuth'
 import { useUndoableRemoval } from '../hooks/useUndoableRemoval'
 
 function conceptActionLabel(concept) {
@@ -93,6 +95,10 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
   })
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  // Every image saved here is staged under its concept first (#115), so the
+  // concept stores a key, never base64, and survives a failed upload.
+  const userId = useAuth()?.user?.id
+  const stagingFor = (conceptId) => ({ userId, scope: 'concepts', id: conceptId })
 
   const initialDraft = useMemo(() => loadComposerDraft(), [])
   // t7: a steer=<artistId> query param (from the Wall viewer's "G" flow) opens
@@ -174,10 +180,12 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
             tags: steerArtist?.tags || [],
             placement,
           }))
+      const id = Date.now().toString()
+      const { url: imageUrl } = await stageImage(dataUrl, stagingFor(id))
       const concept = {
-        id: Date.now().toString(),
+        id,
         prompt: idea,
-        imageUrl: dataUrl,
+        imageUrl,
         response: '',
         tags: steerArtist?.tags || [],
         steerArtistId: steerArtistId || undefined,
@@ -225,26 +233,29 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
   // identically to a generated result — either attached to a pending
   // prompt-pack concept, or as a brand new concept from the current idea.
   function handleComposerPaste(dataUrlOrUrl) {
-    if (pendingPasteConceptId) {
-      setConcepts((prev) => prev.map((c) => (
-        c.id === pendingPasteConceptId ? { ...c, imageUrl: dataUrlOrUrl } : c
-      )))
-    } else {
-      const steerArtist = artists.find((a) => a.id === steerArtistId)
-      const concept = {
-        id: Date.now().toString(),
-        prompt: idea,
-        imageUrl: dataUrlOrUrl,
-        response: '',
-        tags: steerArtist?.tags || [],
-        steerArtistId: steerArtistId || undefined,
-        placement: placement || undefined,
-        provider: 'pasted',
-        createdAt: new Date().toISOString(),
+    const id = pendingPasteConceptId || Date.now().toString()
+    void withStagedImages([dataUrlOrUrl], stagingFor(id), () => {
+      if (pendingPasteConceptId) {
+        setConcepts((prev) => prev.map((c) => (
+          c.id === pendingPasteConceptId ? { ...c, imageUrl: dataUrlOrUrl } : c
+        )))
+      } else {
+        const steerArtist = artists.find((a) => a.id === steerArtistId)
+        const concept = {
+          id,
+          prompt: idea,
+          imageUrl: dataUrlOrUrl,
+          response: '',
+          tags: steerArtist?.tags || [],
+          steerArtistId: steerArtistId || undefined,
+          placement: placement || undefined,
+          provider: 'pasted',
+          createdAt: new Date().toISOString(),
+        }
+        setConcepts((prev) => [concept, ...prev])
       }
-      setConcepts((prev) => [concept, ...prev])
-    }
-    finishComposer()
+      finishComposer()
+    })
   }
 
   function saveTags(id, tags) {
@@ -256,10 +267,14 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
     if (index !== -1) removeConcept(index)
   }
 
+  // Every variant arrives here: the result form, the on-skin preview and the
+  // live camera snapshot alike.
   function addVariant(conceptId, input) {
-    setConcepts((prev) => prev.map((c) => (
-      c.id === conceptId ? addConceptVariant(c, input) : c
-    )))
+    void withStagedImages([input.imageUrl], stagingFor(conceptId), () => {
+      setConcepts((prev) => prev.map((c) => (
+        c.id === conceptId ? addConceptVariant(c, input) : c
+      )))
+    })
   }
 
   function markBest(conceptId, variantId) {
