@@ -346,9 +346,10 @@ or moving to another route. Consecutive removals from the same source can be res
 as a batch. This is a short, in-memory recovery window, not a backup or an undo history
 that survives reloads.
 
-There is no `online` event listener today: connectivity returning by itself does not
-start a retry. Reopening Sable runs reconciliation, while another edit schedules a new
-flush.
+Photos you add while offline, or whose upload fails, are staged on the device and
+queued in an upload outbox. Sable retries the queue when it launches, when connectivity
+returns (the `online` event) and on every flush; an entry leaves the queue only after the
+upload is confirmed, and the photo stays viewable offline from its copy on this device.
 
 Backup export serialises the values currently in memory. Inline `data:` images remain
 embedded, but backend-resolved or signed image URLs are not fetched and materialised

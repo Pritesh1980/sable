@@ -16,7 +16,7 @@ import {
   dropRowGenerations,
 } from '../backend/dirty'
 import { resolveBlobKey, keyForUrl, registerBlobUrl } from '../data/blobUrls'
-import { dataUrlToBlob } from './useImageUpload'
+import { dataUrlToBlob, drainOutbox } from '../data/imageStaging'
 
 const META_KEY = 'tattoo_artists_meta'
 const OLD_KEY = 'tattoo_artists'
@@ -66,6 +66,21 @@ async function dbGetAll() {
       else { db.close(); resolve(out) }
     }
     tx.onerror = () => { db.close(); reject(tx.error) }
+  })
+}
+
+// What the IndexedDB display cache keeps of an artist's photos. Its only reader
+// is buildArtists' legacy path, which shows a cached data URL that has no key —
+// so a photo that *has* a key goes in as its ref, never as the data URL it was
+// added with. Otherwise, on a backend whose URLs are not the bytes (Supabase
+// signs one per key), a reload resolves the key to a new URL, the cached data
+// URL no longer maps back to it, and the photo shows twice (#115).
+export function displayCacheImages(images = []) {
+  return images.map((img) => {
+    const url = typeof img === 'string' ? img : img?.url
+    const key = typeof url === 'string' ? keyForUrl(url) : null
+    if (!key) return img
+    return typeof img === 'object' && img.addedAt ? { key, addedAt: img.addedAt } : { key }
   })
 }
 
@@ -579,6 +594,9 @@ export function useArtistStorage() {
 
   const runFlushMeta = useCallback(async () => {
     if (!user) return
+    // Photos still waiting to upload get another try with every sync attempt
+    // (#115); the rows below carry their keys and needn't wait for the bytes.
+    void drainOutbox({ userId: user.id })
     const meta = artistsRef.current.map(canonicalizeArtist)
     const at = nowStamp()
     // Rows keep the stamp (and editGen) set when the edit happened; `at` only
@@ -677,7 +695,7 @@ export function useArtistStorage() {
       for (const a of stamped) {
         const prevA = prev.find((p) => p.id === a.id)
         if (!prevA || prevA.images !== a.images) {
-          dbPut(a.id, a.images || []).catch((e) =>
+          dbPut(a.id, displayCacheImages(a.images || [])).catch((e) =>
             console.error(`[tattoo] Failed to save images for ${a.id}:`, e)
           )
         }
