@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router'
 import { UndoProvider } from './context/UndoContext'
-import { useAuth } from './context/useAuth'
 import { watchUploadOutbox } from './data/imageStaging'
 import Nav from './components/Nav'
 import Drawer from './components/Drawer'
