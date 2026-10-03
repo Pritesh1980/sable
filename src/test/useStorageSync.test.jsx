@@ -36,6 +36,8 @@ describe('useStorage sync', () => {
     expect(stored).toMatchObject([{ id: 'x', title: 'local only' }])
     expect(stored[0].updatedAt).toBeTruthy()
     expect(localStorage.getItem('tattoo_remote_ideas')).toBeNull()
+    expect(result.current[2].supported).toBe(false)
+    await expect(result.current[2]((rows) => rows, { ownerId: 'missing' })).rejects.toMatchObject({ code: 'commit_unavailable' })
   })
 
   it('pushes a user edit to the remote store when authed', async () => {

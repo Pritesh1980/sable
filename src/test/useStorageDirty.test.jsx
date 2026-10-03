@@ -29,6 +29,15 @@ describe('useStorage dirty-state handling', () => {
   beforeEach(() => localStorage.clear())
   afterEach(() => vi.restoreAllMocks())
 
+  it('an unavailable checked import does not cancel a pending ordinary save', async () => {
+    seedSession()
+    const { result } = renderSynced('tattoo_concepts', [])
+    await waitFor(() => expect(result.current.auth.user).toBeTruthy())
+    act(() => result.current.store[1]([{ id: 'manual', title: 'Keep my ordinary edit' }]))
+    await expect(result.current.store[2]((rows) => rows, { ownerId: 'local-owner@example.com' })).rejects.toMatchObject({ code: 'commit_unavailable' })
+    await waitFor(async () => expect((await backend.store.list('concepts'))[0]?.title).toBe('Keep my ordinary edit'), { timeout: 2000 })
+  })
+
   it('a failed upsert is not treated as synced: a later flush retries it', async () => {
     seedSession()
     const { result } = renderSynced('tattoo_ideas', [])

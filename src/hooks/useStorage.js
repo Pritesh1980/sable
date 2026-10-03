@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { backend } from '../backend'
 import { useAuth } from '../context/useAuth'
+import { recordConceptEdits, readConceptEdits, resolveConceptEdits, confirmConceptEdits } from '../backend/local/localStore'
 import {
   collectionFor,
   reconcileValue,
@@ -61,12 +62,16 @@ export function useStorage(key, defaultValue, codecArg) {
   const auth = useAuth()
   const user = auth?.user || null
   const collection = collectionFor(key)
+  const privateConcepts = collection === 'concepts' && backend.kind === 'local' && backend.capabilities.realAuth
 
   const valueRef = useRef(value)
   const syncedRef = useRef(null)
   const pushTimer = useRef(null)
   const flushRef = useRef(null)
   const editSeq = useRef(0)
+  const privatePending = useRef([])
+  const lastEditAt = useRef(0)
+  const mounted = useRef(true)
   // This tab's own singleton edit stamp. The tattoo_stamp_ sidecar is shared
   // across tabs, so flushing under readStamp() could launder a stale map with
   // another tab's newer stamp; the flush must carry the stamp of the edit it
@@ -76,6 +81,97 @@ export function useStorage(key, defaultValue, codecArg) {
   // async backend an older flush completing last would overwrite newer remote
   // rows and regress the synced baseline.
   const flushChain = useRef(Promise.resolve())
+
+  const editPrivate = useCallback((updater, restore = true) => {
+    const snapshot = backend.ownerScope.capture()
+    if (snapshot.ownerId !== user?.id) throw Object.assign(new Error('Owner changed'), { code: 'owner_changed' })
+    const prev = valueRef.current
+    const next = typeof updater === 'function' ? updater(prev) : updater
+    lastEditAt.current = Math.max(Date.now(), lastEditAt.current + 1)
+    const at = new Date(lastEditAt.current).toISOString()
+    const stamped = stampChangedRows(prev, next, at)
+    const edits = recordConceptEdits(snapshot.ownerId, codec.toCanonical(prev), codec.toCanonical(stamped), { restore, at })
+    privatePending.current.push(...edits)
+    localStorage.setItem(key, JSON.stringify(codec.toCanonical(stamped)))
+    backend.ownerScope.assertCurrent(snapshot)
+    writeRowGenerations(key, stamped.filter((r) => prev.find((p) => p.id === r.id) !== r))
+    dropRowGenerations(key, prev.filter((r) => !stamped.some((nextRow) => nextRow.id === r.id)).map((r) => r.id))
+    valueRef.current = stamped
+    editSeq.current += 1
+    setValue(stamped)
+    return stamped
+  }, [codec, key, user])
+
+  const canonicalEdits = useCallback((edits) => edits.map((edit) => ({
+    ...edit,
+    base: edit.base && codec.toCanonical([edit.base])[0],
+    draft: edit.draft && codec.toCanonical([edit.draft])[0],
+  })), [codec])
+
+  const publishPrivate = useCallback(async (rows, snapshot) => {
+    // Display resolution itself can await I/O. Rebase, never replace, edits
+    // arriving at either the canonical write or display-resolution boundary.
+    for (let round = 0; round < 3; round += 1) {
+      const seq = editSeq.current
+      const rebased = resolveConceptEdits({ rows }, canonicalEdits(privatePending.current)).rows
+      const display = await codec.toDisplay(rebased)
+      backend.ownerScope.assertCurrent(snapshot)
+      if (!mounted.current) throw Object.assign(new Error('Import interrupted'), { code: 'commit_conflict' })
+      if (seq !== editSeq.current) continue
+      valueRef.current = display
+      setValue(display)
+      return
+    }
+    throw Object.assign(new Error('Edits still arriving'), { code: 'commit_conflict' })
+  }, [codec, canonicalEdits])
+
+  const persistPrivate = useCallback(async (updater, expected) => {
+    const snapshot = backend.ownerScope.capture()
+    if (snapshot.ownerId !== user?.id) throw Object.assign(new Error('Owner changed'), { code: 'owner_changed' })
+    let valueToUpload = valueRef.current
+    for (let round = 0; ; round += 1) {
+      // A reload can have a different tab's cache but still have our durable
+      // pending image draft. Upload both before canonicalizing the intent.
+      await codec.ensureUploaded([...valueToUpload, ...privatePending.current.map((edit) => edit.draft).filter(Boolean)], { userId: snapshot.ownerId })
+      backend.ownerScope.assertCurrent(snapshot)
+      if (valueRef.current === valueToUpload) break
+      if (round >= 2) throw Object.assign(new Error('Edits still arriving'), { code: 'commit_conflict' })
+      valueToUpload = valueRef.current
+    }
+    let submitted = []
+    let canonical
+    const method = expected ? 'upsertChecked' : 'upsert'
+    const rows = await backend.store[method](collection, [], {
+      ownerId: snapshot.ownerId,
+      resolveLatest(state) {
+        backend.ownerScope.assertCurrent(snapshot)
+        if (updater) {
+          // Resolve same-tab pending intent onto the row loaded *under lock*.
+          // The updater may only add to that authoritative destination.
+          const latest = resolveConceptEdits(state, canonicalEdits(privatePending.current))
+          if (!latest.rows.some((r) => r.id === expected.conceptId)
+            || latest.deletions[JSON.stringify([expected.conceptId, expected.variantId])]?.deleted) {
+            throw Object.assign(new Error('Destination deleted'), { code: 'commit_conflict' })
+          }
+          valueRef.current = latest.rows
+          editPrivate(updater, false)
+        }
+        submitted = [...privatePending.current]
+        const next = resolveConceptEdits(state, canonicalEdits(submitted))
+        canonical = next.rows
+        localStorage.setItem(key, JSON.stringify(canonical))
+        return next
+      },
+    })
+    backend.ownerScope.assertCurrent(snapshot)
+    if (expected) requireReceipt(rows, expected)
+    confirmConceptEdits(submitted)
+    privatePending.current = privatePending.current.filter((e) => !submitted.includes(e))
+    confirmRowGenerations(key, submitted.map((edit) => ({ id: edit.id, editGen: edit.generation })))
+    syncedRef.current = rows
+    await publishPrivate(rows, snapshot)
+    return rows
+  }, [collection, editPrivate, key, publishPrivate, canonicalEdits, codec, user])
 
   // Offline cache (canonical form). Also keep valueRef current so the debounced
   // flush reads the latest committed value.
@@ -92,9 +188,13 @@ export function useStorage(key, defaultValue, codecArg) {
   useEffect(() => {
     if (!hasCodec) return undefined
     let cancelled = false
+    const initial = valueRef.current
+    const seq = editSeq.current
     codec
-      .toDisplay(valueRef.current)
-      .then((display) => { if (!cancelled) setValue(display) })
+      .toDisplay(initial)
+      .then((display) => {
+        if (!cancelled && valueRef.current === initial && editSeq.current === seq) setValue(display)
+      })
       .catch((e) => console.error(`[tattoo] toDisplay failed for ${key}:`, e))
     return () => { cancelled = true }
   }, [hasCodec, codec, key])
@@ -107,6 +207,19 @@ export function useStorage(key, defaultValue, codecArg) {
     let cancelled = false
     ;(async () => {
       try {
+        if (privateConcepts) {
+          const snapshot = backend.ownerScope.capture()
+          privatePending.current = readConceptEdits(snapshot.ownerId)
+          // Rebase crash-recovery intent before the ordinary hydration path
+          // can reconcile a stale whole cache row over a paid variant.
+          const p = flushChain.current.then(() => {
+            backend.ownerScope.assertCurrent(snapshot)
+            return persistPrivate()
+          })
+          flushChain.current = p.catch(() => {})
+          await p
+          return
+        }
         const remoteRows = await backend.store.list(collection)
         if (cancelled) return
         // Rows deleted locally but not yet remotely must not ride back in on
@@ -161,10 +274,13 @@ export function useStorage(key, defaultValue, codecArg) {
       }
     })()
     return () => { cancelled = true }
-  }, [user, collection, codec, key])
+  }, [user, collection, codec, key, privateConcepts, persistPrivate])
 
-  const runFlush = useCallback(async () => {
+  const runFlush = useCallback(async (checkedSnapshot) => {
     if (!user || !collection) return
+    if (privateConcepts) {
+      return persistPrivate()
+    }
     const isSingleton = SINGLETON_COLLECTIONS.has(collection)
     // Snapshot the shared, opaque edit generation before doing any async
     // work. It's a localStorage sidecar, so another tab editing the same key
@@ -182,6 +298,7 @@ export function useStorage(key, defaultValue, codecArg) {
     let next = valueRef.current
     for (let round = 0; ; round += 1) {
       await codec.ensureUploaded(next, { userId: user.id })
+      if (checkedSnapshot) backend.ownerScope.assertCurrent(checkedSnapshot)
       if (valueRef.current === next) break
       if (round >= 2) return
       next = valueRef.current
@@ -192,7 +309,8 @@ export function useStorage(key, defaultValue, codecArg) {
     const canonical = codec.toCanonical(next)
     try {
       localStorage.setItem(key, JSON.stringify(canonical))
-    } catch {
+    } catch (error) {
+      if (checkedSnapshot) throw error
       // quota exceeded — silent fail
     }
     const rows = valueToRecords(
@@ -223,6 +341,7 @@ export function useStorage(key, defaultValue, codecArg) {
     const tasks = [backend.store.upsert(collection, rows)]
     if (pendingDeletes.length) tasks.push(backend.store.remove(collection, pendingDeletes))
     await Promise.all(tasks)
+    if (checkedSnapshot) backend.ownerScope.assertCurrent(checkedSnapshot)
 
     syncedRef.current = rows
     clearPendingDeletes(key, pendingDeletes)
@@ -240,10 +359,15 @@ export function useStorage(key, defaultValue, codecArg) {
       // this exact edit, not some other tab's, is what's now confirmed.
       confirmRowGenerations(key, canonical)
     }
-  }, [user, collection, codec, key])
+  }, [user, collection, codec, key, privateConcepts, persistPrivate])
 
   const flush = useCallback(() => {
-    const p = flushChain.current.then(runFlush, runFlush)
+    const snapshot = backend.capabilities.realAuth ? backend.ownerScope.capture() : null
+    const work = () => {
+      if (snapshot) backend.ownerScope.assertCurrent(snapshot)
+      return runFlush()
+    }
+    const p = flushChain.current.then(work, work)
     flushChain.current = p.then(() => {}, () => {})
     return p
   }, [runFlush])
@@ -252,6 +376,18 @@ export function useStorage(key, defaultValue, codecArg) {
 
   const setValueAndSync = useCallback(
     (updater) => {
+      if (privateConcepts) {
+        const snapshot = backend.ownerScope.capture()
+        editPrivate(updater)
+        clearTimeout(pushTimer.current)
+        pushTimer.current = setTimeout(() => {
+          Promise.resolve().then(() => {
+            backend.ownerScope.assertCurrent(snapshot)
+            return flushRef.current?.()
+          }).catch(() => {})
+        }, 500)
+        return
+      }
       const at = nowStamp()
       const isSingleton = collection && SINGLETON_COLLECTIONS.has(collection)
       setValue((prev) => {
@@ -323,11 +459,77 @@ export function useStorage(key, defaultValue, codecArg) {
         }, 500)
       }
     },
-    [user, collection, key]
+    [user, collection, key, privateConcepts, editPrivate]
   )
 
-  // Cancel a pending push on unmount (the value is already in the localStorage cache).
-  useEffect(() => () => clearTimeout(pushTimer.current), [])
+  const commitChecked = useCallback((updater, expected) => {
+    if (!user || collection !== 'concepts' || (backend.kind === 'local' && !backend.store.checkedSupported)) {
+      return Promise.reject(Object.assign(new Error('Checked storage unavailable'), { code: 'commit_unavailable' }))
+    }
+    clearTimeout(pushTimer.current)
+    let snapshot
+    try { snapshot = backend.ownerScope.capture() } catch (error) { return Promise.reject(error) }
+    const work = async () => {
+      backend.ownerScope.assertCurrent(snapshot)
+      if (!user || collection !== 'concepts' || (backend.kind === 'local' && !backend.store.checkedSupported)) {
+        throw Object.assign(new Error('Checked storage unavailable'), { code: 'commit_unavailable' })
+      }
+      if (snapshot.ownerId !== expected.ownerId || user.id !== expected.ownerId) {
+        throw Object.assign(new Error('Owner changed'), { code: 'owner_changed' })
+      }
+      if (privateConcepts) await persistPrivate(updater, expected)
+      else {
+        // Supabase uses the existing rejecting writer, not another transaction
+        // abstraction. The readback below proves presence, not cross-device
+        // atomicity. Keep newer local generations queued during these awaits.
+        const before = await backend.store.list(collection)
+        backend.ownerScope.assertCurrent(snapshot)
+        if (!before.some((row) => row.id === expected.conceptId)
+          || !valueRef.current.some((row) => row.id === expected.conceptId)) {
+          throw Object.assign(new Error('Destination deleted'), { code: 'commit_conflict' })
+        }
+        const next = stampChangedRows(valueRef.current, updater(valueRef.current), nowStamp())
+        requireReceipt(codec.toCanonical(next), expected)
+        valueRef.current = next
+        setValue(next)
+        writeRowGenerations(key, next)
+        editSeq.current += 1
+        localStorage.setItem(key, JSON.stringify(codec.toCanonical(next)))
+        await runFlush(snapshot)
+        backend.ownerScope.assertCurrent(snapshot)
+        const canonical = await backend.store.list(collection)
+        backend.ownerScope.assertCurrent(snapshot)
+        requireReceipt(canonical, expected)
+      }
+      backend.ownerScope.assertCurrent(snapshot)
+      requireReceipt(codec.toCanonical(valueRef.current), expected)
+      return { ...expected, committed: true }
+    }
+    const p = flushChain.current.then(work, work)
+    flushChain.current = p.catch(() => {})
+    return p
+  }, [user, collection, privateConcepts, persistPrivate, codec, key, runFlush])
+  const checkedSupported = Boolean(user && collection === 'concepts'
+    && (backend.kind !== 'local' || backend.store.checkedSupported))
+  const checkedCommit = useMemo(() => {
+    const commit = (updater, expected) => commitChecked(updater, expected)
+    // Fresh wrapper, not a hook argument mutation. The locked callable API
+    // includes this read-only capability; the wrapper is never mutated again.
+    // eslint-disable-next-line react-hooks/immutability
+    commit.supported = checkedSupported
+    return commit
+  }, [commitChecked, checkedSupported])
 
-  return [value, setValueAndSync]
+  // Cancel a pending push on unmount (the value is already in the localStorage cache).
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false; clearTimeout(pushTimer.current) }
+  }, [])
+
+  return [value, setValueAndSync, checkedCommit]
+}
+
+function requireReceipt(rows, { conceptId, variantId, imageKey }) {
+  const variant = rows.find((r) => r.id === conceptId)?.variants?.find((v) => v.id === variantId)
+  if (!variant || variant.imageUrl !== imageKey) throw Object.assign(new Error('Import unconfirmed'), { code: 'commit_conflict' })
 }

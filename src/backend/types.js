@@ -41,6 +41,10 @@
  * @typedef {Object} RemoteStore
  * @property {(collection: string) => Promise<Record[]>} list
  * @property {(collection: string, rows: Record[]) => Promise<Record[]>} upsert
+ * @property {(collection: string, rows: Record[], options: {ownerId:string, resolveLatest?:Function}) => Promise<Record[]>} [upsertChecked]
+ *   Local-only checked writer. Private concepts may pass an internal under-lock
+ *   resolveLatest({rows,deletions}) resolver to either writer. No public metadata.
+ * @property {boolean} [checkedSupported] Local paid imports require Web Locks.
  * @property {(collection: string, ids: string[]) => Promise<void>} remove
  * @property {(collection: string, since?: string) => Promise<Record[]>} pull
  *   Records changed strictly after the `since` ISO timestamp (all when omitted).

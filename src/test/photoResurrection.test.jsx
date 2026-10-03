@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { AuthProvider } from '../context/AuthContext'
 import { useAuth } from '../context/useAuth'
@@ -7,9 +7,10 @@ import {
   buildArtists,
   applyImageTombstones,
   removedImageTombstones,
+  cacheArtistImages,
 } from '../hooks/useArtistStorage'
 import { backend } from '../backend'
-import { clearBlobUrls, registerBlobUrl } from '../data/blobUrls'
+import { clearBlobUrls, registerBlobUrl, keyForUrl } from '../data/blobUrls'
 import { DEFAULT_ARTISTS } from '../data/artists'
 
 const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>
@@ -40,6 +41,21 @@ function clearStore(name, store) {
 
 const renderSynced = () =>
   renderHook(() => ({ auth: useAuth(), store: useArtistStorage() }), { wrapper })
+
+afterEach(() => vi.restoreAllMocks())
+
+async function readCachedImages(id) {
+  const req = indexedDB.open('tattoo-images-v1', 1)
+  return new Promise((resolve, reject) => {
+    req.onsuccess = () => {
+      const db = req.result
+      const read = db.transaction('artist-images').objectStore('artist-images').get(id)
+      read.onsuccess = () => { db.close(); resolve(read.result) }
+      read.onerror = () => { db.close(); reject(read.error) }
+    }
+    req.onerror = () => reject(req.error)
+  })
+}
 
 // #55 part 1: buildArtists's idbImages branch ignored the reconciled canonical
 // a.images entirely whenever any IndexedDB cache existed, so a stale local
@@ -115,23 +131,86 @@ describe('a stale local image cache does not resurrect a remotely-removed photo'
     // genuinely un-migrated one, since the local backend resolves every blob
     // (migrated or not) to a data-URL.
     registerBlobUrl('user/local-artist@studio.com/artists/c1/x.jpg', 'data:image/jpeg;base64,X_STALE')
-    // Local IndexedDB cache (device A's stale view): still has X too.
-    const req = indexedDB.open('tattoo-images-v1', 1)
-    await new Promise((resolve, reject) => {
-      req.onupgradeneeded = (e) => e.target.result.createObjectStore('artist-images')
-      req.onsuccess = (e) => {
-        const tx = e.target.result.transaction('artist-images', 'readwrite')
-        tx.objectStore('artist-images').put(['data:image/jpeg;base64,X_STALE', 'data:image/jpeg;base64,Y'], 'c1')
-        tx.oncomplete = resolve
-        tx.onerror = () => reject(tx.error)
-      }
-      req.onerror = () => reject(req.error)
-    })
+    // Exercise the actual durable cache path, not a hand-written old schema.
+    // AuthProvider clears all volatile URL mappings at initial sign-in.
+    registerBlobUrl(key, 'data:image/jpeg;base64,Y')
+    await cacheArtistImages('c1', ['data:image/jpeg;base64,X_STALE', 'data:image/jpeg;base64,Y'])
 
     const { result } = renderSynced()
     await waitFor(() => expect(result.current.store[0]).toHaveLength(1))
     await waitFor(() => expect(result.current.store[0][0].images).toContain('data:image/jpeg;base64,Y'))
     expect(result.current.store[0][0].images).not.toContain('data:image/jpeg;base64,X_STALE')
+  })
+
+  it('retains mixed genuine legacy bytes but never reuploads migrated entries after clear/reload', async () => {
+    seedSession('artist@studio.com')
+    const ownerId = 'local-artist@studio.com'
+    const key = `user/${ownerId}/artists/c1/y.jpg`
+    await backend.blobs.upload(ownerId, key, 'data:image/jpeg;base64,Y', 'image/jpeg')
+    await backend.store.upsert('artistsMeta', [{ id: 'c1', handle: 'x', images: [{ key }], updatedAt: '2026-06-01T00:00:00Z' }])
+    registerBlobUrl(`user/${ownerId}/artists/c1/x.jpg`, 'data:image/jpeg;base64,X_STALE')
+    registerBlobUrl(key, 'data:image/jpeg;base64,Y')
+    await cacheArtistImages('c1', ['data:image/jpeg;base64,X_STALE', 'data:image/jpeg;base64,Y', 'data:image/jpeg;base64,LEGACY'])
+    clearBlobUrls()
+    const upload = vi.spyOn(backend.blobs, 'upload')
+    const h = renderSynced()
+    await waitFor(() => expect(h.result.current.store[0].find((r) => r.id === 'c1')?.images).toContain('data:image/jpeg;base64,LEGACY'))
+    await waitFor(async () => expect((await backend.store.list('artistsMeta'))[0].images).toHaveLength(2))
+    await waitFor(() => expect(localStorage.getItem('tattoo_img_migrated_v1')).toBe('1'))
+    expect(h.result.current.store[0][0].images).not.toContain('data:image/jpeg;base64,X_STALE')
+    expect(upload.mock.calls.map((args) => args[2])).toEqual(['data:image/jpeg;base64,LEGACY'])
+    expect((await readCachedImages('c1')).every((image) => image.key)).toBe(true)
+    h.unmount()
+    clearBlobUrls()
+    const second = renderSynced()
+    await waitFor(() => expect(second.result.current.store[0].find((r) => r.id === 'c1')?.images).toContain('data:image/jpeg;base64,Y'))
+    expect(second.result.current.store[0][0].images).not.toContain('data:image/jpeg;base64,X_STALE')
+    expect(upload).toHaveBeenCalledTimes(1)
+  })
+
+  it('never restores another owner cache refs as new uploads or reverse URL mappings', async () => {
+    registerBlobUrl('user/A/artists/shared-id/x.jpg', 'data:image/jpeg;base64,A_PRIVATE')
+    await cacheArtistImages('shared-id', ['data:image/jpeg;base64,A_PRIVATE'])
+    clearBlobUrls()
+    seedSession('B')
+    const built = await buildArtists([{ id: 'shared-id', images: [] }], { 'shared-id': await readCachedImages('shared-id') }, false)
+    expect(built[0].images).toEqual([])
+    expect(keyForUrl('data:image/jpeg;base64,A_PRIVATE')).toBeNull()
+  })
+
+  it('keeps failed classification writes recoverable without marking migration complete', async () => {
+    seedSession('artist@studio.com')
+    localStorage.setItem('tattoo_artists_meta', JSON.stringify([{ id: 'c1', handle: 'x', images: [] }]))
+    await cacheArtistImages('c1', ['data:image/jpeg;base64,LEGACY'])
+    const originalPut = IDBObjectStore.prototype.put
+    vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function (...args) {
+      if (this.transaction.db.name === 'tattoo-images-v1') throw new Error('quota')
+      return originalPut.apply(this, args)
+    })
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const h = renderSynced()
+    await waitFor(() => expect(error).toHaveBeenCalled())
+    expect(localStorage.getItem('tattoo_img_migrated_v1')).toBeNull()
+    expect(await readCachedImages('c1')).toEqual(['data:image/jpeg;base64,LEGACY'])
+    await waitFor(() => expect(h.result.current.store[0].find((r) => r.id === 'c1')?.images).toContain('data:image/jpeg;base64,LEGACY'))
+  })
+
+  it('retains historical ambiguous bytes but never displays or reuploads them after completed migration', async () => {
+    seedSession('artist@studio.com')
+    await cacheArtistImages('c1', ['data:image/jpeg;base64,X_STALE'])
+    localStorage.setItem('tattoo_img_migrated_v1', '1')
+    await backend.store.upsert('artistsMeta', [{ id: 'c1', handle: 'x', images: [], updatedAt: '2026-06-01T00:00:00Z' }])
+    clearBlobUrls()
+    const upload = vi.spyOn(backend.blobs, 'upload')
+    const h = renderSynced()
+    await waitFor(() => expect(h.result.current.store[0]).toHaveLength(1))
+    expect(h.result.current.store[0][0].images).toEqual([])
+    expect(upload).not.toHaveBeenCalled()
+    expect(await readCachedImages('c1')).toEqual(['data:image/jpeg;base64,X_STALE'])
+    expect((await backend.store.list('artistsMeta'))[0].images).toEqual([])
+    // Adding a new photo must not silently erase the quarantined old bytes.
+    await cacheArtistImages('c1', ['https://example.test/new.jpg'])
+    expect(await readCachedImages('c1')).toContain('data:image/jpeg;base64,X_STALE')
   })
 })
 

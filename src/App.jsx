@@ -35,7 +35,7 @@ export default function App() {
 function AppShell() {
   const [artists, setArtists] = useArtistStorage()
   const [ideas, setIdeas] = useStorage('tattoo_ideas', [], ideasCodec)
-  const [concepts, setConcepts] = useStorage('tattoo_concepts', [], conceptsCodec)
+  const [concepts, setConcepts, commitConcepts] = useStorage('tattoo_concepts', [], conceptsCodec)
   const [boards, setBoards] = useStorage('tattoo_boards', [])
   const [conventionOverrides, setConventionOverrides] = useStorage('tattoo_convention_attending', {})
   // Device-local on purpose (no sync collection): a show's line-up is hundreds
@@ -75,7 +75,7 @@ function AppShell() {
             <Route path="/brief" element={<Brief ideas={ideas} setIdeas={setIdeas} artists={artists} mergedConventions={mergedConventions} boards={boards} setBoards={setBoards} />} />
             <Route path="/conventions" element={<Conventions artists={artists} setArtists={setArtists} conventionOverrides={conventionOverrides} setConventionOverrides={setConventionOverrides} conventionLineups={conventionLineups} setConventionLineups={setConventionLineups} conventionWinners={conventionWinners} setConventionWinners={setConventionWinners} />} />
             <Route path="/studios" element={<Studios artists={artists} />} />
-            <Route path="/concepts" element={<Concepts concepts={concepts} setConcepts={setConcepts} artists={artists} ideas={ideas} />} />
+            <Route path="/concepts" element={<Concepts concepts={concepts} setConcepts={setConcepts} commitConcepts={commitConcepts} artists={artists} ideas={ideas} />} />
             <Route path="/boards" element={<Navigate to="/brief?tab=boards" replace />} />
             <Route path="/help" element={<Help />} />
             <Route
