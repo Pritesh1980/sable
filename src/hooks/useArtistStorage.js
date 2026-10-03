@@ -44,36 +44,65 @@ function openDB() {
   })
 }
 
-// Cache keys, not the current display URL, for already-uploaded images. A URL
-// reverse map is volatile across identity changes/reloads and cannot classify
-// old bytes as migrated. Raw legacy uploads remain intact until migration.
-export async function cacheArtistImages(id, images) {
-  const cached = images.map((image) => {
-    const url = typeof image === 'string' ? image : image?.url
-    const key = image?.key || keyForUrl(url)
-    return key ? { key, ...(image?.addedAt ? { addedAt: image.addedAt } : {}) } : image
-  })
+function captureCacheOwner(isCancelled = () => false) {
+  const owner = backend.ownerScope.capture()
+  return () => {
+    backend.ownerScope.assertCurrent(owner)
+    if (isCancelled()) throw Object.assign(new Error('Image cache owner changed'), { code: 'owner_changed' })
+  }
+}
+
+// Read/modify/write in one transaction: migration must classify the latest row,
+// never replace it with the snapshot read before a blob or canonical-store await.
+async function updateCachedImages(id, update, assertCurrent) {
+  assertCurrent()
   const db = await openDB()
   return new Promise((resolve, reject) => {
     try {
+      assertCurrent()
       const tx = db.transaction(STORE, 'readwrite')
       const store = tx.objectStore(STORE)
-      if (localStorage.getItem(MIGRATED_FLAG)) {
-        const prior = store.get(id)
-        prior.onsuccess = () => {
-          // Unknown historical extras were deliberately withheld from display.
-          // Keep their only bytes even if the user later adds a different image.
-          const recovery = (Array.isArray(prior.result) ? prior.result : []).filter(
-            (image) => typeof image === 'string' && image.startsWith('data:') && !keyForUrl(image) && !cached.includes(image)
-          )
-          try { store.put([...cached, ...recovery], id) } catch (error) { tx.abort(); reject(error) }
-        }
-      } else store.put(cached, id)
-      tx.oncomplete = () => { db.close(); resolve() }
+      const prior = store.get(id)
+      prior.onsuccess = () => {
+        try {
+          assertCurrent()
+          const next = update(Array.isArray(prior.result) ? prior.result : [])
+          assertCurrent()
+          store.put(next, id)
+        } catch (error) { tx.abort(); reject(error) }
+      }
+      tx.oncomplete = () => {
+        db.close()
+        try { assertCurrent(); resolve() } catch (error) { reject(error) }
+      }
       tx.onerror = () => { db.close(); reject(tx.error) }
       tx.onabort = () => { db.close(); reject(tx.error || new Error('Image cache write aborted')) }
     } catch (error) { db.close(); reject(error) }
   })
+}
+
+// Cache keys for uploaded images and explicit pending markers for new local
+// bytes. The marker is private to IndexedDB, never synced canonical metadata.
+// Default legacy mode is used only by the old-cache compatibility migration.
+export async function cacheArtistImages(id, images, { pendingUploads = false, assertCurrent = captureCacheOwner() } = {}) {
+  const cached = images.map((image) => {
+    const url = typeof image === 'string' ? image : image?.url
+    const key = image?.key || keyForUrl(url)
+    const addedAt = image?.addedAt ? { addedAt: image.addedAt } : {}
+    if (key) return { key, ...addedAt }
+    // Only an explicit ordinary edit grants pending membership. Historical
+    // unknown raw strings stay quarantined once the migration flag exists.
+    if (pendingUploads && typeof url === 'string' && url.startsWith('data:')) return { pendingUpload: true, url, ...addedAt }
+    return image
+  })
+  return updateCachedImages(id, (prior) => {
+    // Unknown historical extras were deliberately withheld from display.
+    // Keep their only bytes even if the user later adds a different image.
+    const recovery = localStorage.getItem(MIGRATED_FLAG) ? prior.filter(
+      (image) => typeof image === 'string' && image.startsWith('data:') && !keyForUrl(image) && !cached.includes(image)
+    ) : []
+    return [...cached, ...recovery]
+  }, assertCurrent)
 }
 
 async function dbGetAll() {
@@ -288,6 +317,7 @@ export function mergeStaticImages(idbImages = [], staticImages = []) {
 // un-migrated local upload — a raw data-URL with no registered blob key yet,
 // because canonicalizeImages deliberately drops those until the one-time
 // migration uploads them — which must still display locally in that window.
+// Explicit pending-upload entries retain that exception after migration too.
 // New cache writes classify migrated images durably as {key}. Historical raw
 // arrays are ambiguous once migration was marked complete: retain their bytes
 // in IndexedDB for recovery, but do not infer image membership from them.
@@ -304,8 +334,13 @@ export async function buildArtists(metaList, imageMap, withDefaults = true) {
       const def = withDefaults ? DEFAULT_ARTISTS.find((d) => d.id === a.id) : undefined
       const idbImages = imageMap[a.id]
       const { display: resolved, unresolved } = await resolveImageRefs(Array.isArray(a.images) ? a.images : [])
-      const legacyLocalOnly = !localStorage.getItem(MIGRATED_FLAG) && Array.isArray(idbImages)
-        ? idbImages.filter((s) => typeof s === 'string' && s.startsWith('data:') && !keyForUrl(s))
+      const legacyLocalOnly = Array.isArray(idbImages)
+        ? idbImages.flatMap((image) => {
+          if (image?.pendingUpload === true && typeof image.url === 'string' && image.url.startsWith('data:')) {
+            return keyForUrl(image.url) ? [] : [image.addedAt ? { url: image.url, addedAt: image.addedAt } : image.url]
+          }
+          return !localStorage.getItem(MIGRATED_FLAG) && typeof image === 'string' && image.startsWith('data:') && !keyForUrl(image) ? [image] : []
+        })
         : []
       const own = legacyLocalOnly.length ? [...legacyLocalOnly, ...resolved] : resolved
       // A tombstoned DEFAULT_ARTISTS image must not be merged back in —
@@ -323,8 +358,8 @@ export async function buildArtists(metaList, imageMap, withDefaults = true) {
   )
 }
 
-// One-time migration: upload every legacy data-URL sitting in IndexedDB to the
-// blob store and register key↔url so canonicalizeImages can map them to { key }.
+// Upload eligible legacy bytes and explicitly pending local uploads on mount.
+// Register key↔url so canonicalizeImages can map them to { key }.
 // Cache classification is persisted after canonical metadata succeeds, before
 // marking migration complete. Failed/unclassified bytes remain recoverable.
 // Returns the { artistId, key } pairs it actually uploaded, so the caller can
@@ -333,26 +368,41 @@ export async function buildArtists(metaList, imageMap, withDefaults = true) {
 // in any artist's canonical images, and buildArtists's #55 fix (which no
 // longer trusts the IndexedDB cache for anything already registered) would
 // drop it from display and from the metadata pushed right after.
-async function migrateLegacyImages(userId, imageMap) {
+async function migrateLegacyImages(userId, imageMap, assertCurrent) {
   const migrated = []
+  const classifications = new Map()
   let complete = true
+  const includeLegacy = !localStorage.getItem(MIGRATED_FLAG)
   for (const [artistId, images] of Object.entries(imageMap)) {
     if (!Array.isArray(images)) continue
+    const keys = new Map()
+    classifications.set(artistId, keys)
     for (const img of images) {
-      if (typeof img !== 'string' || !img.startsWith('data:')) continue
-      if (keyForUrl(img)) continue
+      assertCurrent()
+      const pending = img?.pendingUpload === true
+      const url = pending ? img.url : img
+      if ((!pending && !includeLegacy) || typeof url !== 'string' || !url.startsWith('data:')) continue
+      const existing = keyForUrl(url)
+      if (existing) {
+        keys.set(url, existing)
+        if (pending) migrated.push({ artistId, key: existing, addedAt: img.addedAt })
+        continue
+      }
       const key = `user/${userId}/artists/${artistId}/${crypto.randomUUID?.() || Date.now()}.jpg`
       try {
-        await backend.blobs.upload(userId, key, img, 'image/jpeg')
-        registerBlobUrl(key, img)
-        migrated.push({ artistId, key })
+        await backend.blobs.upload(userId, key, url, 'image/jpeg')
+        assertCurrent()
+        registerBlobUrl(key, url)
+        keys.set(url, key)
+        migrated.push({ artistId, key, addedAt: img?.addedAt })
       } catch (e) {
+        assertCurrent()
         complete = false
         console.error('[tattoo] image migration failed for', artistId, e)
       }
     }
   }
-  return { refs: migrated, complete }
+  return { refs: migrated, complete, classifications }
 }
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
@@ -421,14 +471,16 @@ export function useArtistStorage() {
     let cancelled = false
     async function init() {
       try {
+        const assertCurrent = captureCacheOwner(() => cancelled)
         const oldRaw = localStorage.getItem(OLD_KEY)
         // The legacy namespace has no verified owner. Only offline auth keeps
         // its compatibility migration; a real account cannot claim or seed it.
         if (oldRaw && backend.capabilities.offlineAuth) {
           const old = JSON.parse(oldRaw)
           await Promise.all(
-            old.filter((a) => a.images?.length).map((a) => cacheArtistImages(a.id, a.images))
+            old.filter((a) => a.images?.length).map((a) => cacheArtistImages(a.id, a.images, { assertCurrent }))
           )
+          assertCurrent()
           if (!localStorage.getItem(META_KEY)) {
             saveMeta(applyDefaults(old))
           }
@@ -442,6 +494,7 @@ export function useArtistStorage() {
         const built = await buildArtists(artistsRef.current.map(canonicalizeArtist), imageMap, seedsOwnerData(user, undefined, backend.capabilities.offlineAuth))
         if (!cancelled) setArtistsRaw(built)
       } catch (e) {
+        if (e.code === 'owner_changed') return
         console.error('[tattoo] Failed to load images:', e)
       }
     }
@@ -458,22 +511,27 @@ export function useArtistStorage() {
     let cancelled = false
     ;(async () => {
       try {
+        const assertCurrent = captureCacheOwner(() => cancelled)
         // One-time migration of legacy IndexedDB data-URLs → blob storage so they
         // gain keys and can sync across devices.
         const imageMap = await dbGetAll()
+        assertCurrent()
         imageMapRef.current = imageMap
         let didMigrate = false
         let migrationComplete = false
         let migratedRefs = []
-        if (!localStorage.getItem(MIGRATED_FLAG)) {
-          const migration = await migrateLegacyImages(user.id, imageMap)
+        let classifications = new Map()
+        if (!localStorage.getItem(MIGRATED_FLAG) || Object.values(imageMap).some((images) => Array.isArray(images) && images.some((image) => image?.pendingUpload === true))) {
+          const migration = await migrateLegacyImages(user.id, imageMap, assertCurrent)
+          assertCurrent()
           migratedRefs = migration.refs
           migrationComplete = migration.complete
+          classifications = migration.classifications
           didMigrate = true
         }
 
         const remoteAll = await backend.store.list(COLLECTION)
-        if (cancelled) return
+        assertCurrent()
         // Reconcile against what's on screen *now*, read after the fetch — not
         // the mount-time cache. An edit made while the pull was in flight is
         // stamped newer than the remote row and wins last-write-wins; the old
@@ -527,9 +585,9 @@ export function useArtistStorage() {
         // the artist's own photo and belongs ahead of the curated starter set.
         if (migratedRefs.length) {
           const byArtist = new Map()
-          for (const { artistId, key } of migratedRefs) {
+          for (const { artistId, key, addedAt } of migratedRefs) {
             if (!byArtist.has(artistId)) byArtist.set(artistId, [])
-            byArtist.get(artistId).push({ key })
+            byArtist.get(artistId).push(addedAt ? { key, addedAt } : { key })
           }
           nextMeta = nextMeta.map((a) =>
             byArtist.has(a.id) ? { ...a, images: [...byArtist.get(a.id), ...(a.images || [])] } : a
@@ -540,12 +598,13 @@ export function useArtistStorage() {
           // crash-recovered edit — pure local bookkeeping that must never
           // reach the remote store (#84 cross-model review).
           await backend.store.upsert(COLLECTION, nextMeta.map(stripEditGen))
+          assertCurrent()
         }
 
-        if (cancelled) return
+        assertCurrent()
         syncedRef.current = nextMeta
         const built = await buildArtists(nextMeta, imageMapRef.current, seedsOwnerData(user, undefined, backend.capabilities.offlineAuth))
-        if (cancelled) return
+        assertCurrent()
         setArtistsRaw(built)
 
         // After migrating legacy images, push the now-keyed metadata so the keys
@@ -567,13 +626,21 @@ export function useArtistStorage() {
           // strip it for the push, but keep the unstripped rows as the
           // in-memory baseline (syncedRef participates in reconciliation).
           await backend.store.upsert(COLLECTION, rows.map(stripEditGen))
+          assertCurrent()
           syncedRef.current = rows
           // Persist the migrated/legacy distinction atomically per cache row.
           // Only mark complete after both the canonical record and cache write
           // succeed; never discard an unknown historical raw image here.
-          for (const [id, images] of Object.entries(imageMap)) {
-            if (Array.isArray(images)) await cacheArtistImages(id, images)
+          for (const [id, keys] of classifications) {
+            assertCurrent()
+            await updateCachedImages(id, (current) => current.map((image) => {
+              const url = typeof image === 'string' ? image : image?.url
+              const key = keys.get(url)
+              return key ? { key, ...(image?.addedAt ? { addedAt: image.addedAt } : {}) } : image
+            }), assertCurrent)
+            assertCurrent()
           }
+          assertCurrent()
           if (migrationComplete) localStorage.setItem(MIGRATED_FLAG, '1')
         }
 
@@ -596,6 +663,7 @@ export function useArtistStorage() {
           }, 500)
         }
       } catch (e) {
+        if (e.code === 'owner_changed') return
         console.error('[tattoo] artist meta sync failed:', e)
       }
     })()
@@ -666,6 +734,7 @@ export function useArtistStorage() {
   useEffect(() => { flushMetaRef.current = flushMeta }, [flushMeta])
 
   function setArtists(updater) {
+    const assertCurrent = captureCacheOwner()
     const at = nowStamp()
     setArtistsRaw((prev) => {
       const next = typeof updater === 'function' ? updater(prev) : updater
@@ -707,7 +776,7 @@ export function useArtistStorage() {
       for (const a of stamped) {
         const prevA = prev.find((p) => p.id === a.id)
         if (!prevA || prevA.images !== a.images) {
-          cacheArtistImages(a.id, a.images || []).catch((e) =>
+          cacheArtistImages(a.id, a.images || [], { pendingUploads: true, assertCurrent }).catch((e) =>
             console.error(`[tattoo] Failed to save images for ${a.id}:`, e)
           )
         }

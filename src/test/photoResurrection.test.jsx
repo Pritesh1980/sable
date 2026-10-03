@@ -10,6 +10,7 @@ import {
   cacheArtistImages,
 } from '../hooks/useArtistStorage'
 import { backend } from '../backend'
+import { uploadDataUrl } from '../hooks/useImageUpload'
 import { clearBlobUrls, registerBlobUrl, keyForUrl } from '../data/blobUrls'
 import { DEFAULT_ARTISTS } from '../data/artists'
 
@@ -27,11 +28,11 @@ function clearStore(name, store) {
     const req = indexedDB.open(name)
     req.onsuccess = (e) => {
       const db = e.target.result
-      if (!db.objectStoreNames.contains(store)) return res()
+      if (!db.objectStoreNames.contains(store)) { db.close(); return res() }
       const tx = db.transaction(store, 'readwrite')
       tx.objectStore(store).clear()
-      tx.oncomplete = () => res()
-      tx.onerror = () => res()
+      tx.oncomplete = () => { db.close(); res() }
+      tx.onerror = () => { db.close(); res() }
       return undefined
     }
     req.onerror = () => res()
@@ -176,6 +177,90 @@ describe('a stale local image cache does not resurrect a remotely-removed photo'
     const built = await buildArtists([{ id: 'shared-id', images: [] }], { 'shared-id': await readCachedImages('shared-id') }, false)
     expect(built[0].images).toEqual([])
     expect(keyForUrl('data:image/jpeg;base64,A_PRIVATE')).toBeNull()
+  })
+
+  it('keeps a new failed-upload photo visible and retryable after completed migration and reload', async () => {
+    seedSession('artist@studio.com')
+    const historical = 'data:image/jpeg;base64,HISTORICAL'
+    await cacheArtistImages('c1', [historical])
+    localStorage.setItem('tattoo_img_migrated_v1', '1')
+    await backend.store.upsert('artistsMeta', [{ id: 'c1', images: [], updatedAt: '2026-06-01T00:00:00Z' }])
+    const realUpload = backend.blobs.upload.bind(backend.blobs)
+    const upload = vi.spyOn(backend.blobs, 'upload').mockRejectedValue(new Error('offline'))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const h = renderSynced()
+    await waitFor(() => expect(h.result.current.store[0]).toHaveLength(1))
+    const fresh = 'data:image/jpeg;base64,TkVXX1BFTkRJTkc='
+    // The upload fallback hands the unchanged bytes to the ordinary setter.
+    expect(await uploadDataUrl(fresh, { userId: 'local-artist@studio.com', scope: 'artists', id: 'c1' })).toBeNull()
+    act(() => h.result.current.store[1]((rows) => rows.map((row) => ({ ...row, images: [fresh] }))))
+    await waitFor(async () => expect(await readCachedImages('c1')).toHaveLength(2))
+    h.unmount()
+    clearBlobUrls()
+    const second = renderSynced()
+    await waitFor(() => expect(second.result.current.store[0][0]?.images).toContain(fresh))
+    await waitFor(() => expect(upload).toHaveBeenCalledTimes(2))
+    expect(second.result.current.store[0][0].images).not.toContain(historical)
+    second.unmount()
+    clearBlobUrls()
+    upload.mockImplementation(realUpload)
+    const third = renderSynced()
+    await waitFor(async () => expect((await readCachedImages('c1'))[0]).toHaveProperty('key'))
+    await waitFor(() => expect(third.result.current.store[0][0]?.images).toContain(fresh))
+    expect(third.result.current.store[0][0].images).not.toContain(historical)
+    expect(await readCachedImages('c1')).toContain(historical)
+    expect(upload).toHaveBeenCalledTimes(3)
+    expect((await backend.store.list('artistsMeta'))[0].images).toHaveLength(1)
+  })
+
+  it('classifies the current cache without overwriting a new photo added during canonical upsert', async () => {
+    seedSession('artist@studio.com')
+    await backend.store.upsert('artistsMeta', [{ id: 'c1', images: [], updatedAt: '2026-06-01T00:00:00Z' }])
+    await cacheArtistImages('c1', ['data:image/jpeg;base64,LEGACY'])
+    const original = backend.store.upsert.bind(backend.store)
+    let release
+    const gate = new Promise((resolve) => { release = resolve })
+    const upsert = vi.spyOn(backend.store, 'upsert').mockImplementationOnce(async (...args) => { await gate; return original(...args) })
+    const h = renderSynced()
+    await waitFor(() => expect(upsert).toHaveBeenCalled())
+    const fresh = 'data:image/jpeg;base64,NEW_DURING_AWAIT'
+    act(() => h.result.current.store[1]((rows) => rows.map((row) => ({ ...row, images: [...row.images, fresh] }))))
+    await waitFor(async () => expect(await readCachedImages('c1')).toHaveLength(2))
+    release()
+    await waitFor(() => expect(localStorage.getItem('tattoo_img_migrated_v1')).toBe('1'))
+    const cached = await readCachedImages('c1')
+    expect(cached).toHaveLength(2)
+    clearBlobUrls()
+    const built = await buildArtists([{ id: 'c1', images: [] }], { c1: cached }, false)
+    expect(built[0].images).toContain(fresh)
+  })
+
+  it('fences migration cache writes and completion when the owner changes between row writes', async () => {
+    seedSession('artist@studio.com')
+    await backend.store.upsert('artistsMeta', [{ id: 'c1', images: [] }, { id: 'c2', images: [] }])
+    await cacheArtistImages('c1', ['data:image/jpeg;base64,ONE'])
+    await cacheArtistImages('c2', ['data:image/jpeg;base64,TWO'])
+    const originalPut = IDBObjectStore.prototype.put
+    let transitioned = false
+    let secondWrites = 0
+    let signOut
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function (...args) {
+      if (this.transaction.db.name === 'tattoo-images-v1') {
+        if (transitioned) secondWrites += 1
+        if (!transitioned) this.transaction.addEventListener('complete', () => {
+          transitioned = true
+          act(() => { signOut = h.result.current.auth.signOut() })
+        })
+      }
+      return originalPut.apply(this, args)
+    })
+    const h = renderSynced()
+    await waitFor(() => expect(transitioned).toBe(true))
+    await act(async () => { await signOut })
+    expect(secondWrites).toBe(0)
+    expect(localStorage.getItem('tattoo_img_migrated_v1')).toBeNull()
+    expect((await indexedDB.databases()).some((db) => db.name === 'tattoo-images-v1')).toBe(false)
   })
 
   it('keeps failed classification writes recoverable without marking migration complete', async () => {
