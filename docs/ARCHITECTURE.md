@@ -296,9 +296,18 @@ The protocol above lives in one place, `src/sync/collectionStore.js` (#111): a
 framework-free store per collection, bound to React by `useCollection`
 (`useSyncExternalStore`, with a setter that never changes). `useStorage` is a thin
 wrapper that creates one per component and starts it with the signed-in user; it backs
-ideas, concepts, boards, attendance and the device-only stores. `useArtistStorage`
-still runs its own copy of the protocol until artists move onto the engine (#112).
-`src/test/collectionStore.test.js` pins each rule without React.
+ideas, concepts, boards, attendance and the device-only stores. `useArtistStorage` is
+the same wrapper plus a **policy** (#112, `src/data/artistsPolicy.js`): optional hooks
+the engine calls for what is specific to a collection. `initial` shapes the first paint
+(owner seeding, #25), `onMount` runs once before hydration (the legacy `tattoo_artists`
+import and the IndexedDB photo cache, `src/data/legacyArtistImages.js`),
+`beforeFirstPull` runs before the list (the one-time legacy photo migration) and hands
+its result to `merge`, which replaces the generic reconcile (LWW, image tombstones #55,
+owner defaults, the empty-remote seed push, the post-migration restamp), and `onEdit`
+runs on the stamped rows (tombstones, display cache). `buildArtists` and
+`canonicalizeArtist` remain the temporary artist codec. `src/test/collectionStore.test.js`
+and `collectionStorePolicy.test.js` pin the engine without React;
+`artistsPolicy.test.js` pins each artist rule.
 
 `set(updater)` does the stamping, tombstones and generations outside any React updater
 and writes the offline cache before it returns. Previously the cache was written in an
@@ -860,7 +869,7 @@ sequence (`fromSlots`), so an offline photo keeps its place relative to its neig
 |---|---|
 | `src/backend/` | The vendor boundary: `index.js` factory, `sync.js`, `dirty.js`, `owner.js`, `purge.js`, `local/`, `supabase/` |
 | `src/sync/` | `collectionStore.js` — the local-first sync engine (edit-time stamping, tombstones and generations, first pull, chained pushes, start/stop epochs); `useCollection.js` — its React binding |
-| `src/hooks/` | `useStorage.js` — thin wrapper over the engine; `useArtistStorage.js` — artists, on their own copy of the protocol until #112 |
+| `src/hooks/` | `useStorage.js` — thin wrapper over the engine; `useArtistStorage.js` — artists, the same wrapper plus `data/artistsPolicy.js` (#112) |
 | `src/data/` | Domain logic: planning, embeddings, taste, staged screenshot intake, convention ingestion and Top picks, demo seed |
 | `src/data/lineups/` | Shipped roster and curated picks; floorplan coordinates are data-only, not a runtime map |
 | `src/context/UndoContext.jsx` | Shared, time-bounded undo offer and restoration feedback |

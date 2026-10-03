@@ -23,16 +23,37 @@
 // and the remote once. A flush already in flight is not cancelled by stop: its
 // tombstones and generations are only cleared once its writes land.
 //
+// Policy hooks (#112) carry what is specific to one collection — only artists
+// use them today (src/data/artistsPolicy.js). All are optional, and hooks that
+// produce a value return it, so the engine stays the only writer of state:
+//   initial(rawCache, ctx) → value     first paint; rawCache is the parsed cache
+//                                      or null. ctx.user is `initialUser`
+//   onMount(ctx) → Promise             work that runs once, signed in or not,
+//                                      before the first hydration
+//   beforeFirstPull(ctx) → Promise<prep>   runs before the list; `prep` is
+//                                      handed to merge
+//   merge({ local, remote, prep, ctx }) → { value, push?, pushDisplay? }
+//                                      replaces the generic reconcile and
+//                                      stamping. `push` rows are upserted before
+//                                      the value is published (an empty remote's
+//                                      seed); `pushDisplay(display)` → rows are
+//                                      upserted after it
+//   onEdit(prev, next, at) → next      after stamping, before anything is
+//                                      durable (tombstones, display cache)
+// The codec's toDisplay also receives ctx = { user, owner }.
+//
 // A collection with no backend collection (collectionFor(key) === null) is
 // device-local: edits are persisted and nothing else.
 
 import { backend as appBackend } from '../backend'
+import { seedsOwnerData } from '../backend/owner'
 import { drainOutbox } from '../data/imageStaging'
 import {
   collectionFor,
   reconcileValue,
   valueToRecords,
   nowStamp,
+  stripEditGen,
   SINGLETON_COLLECTIONS,
 } from '../backend/sync'
 import {
@@ -89,10 +110,14 @@ function writeCache(key, canonical) {
 const rowIds = (rows) =>
   (Array.isArray(rows) ? rows : []).map((r) => (r && typeof r === 'object' ? r.id : undefined))
 
+const ctxFor = (u) => ({ user: u || null, owner: seedsOwnerData(u || null) })
+
 export function createCollectionStore({
   key,
   defaultValue,
   codec: codecArg,
+  policy = {},
+  initialUser = null,
   collection = collectionFor(key),
   backend = appBackend,
 }) {
@@ -100,7 +125,10 @@ export function createCollectionStore({
   const isSingleton = Boolean(collection) && SINGLETON_COLLECTIONS.has(collection)
   const listeners = new Set()
 
-  let value = readCache(key, defaultValue)
+  let value = policy.initial
+    ? policy.initial(readCache(key, null), ctxFor(initialUser))
+    : readCache(key, defaultValue)
+  let mounted = null // the one onMount promise, shared by every start
   let epoch = 0
   let user = null // the live start's user; null when stopped or signed out
   let stopped = false
@@ -147,7 +175,8 @@ export function createCollectionStore({
   function trackListEdit(prev, next, at) {
     // Stamp what changed, so the edit survives a reload and wins last-write-wins
     // against older remote rows even if no push ever succeeds.
-    const stamped = stampChangedRows(prev, next, at)
+    let stamped = stampChangedRows(prev, next, at)
+    if (policy.onEdit) stamped = policy.onEdit(prev, stamped, at)
     // Tombstones at the edit, not at the flush 500ms later. Idempotent, and a
     // re-add supersedes them at flush or pull.
     if (Array.isArray(prev)) {
@@ -304,10 +333,10 @@ export function createCollectionStore({
   // first pull, so local photos show even while list() hangs offline. Dropped
   // when its epoch has ended, or when an edit or the pull replaced the value
   // while it resolved — a late hydration must never undo either.
-  async function hydrate(live) {
+  async function hydrate(live, ctx) {
     const from = value
     try {
-      const display = await codec.toDisplay(from)
+      const display = await codec.toDisplay(from, ctx)
       if (live() && value === from) replace(display)
     } catch (e) {
       console.error(`[tattoo] toDisplay failed for ${key}:`, e)
@@ -316,8 +345,11 @@ export function createCollectionStore({
 
   // Pull + reconcile. Never pushes unless an edit is still unconfirmed or the
   // codec moved images, so it can't clobber newer remote data.
-  async function pull(pullUser, live) {
+  async function pull(pullUser, live, ctx) {
     try {
+      // Before the list; whatever it returns is merge's `prep`.
+      const prep = policy.beforeFirstPull ? await policy.beforeFirstPull(ctx) : undefined
+      if (!live()) return
       const remoteRows = await backend.store.list(collection)
       if (!live()) return
       // An edit that lands while toDisplay converts the rows would be overwritten
@@ -327,6 +359,7 @@ export function createCollectionStore({
       let pendingDeletes = []
       let merged
       let display
+      let merge = null
       for (let round = 0; ; round += 1) {
         // Rows deleted locally but not yet remotely must not ride back in on the
         // pull; the remove is retried below instead. A pending delete for an id
@@ -342,22 +375,41 @@ export function createCollectionStore({
         const usableRemote = pendingDeletes.length
           ? remoteRows.filter((r) => !pendingDeletes.includes(r.id))
           : remoteRows
-        const reconciled = reconcileValue(collection, value, usableRemote, readStamp(key))
-        // Rows that predate edit-time stamping get one now, once — otherwise every
-        // flush would fallback-restamp them, outranking other devices.
-        merged = Array.isArray(reconciled)
-          ? reconciled.map((r) =>
-              r && typeof r === 'object' && !r.updatedAt ? { ...r, updatedAt: nowStamp() } : r
-            )
-          : reconciled
-        display = await codec.toDisplay(merged)
+        if (policy.merge) {
+          merge = policy.merge({ local: value, remote: usableRemote, prep, ctx })
+          merged = merge.value
+        } else {
+          const reconciled = reconcileValue(collection, value, usableRemote, readStamp(key))
+          // Rows that predate edit-time stamping get one now, once — otherwise every
+          // flush would fallback-restamp them, outranking other devices.
+          merged = Array.isArray(reconciled)
+            ? reconciled.map((r) =>
+                r && typeof r === 'object' && !r.updatedAt ? { ...r, updatedAt: nowStamp() } : r
+              )
+            : reconciled
+        }
+        display = await codec.toDisplay(merged, ctx)
         if (!live()) return
         if (editSeq === seq) break
         if (round >= 2) return
       }
+      // The policy's seed push lands before the value is published, as the
+      // artist protocol always did: an empty remote is filled even when no edit
+      // ever marked anything dirty.
+      if (merge?.push?.length) {
+        await backend.store.upsert(collection, merge.push.map(stripEditGen))
+        if (!live()) return
+      }
       // Published only now: a pull whose epoch ended must not move the baseline.
       synced = merged
       replace(display)
+
+      if (merge?.pushDisplay) {
+        const rows = merge.pushDisplay(display)
+        await backend.store.upsert(collection, rows.map(stripEditGen))
+        // Unstripped, like every baseline: only its ids are ever read.
+        synced = rows
+      }
 
       const retried = pendingDeletes.length
         ? backend.store
@@ -384,6 +436,7 @@ export function createCollectionStore({
     const mine = epoch
     const live = () => epoch === mine
     const startUser = nextUser || null
+    const ctx = ctxFor(startUser)
     user = startUser
     stopped = false
     const replay = parked
@@ -392,9 +445,18 @@ export function createCollectionStore({
     if (startUser && collection && unarmed) armPush()
     return Promise.resolve().then(() => {
       if (!live()) return undefined
+      // onMount runs once for the store's life and gates both hydration and
+      // the pull (the legacy import it does feeds both); it never waits on the
+      // network.
+      if (policy.onMount && !mounted) {
+        mounted = Promise.resolve(policy.onMount(ctx)).catch((e) =>
+          console.error(`[tattoo] onMount failed for ${key}:`, e)
+        )
+      }
+      const ready = mounted || Promise.resolve()
       const work = []
-      if (!hydrated) work.push(hydrate(live))
-      if (startUser && collection) work.push(pull(startUser, live))
+      if (!hydrated) work.push(ready.then(() => live() && hydrate(live, ctx)))
+      if (startUser && collection) work.push(ready.then(() => live() && pull(startUser, live, ctx)))
       return Promise.all(work).then(noop)
     })
   }

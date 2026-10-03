@@ -43,7 +43,10 @@ This is a personal app for one user (the owner). (A read-only share link for the
   last-write-wins on `updatedAt` (`src/backend/sync.js`). The protocol runs in one
   framework-free engine, `src/sync/collectionStore.js` (#111), bound to React by
   `useCollection` (`useSyncExternalStore`, stable setter); `useStorage` is a thin
-  wrapper over it, and `useArtistStorage` keeps its own copy until #112. Its lifecycle
+  wrapper over it, and so is `useArtistStorage` (#112): everything artist-specific
+  (owner seeding, tombstones, the legacy photo cache and its migration) is the policy in
+  `src/data/artistsPolicy.js` / `legacyArtistImages.js`, passed to the engine as hooks
+  (`initial`, `onMount`, `beforeFirstPull`, `merge`, `onEdit`). Its lifecycle
   is load-bearing: creating a store only reads the cache (StrictMode runs lazy
   initialisers twice), each `start(user)` opens an epoch so a stopped start's pull or
   hydration is discarded, an edit writes the cache before `set` returns, a late
