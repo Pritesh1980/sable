@@ -8,6 +8,7 @@
     "build": "vite build",
     "docs:check": "node --test scripts/checkMermaidDocsTest.js && node scripts/checkMermaidDocs.js",
     "test": "vitest run",
+    "test:relay": "npm --prefix server test",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",

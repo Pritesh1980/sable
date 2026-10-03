@@ -77,3 +77,9 @@ artifacts/
 
 # Vitest coverage output (npm run test:coverage)
 /coverage/
+
+# Private relay runtime files only; source, tests and example config are tracked.
+/server/node_modules/
+/server/.env
+/server/.env.local
+/server/.data/

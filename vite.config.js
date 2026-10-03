@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite'
+import { configDefaults } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import precachePlugin from './scripts/precachePlugin.js'
 
@@ -18,6 +19,7 @@ export default defineConfig({
     allowedHosts: ['.trycloudflare.com', '.ts.net'],
   },
   test: {
+    exclude: [...configDefaults.exclude, 'server/**'],
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.js'],
     globals: true,
