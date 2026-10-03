@@ -7,6 +7,8 @@ import { SHARE_CACHE } from '../sw/shareTarget'
 // NOT cleared: device preferences (theme/font) and device-local API keys, and —
 // importantly — the local backend's simulated "remote" (tattoo_remote_*,
 // tattoo-blobs-v1), which is the source of truth under VITE_BACKEND=local.
+// Owner-scoped tattoo_backup_status_* and tattoo_persistence_ack_* stay with
+// that owner's library; the signed-out app shell unmounts their indicators.
 const PURGE_KEYS = [
   'tattoo_ideas',
   'tattoo_concepts',

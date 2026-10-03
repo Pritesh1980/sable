@@ -1,5 +1,29 @@
-import { describe, it, expect } from 'vitest'
-import { buildBoardBrief, buildIdeaBrief, createBackup, parseBackup } from '../data/export'
+import { describe, it, expect, vi } from 'vitest'
+import { buildBoardBrief, buildIdeaBrief, createBackup, parseBackup, requestBackupDownload } from '../data/export'
+
+it('initiates a date-named download from an attached anchor before deferred URL cleanup', () => {
+  vi.useFakeTimers()
+  const oldCreate = URL.createObjectURL
+  const oldRevoke = URL.revokeObjectURL
+  URL.createObjectURL = vi.fn(() => 'blob:backup')
+  URL.revokeObjectURL = vi.fn()
+  const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function () {
+    expect(document.body.contains(this)).toBe(true)
+    expect(this.download).toBe('tattoo-backup-2026-09-28.json')
+  })
+  try {
+    requestBackupDownload({ exportedAt: '2026-09-28T12:00:00.000Z', data: {} })
+    expect(click).toHaveBeenCalledOnce()
+    expect(URL.revokeObjectURL).not.toHaveBeenCalled()
+    vi.runAllTimers()
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:backup')
+  } finally {
+    click.mockRestore()
+    URL.createObjectURL = oldCreate
+    URL.revokeObjectURL = oldRevoke
+    vi.useRealTimers()
+  }
+})
 
 describe('createBackup', () => {
   it('wraps app data with version and timestamp', () => {

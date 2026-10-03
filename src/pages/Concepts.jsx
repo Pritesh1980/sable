@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router'
 import ConceptComposer from '../components/ConceptComposer'
 import ConceptPiece from '../components/ConceptPiece'
 import ConceptVariantLab from '../components/ConceptVariantLab'
+import ConceptBackupStatus from '../components/ConceptBackupStatus'
 import ConceptViewer from '../components/ConceptViewer'
 import PromptPackComposer from '../components/PromptPackComposer'
 import ReliefStlDrawer from '../components/ReliefStlDrawer'
@@ -81,7 +82,7 @@ function KeyField({ label, help, placeholder, value, onSave, onRemove }) {
   )
 }
 
-export default function Concepts({ concepts, setConcepts, artists = [], ideas = [] }) {
+export default function Concepts({ concepts, setConcepts, artists = [], ideas = [], backupOwnerId, onExportBackup, backupRevision }) {
   // A concept carries its image, variants and notes; deleting one goes through
   // the app's Undo bar rather than being final (#95). Durable: the removal is
   // already persisted, so the offer must outlive the viewer closing.
@@ -415,6 +416,12 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
             ))}
           </div>
         </section>
+      )}
+
+      {backupOwnerId && onExportBackup && (
+        <div className="max-w-3xl mx-auto px-4 md:px-8 pb-10">
+          <ConceptBackupStatus key={backupOwnerId} ownerId={backupOwnerId} concepts={concepts} onExport={onExportBackup} revision={backupRevision} />
+        </div>
       )}
 
       <ConceptComposer

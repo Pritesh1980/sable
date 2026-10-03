@@ -3,6 +3,8 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import Settings from '../pages/Settings'
 import { isIOS, getShareShortcutUrl } from '../data/platform'
+import { backend } from '../backend'
+import { AuthContext } from '../context/auth-context'
 
 vi.mock('../data/platform', () => ({
   isIOS: vi.fn(() => false),
@@ -11,10 +13,11 @@ vi.mock('../data/platform', () => ({
 
 const noop = () => {}
 
-function renderSettings(props = {}) {
+function renderSettings(props = {}, auth = null) {
   return render(
     <MemoryRouter>
-      <Settings
+      <AuthContext.Provider value={auth}>
+        <Settings
         artists={[]}
         setArtists={noop}
         ideas={[]}
@@ -25,8 +28,10 @@ function renderSettings(props = {}) {
         setConcepts={noop}
         conventionOverrides={{}}
         setConventionOverrides={noop}
+        onExportBackup={async () => {}}
         {...props}
-      />
+        />
+      </AuthContext.Provider>
     </MemoryRouter>
   )
 }
@@ -49,11 +54,24 @@ describe('Settings page', () => {
     expect(screen.getByRole('button', { name: /import backup/i })).toBeInTheDocument()
   })
 
-  it('exports a backup when Export Backup is clicked', () => {
+  it('reports a requested download without claiming the file was saved', async () => {
     renderSettings()
     fireEvent.click(screen.getByRole('button', { name: /export backup/i }))
-    expect(URL.createObjectURL).toHaveBeenCalledTimes(1)
-    expect(screen.getByText('Backup exported.')).toBeInTheDocument()
+    expect(await screen.findByText('Download requested—check the file was saved.')).toBeInTheDocument()
+  })
+
+  it('describes device-only and cloud sign-in restoration separately', () => {
+    const original = backend.kind
+    try {
+      backend.kind = 'local'
+      const local = renderSettings({}, { user: { id: 'A', email: 'a@example.test' }, signOut: noop })
+      expect(screen.getByText(/same owner on this device/i)).toBeInTheDocument()
+      expect(screen.getByText(/not a cloud copy/i)).toBeInTheDocument()
+      local.unmount()
+      backend.kind = 'supabase'
+      renderSettings({}, { user: { id: 'A', email: 'a@example.test' }, signOut: noop })
+      expect(screen.getByText(/cloud-stored library syncs/i)).toBeInTheDocument()
+    } finally { backend.kind = original }
   })
 })
 

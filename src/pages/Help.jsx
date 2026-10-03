@@ -114,14 +114,14 @@ const SECTIONS = [
   {
     id: 'backup',
     label: 'Settings, backup & restore',
-    blurb: 'Your data syncs to your account — export a copy any time to keep it safe or move it.',
+    blurb: 'Export a portable library snapshot; device-only storage is not cloud sync.',
     image: 'settings.png',
     steps: [
-      'Your data is saved to your account and synced across your devices automatically; a local copy is also kept on each device so the app works offline.',
+      'With device-local storage, your library stays on this device even with a real login. Signing out clears displayed caches; signing back in as the same owner restores this device’s library. Only cloud-storage builds sync across devices.',
       'Drawer → Settings shows your account (with sign out) and the backup tools.',
-      'Use Export Backup to download a JSON file containing artists, ideas, boards, concepts, notes, ranks, tags and saved images.',
+      'Use Export Backup to request a JSON download with artists, ideas, boards, concepts, notes, ranks, tags and local saved image bytes. Check that the file was actually saved. External portfolio and bundled image links remain references.',
       'Use Import Backup to restore from a previously exported file — this replaces the current data.',
-      'Export before making big changes if you want a restore point you control.',
+      'Concepts shows when a download was requested and how many paid results were saved since that request. It does not verify an off-device copy; export again after new paid results, and keep the file somewhere safe.',
     ],
   },
 ]

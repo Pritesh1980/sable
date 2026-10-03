@@ -1,25 +1,23 @@
 import { useState, useRef } from 'react'
-import { createBackup, parseBackup } from '../data/export'
+import { parseBackup } from '../data/export'
 
-function downloadJson(filename, payload) {
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  link.click()
-  URL.revokeObjectURL(url)
-}
-
-export default function BackupPanel({ artists, setArtists, ideas, setIdeas, boards, setBoards, concepts, setConcepts, conventionOverrides, setConventionOverrides }) {
+export default function BackupPanel({ setArtists, setIdeas, setBoards, setConcepts, setConventionOverrides, onExport }) {
   const fileRef = useRef()
   const [message, setMessage] = useState('')
+  const [busy, setBusy] = useState(false)
 
-  function exportBackup() {
-    const backup = createBackup({ artists, ideas, boards, concepts, conventionOverrides })
-    const date = backup.exportedAt.slice(0, 10)
-    downloadJson(`tattoo-backup-${date}.json`, backup)
-    setMessage('Backup exported.')
+  async function exportBackup() {
+    if (busy) return
+    setBusy(true)
+    setMessage('Preparing portable backup…')
+    try {
+      await onExport()
+      setMessage('Download requested—check the file was saved.')
+    } catch (error) {
+      setMessage(error?.message || 'Could not prepare a complete backup. Nothing was downloaded.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function importBackup(e) {
@@ -47,16 +45,17 @@ export default function BackupPanel({ artists, setArtists, ideas, setIdeas, boar
         <div>
           <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-1">Backup</p>
           <p className="text-cream-muted/90 text-sm font-body leading-relaxed">
-            Export or restore artists, ideas, boards, concepts, notes, ranks, tags, and saved images.
+            Export or restore your library. Local saved images are embedded; external portfolio links remain references.
           </p>
         </div>
       </div>
       <div className="flex flex-wrap gap-2">
         <button
           onClick={exportBackup}
-          className="px-4 min-h-11 bg-accent hover:bg-accent-hover text-cream text-sm font-body rounded-xs transition-colors"
+          disabled={busy}
+          className="px-4 min-h-11 bg-accent hover:bg-accent-hover text-cream text-sm font-body rounded-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-cream disabled:opacity-60"
         >
-          Export Backup
+          {busy ? 'Preparing…' : 'Export Backup'}
         </button>
         <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={importBackup} />
         <button
@@ -66,7 +65,7 @@ export default function BackupPanel({ artists, setArtists, ideas, setIdeas, boar
           Import Backup
         </button>
       </div>
-      {message && <p className="text-xs font-mono text-cream-muted/90 mt-3">{message}</p>}
+      {message && <p role="status" className="text-xs font-mono text-cream-muted/90 mt-3">{message}</p>}
     </div>
   )
 }

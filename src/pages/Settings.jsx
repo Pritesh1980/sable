@@ -2,11 +2,12 @@ import Logo from '../components/Logo'
 import BackupPanel from '../components/BackupPanel'
 import { useAuth } from '../context/useAuth'
 import { isIOS, getShareShortcutUrl } from '../data/platform'
+import { backend } from '../backend'
 
 const MANAGING_ARTISTS_GUIDE_URL =
   'https://github.com/Pritesh1980/sable/blob/main/docs/02-managing-artists.md#share-a-screenshot-straight-from-instagram'
 
-export default function Settings({ artists, setArtists, ideas, setIdeas, boards, setBoards, concepts, setConcepts, conventionOverrides, setConventionOverrides }) {
+export default function Settings({ artists, setArtists, ideas, setIdeas, boards, setBoards, concepts, setConcepts, conventionOverrides, setConventionOverrides, onExportBackup }) {
   const auth = useAuth()
   const onIOS = isIOS()
   const shortcutUrl = onIOS ? getShareShortcutUrl() : ''
@@ -35,8 +36,10 @@ export default function Settings({ artists, setArtists, ideas, setIdeas, boards,
               Sign out
             </button>
           </div>
-          <p className="text-cream-muted/60 text-xs font-body mt-2 leading-relaxed">
-            Signing out clears this device's copy of your data. It syncs back when you sign in again.
+          <p className="text-cream-muted/90 text-xs font-body mt-2 leading-relaxed">
+            {backend.kind === 'local'
+              ? "Signing out clears displayed caches, not this owner's device-only library. Sign in as the same owner on this device to see it again; this is not a cloud copy."
+              : 'Signing out clears displayed caches. Your cloud-stored library syncs when you sign in again.'}
           </p>
         </div>
       )}
@@ -79,6 +82,7 @@ export default function Settings({ artists, setArtists, ideas, setIdeas, boards,
       )}
 
       <BackupPanel
+        onExport={onExportBackup}
         artists={artists}
         setArtists={setArtists}
         ideas={ideas}

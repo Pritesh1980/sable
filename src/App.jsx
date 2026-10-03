@@ -9,6 +9,9 @@ import { useStorage } from './hooks/useStorage'
 import { useArtistStorage } from './hooks/useArtistStorage'
 import { ideasCodec, conceptsCodec } from './data/imageCodec'
 import { mergeConventionOverrides } from './data/conventions'
+import { useAuth } from './context/useAuth'
+import { backend } from './backend'
+import { requestPortableExport } from './data/portableBackup'
 
 // The Wall (home) stays eager — it's the first paint. Every other page is
 // route-split so the initial bundle (and the SW precache built from it) stays
@@ -33,6 +36,7 @@ export default function App() {
 }
 
 function AppShell() {
+  const auth = useAuth()
   const [artists, setArtists] = useArtistStorage()
   const [ideas, setIdeas] = useStorage('tattoo_ideas', [], ideasCodec)
   const [concepts, setConcepts, commitConcepts] = useStorage('tattoo_concepts', [], conceptsCodec)
@@ -48,7 +52,17 @@ function AppShell() {
   const [conventionWinners, setConventionWinners] = useStorage('tattoo_convention_winners', {})
   const mergedConventions = mergeConventionOverrides(conventionOverrides)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [backupRevision, setBackupRevision] = useState(0)
   const navigate = useNavigate()
+
+  async function exportFullLibrary() {
+    const ownerId = auth?.user?.id
+    const ownerSnapshot = backend.ownerScope.capture()
+    if (!ownerId || ownerSnapshot.ownerId !== ownerId) throw new Error('Sign in before exporting a portable backup.')
+    await requestPortableExport({ artists, ideas, boards, concepts, conventionOverrides },
+      { ownerId, blobs: backend.blobs, assertCurrent: () => backend.ownerScope.assertCurrent(ownerSnapshot) })
+    setBackupRevision((value) => value + 1)
+  }
 
   return (
     <div className="bg-ink-black min-h-screen pb-20">
@@ -75,13 +89,14 @@ function AppShell() {
             <Route path="/brief" element={<Brief ideas={ideas} setIdeas={setIdeas} artists={artists} mergedConventions={mergedConventions} boards={boards} setBoards={setBoards} />} />
             <Route path="/conventions" element={<Conventions artists={artists} setArtists={setArtists} conventionOverrides={conventionOverrides} setConventionOverrides={setConventionOverrides} conventionLineups={conventionLineups} setConventionLineups={setConventionLineups} conventionWinners={conventionWinners} setConventionWinners={setConventionWinners} />} />
             <Route path="/studios" element={<Studios artists={artists} />} />
-            <Route path="/concepts" element={<Concepts concepts={concepts} setConcepts={setConcepts} commitConcepts={commitConcepts} artists={artists} ideas={ideas} />} />
+            <Route path="/concepts" element={<Concepts concepts={concepts} setConcepts={setConcepts} commitConcepts={commitConcepts} artists={artists} ideas={ideas} backupOwnerId={auth?.user?.id} onExportBackup={exportFullLibrary} backupRevision={backupRevision} />} />
             <Route path="/boards" element={<Navigate to="/brief?tab=boards" replace />} />
             <Route path="/help" element={<Help />} />
             <Route
               path="/settings"
               element={(
                 <Settings
+                  onExportBackup={exportFullLibrary}
                   artists={artists}
                   setArtists={setArtists}
                   ideas={ideas}

@@ -47,6 +47,26 @@ export function createBackup({ artists = [], ideas = [], boards = [], concepts =
   }
 }
 
+// Initiation is observable; completion of a browser download is not. Delay URL
+// cleanup so Safari has time to consume the object URL after the synthetic click.
+export function requestBackupDownload(backup) {
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  try {
+    link.href = url
+    link.download = `tattoo-backup-${backup.exportedAt.slice(0, 10)}.json`
+    document.body.append(link)
+    link.click()
+  } catch (error) {
+    URL.revokeObjectURL(url)
+    throw error
+  } finally {
+    link.remove()
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 60_000)
+}
+
 export function parseBackup(raw) {
   const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
   if (!parsed || typeof parsed !== 'object') {

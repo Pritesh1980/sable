@@ -13,6 +13,11 @@ const REFRESH_MARGIN_MS = 60_000
 
 const keyToEntry = new Map() // key -> { url, cachedAt }
 const urlToKey = new Map()
+// A mounted image can keep an earlier signed URL after the key is refreshed.
+// Keep a bounded, session-only reverse history for portable export. The active
+// map's existing semantics stay unchanged; owner transitions clear both maps.
+const staleUrlToKey = new Map()
+const MAX_STALE_URLS = 512
 const inflight = new Map()
 let cacheEpoch = 0
 
@@ -35,9 +40,16 @@ export function registerBlobUrl(key, url) {
   // over a long session (every TTL refresh) would otherwise pile up entries
   // for urls nothing points to any more.
   const previous = keyToEntry.get(key)
-  if (previous?.url) urlToKey.delete(previous.url)
+  if (previous?.url && previous.url !== url) {
+    urlToKey.delete(previous.url)
+    staleUrlToKey.set(previous.url, key)
+    if (staleUrlToKey.size > MAX_STALE_URLS) staleUrlToKey.delete(staleUrlToKey.keys().next().value)
+  }
   keyToEntry.set(key, { url, cachedAt: Date.now() })
-  if (url) urlToKey.set(url, key)
+  if (url) {
+    staleUrlToKey.delete(url)
+    urlToKey.set(url, key)
+  }
 }
 
 // Synchronous cache peek for render paths that can't await resolveBlobKey. A
@@ -56,6 +68,12 @@ export function getCachedBlobUrl(key) {
 // (or null for static paths / external URLs that were never uploaded).
 export function keyForUrl(url) {
   return urlToKey.get(url) || null
+}
+
+// Export-only lookup for a URL retained in long-lived React state. Do not use
+// for normal hydration: stale signed URLs must still refresh before display.
+export function knownKeyForUrl(url) {
+  return keyForUrl(url) || staleUrlToKey.get(url) || null
 }
 
 // Resolve a key to a displayable URL, caching the result and de-duping in-flight
@@ -113,5 +131,6 @@ export function clearBlobUrls() {
   cacheEpoch += 1
   keyToEntry.clear()
   urlToKey.clear()
+  staleUrlToKey.clear()
   inflight.clear()
 }
