@@ -9,15 +9,27 @@ function isImageDataUrl(url) {
   return match[2].length % 4 === 0 && /^[a-z0-9+/]+={0,2}$/i.test(match[2])
 }
 
-function imageKey(value) {
-  if (typeof value === 'string') return knownKeyForUrl(value) || value
-  if (value && typeof value === 'object') return value.key || knownKeyForUrl(value.url) || value.url || ''
-  return ''
+function imageSource(value) {
+  if (typeof value === 'string') {
+    const knownKey = knownKeyForUrl(value)
+    return { source: knownKey || value, canonical: Boolean(knownKey) || value.startsWith('user/') }
+  }
+  if (value && typeof value === 'object') {
+    // An explicit {key} is a canonical promise, even when malformed. Never
+    // reinterpret it as a static or external URL just because its text lacks
+    // the expected user/<owner>/ prefix.
+    if (Object.hasOwn(value, 'key')) return { source: value.key, canonical: true }
+    const url = typeof value.url === 'string' ? value.url : ''
+    const knownKey = knownKeyForUrl(url)
+    return { source: knownKey || url, canonical: Boolean(knownKey) || url.startsWith('user/') }
+  }
+  return { source: '', canonical: false }
 }
 
-function isLocalKey(value) { return value.startsWith('user/') }
-
 function validateKey(key, ownerId) {
+  if (typeof key !== 'string' || !key.startsWith('user/')) {
+    throw new Error('A canonical image key is malformed; backup was not downloaded.')
+  }
   const parts = key.split('/')
   if (parts.length < 4 || parts.some((part) => !part || part === '.' || part === '..')) {
     throw new Error('A local image key is malformed; backup was not downloaded.')
@@ -48,9 +60,8 @@ export async function createPortableBackup(data, { ownerId, blobs, fetchImpl = g
   const materialized = new Map()
 
   async function image(value) {
-    const source = imageKey(value)
-    if (!source) return ''
-    if (isLocalKey(source)) {
+    const { source, canonical } = imageSource(value)
+    if (canonical) {
       validateKey(source, ownerId)
       if (!materialized.has(source)) {
         let resolved
@@ -72,6 +83,7 @@ export async function createPortableBackup(data, { ownerId, blobs, fetchImpl = g
       }
       return materialized.get(source)
     }
+    if (!source) return ''
     if (source.startsWith('data:')) {
       if (!isImageDataUrl(source)) throw new Error('An embedded image is malformed; backup was not downloaded.')
       return source

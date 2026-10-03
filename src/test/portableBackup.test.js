@@ -87,6 +87,34 @@ it('does not advance request status when one image fails or download initiation 
   expect(readBackupStatus('A').paidVariantIds).toEqual(['relay:a'])
 })
 
+it.each([
+  ['artist unresolved image', { artists: [{ id: 'a', images: [], unresolvedImages: [{ ref: { key: 'damaged-key' }, index: 0 }] }] }],
+  ['idea image', { ideas: [{ id: 'i', images: [{ key: 'damaged-key', note: 'Keep this' }] }] }],
+])('rejects a malformed canonical %s before download or status advancement', async (_label, data) => {
+  localStorage.clear()
+  const download = vi.fn()
+  const blobs = { getUrl: vi.fn() }
+  await expect(requestPortableExport(data, { ownerId: 'A', blobs, download })).rejects.toThrow(/canonical|key|malformed/i)
+  expect(download).not.toHaveBeenCalled()
+  expect(readBackupStatus('A')).toBeNull()
+  expect(blobs.getUrl).not.toHaveBeenCalled()
+})
+
+it('still exports valid canonical refs and external image references together', async () => {
+  localStorage.clear()
+  const bytes = 'data:image/png;base64,aW1hZ2U='
+  const download = vi.fn()
+  const backup = await requestPortableExport({
+    artists: [{ id: 'a', images: [{ key: 'user/A/artists/a/1.png' }, 'https://portfolio.example/work.png'] }],
+    ideas: [{ id: 'i', images: [{ key: 'user/A/ideas/i/1.png', note: 'Shape' }] }],
+  }, { ownerId: 'A', blobs: { getUrl: async () => bytes }, download })
+  expect(backup.data.artists[0].images).toEqual([bytes, 'https://portfolio.example/work.png'])
+  expect(backup.data.ideas[0].images).toEqual([{ url: bytes, note: 'Shape' }])
+  expect(backup.externalImageReferences).toEqual(['https://portfolio.example/work.png'])
+  expect(download).toHaveBeenCalledOnce()
+  expect(readBackupStatus('A').requestedAt).toBeTruthy()
+})
+
 it('materializes a superseded signed display URL through its session key, then fails closed after owner cache clear', async () => {
   const key = 'user/A/concepts/c/old.png'
   const stale = 'https://signed.example/storage/v1/object/sign/tattoo-images/user/A/concepts/c/old.png?token=old'
