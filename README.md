@@ -9,7 +9,7 @@
 
 Sable gathers the artists you've collected — off Instagram, out of the camera roll — into a gallery built for browsing, then learns your taste by *looking* at their work instead of making you label it. It installs to your phone, works offline, and your reference images never leave the device.
 
-![The Wall — Sable's home screen with the Top-5 dock and artist masonry](docs/images/wall.png)
+![The Wall — Sable's home screen with the Top-5 dock and artist masonry](docs/images/wall.jpg)
 
 - **One place, organised by artist.** Not two hundred saved posts — each artist's work, handle, styles and your own notes together on one card.
 - **Built for looking.** Four ways through the collection (filmstrip, compare, grid, style wall) plus the Wall home. Their work at full size, on black.
