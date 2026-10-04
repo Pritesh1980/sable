@@ -22,6 +22,108 @@ async function committed(t) {
   return { ...fixture, spool, bytes, receipt, jobDir: join(fixture.spoolDir, id) }
 }
 
+// Intercept only the durable filesystem boundary; all non-failing calls still
+// execute the real fsync. Inodes identify directories without platform fd paths.
+async function interceptDirectorySync(t, dir, beforeSync) {
+  const handle = await open(join(dir, 'sync-probe'), 'wx')
+  const prototype = Object.getPrototypeOf(handle)
+  const sync = prototype.sync
+  await handle.close()
+  t.mock.method(prototype, 'sync', async function () {
+    const stat = await this.stat()
+    if (stat.isDirectory()) await beforeSync(stat)
+    await sync.call(this)
+  })
+}
+
+const diskFailure = () => Object.assign(new Error('fixture fsync failure'), { code: 'EIO' })
+
+for (const recovery of ['read', 'matching commit']) {
+  test(`${recovery} cannot promote a renamed manifest until its failed directory sync completes`, async t => {
+    const { spoolDir, dir } = await makeDiskFixture(t)
+    const bytes = await png()
+    let failSync = false
+    const spool = createSpool(spoolDir, { fault: stage => {
+      if (stage === 'before_manifest_rename') failSync = true
+    } })
+    await interceptDirectorySync(t, dir, async stat => {
+      if (failSync && stat.ino === (await lstat(join(spoolDir, id))).ino) throw diskFailure()
+    })
+    await assert.rejects(spool.commitOutput(id, { bytes, mime: 'image/png' }), { code: 'spool_io_error' })
+    const manifest = JSON.parse(await readFile(join(spoolDir, id, 'manifest.json'), 'utf8'))
+    const recovered = createSpool(spoolDir)
+    const retry = () => recovery === 'read' ? recovered.readOutput(id)
+      : recovered.commitOutput(id, { bytes, mime: 'image/png' })
+    await assert.rejects(retry(), { code: 'spool_io_error' })
+    failSync = false
+    assert.equal((await retry()).completedAt, manifest.completedAt)
+  })
+}
+
+for (const ancestor of ['root parent', 'job parent']) {
+  test(`input retry reestablishes the ${ancestor} barrier after interrupted mkdir durability`, async t => {
+    const { spoolDir, dir } = await makeDiskFixture(t)
+    if (ancestor === 'job parent') await mkdir(spoolDir, { mode: 0o700 })
+    const parent = ancestor === 'root parent' ? dir : spoolDir
+    const inode = (await lstat(parent)).ino
+    let failSync = true
+    await interceptDirectorySync(t, dir, stat => {
+      if (failSync && stat.ino === inode) throw diskFailure()
+    })
+    const write = () => createSpool(spoolDir).writeInput(id, Buffer.from('source'))
+    await assert.rejects(write(), { code: 'spool_io_error' })
+    assert.ok((await lstat(ancestor === 'root parent' ? spoolDir : join(spoolDir, id))).isDirectory())
+    await assert.rejects(write(), { code: 'spool_io_error' })
+    failSync = false
+    assert.equal(await write(), id)
+    assert.equal((await createSpool(spoolDir).readInput(id)).toString(), 'source')
+  })
+}
+
+for (const artifact of ['input', 'output']) {
+  test(`${artifact} deletion retries fsync even after the removed entries are already absent`, async t => {
+    const { spool, spoolDir, dir, jobDir } = await committed(t)
+    await spool.writeInput(id, Buffer.from('source'))
+    const inode = (await lstat(jobDir)).ino
+    let failSync = true
+    await interceptDirectorySync(t, dir, async stat => {
+      const files = await readdir(jobDir)
+      const absent = artifact === 'input' ? !files.includes('input')
+        : !files.includes('output.png') && !files.includes('manifest.json')
+      if (failSync && stat.ino === inode && absent) throw diskFailure()
+    })
+    const remove = instance => artifact === 'input' ? instance.removeInput(id) : instance.removeOutput(id)
+    await assert.rejects(remove(spool), { code: 'spool_io_error' })
+    await assert.rejects(remove(createSpool(spoolDir)), { code: 'spool_io_error' })
+    failSync = false
+    await remove(createSpool(spoolDir))
+    if (artifact === 'input') assert.ok(await spool.readOutput(id))
+    else assert.equal((await spool.readInput(id)).toString(), 'source')
+  })
+}
+
+test('sweep retries the root barrier after an orphan directory was removed but not synced', async t => {
+  const { spoolDir, dir } = await makeDiskFixture(t)
+  const spool = createSpool(spoolDir)
+  await spool.writeInput(id, Buffer.from('orphan'))
+  const old = new Date(Date.now() - 2 * day)
+  await utimes(join(spoolDir, id), old, old)
+  const inode = (await lstat(spoolDir)).ino
+  let failSync = true
+  await interceptDirectorySync(t, dir, async stat => {
+    if (failSync && stat.ino === inode && !(await readdir(spoolDir)).includes(id)) throw diskFailure()
+  })
+  const attempt = async () => {
+    try { return await createSpool(spoolDir).sweep([], Date.now()) }
+    catch (error) { return { removed: 0, errors: [{ code: error.code }] } }
+  }
+  assert.equal((await attempt()).errors[0].code, 'spool_io_error')
+  assert.deepEqual(await readdir(spoolDir), [])
+  assert.equal((await attempt()).errors[0]?.code, 'spool_io_error')
+  failSync = false
+  assert.deepEqual(await spool.sweep([], Date.now()), { removed: 0, errors: [] })
+})
+
 test('a completed manifest survives a crash before database success with its original timestamp', async t => {
   const { spoolDir } = await makeDiskFixture(t)
   const bytes = await png()
@@ -148,7 +250,8 @@ test('actual file and directory fsync complete in image-before-manifest order', 
     'file', 'before_manifest_rename', 'directory', 'manifest_committed'])
   events.length = 0
   await spool.writeInput(id, Buffer.from('source'))
-  assert.deepEqual(events, ['before_input_write', 'file', 'before_input_rename', 'directory', 'input_committed'])
+  assert.deepEqual(events, ['directory', 'directory', 'before_input_write', 'file',
+    'before_input_rename', 'directory', 'input_committed'])
 })
 
 test('an actual file fsync failure fails closed with sanitized ENOSPC and recoverable evidence', async t => {

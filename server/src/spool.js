@@ -108,10 +108,12 @@ export function createSpool(dir, { fault = () => {} } = {}) {
         let stat = await statOrNull(root)
         if (!stat) {
           await mkdir(root, { mode: 0o700 })
-          await syncDirectory(dirname(root))
           stat = await lstat(root)
         }
         requireDirectory(stat)
+        // An existing entry may be the residue of mkdir followed by failed
+        // fsync, including in a previous Spool instance. Reestablish the barrier.
+        await syncDirectory(dirname(root))
         return action(root)
       })
       const settled = pending.catch(() => {})
@@ -127,9 +129,10 @@ export function createSpool(dir, { fault = () => {} } = {}) {
     let stat = await statOrNull(path)
     if (!stat && create) {
       await mkdir(path, { mode: 0o700 })
-      await syncDirectory(root)
       stat = await lstat(path)
     }
+    // Sync even an absent entry: a previous rmdir may still need its barrier.
+    await syncDirectory(root)
     if (!stat) return null
     requireDirectory(stat)
     return path
@@ -167,6 +170,9 @@ export function createSpool(dir, { fault = () => {} } = {}) {
       const bytes = await readBounded(join(directory, 'output.png'), LIMITS.maxBodyBytes)
       if (!bytes || bytes.length !== manifest.size || hash(bytes) !== manifest.digest) return null
       await validateOutput(bytes, manifest.mime)
+      // Rename may have succeeded before a previous directory fsync failed.
+      // Valid bytes alone do not prove that the manifest's name is durable.
+      await syncDirectory(directory)
       return { bytes, ...receipt(manifest) }
     } catch (error) {
       if (['spool_corrupt', 'invalid_spool_output', 'ENOENT'].includes(error.code)) return null
@@ -180,7 +186,8 @@ export function createSpool(dir, { fault = () => {} } = {}) {
     // unexpected directory or follow a symlink even during orphan cleanup.
     for (const name of files) requireFile(await lstat(join(directory, name)))
     for (const name of files) await unlink(join(directory, name))
-    if (files.length) await syncDirectory(directory)
+    // An empty selection can be a retry after unlink succeeded but sync failed.
+    await syncDirectory(directory)
     return files.length
   }
 
@@ -271,6 +278,9 @@ export function createSpool(dir, { fault = () => {} } = {}) {
             }
           } catch (error) { result.errors.push({ jobId, code: safeError(error).code }) }
         }
+        // An earlier sweep may have removed its last job directory before root
+        // fsync failed. No remaining entry can tell us to retry that barrier.
+        await syncDirectory(root)
         return result
       })
     },
