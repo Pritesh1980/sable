@@ -62,13 +62,26 @@ async function readBounded(response, signal) {
   return Buffer.concat(chunks, lengthRead)
 }
 
+function validBase64Text(encoded) {
+  if (typeof encoded !== 'string' || encoded.length === 0
+      || encoded.length > Math.ceil(MAX_OUTPUT_BYTES / 3) * 4 || encoded.length % 4 !== 0) return false
+  let padding = 0
+  if (encoded.endsWith('=')) padding += 1
+  if (encoded.endsWith('==')) padding += 1
+  for (let index = 0; index < encoded.length - padding; index += 1) {
+    const code = encoded.charCodeAt(index)
+    if (!((code >= 65 && code <= 90) || (code >= 97 && code <= 122)
+        || (code >= 48 && code <= 57) || code === 43 || code === 47)) return false
+  }
+  return true
+}
+
 async function decodeOutput(body) {
   let payload
   try { payload = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(body)) } catch { throw uncertain() }
   if (!payload || !Array.isArray(payload.data) || payload.data.length !== 1) throw uncertain()
   const encoded = payload.data[0]?.b64_json
-  if (typeof encoded !== 'string' || encoded.length === 0 || encoded.length > Math.ceil(MAX_OUTPUT_BYTES / 3) * 4
-      || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/u.test(encoded)) throw uncertain()
+  if (!validBase64Text(encoded)) throw uncertain()
   const bytes = Buffer.from(encoded, 'base64')
   if (bytes.length === 0 || bytes.length > MAX_OUTPUT_BYTES || bytes.toString('base64') !== encoded) throw uncertain()
   try {
@@ -99,6 +112,7 @@ export function createOpenAiEdits({ apiKey, fetchImpl = fetch, timeoutMs = 12000
       const abort = () => controller.abort()
       signal?.addEventListener('abort', abort, { once: true })
       const timer = setTimeout(abort, timeoutMs)
+      let explicitlyRejected = false
       try {
         const form = new FormData()
         form.set('model', profile.model)
@@ -109,20 +123,21 @@ export function createOpenAiEdits({ apiKey, fetchImpl = fetch, timeoutMs = 12000
         form.set('output_format', 'png')
         form.set('image[]', new Blob([sourceBytes], { type: 'image/png' }), 'source.png')
         const response = await awaitWithAbort(fetchImpl(ENDPOINT, {
-          method: 'POST', headers: { Authorization: `Bearer ${apiKey}` }, body: form, signal: controller.signal,
+          method: 'POST', headers: { Authorization: `Bearer ${apiKey}` }, body: form,
+          signal: controller.signal, redirect: 'error',
         }), controller.signal)
         if (controller.signal.aborted) throw uncertain()
         if (!response || typeof response.status !== 'number') throw uncertain()
         if (!response.ok) {
-          throw response.status >= 400 && response.status < 500
-            ? imageJobError('provider_rejected', 502) : uncertain()
+          explicitlyRejected = response.status >= 400 && response.status < 500
+          throw uncertain()
         }
         const output = await decodeOutput(await readBounded(response, controller.signal))
         if (controller.signal.aborted) throw uncertain()
         return output
-      } catch (error) {
-        if (error?.code === 'provider_rejected') throw error
-        throw uncertain()
+      } catch {
+        // Only an observed HTTP 4xx, never a thrown object's code, proves rejection.
+        throw explicitlyRejected ? imageJobError('provider_rejected', 502) : uncertain()
       } finally {
         clearTimeout(timer)
         signal?.removeEventListener('abort', abort)

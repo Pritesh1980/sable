@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { randomBytes } from 'node:crypto'
 import sharp from 'sharp'
 import { createOpenAiEdits } from '../src/providers/openaiEdits.js'
 
@@ -13,8 +14,10 @@ const jsonResponse = (body, status = 200) => new Response(JSON.stringify(body), 
 test('posts one PNG source and fixed edit parameters without leaking the key into the URL', async () => {
   const output = await png()
   let calls = 0
+  let redirectMode
   const provider = createOpenAiEdits({ apiKey: 'fixture-only', fetchImpl: async (url, options) => {
     calls += 1
+    redirectMode = options.redirect
     assert.equal(url, 'https://api.openai.com/v1/images/edits')
     assert.equal(options.method, 'POST')
     assert.deepEqual(options.headers, { Authorization: 'Bearer fixture-only' })
@@ -32,6 +35,35 @@ test('posts one PNG source and fixed edit parameters without leaking the key int
   const result = await provider.edit(input)
   assert.deepEqual(result, { bytes: output, mime: 'image/png' })
   assert.equal(calls, 1)
+  assert.equal(redirectMode, 'error')
+})
+
+test('accepts a realistic large valid PNG without exhausting base64 validation', async () => {
+  const output = await sharp(randomBytes(1024 * 1024 * 4), {
+    raw: { width: 1024, height: 1024, channels: 4 },
+  }).png({ compressionLevel: 0 }).toBuffer()
+  assert.ok(output.length > 4 * 1024 * 1024)
+  assert.ok(output.length < 8 * 1024 * 1024)
+  let calls = 0
+  const provider = createOpenAiEdits({ apiKey: 'fixture-only', fetchImpl: async () => {
+    calls += 1
+    return jsonResponse({ data: [{ b64_json: output.toString('base64') }] })
+  } })
+  assert.deepEqual(await provider.edit(input), { bytes: output, mime: 'image/png' })
+  assert.equal(calls, 1)
+})
+
+test('a redirect response is not followed and leaves the paid outcome uncertain', async () => {
+  let calls = 0
+  let redirectMode
+  const provider = createOpenAiEdits({ apiKey: 'fixture-only', fetchImpl: async (_url, options) => {
+    calls += 1
+    redirectMode = options.redirect
+    return Response.redirect('https://other.example/edits', 307)
+  } })
+  await assert.rejects(provider.edit(input), { code: 'provider_uncertain', message: 'provider_uncertain' })
+  assert.equal(calls, 1)
+  assert.equal(redirectMode, 'error')
 })
 
 test('a failed paid request is attempted once, without fallback', async () => {
@@ -43,6 +75,25 @@ test('a failed paid request is attempted once, without fallback', async () => {
   await assert.rejects(provider.edit({ sourceBytes: Buffer.from('source'), prompt: 'Change ink',
     profile: { id: 'openai-refine-v1', model: 'gpt-image-2.5-sunburst', size: '1024x1024',
       quality: 'medium', outputFormat: 'png' } }), { code: 'provider_uncertain' })
+  assert.equal(calls, 1)
+})
+
+test('an injected rejection-shaped transport error cannot leak provider details', async () => {
+  let calls = 0
+  const raw = Object.assign(new Error('secret response and key'), {
+    code: 'provider_rejected', sensitive: 'private payload',
+  })
+  const provider = createOpenAiEdits({ apiKey: 'fixture-only', fetchImpl: async () => {
+    calls += 1
+    throw raw
+  } })
+  await assert.rejects(provider.edit(input), error => {
+    assert.notEqual(error, raw)
+    assert.equal(error.code, 'provider_uncertain')
+    assert.equal(error.message, 'provider_uncertain')
+    assert.equal(Object.hasOwn(error, 'sensitive'), false)
+    return true
+  })
   assert.equal(calls, 1)
 })
 
