@@ -1,4 +1,31 @@
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from 'jose'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { compileRefinementPrompt } from '../../shared/imageJobs.js'
+
+export async function makeDiskFixture(t) {
+  const dir = await mkdtemp(join(tmpdir(), 'sable-relay-'))
+  t.after(() => rm(dir, { recursive: true, force: true }))
+  return { dir, dbPath: join(dir, 'jobs.sqlite'), spoolDir: join(dir, 'spool') }
+}
+
+/** Complete acceptance input; only the repository clock/admission test overrides time. */
+export function makeJobInput(overrides = {}) {
+  const admittedAt = overrides.admittedAt ?? 1_800_000_000_000
+  const fields = { change: 'Add mist', keep: 'Temple', palette: 'black' }
+  return {
+    id: crypto.randomUUID(), ownerId: 'A',
+    requestId: `v1.${admittedAt}.${crypto.randomUUID()}`,
+    requestHash: 'a'.repeat(64), sourceImageDigest: 'b'.repeat(64),
+    inputRef: 'internal-input', admittedAt,
+    request: { version: 1, operation: 'refine', profileId: 'openai-refine-v1',
+      ...fields, prompt: compileRefinementPrompt(fields) },
+    profile: { id: 'openai-refine-v1', model: 'gpt-image-2.5-sunburst',
+      size: '1024x1024', quality: 'medium', outputFormat: 'png' },
+    ...overrides,
+  }
+}
 
 /** Generated, local-only keys. Undefined claim overrides deliberately omit claims. */
 export async function makeJwtFixture({ algorithm = 'ES256' } = {}) {
