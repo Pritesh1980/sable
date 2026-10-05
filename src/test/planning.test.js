@@ -8,6 +8,7 @@ import {
   matchArtistsForIdea,
   normalizeArtistStatus,
   normalizeReferenceImages,
+  setImageNote,
 } from '../data/planning'
 
 describe('normalizeArtistStatus', () => {
@@ -163,5 +164,27 @@ describe('buildPipelineSummary', () => {
     expect(stages.every((s) => s.count === 0)).toBe(true)
     expect(parked).toBe(0)
     expect(contacted).toBe(0)
+  })
+})
+
+describe('setImageNote (#114)', () => {
+  const a = { url: '', note: '', key: 'user/u1/a.jpg' }
+  const b = { url: '', note: '', key: 'user/u1/b.jpg' }
+
+  it('sets the note on the targeted photo only, even when no url has resolved', () => {
+    expect(setImageNote([a, b], b, 'linework').map((i) => i.note)).toEqual(['', 'linework'])
+  })
+
+  it('still finds the photo after its signed url changed', () => {
+    const refreshed = { ...a, url: 'https://signed.example/a?t=2' }
+    const stale = { ...a, url: 'https://signed.example/a?t=1' }
+    expect(setImageNote([refreshed, b], stale, 'x').map((i) => i.note)).toEqual(['x', ''])
+  })
+
+  it('normalises plain url strings and matches them by url', () => {
+    expect(setImageNote(['x.jpg', 'y.jpg'], { url: 'y.jpg', note: '' }, 'n')).toEqual([
+      { url: 'x.jpg', note: '' },
+      { url: 'y.jpg', note: 'n' },
+    ])
   })
 })

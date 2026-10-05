@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { removeAt, restoreRemoval } from '../data/undoableRemoval'
+import { itemIdentity, removeAt, restoreRemoval } from '../data/undoableRemoval'
 
 describe('removeAt', () => {
   it('drops the item at the index and reports what it took', () => {
@@ -120,5 +120,36 @@ describe('restoreRemoval', () => {
 
     expect(once).toEqual(['x', 'x', 'y'])
     expect(restoreRemoval(once, removal)).toEqual(['x', 'x', 'y'])
+  })
+})
+
+// Key-first identity (#114): an idea photo whose url has not resolved yet
+// normalises to { url: '', key }, so the url-first rule gave every such photo
+// the identity '' — removing, undoing or annotating one hit the others too.
+describe('key-first identity', () => {
+  const photo = (key, url = '') => ({ url, note: '', key })
+
+  it('tells two unresolved photos apart', () => {
+    expect(itemIdentity(photo('user/u1/a.jpg'))).not.toBe(itemIdentity(photo('user/u1/b.jpg')))
+  })
+
+  it('prefers the key over a url, so identity survives a signed-url refresh', () => {
+    const before = photo('user/u1/a.jpg', 'https://signed.example/a?t=1')
+    const after = photo('user/u1/a.jpg', 'https://signed.example/a?t=2')
+    expect(itemIdentity(before)).toBe(itemIdentity(after))
+    expect(itemIdentity(before)).toBe(itemIdentity({ key: 'user/u1/a.jpg' }))
+  })
+
+  it('still identifies plain strings and url-only entries by their url', () => {
+    expect(itemIdentity('a.jpg')).toBe('a.jpg')
+    expect(itemIdentity({ url: 'a.jpg', note: 'x' })).toBe('a.jpg')
+  })
+
+  it('removes and restores one of two unresolved photos without touching the other', () => {
+    const a = photo('user/u1/a.jpg')
+    const b = photo('user/u1/b.jpg')
+    const { list, removal } = removeAt([a, b], 1)
+    expect(list).toEqual([a])
+    expect(restoreRemoval(list, removal)).toEqual([a, b])
   })
 })
