@@ -49,11 +49,13 @@ describe('Settings page', () => {
     expect(screen.getByRole('button', { name: /import backup/i })).toBeInTheDocument()
   })
 
-  it('exports a backup when Export Backup is clicked', () => {
+  // Export resolves each photo to bytes first (#114), so it finishes a tick
+  // after the click rather than during it.
+  it('exports a backup when Export Backup is clicked', async () => {
     renderSettings()
     fireEvent.click(screen.getByRole('button', { name: /export backup/i }))
+    expect(await screen.findByText('Backup exported.')).toBeInTheDocument()
     expect(URL.createObjectURL).toHaveBeenCalledTimes(1)
-    expect(screen.getByText('Backup exported.')).toBeInTheDocument()
   })
 })
 

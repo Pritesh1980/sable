@@ -1,8 +1,11 @@
 import { useState, useRef } from 'react'
-import { createBackup, parseBackup } from '../data/export'
+import { createBackupWithImages, parseBackup, restoreBackupImages } from '../data/export'
+import { useAuth } from '../context/useAuth'
 
+// Compact: a v2 backup carries every photo as base64, so indentation would only
+// add weight to a file that is already large.
 function downloadJson(filename, payload) {
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+  const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
@@ -13,30 +16,52 @@ function downloadJson(filename, payload) {
 
 export default function BackupPanel({ artists, setArtists, ideas, setIdeas, boards, setBoards, concepts, setConcepts, conventionOverrides, setConventionOverrides }) {
   const fileRef = useRef()
+  const userId = useAuth()?.user?.id || null
   const [message, setMessage] = useState('')
+  const [busy, setBusy] = useState(false)
 
-  function exportBackup() {
-    const backup = createBackup({ artists, ideas, boards, concepts, conventionOverrides })
-    const date = backup.exportedAt.slice(0, 10)
-    downloadJson(`tattoo-backup-${date}.json`, backup)
-    setMessage('Backup exported.')
+  const photos = (n) => `${n} photo${n === 1 ? '' : 's'}`
+
+  async function exportBackup() {
+    setBusy(true)
+    try {
+      const { backup, skipped } = await createBackupWithImages(
+        { artists, ideas, boards, concepts, conventionOverrides },
+        { onProgress: (done, total) => setMessage(`Exporting photos… ${done} of ${total}`) },
+      )
+      downloadJson(`tattoo-backup-${backup.exportedAt.slice(0, 10)}.json`, backup)
+      setMessage(skipped
+        ? `Backup exported. ${photos(skipped)} couldn't be read right now (offline?) and ${skipped === 1 ? 'is' : 'are'} not included.`
+        : 'Backup exported.')
+    } catch (error) {
+      setMessage(error.message || 'Could not export backup.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function importBackup(e) {
     const file = e.target.files?.[0]
     if (!file) return
 
+    setBusy(true)
     try {
-      const data = parseBackup(await file.text())
+      const parsed = parseBackup(await file.text())
+      // Photos embedded in the backup go through the normal staging/upload path
+      // first, so the state set below already carries the new account's keys.
+      const { data, failed } = await restoreBackupImages(parsed, { userId })
       setArtists(data.artists)
       setIdeas(data.ideas)
       setBoards(data.boards)
       setConcepts(data.concepts)
       setConventionOverrides(data.conventionOverrides)
-      setMessage('Backup imported.')
+      setMessage(failed
+        ? `Backup imported. ${photos(failed)} couldn't be saved and ${failed === 1 ? 'was' : 'were'} left out.`
+        : 'Backup imported.')
     } catch (error) {
       setMessage(error.message || 'Could not import backup.')
     } finally {
+      setBusy(false)
       e.target.value = ''
     }
   }
@@ -54,6 +79,7 @@ export default function BackupPanel({ artists, setArtists, ideas, setIdeas, boar
       <div className="flex flex-wrap gap-2">
         <button
           onClick={exportBackup}
+          disabled={busy}
           className="px-4 min-h-11 bg-accent hover:bg-accent-hover text-cream text-sm font-body rounded-xs transition-colors"
         >
           Export Backup
@@ -61,6 +87,7 @@ export default function BackupPanel({ artists, setArtists, ideas, setIdeas, boar
         <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={importBackup} />
         <button
           onClick={() => fileRef.current.click()}
+          disabled={busy}
           className="px-4 min-h-11 border border-ink-border hover:border-cream-muted/50 text-cream-muted hover:text-cream text-sm font-body rounded-xs transition-colors"
         >
           Import Backup

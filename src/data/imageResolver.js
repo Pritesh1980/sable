@@ -36,6 +36,21 @@ export async function resolveImage(ref) {
   }
 }
 
+// The photo's bytes, or null when they cannot be read right now (offline, an
+// expired url, a missing key). For consumers that need the bytes themselves —
+// backup export, and the pixel consumers that must not read cross-origin
+// pixels — rather than a url to show. Never rejects.
+export async function resolveImageBlob(ref) {
+  try {
+    const src = await resolveImage(ref)
+    if (!src) return null
+    const response = await fetch(src)
+    return response.ok ? await response.blob() : null
+  } catch {
+    return null
+  }
+}
+
 function displayString(ref) {
   const raw = typeof ref === 'string' ? ref : ref?.url
   return safeSrc(resolveAssetPath(raw))

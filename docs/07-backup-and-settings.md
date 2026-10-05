@@ -22,7 +22,8 @@ Tap **Export Backup**. A single JSON file downloads — named with the date, e.g
 `tattoo-backup-2026-05-30.json`. It contains the current document snapshot:
 
 - artists, their tags, status, studio, notes and ranks
-- current image values; inline `data:` images are embedded
+- your photos themselves, embedded in the file — so the backup restores on any device or
+  account, and nothing in it expires
 - ideas, boards and AI concepts
 - any convention attendance you've recorded
 
@@ -30,7 +31,9 @@ Tap **Export Backup**. A single JSON file downloads — named with the date, e.g
 
 Tap **Import Backup** and choose a previously exported file. This **replaces** the current
 data with the backup's contents — useful for recovering an earlier snapshot, or for pulling
-your data into an account that doesn't have it yet.
+your data into an account that doesn't have it yet. Embedded photos are saved to the
+account you're signed in to as they come back in. Backups made by earlier versions of Sable
+still import; a backup from a *newer* version is refused with a message to update first.
 
 ## When to back up
 
@@ -40,10 +43,11 @@ your data into an account that doesn't have it yet.
   (your account syncs everything), but a backup is an export you hold yourself.
 - Periodically, just in case — it's one tap.
 
-> **Image limitation:** export does not fetch backend image blobs. Inline images already
-> held as `data:` values are embedded and can make the file large, but resolved or signed
-> backend URLs may expire. Use account sync to move backend images between devices; do
-> not rely on the JSON as a permanent standalone image archive.
+> **File size and offline:** because the photos are embedded, a backup of a large
+> collection can be big (tens of megabytes or more) and takes a moment to build — the panel
+> shows its progress. Photos that can't be read right now (for example, not downloaded to
+> this device while you're offline) are left out, and the panel tells you how many. Export
+> again once you're back online to include them.
 
 ---
 
