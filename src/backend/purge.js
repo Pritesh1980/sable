@@ -1,6 +1,7 @@
 import { clearBlobUrls } from '../data/blobUrls'
 import { purgeDirtySidecars } from './dirty'
 import { SHARE_CACHE } from '../sw/shareTarget'
+import { pendingImageJobs } from '../data/imageJobs/pendingJobs'
 
 // Local caches that hold the signed-in user's data. Cleared on sign-out so the
 // next account on a shared device never sees the previous user's content.
@@ -59,6 +60,7 @@ export async function purgeLocalUserData() {
     console.error('[tattoo] purge localStorage failed:', e)
   }
   clearBlobUrls()
+  await pendingImageJobs.clearAll()
   // Display image cache only — canonical rows (tattoo_remote_<owner>_*) and
   // tattoo-blobs-v1 stay. Private adapters enforce their captured owner; these
   // are the only durable copy for real-auth/local-storage accounts, not caches.

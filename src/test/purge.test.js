@@ -6,9 +6,28 @@ import { createLocalStore } from '../backend/local/localStore'
 import { createLocalBlobs } from '../backend/local/localBlobs'
 import { backend } from '../backend'
 import { getCachedBlobUrl, keyForUrl, registerBlobUrl, resolveBlobKey } from '../data/blobUrls'
+import { pendingImageJobs } from '../data/imageJobs/pendingJobs'
+import { compileRefinementPrompt } from '../../shared/imageJobs'
+import { Blob } from 'node:buffer'
 
 describe('purgeLocalUserData', () => {
   beforeEach(() => localStorage.clear())
+
+  it('clears transient refinement inputs for every owner on identity change', async () => {
+    const fields = { change: 'Adjust ink', keep: '', palette: 'black' }
+    const requestId = 'v1.1800000000000.00000000-0000-4000-8000-000000000001'
+    for (const ownerId of ['A', 'B']) {
+      await pendingImageJobs.put({ requestId, ownerId,
+        source: new Blob(['private prepared image'], { type: 'image/png' }), sourceImageDigest: 'a'.repeat(64),
+        request: { version: 1, operation: 'refine', profileId: 'openai-refine-v1',
+          ...fields, prompt: compileRefinementPrompt(fields) },
+        destination: { ownerId, conceptId: 'concept', parentVariantId: null, draftRevision: 1 },
+        createdAt: 1_800_000_000_000, jobId: null, accepted: false })
+    }
+    await purgeLocalUserData()
+    expect(await pendingImageJobs.list('A')).toEqual([])
+    expect(await pendingImageJobs.list('B')).toEqual([])
+  })
 
   it('retains private canonical rows and bytes while invalidating display resolutions', async () => {
     const ownerScope = createOwnerScope({ privateMode: true, getOwnerId: () => 'A' })
