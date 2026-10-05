@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import ArtistImage from './ArtistImage'
 import { createGlEngine } from '../lib/glCrossfade'
+import useImageBytes from '../hooks/useImageBytes'
 
 // A WebGL image stage that crossfades between images with a subtle depth
 // ripple. three.js is loaded on demand (dynamic import) so it never enters the
@@ -17,12 +18,17 @@ export default function GlCrossfade({
 }) {
   const mountRef = useRef(null)
   const engineRef = useRef(null)
-  const srcRef = useRef(src)
+  // `src` is a stored image ref. WebGL reads the texture's pixels, which a
+  // cross-origin url (a signed url) does not allow, so the engine is only ever
+  // handed a same-origin source — a blob: copy where needed (#114).
+  const { src: glSrc, status } = useImageBytes(src)
+  const srcRef = useRef(glSrc)
+  const shownRef = useRef(false) // whether the engine has been given a first image
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
-    srcRef.current = src
-  }, [src])
+    srcRef.current = glSrc
+  }, [glSrc])
 
   // Initialise the engine once. Dynamic import keeps three out of the initial
   // bundle; any failure flips to the CSS/img fallback.
@@ -45,7 +51,11 @@ export default function GlCrossfade({
           return
         }
         engineRef.current = engine
-        engine.setImage(srcRef.current)
+        // Still loading when the engine came up: the effect below shows it.
+        if (srcRef.current) {
+          engine.setImage(srcRef.current)
+          shownRef.current = true
+        }
       })
       .catch(() => {
         if (!cancelled) setFailed(true)
@@ -60,14 +70,24 @@ export default function GlCrossfade({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Animate to the new image whenever src changes after the engine is live. On
+  // Animate to the new image whenever it changes after the engine is live. On
   // first mount engineRef is still null (init is async), so the initial image
-  // is shown by engine.setImage above with the latest src.
+  // is shown by engine.setImage above with the latest source. An image that
+  // only arrives once resolved is still the first one: shown outright, not
+  // faded in from nothing.
   useEffect(() => {
-    if (engineRef.current) engineRef.current.transitionTo(src)
-  }, [src])
+    const engine = engineRef.current
+    if (!engine || !glSrc) return
+    if (shownRef.current) {
+      engine.transitionTo(glSrc)
+    } else {
+      engine.setImage(glSrc)
+      shownRef.current = true
+    }
+  }, [glSrc])
 
-  if (!src || failed) {
+  // The plain image still shows a photo whose bytes cannot be read for WebGL.
+  if (!src || failed || status === 'unavailable') {
     return (
       <div className="w-full h-full flex items-center justify-center">
         <ArtistImage

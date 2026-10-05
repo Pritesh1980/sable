@@ -8,7 +8,6 @@ import useIdleFade from '../hooks/useIdleFade'
 import useDialogFocus from '../hooks/useDialogFocus'
 import useMediaQuery from '../hooks/useMediaQuery'
 import useSwipeTap from '../hooks/useSwipeTap'
-import useImageSrc from '../hooks/useImageSrc'
 import useViewportZoomed from '../hooks/useViewportZoomed'
 import { resolveTransitionMode } from '../lib/gl'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
@@ -145,11 +144,6 @@ export default function WallViewer({
     [items, current]
   )
 
-  // Items carry the stored ref (#113). ArtistImage and the provenance notice
-  // take the ref as-is; only the imperative GL stage needs a URL, so resolve
-  // the current image here — above the early return, so hook order is stable.
-  const { src: currentSrc } = useImageSrc(current?.image)
-
   if (!open || !current) return null
 
   const activeArtist = resolveArtist(current.artistId, artist, artists)
@@ -236,7 +230,7 @@ export default function WallViewer({
         {transitionMode === 'webgl' ? (
           <div className="absolute inset-0">
             <GlCrossfade
-              src={currentSrc}
+              src={current.image}
               label={`${current.artistName} — ${current.styles.join(', ')}`}
               className="w-full h-full block"
               fallbackImageClassName="max-w-[100vw] max-h-[100vh] object-contain animate-fade-in"

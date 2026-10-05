@@ -43,12 +43,47 @@ export async function resolveImage(ref) {
 export async function resolveImageBlob(ref) {
   try {
     const src = await resolveImage(ref)
-    if (!src) return null
+    return src ? await fetchBlob(src) : null
+  } catch {
+    return null
+  }
+}
+
+async function fetchBlob(src) {
+  try {
     const response = await fetch(src)
     return response.ok ? await response.blob() : null
   } catch {
     return null
   }
+}
+
+// data: and blob: urls, and anything on this page's own origin, can be drawn to
+// a canvas and read back. A cross-origin url without CORS taints it.
+export function isSameOrigin(src) {
+  if (/^(?:data|blob):/i.test(src)) return true
+  try {
+    return new URL(src, globalThis.location?.href).origin === globalThis.location?.origin
+  } catch {
+    return false
+  }
+}
+
+const noop = () => {}
+
+// For consumers that read pixels (STL relief, the WebGL texture): a source they
+// can always read. A same-origin source is returned as it is; a cross-origin
+// one — every signed Supabase url — is copied into a same-origin blob: url.
+// `src` is '' when the photo is not available right now (offline, expired, a
+// missing key), and `release()` frees the copy (a no-op when there is none).
+export async function resolveImageBytes(ref) {
+  const src = await resolveImage(ref)
+  if (!src) return { src: '', release: noop }
+  if (isSameOrigin(src)) return { src, release: noop }
+  const blob = await fetchBlob(src)
+  if (!blob) return { src: '', release: noop }
+  const copy = URL.createObjectURL(blob)
+  return { src: copy, release: () => URL.revokeObjectURL(copy) }
 }
 
 function displayString(ref) {

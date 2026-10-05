@@ -63,6 +63,10 @@ export default function LiveTryOn({ designUrl, label = 'Design', onSave, onClose
   const [pxPerMm, setPxPerMm] = useState(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  // The design url whose bytes could not be read. Keyed by url, so showing a
+  // different design clears it without a reset.
+  const [unreadableDesign, setUnreadableDesign] = useState('')
+  const designUnavailable = unreadableDesign === designUrl
 
   useEffect(() => { onCloseRef.current = onClose }, [onClose])
   useEffect(() => { transformRef.current = transform }, [transform])
@@ -72,7 +76,7 @@ export default function LiveTryOn({ designUrl, label = 'Design', onSave, onClose
     let cancelled = false
     imageUrlToDataUrl(designUrl)
       .then((url) => { if (!cancelled) setDesignSrc(url) })
-      .catch(() => {})
+      .catch(() => { if (!cancelled) setUnreadableDesign(designUrl) })
     return () => { cancelled = true }
   }, [designUrl])
 
@@ -380,12 +384,15 @@ export default function LiveTryOn({ designUrl, label = 'Design', onSave, onClose
               <button
                 type="button"
                 onClick={handleSnapshot}
-                disabled={saving || (!streaming && !photo)}
+                disabled={saving || designUnavailable || (!streaming && !photo)}
                 className="ml-auto rounded-xs bg-accent px-4 py-2 font-body text-sm text-cream disabled:opacity-40"
               >
                 Save snapshot
               </button>
             </div>
+            {designUnavailable && (
+              <p className="text-sm text-accent">This design is available when online — it cannot be read right now, so a snapshot cannot be saved.</p>
+            )}
             {saveError && <p className="text-sm text-accent">{saveError}</p>}
             <p className="text-xs text-cream-muted">Drag to move · pinch to size and turn</p>
           </>

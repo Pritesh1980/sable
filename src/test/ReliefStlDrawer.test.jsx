@@ -301,4 +301,34 @@ describe('ReliefStlDrawer', () => {
 
     expect(screen.getByText('Could not load this image for STL export.')).toBeTruthy()
   })
+
+  // #114: a signed url is cross-origin without CORS, so reading pixels from an
+  // <img> pointing at it taints the canvas. The drawer reads a same-origin copy.
+  describe('a cross-origin source (#114)', () => {
+    const remote = { ...source, imageUrl: 'https://signed.example/raven.png' }
+    afterEach(() => vi.unstubAllGlobals())
+
+    it('renders and reads a same-origin blob: copy, never the cross-origin url', async () => {
+      createObjectURLSpy.mockReturnValueOnce('blob:copy-of-source')
+      vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, blob: async () => new Blob(['x'], { type: 'image/png' }) })))
+      render(<ReliefStlDrawer source={remote} onClose={() => {}} />)
+
+      const image = await screen.findByRole('img', { name: 'Raven Chest STL source' })
+      expect(image).toHaveAttribute('src', 'blob:copy-of-source')
+      expect(fetch).toHaveBeenCalledWith('https://signed.example/raven.png')
+
+      fireEvent.load(image)
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Download STL' })).toBeEnabled())
+    })
+
+    it('says the image is available when online, and disables the download, when it cannot be read', async () => {
+      vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('offline') }))
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      render(<ReliefStlDrawer source={remote} onClose={() => {}} />)
+
+      expect(await screen.findByText(/available when online/i)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Download STL' })).toBeDisabled()
+      expect(screen.queryByRole('img', { name: 'Raven Chest STL source' })).not.toBeInTheDocument()
+    })
+  })
 })
