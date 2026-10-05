@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Download, LoaderCircle } from 'lucide-react'
 import { getBackupSummary, hasPersistenceAcknowledgement, acknowledgePersistenceWarning, requiresPersistenceAcknowledgement } from '../data/backupStatus'
 import { getStoragePersistence } from '../data/storagePersistence'
 
@@ -30,11 +31,12 @@ export default function ConceptBackupStatus({ ownerId, concepts, onExport, revis
   }
 
   return (
-    <section aria-label="Paid image backup" className="border border-v2-hairline bg-v2-surface p-4 rounded-xs text-v2-cream font-v2-ui">
+    <section aria-label="Paid image backup" className="border-t border-v2-hairline py-4 text-v2-cream font-v2-ui">
       <p className="font-v2-display text-lg">Paid image backup</p>
       <p className="text-sm text-v2-muted mt-1">{requestedAt ? `Download requested ${new Date(requestedAt).toLocaleString()}—check the file was saved` : 'No export requested'}</p>
       {paidSinceExport > 0 && <p className="text-sm text-v2-cream mt-1">Paid results saved since last export request: {paidSinceExport}</p>}
-      <button type="button" disabled={busy} onClick={exportBackup} className="mt-3 min-h-11 px-4 border border-v2-cream text-v2-cream rounded-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-v2-cream disabled:opacity-60">
+      <button type="button" disabled={busy} onClick={exportBackup} className="mt-3 inline-flex items-center gap-2 min-h-11 px-4 border border-v2-cream text-v2-cream rounded-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-v2-cream disabled:opacity-60">
+        {busy ? <LoaderCircle size={18} aria-hidden="true" className="animate-spin" /> : <Download size={18} aria-hidden="true" />}
         {busy ? 'Preparing…' : 'Export full library backup'}
       </button>
       {persistence && !acknowledged && requiresPersistenceAcknowledgement(ownerId, persistence) && (

@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react'
+import { Sparkles } from 'lucide-react'
+import RefinementCompare from './RefinementCompare'
 import {
   RESULT_VARIANT_PROVIDERS,
   getConceptVariants,
@@ -293,6 +295,7 @@ function AddVariantForm({ conceptId, label, onAddVariant, onCancel }) {
 }
 
 function VariantDetails({
+  original,
   conceptId,
   label,
   variant,
@@ -301,6 +304,7 @@ function VariantDetails({
   onMarkBest,
   onDeleteVariant,
   onRateVariant,
+  onRefine,
 }) {
   const title = resultTitle(variant)
   const actionLabel = resultActionLabel(variant)
@@ -310,6 +314,10 @@ function VariantDetails({
 
   return (
     <div className="border-t border-ink-border bg-ink-black/25 p-4">
+      {variant.operation === 'refine' && imageUrl && <RefinementCompare original={original} variant={variant}
+        parentAvailable={Boolean(original?.imageUrl)} onMarkBest={id => onMarkBest(conceptId, id)}
+        onRate={(id, rating) => onRateVariant(conceptId, id, rating)}
+        onTryOn={onTryOnSkin ? input => onTryOnSkin({ ...input, conceptId, conceptLabel: label }) : undefined} />}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
         <div className="space-y-3">
           {imageUrl ? (
@@ -361,6 +369,11 @@ function VariantDetails({
           </div>
 
           <div className="flex flex-wrap gap-2 pt-1">
+            {imageUrl && onRefine && <button type="button" aria-label={`Refine ${title} for ${label}`}
+              onClick={() => onRefine({ conceptId, parentVariantId: variant.id, imageUrl })}
+              className="inline-flex min-h-11 items-center gap-2 rounded-xs border border-accent/45 px-3 text-sm text-accent focus-visible:outline-2 focus-visible:outline-cream">
+              <Sparkles size={18} aria-hidden="true" />Refine this
+            </button>}
             {imageUrl && onMakeStl && (
               <button
                 type="button"
@@ -419,6 +432,7 @@ function VariantDetails({
 }
 
 function VariantCard({
+  original,
   conceptId,
   label,
   variant,
@@ -429,6 +443,7 @@ function VariantCard({
   onMarkBest,
   onDeleteVariant,
   onRateVariant,
+  onRefine,
 }) {
   const title = resultTitle(variant)
   const actionLabel = resultActionLabel(variant)
@@ -479,6 +494,7 @@ function VariantCard({
       {isExpanded && (
         <div id={`variant-details-${variant.id}`}>
           <VariantDetails
+            original={original}
             conceptId={conceptId}
             label={label}
             variant={variant}
@@ -487,6 +503,7 @@ function VariantCard({
             onMarkBest={onMarkBest}
             onDeleteVariant={onDeleteVariant}
             onRateVariant={onRateVariant}
+            onRefine={onRefine}
           />
         </div>
       )}
@@ -496,12 +513,14 @@ function VariantCard({
 
 export default function ConceptVariantLab({
   concept,
+  concepts = [],
   onAddVariant,
   onMakeStl,
   onTryOnSkin,
   onMarkBest,
   onDeleteVariant,
   onRateVariant,
+  onRefine,
 }) {
   const [isAdding, setIsAdding] = useState(false)
   const [expandedVariantId, setExpandedVariantId] = useState('')
@@ -526,6 +545,12 @@ export default function ConceptVariantLab({
             </span>
           </div>
         </div>
+
+        {concept.imageUrl && onRefine && <button type="button" aria-label={`Refine original for ${label}`}
+          onClick={() => onRefine({ conceptId: concept.id, parentVariantId: null, imageUrl: concept.imageUrl })}
+          className="inline-flex min-h-11 items-center gap-2 rounded-xs border border-accent/45 px-3 text-sm text-accent focus-visible:outline-2 focus-visible:outline-cream">
+          <Sparkles size={18} aria-hidden="true" />Refine this
+        </button>}
 
         {!isAdding && (
           <button
@@ -560,6 +585,11 @@ export default function ConceptVariantLab({
               conceptId={concept.id}
               label={label}
               variant={variant}
+              original={(() => {
+                const source = variant.sourceConceptId === concept.id ? concept
+                  : concepts.find(row => row.id === variant.sourceConceptId)
+                return variant.parentVariantId ? source?.variants?.find(row => row.id === variant.parentVariantId) : source
+              })()}
               isExpanded={expandedVariantId === variant.id}
               onToggle={() => {
                 setExpandedVariantId((current) => (
@@ -571,6 +601,7 @@ export default function ConceptVariantLab({
               onMarkBest={onMarkBest}
               onDeleteVariant={onDeleteVariant}
               onRateVariant={onRateVariant}
+              onRefine={onRefine}
             />
           ))
         )}

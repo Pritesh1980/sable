@@ -76,6 +76,38 @@ On a phone, swipe left / right between concepts, swipe down to close, and tap th
 - **Delete** removes the concept — an **Undo** bar appears for a few seconds if you change
   your mind.
 
+## Refine an image
+
+Choose **Refine this** on the original image or an image-bearing AI result. Text-only
+results have no refinement action. The drawer shows the prepared source without cropping;
+if Sable cannot read it, choose a PNG, JPEG or WebP file explicitly. External image links
+are not silently fetched. Fill **Change** and **Keep**, choose black ink or colour, and
+review the outgoing prompt. The original stays unchanged; each result is a new variant.
+
+The public demo and offline builds use the manual path: **Copy refinement prompt**,
+**Export source image**, attach that image separately in your chosen AI, then select
+its provider and **Import variation**. Copying text does not attach the image. Imported
+results carry your provider attribution, not relay-verified provenance.
+
+In an activated private-owner build, **Generate one variation** names the OpenAI model
+and fixed image profile. It creates one paid image. Consent sends only the selected
+image and visible prompt, not your boards, body photos or artist portfolios. Read the
+linked provider privacy policy and API data controls; no zero-retention promise is made.
+If storage persistence is unavailable, acknowledge the risk before payment. Manual
+copy, export and import remain available.
+
+Use **Check recovery** above the wall after an interrupted request. Closing the drawer
+does not cancel a job. Unknown acceptance is checked or retried with the same saved input
+and request ID; it is not automatically charged again. An expired request or uncertain
+provider outcome requires explicit confirmation before a new paid request. Successful
+known destinations are recovered into the library; an unknown or deleted destination
+requires you to select a concept before saving. Disabled payment can still allow recovery
+of previously accepted jobs.
+
+Saved refinements show **Original and variation** side by side on desktop and stacked
+on a phone. A deleted parent is labelled **Source image unavailable** without hiding
+the child. Rating, **Mark Best** and **Try on skin** act on the saved variation.
+
 ## Try a concept on skin
 
 On any result with an image, choose **Try on skin**.

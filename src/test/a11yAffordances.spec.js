@@ -2,8 +2,21 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { createElement } from 'react'
+import { render, screen } from '@testing-library/react'
+import RefinementComposer from '../components/RefinementComposer'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '../..')
+
+it('gives refinement commands visible focus and stable touch targets', () => {
+  render(createElement(RefinementComposer, { state: { draft: { change: 'Shape', keep: 'Ink', palette: 'black' },
+    source: null, recoverableJobs: [] }, capabilities: { enabled: false }, onClose: () => {} }))
+  for (const button of screen.getAllByRole('button')) {
+    expect(button.className).toContain('min-h-11')
+    expect(button.className).toContain('focus-visible:outline-2')
+  }
+  expect(screen.getByRole('dialog', { name: 'Refine image' })).toHaveFocus()
+})
 
 function listFilesRecursive(dir) {
   const out = []

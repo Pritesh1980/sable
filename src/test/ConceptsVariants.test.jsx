@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { describe, expect, it } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import Concepts from '../pages/Concepts'
 import { buildPromptPackFromFreeText } from '../data/promptPacks'
+import ConceptVariantLab from '../components/ConceptVariantLab'
 
 const ravenPromptPack = buildPromptPackFromFreeText(
   'Raven chest piece with blackwork botanicals',
@@ -79,6 +80,35 @@ function DuplicateVariantHarness() {
 }
 
 describe('Concepts variant integration', () => {
+  it('offers refinement only for image-bearing originals and variants', () => {
+    const refine = vi.fn()
+    render(<ConceptVariantLab concept={{ id: 'c', prompt: 'Temple', imageUrl: '/original.png', variants: [
+      { id: 'image', title: 'Image pass', imageUrl: '/variant.png' },
+      { id: 'text', title: 'Text pass', response: 'More mist' },
+    ] }} onRefine={refine} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Refine original for Temple' }))
+    expect(refine).toHaveBeenLastCalledWith({ conceptId: 'c', parentVariantId: null, imageUrl: '/original.png' })
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Image pass result for Temple' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Refine Image pass for Temple' }))
+    expect(refine).toHaveBeenLastCalledWith({ conceptId: 'c', parentVariantId: 'image', imageUrl: '/variant.png' })
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Text pass result for Temple' }))
+    expect(screen.queryByRole('button', { name: 'Refine Text pass for Temple' })).not.toBeInTheDocument()
+  })
+
+  it('does not silently fetch an external refinement source or enable a relay in offline mode', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+    const concepts = [{ id: 'c', prompt: 'Temple', imageUrl: '', variants: [
+      { id: 'external', title: 'External image', imageUrl: 'https://external.example/private.png' },
+    ] }]
+    render(<MemoryRouter><Concepts concepts={concepts} setConcepts={() => {}} /></MemoryRouter>)
+    fireEvent.click(screen.getByRole('button', { name: 'Expand External image result for Temple' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Refine External image for Temple' }))
+    await waitFor(() => expect(screen.getByRole('dialog', { name: 'Refine image' })).toBeInTheDocument())
+    expect(screen.getByLabelText('Source image file')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Generate one variation' })).not.toBeInTheDocument()
+    expect(fetchSpy).not.toHaveBeenCalled()
+    fetchSpy.mockRestore()
+  })
   // #23: purely synchronous work (one render plus a long chain of fireEvent
   // calls, each triggering a re-render) — no async gap, no race. Under real
   // CPU contention from concurrent test workers this legitimately exceeds
@@ -167,6 +197,16 @@ describe('Concepts variant integration', () => {
     expect(screen.getByRole('button', {
       name: 'Delete Image pass result for Raven chest piece with blackwork botanicals',
     })).toBeInTheDocument()
+  })
+
+  it('keeps a saved refinement comparison when its recorded source was deleted', () => {
+    const concept = { id: 'child-concept', prompt: 'Saved child', variants: [{ id: 'child', title: 'Variation',
+      imageUrl: '/child.png', operation: 'refine', sourceConceptId: 'deleted', parentVariantId: 'old' }] }
+    render(<ConceptVariantLab concept={concept} concepts={[concept]} onMarkBest={() => {}}
+      onRateVariant={() => {}} onDeleteVariant={() => {}} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Variation result for Saved child' }))
+    expect(screen.getByText('Source image unavailable')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Variation' })).toHaveAttribute('src', '/child.png')
   })
 
   it('opens the relief STL drawer from an image result variant', () => {

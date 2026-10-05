@@ -5,6 +5,8 @@ import ConceptPiece from '../components/ConceptPiece'
 import ConceptVariantLab from '../components/ConceptVariantLab'
 import ConceptBackupStatus from '../components/ConceptBackupStatus'
 import ConceptViewer from '../components/ConceptViewer'
+import RefinementComposer from '../components/RefinementComposer'
+import RefinementCompare from '../components/RefinementCompare'
 import PromptPackComposer from '../components/PromptPackComposer'
 import ReliefStlDrawer from '../components/ReliefStlDrawer'
 import SkinPreviewDrawer from '../components/SkinPreviewDrawer'
@@ -14,6 +16,8 @@ import {
   markBestVariant,
   removeConceptVariant,
   updateVariantRating,
+  createConceptVariant,
+  upsertRefinementVariant,
 } from '../data/conceptVariants'
 import { buildConceptWallItems } from '../data/concepts'
 import { clearComposerDraft, loadComposerDraft, saveComposerDraft } from '../data/composerDraft'
@@ -24,8 +28,46 @@ import { useConceptRefinement } from '../hooks/useConceptRefinement'
 import { backend } from '../backend'
 import { createRelayClient } from '../data/imageJobs/relayClient'
 import { pendingImageJobs } from '../data/imageJobs/pendingJobs'
+import { prepareRefinementSource } from '../data/imageJobs/prepareSource'
+import { knownKeyForUrl } from '../data/blobUrls'
+import { resolveAssetPath } from '../data/assetPath'
+import { LIMITS } from '../../shared/imageJobs'
+import { RefreshCw } from 'lucide-react'
 
 const OFFLINE_RELAY = createRelayClient({ auth: backend.auth })
+
+async function selectedImageBytes(url) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 30_000)
+  try {
+    const response = await fetch(url, { credentials: 'omit', cache: 'no-store', redirect: 'error', signal: controller.signal })
+    if (!response.ok || !['image/png', 'image/jpeg', 'image/webp'].includes(response.headers.get('Content-Type')?.split(';')[0])) {
+      throw new Error('source_unreadable')
+    }
+    const reader = response.body.getReader()
+    const chunks = []
+    let size = 0
+    try {
+      while (true) {
+        const { value, done } = await reader.read()
+        if (done) break
+        size += value.byteLength
+        if (size > LIMITS.maxBodyBytes) { await reader.cancel(); throw new Error('source_too_large') }
+        chunks.push(value)
+      }
+    } finally { reader.releaseLock() }
+    return new Blob(chunks, { type: response.headers.get('Content-Type').split(';')[0] })
+  } finally { clearTimeout(timer) }
+}
+
+function imageDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = () => reject(new Error('source_unreadable'))
+    reader.readAsDataURL(blob)
+  })
+}
 
 function conceptActionLabel(concept) {
   return String(concept?.prompt || concept?.id || 'this concept').trim() || 'this concept'
@@ -91,7 +133,9 @@ function KeyField({ label, help, placeholder, value, onSave, onRemove }) {
 export default function Concepts({ concepts, setConcepts, commitConcepts, artists = [], ideas = [], backupOwnerId,
   onExportBackup, backupRevision, ownerScope = backend.ownerScope, blobs = backend.blobs,
   relay = OFFLINE_RELAY, journal = pendingImageJobs }) {
-  useConceptRefinement({ ownerId: backupOwnerId, ownerScope, concepts, commitConcepts, blobs, relay, journal })
+  const refinement = useConceptRefinement({ ownerId: backupOwnerId, ownerScope, concepts, commitConcepts, blobs, relay, journal })
+  const [refinementMessage, setRefinementMessage] = useState('')
+  const [manualComparison, setManualComparison] = useState(null)
   // A concept carries its image, variants and notes; deleting one goes through
   // the app's Undo bar rather than being final (#95). Durable: the removal is
   // already persisted, so the offer must outlive the viewer closing.
@@ -307,6 +351,114 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
     })
   }
 
+  async function refineSource({ conceptId, parentVariantId, imageUrl }) {
+    const snapshot = ownerScope.capture()
+    setRefinementMessage('')
+    setManualComparison(null)
+    let blob = null
+    try {
+      const key = knownKeyForUrl(imageUrl)
+      let url
+      if (key) {
+        if (!key.startsWith(`user/${snapshot.ownerId}/concepts/`) || key.split('/').some(part => !part || part === '.' || part === '..')) {
+          throw new Error('owner_changed')
+        }
+        url = await blobs.getUrl(key)
+        ownerScope.assertCurrent(snapshot)
+      } else if (imageUrl.startsWith('data:image/')) url = imageUrl
+      else {
+        const selected = new URL(resolveAssetPath(imageUrl), window.location.href)
+        const assets = new URL(`${import.meta.env.BASE_URL}images/`, window.location.origin)
+        if (selected.origin === assets.origin && selected.pathname.startsWith(assets.pathname)) url = selected.href
+      }
+      if (url) blob = await selectedImageBytes(url)
+      ownerScope.assertCurrent(snapshot)
+    } catch {
+      try { ownerScope.assertCurrent(snapshot) } catch { return }
+      // No arbitrary external URL fallback: let the user explicitly choose bytes.
+    }
+    ownerScope.assertCurrent(snapshot)
+    await refinement.openSource({ ownerId: snapshot.ownerId, conceptId, parentVariantId }, blob)
+  }
+
+  function assertRefinementOwner() {
+    const snapshot = ownerScope.capture()
+    if (refinement.state.destination && refinement.state.destination.ownerId !== snapshot.ownerId) throw new Error('owner_changed')
+    return snapshot
+  }
+
+  async function copyRefinementPrompt(prompt) {
+    const snapshot = assertRefinementOwner()
+    try {
+      await navigator.clipboard.writeText(prompt)
+      ownerScope.assertCurrent(snapshot)
+      setRefinementMessage('Prompt copied. Attach the exported source image separately.')
+    } catch {
+      try { ownerScope.assertCurrent(snapshot) } catch { return }
+      setRefinementMessage('Could not copy the prompt. Select the outgoing text and copy it.')
+    }
+  }
+
+  function exportRefinementSource() {
+    assertRefinementOwner()
+    const blob = refinement.state.source?.blob
+    if (!blob) return
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    try {
+      link.href = url
+      link.download = 'sable-refinement-source.png'
+      document.body.append(link)
+      link.click()
+      setRefinementMessage('Source download requested. Check that the file was saved.')
+    } catch {
+      URL.revokeObjectURL(url)
+      setRefinementMessage('Could not request the source download.')
+    } finally { link.remove() }
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  }
+
+  async function importManualVariation(file, provider) {
+    const snapshot = assertRefinementOwner()
+    const destination = refinement.state.destination
+    const draft = { ...refinement.state.draft }
+    if (!destination || !concepts.some(row => row.id === destination.conceptId)) throw new Error('destination_required')
+    const prepared = await prepareRefinementSource(file)
+    try {
+      ownerScope.assertCurrent(snapshot)
+      const imageUrl = await imageDataUrl(prepared.blob)
+      ownerScope.assertCurrent(snapshot)
+      const variant = createConceptVariant({ provider, title: 'Imported variation', imageUrl, operation: 'refine',
+        sourceConceptId: destination.conceptId, parentVariantId: destination.parentVariantId,
+        sourceImageDigest: refinement.state.source?.digest,
+        refinement: { version: 1, ...draft },
+        generation: { version: 1, provider, createdAt: new Date().toISOString(), provenance: 'user-import' } })
+      setConcepts(rows => rows.map(row => row.id === destination.conceptId ? upsertRefinementVariant(row, variant) : row))
+      setManualComparison({ conceptId: destination.conceptId, variantId: variant.id })
+      setRefinementMessage('Variation imported with your provider attribution, not relay-verified provenance.')
+    } finally { URL.revokeObjectURL(prepared.previewUrl) }
+  }
+
+  function recoverRefinement(action) {
+    if (action.kind === 'retry') return refinement.retryUnaccepted({ confirmed: action.confirmed })
+    if (action.kind === 'import') return refinement.importRecovered(action.jobId, action.conceptId)
+    if (action.kind === 'discard') return refinement.discard(action.jobId)
+    return refinement.recover()
+  }
+
+  const comparison = manualComparison || refinement.state.comparison
+  const comparisonConcept = concepts.find(row => row.id === comparison?.conceptId)
+  const comparisonVariant = comparisonConcept?.variants?.find(variant => variant.id === comparison.variantId)
+  const sourceConcept = concepts.find(row => row.id === comparisonVariant?.sourceConceptId)
+  const original = comparisonVariant?.parentVariantId
+    ? sourceConcept?.variants?.find(variant => variant.id === comparisonVariant.parentVariantId)
+    : sourceConcept
+  const comparisonPanel = comparisonVariant && <RefinementCompare original={original} variant={comparisonVariant}
+    parentAvailable={Boolean(original?.imageUrl)}
+    onMarkBest={variantId => markBest(comparison.conceptId, variantId)}
+    onRate={(variantId, rating) => rateVariant(comparison.conceptId, variantId, rating)}
+    onTryOn={input => { refinement.close(); tryOnSkin({ ...input, conceptId: comparison.conceptId, conceptLabel: comparisonConcept.prompt }) }} />
+
   const wallItems = useMemo(() => buildConceptWallItems(concepts, artists), [concepts, artists])
   // Concepts without a saved image can't live on an image wall — a pasted-back
   // result (or a prompt pack awaiting one) stays here until it has one.
@@ -372,6 +524,16 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
         </button>
       </header>
 
+      <section aria-label="Refinement recovery" className="flex flex-wrap items-center justify-between gap-2 border-b border-v2-hairline px-4 sm:px-8 py-2 font-v2-ui text-sm text-v2-muted">
+        <span role="status">{refinement.state.phase === 'saved' ? 'Variation saved' : refinement.state.recovering
+          ? 'Checking refinement recovery' : refinement.state.pending || refinement.state.recoverableJobs.length
+            ? 'Refinement needs attention' : 'Refinement recovery'}</span>
+        <button type="button" onClick={() => refinement.recover({ open: true })}
+          className="inline-flex min-h-11 items-center gap-2 px-3 text-v2-cream focus-visible:outline-2 hover:text-v2-accent">
+          <RefreshCw size={18} aria-hidden="true" />Check recovery
+        </button>
+      </section>
+
       {wallItems.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-4 py-32 text-center px-6">
           <p className="font-v2-display text-v2-cream text-xl tracking-wide">
@@ -404,6 +566,7 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
                 <p className="font-v2-display text-v2-cream text-sm italic mb-3">"{c.prompt}"</p>
                 <SavedPromptPack promptPack={c.promptPack} />
                 <ConceptVariantLab
+                  concepts={concepts}
                   concept={c}
                   onAddVariant={addVariant}
                   onMarkBest={markBest}
@@ -411,6 +574,7 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
                   onRateVariant={rateVariant}
                   onMakeStl={makeStlFromVariant}
                   onTryOnSkin={tryOnSkin}
+                  onRefine={refineSource}
                 />
                 <div className="flex justify-end mt-4 pt-3 border-t border-v2-hairline">
                   <button
@@ -468,6 +632,7 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
           items={wallItems}
           initialIndex={viewerIndex}
           artists={artists}
+          concepts={concepts}
           open={viewerOpen}
           onClose={() => setViewerIndex(null)}
           onDelete={handleDeleteFromViewer}
@@ -478,6 +643,7 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
           onRateVariant={rateVariant}
           onMakeStl={makeStlFromVariant}
           onTryOnSkin={tryOnSkin}
+          onRefine={refineSource}
         />
       )}
 
@@ -492,6 +658,19 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
         onSave={addVariant}
         onClose={() => setSkinSource(null)}
       />
+
+      {refinement.state.open && <RefinementComposer
+        key={`${refinement.state.destination?.conceptId}:${refinement.state.destination?.parentVariantId}:${refinement.state.source?.digest}`}
+        state={refinement.state}
+        capabilities={{ ...refinement.state.capabilities, enabled: Boolean(refinement.state.capabilities?.enabled && commitConcepts?.supported) }}
+        persistence={refinement.state.persistence} onDraftChange={refinement.setDraft} onSubmit={refinement.submit}
+        onCopyPrompt={copyRefinementPrompt} onExportSource={exportRefinementSource} onImportVariation={importManualVariation}
+        onSelectSource={file => refinement.openSource(refinement.state.destination, file)}
+        onRecover={recoverRefinement} onClose={refinement.close} destinations={concepts} comparison={comparisonPanel}
+        message={refinementMessage}
+        backupStatus={backupOwnerId && onExportBackup && <ConceptBackupStatus ownerId={backupOwnerId}
+          concepts={concepts} onExport={onExportBackup} revision={backupRevision} />}
+      />}
     </div>
   )
 }

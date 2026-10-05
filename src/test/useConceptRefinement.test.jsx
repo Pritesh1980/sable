@@ -153,6 +153,21 @@ it('reconciles a lost response on reload without automatically resubmitting or p
   expect(await sent.source.arrayBuffer()).toEqual(await marker.source.arrayBuffer())
 })
 
+it('opens recovery with the exact journaled preview and draft without preparing or sending again', async () => {
+  const marker = await addMarker({ accepted: false })
+  const preview = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:recovered')
+  await mount()
+  await act(async () => { await hook.result.current.recover({ open: true }) })
+  expect(hook.result.current.state).toMatchObject({ open: true, draft: fields,
+    destination: marker.destination, source: { digest: marker.sourceImageDigest, previewUrl: 'blob:recovered' } })
+  expect(await hook.result.current.state.source.blob.arrayBuffer()).toEqual(await marker.source.arrayBuffer())
+  expect(preview).toHaveBeenCalledOnce()
+  expect(prepareRefinementSource).not.toHaveBeenCalled()
+  expect(relay.submit).not.toHaveBeenCalled()
+  hook.unmount()
+  expect(revoke).toHaveBeenCalledWith('blob:recovered')
+})
+
 it('does not allocate a replacement key for expired unknown acceptance without explicit confirmation', async () => {
   await addMarker({ accepted: false })
   relay.submit.mockRejectedValueOnce(Object.assign(new Error('expired'), { code: 'request_expired' }))

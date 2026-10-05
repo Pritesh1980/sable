@@ -1,8 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render } from '@testing-library/react'
+import { fireEvent, render } from '@testing-library/react'
 import ConceptViewer from '../components/ConceptViewer'
 import ReliefStlDrawer from '../components/ReliefStlDrawer'
 import SkinPreviewDrawer from '../components/SkinPreviewDrawer'
+import RefinementComposer from '../components/RefinementComposer'
 
 // Make STL and Try on skin open from inside the full-screen concept viewer's
 // info panel. Both drawers must stack above that viewer, or they open hidden
@@ -34,5 +35,16 @@ describe('drawers opened from the concept viewer', () => {
 
     const skin = render(<SkinPreviewDrawer source={source} apiKey="" onSave={() => {}} onClose={() => {}} />)
     expect(zIndexOf(skin.getByRole('dialog', { name: 'Try on skin' }))).toBeGreaterThan(viewerZ)
+  })
+
+  it('keeps refinement above the viewer and Escape closes only the top drawer', () => {
+    const closeViewer = vi.fn(), closeRefinement = vi.fn()
+    const view = render(<><ConceptViewer items={items} onClose={closeViewer} />
+      <RefinementComposer state={{ draft: { change: 'More mist', keep: '', palette: 'black' }, phase: 'ready', source: null }}
+        capabilities={{ enabled: false }} onClose={closeRefinement} /></>)
+    expect(zIndexOf(view.getByRole('dialog', { name: 'Refine image' }))).toBeGreaterThan(zIndexOf(view.getByRole('dialog', { name: /Concept:/ })))
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(closeRefinement).toHaveBeenCalledOnce()
+    expect(closeViewer).not.toHaveBeenCalled()
   })
 })

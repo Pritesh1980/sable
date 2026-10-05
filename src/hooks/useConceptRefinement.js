@@ -245,11 +245,12 @@ export function useConceptRefinement({ ownerId, ownerScope, concepts, commitConc
     } finally { if (busy.current === operation) busy.current = null }
   }
 
-  async function recover() {
+  async function recover({ open = false } = {}) {
     let snapshot
     try {
       snapshot = capture()
-      patch({ recovering: true })
+      const revision = current.current.draftRevision
+      patch({ recovering: true, ...(open ? { open: true } : {}) })
       await latest.current.journal.expire()
       assertSession(snapshot)
       const markers = await latest.current.journal.list(snapshot.ownerId)
@@ -270,6 +271,13 @@ export function useConceptRefinement({ ownerId, ownerScope, concepts, commitConc
       const recoverableJobs = jobs.map(job => ({ ...job,
         destination: markers.find(row => row.jobId === job.id)?.destination ?? null }))
       const pending = current.current.pending ?? markers.find(row => !row.accepted) ?? null
+      if (pending?.source && !current.current.source && current.current.draftRevision === revision) {
+        // These bytes already passed preparation before the journal committed.
+        patch({ source: { blob: pending.source, digest: pending.sourceImageDigest,
+          previewUrl: URL.createObjectURL(pending.source) }, destination: pending.destination,
+        draft: { change: pending.request.change, keep: pending.request.keep, palette: pending.request.palette },
+        draftRevision: pending.destination.draftRevision, phase: 'recoverable' })
+      }
       patch({ capabilities: caps, recoverableJobs, pending, recovering: false,
         job: current.current.job ?? jobs.find(job => ACTIVE.has(job.state)) ?? null })
       for (const job of recoverableJobs) {

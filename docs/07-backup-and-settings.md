@@ -37,6 +37,9 @@ On **Concepts**, the paid-image backup indicator says **“No export requested�
 shows the last download request and **“Paid results saved since last export request.”**
 Export again after saving paid results, then confirm and store the file safely.
 Browser storage persistence is only an eviction hint, not an off-device backup.
+The refinement drawer offers the same **Export full library backup** action, not a
+concept-only file. Export after **Variation saved**, confirm the download, and keep a
+copy away from this device. A pending job is not a saved result or part of this backup.
 
 ## Restore a backup
 

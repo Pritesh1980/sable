@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from 'react'
+import { Sparkles } from 'lucide-react'
 import useIdleFade from '../hooks/useIdleFade'
 import useDialogFocus, { isTopmostDialog } from '../hooks/useDialogFocus'
 import useMediaQuery from '../hooks/useMediaQuery'
@@ -32,7 +33,7 @@ function pad2(n) {
   return String(n).padStart(2, '0')
 }
 
-function InfoPanel({ item, artists, onClose, onSaveTags, onAddVariant, onMarkBest, onDeleteVariant, onRateVariant, onMakeStl, onTryOnSkin }) {
+function InfoPanel({ item, artists, concepts, onClose, onSaveTags, onAddVariant, onMarkBest, onDeleteVariant, onRateVariant, onMakeStl, onTryOnSkin, onRefine }) {
   const concept = item.concept
   const matched = (concept.tags || []).length && artists.length
     ? matchArtistsForIdea({ tags: concept.tags }, artists).slice(0, 3)
@@ -88,6 +89,7 @@ function InfoPanel({ item, artists, onClose, onSaveTags, onAddVariant, onMarkBes
       <ConceptVisualMatches artists={artists} concept={concept} />
 
       <ConceptVariantLab
+        concepts={concepts}
         concept={concept}
         onAddVariant={onAddVariant}
         onMarkBest={onMarkBest}
@@ -95,6 +97,7 @@ function InfoPanel({ item, artists, onClose, onSaveTags, onAddVariant, onMarkBes
         onRateVariant={onRateVariant}
         onMakeStl={onMakeStl}
         onTryOnSkin={onTryOnSkin}
+        onRefine={onRefine}
       />
     </aside>
   )
@@ -116,6 +119,7 @@ export default function ConceptViewer({
   items,
   initialIndex = 0,
   artists = [],
+  concepts = [],
   open = true,
   onClose,
   onDelete,
@@ -126,6 +130,7 @@ export default function ConceptViewer({
   onRateVariant,
   onMakeStl,
   onTryOnSkin,
+  onRefine,
 }) {
   const [index, setIndex] = useState(initialIndex)
   const [showInfo, setShowInfo] = useState(false)
@@ -272,6 +277,12 @@ export default function ConceptViewer({
         className="absolute top-16 left-4 z-20 rounded-xs bg-v2-ink/85 px-2 py-1 pointer-events-none"
       />
 
+      {current.imageUrl && onRefine && <button type="button" onClick={() => onRefine({
+        conceptId: current.concept.id, parentVariantId: null, imageUrl: current.imageUrl })}
+        className="absolute right-4 top-16 z-20 min-h-11 inline-flex items-center gap-2 px-4 bg-v2-ink/90 border border-v2-hairline rounded-xs text-sm text-v2-cream font-v2-ui focus-visible:outline-2 focus-visible:outline-v2-cream">
+        <Sparkles size={18} aria-hidden="true" />Refine this
+      </button>}
+
       {touch ? (
         <div className="absolute inset-0 pointer-events-none">
           {topRow}
@@ -345,6 +356,7 @@ export default function ConceptViewer({
 
       {showInfo && (
         <InfoPanel
+          concepts={concepts}
           item={current}
           artists={artists}
           onClose={() => setShowInfo(false)}
@@ -355,6 +367,7 @@ export default function ConceptViewer({
           onRateVariant={onRateVariant}
           onMakeStl={onMakeStl}
           onTryOnSkin={onTryOnSkin}
+          onRefine={onRefine}
         />
       )}
     </div>
