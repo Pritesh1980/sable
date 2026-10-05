@@ -23,7 +23,9 @@ import {
   matchArtistsForIdea,
   normalizeArtistStatus,
   normalizeReferenceImages,
+  setImageNote,
 } from '../data/planning'
+import { itemIdentity } from '../data/undoableRemoval'
 import { activateOnKey } from '../a11y/activate'
 import { useFocusOnOpen } from '../hooks/useDialogFocus'
 
@@ -223,14 +225,9 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
     }
   )
 
-  function updateImageNote(url, note) {
+  function updateImageNote(target, note) {
     touch('images')
-    setDraft((d) => ({
-      ...d,
-      images: normalizeReferenceImages(d.images).map((image) => (
-        image.url === url ? { ...image, note } : image
-      )),
-    }))
+    setDraft((d) => ({ ...d, images: setImageNote(d.images, target, note) }))
   }
 
   function save() {
@@ -384,7 +381,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
               {images.map((image, index) => {
                 const url = getImageUrl(image)
                 return (
-                <div key={url} className="bg-ink-muted rounded-xs overflow-hidden border border-ink-border">
+                <div key={itemIdentity(image) || index} className="bg-ink-muted rounded-xs overflow-hidden border border-ink-border">
                   <div className="relative aspect-square group">
                     <img src={url} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none' }} />
                     {/* 44pt hit area, 24px chip. The padding puts the chip exactly
@@ -409,7 +406,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
                     rows={2}
                     placeholder="What to borrow from this image…"
                     value={getImageNote(image)}
-                    onChange={(e) => updateImageNote(url, e.target.value)}
+                    onChange={(e) => updateImageNote(image, e.target.value)}
                   />
                 </div>
                 )
