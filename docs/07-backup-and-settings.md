@@ -40,6 +40,9 @@ Browser storage persistence is only an eviction hint, not an off-device backup.
 The refinement drawer offers the same **Export full library backup** action, not a
 concept-only file. Export after **Variation saved**, confirm the download, and keep a
 copy away from this device. A pending job is not a saved result or part of this backup.
+After export, import the file in a fresh browser context and check that embedded paid
+images and their provenance survive. Do not rely on the source browser's existing cache
+as proof that a backup contains the bytes. Relay results are only recoverable for 24 hours.
 
 ## Restore a backup
 

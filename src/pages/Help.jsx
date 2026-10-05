@@ -117,6 +117,28 @@ const SECTIONS = [
     ],
   },
   {
+    id: 'concept-refinement',
+    label: 'Refine an image',
+    blurb: 'Keep the source, describe a change, and save a separate variation.',
+    image: 'concept-refinement.png',
+    steps: [
+      'Choose Refine this on an original or image-bearing result. Review the exact prepared source, Change, Keep, palette and outgoing prompt. If reading fails, choose a PNG, JPEG or WebP file explicitly.',
+      'Manual paths remain available: Copy refinement prompt, Export source image, attach it separately in your AI, then select the provider and Import variation. The import is user-attributed, not relay-verified.',
+      'A private activated relay names the provider and fixed image profile and requires consent for one paid image. Only the selected image and visible prompt are sent. Read the provider privacy and API data controls; acknowledge device-storage risk when required.',
+      'Check recovery after interruption. Retrying uses the saved request image and prompt, not newer draft edits. A new paid request after expiry or an uncertain outcome requires explicit confirmation. Closing the drawer does not cancel a job.',
+    ],
+  },
+  {
+    id: 'concept-refinement-compare',
+    label: 'Compare a saved variation',
+    blurb: 'Compare source and child, rate the direction, and keep a portable copy.',
+    image: 'concept-refinement-compare.png',
+    steps: [
+      'Original and variation are side by side on desktop and stacked on a phone. Rating, Mark Best and Try on skin act on the saved child. A deleted parent is labelled Source image unavailable without hiding the child.',
+      'Relay copies remain recoverable for 24 hours until a checked local save is acknowledged. Export full library backup, confirm the download and keep it off this device. Test import in a fresh context; persistence and a local save are not off-device backups.',
+    ],
+  },
+  {
     id: 'backup',
     label: 'Settings, backup & restore',
     blurb: 'Export a portable library snapshot; device-only storage is not cloud sync.',

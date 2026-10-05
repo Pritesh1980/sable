@@ -35,6 +35,8 @@ it('shows the uncropped prepared source, exact prompt, provider profile and expl
   fireEvent.click(screen.getByRole('checkbox', { name: /send this image and prompt to OpenAI/i }))
   fireEvent.click(screen.getByRole('button', { name: 'Generate one variation' }))
   expect(submit).toHaveBeenCalledWith({ storageWarningAccepted: false })
+  expect(screen.getByRole('checkbox', { name: /send this image and prompt to OpenAI/i })).not.toBeChecked()
+  expect(screen.getByRole('button', { name: 'Generate one variation' })).toBeDisabled()
 })
 
 it('requires the storage acknowledgement for a paid request but not for manual export', () => {

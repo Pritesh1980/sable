@@ -129,7 +129,7 @@ and covered the artist's name, so tapping the name opened Instagram. The victim 
 npx playwright install chromium   # once
 npm run test:e2e                  # builds, serves, runs everything
 npx playwright test e2e/stl.e2e.js --project=iphone   # one file
-npx playwright show-trace test-results/<test>/trace.zip   # after a failure
+npx playwright show-trace test-results/public/<test>/trace.zip   # after a failure
 ```
 
 `playwright.config.js` builds the app twice and serves both builds with `vite preview`:
@@ -159,6 +159,23 @@ Three projects: **iphone** (390×844, `isMobile`, touch; runs almost everything)
 | `hover` / `hover.desktop` | `can-hover` controls visible on a phone and hover-revealed on desktop (#49) |
 | `offline` | Once installed, the app opens every main route with the network off, images included |
 | `routes.subpath` | Deep links, redirects, image paths, the manifest and offline start under `/sable/` |
+
+### Refinement Proofs And Screenshots
+
+`npm run test:e2e:refinement` is separate from the default public suite. Its test-only
+Vite config aliases auth to a fictional adapter and intercepts all relay endpoints;
+OpenAI/Supabase origins are aborted. Production config has no fake auth injection.
+Reports use `test-results/refinement/`, separate from `test-results/public/`.
+See [the fixture coverage](../e2e/README.md). Phone Chromium is not Safari/home-screen
+persistence proof; real-device validation remains in [activation](RELAY-ACTIVATION.md).
+
+To recapture `concepts.png`, `concept-card.png`, `settings.png`,
+`concept-refinement.png` and `concept-refinement-compare.png`, build with the same
+fictional env as `playwright.refinement.config.js`, serve `dist-refinement` on port
+4181, and run `node scripts/captureRefinementGuide.mjs`. It uses synthetic PNGs,
+desktop 1280 x 900 and mobile 430 x 920 with `isMobile` and touch, viewport-only.
+Never substitute portfolio images, body photos, private library bytes or paid results.
+Keep the guide links and Help `SECTIONS` images aligned, then run `npm run docs:check`.
 
 ### Live demo smoke test
 

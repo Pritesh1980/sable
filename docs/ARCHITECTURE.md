@@ -16,7 +16,7 @@ Three ideas carry the design:
 The README has the short version. This document is the detailed one, including the
 trade-offs that were taken deliberately and the limits that are still open.
 
-Checked against the source on **12 September 2026**. Diagrams describe implemented
+Refinement/auth/storage paths checked on **5 October 2026**. Diagrams describe implemented
 runtime paths; checked-in data and planned features are identified separately.
 
 ---
@@ -27,7 +27,8 @@ Sable's main runtime is the browser: React, the offline cache, image processing,
 the Taste Engine all execute on the device. Static assets arrive from GitHub Pages.
 Persistent account data crosses the backend adapter boundary, while explicitly
 requested generation, screenshot analysis, or artist discovery calls the selected AI
-provider directly with a key supplied by the user.
+provider directly with a key supplied by the user. The separate private refinement
+relay described below is implemented but unactivated; it does not replace those routes.
 
 ```mermaid
 flowchart LR
@@ -61,7 +62,73 @@ This view separates three things that are easy to conflate:
 - **synced account data** goes through the backend seam; device-only imports,
   preferences and derived caches do not
 - **optional AI requests** go directly to a provider and never become an implicit
-  backend dependency
+  backend dependency; private refinement alone uses an explicitly configured relay
+
+### Private Refinement Boundary
+
+Public/demo builds remain offline with local auth and no relay URL. Private builds
+can use Supabase auth while keeping documents and blobs device-local:
+`VITE_AUTH_BACKEND=supabase`, `VITE_BACKEND=local`. The owner is matched by auth `sub`,
+not email. Private libraries do not seed artists through an email match. Ownership
+epochs fence awaited work and display caches even across A -> signed out -> A.
+
+```mermaid
+flowchart LR
+  DEMO["Public demo / offline<br/>local auth, empty relay URL"] --> MANUAL["Copy prompt / export selected source<br/>explicit attributed raster import"]
+  PRIVATE["Private owner PWA<br/>real auth, device-local library"] --> SDK["Supabase SDK session<br/>current short-lived access token"]
+  PRIVATE --> JOURNAL[("Owner-scoped IndexedDB journal<br/>exact prepared PNG / request ID")]
+  SDK --> RELAY["Private TLS relay<br/>host unactivated / approval required"]
+  JOURNAL --> RELAY
+  RELAY --> JWT["Owner signature / issuer / audience<br/>fixed JWKS and single algorithm"]
+  JWT --> DB[("SQLite<br/>replay / quota / immutable profile")]
+  DB --> SPOOL[("Private durable spool<br/>input / result manifest / fsync")]
+  SPOOL --> WORKER["One worker<br/>no hidden provider retry"]
+  WORKER --> PROVIDER["OpenAI edits<br/>server-only key, fixed profile"]
+  PROVIDER --> SPOOL
+  SPOOL --> PRIVATE
+```
+
+```mermaid
+sequenceDiagram
+  participant UI as Refinement composer
+  participant J as Pending journal
+  participant R as Authenticated relay
+  participant S as SQLite and spool
+  participant P as Provider
+  participant C as Checked local import
+  UI->>J: Commit exact PNG, request, digest, ID and destination
+  J-->>UI: Transaction committed
+  UI->>R: Submit same immutable bytes and ID
+  R->>S: Replay-first admission and durable input
+  R-->>UI: Accepted job
+  UI->>J: Accepted marker, release journal source bytes
+  S->>P: Single claimed paid attempt
+  P-->>S: Result bytes
+  S->>S: Durable digest-checked manifest then completion
+  UI->>R: List/status after reload, no automatic POST
+  R-->>UI: Recoverable job
+  UI->>C: Verify result bytes, owner and destination
+  C->>C: Upload PNG, read back, commit canonical variant and verify receipt
+  C-->>UI: Verified canonical image key and variant
+  UI->>R: Acknowledge only after checked receipt
+  R->>S: Remove private result/input bytes
+  UI->>J: Remove accepted marker
+```
+
+Lost acceptance retains the same journal bytes and ID. A dispatched ambiguous
+provider outcome is `outcome_unknown`, not an automatic second purchase. A new
+paid request after expiry/uncertainty requires explicit confirmation. Missing or
+deleted destinations require a selection before import; deleted parents remain
+honest unavailable lineage, not a fabricated source. Deterministic job-derived
+variant IDs make repeated imports converge without losing rating/Best annotations.
+Owner checks surround each await and the canonical receipt precedes acknowledgement.
+
+Results expire after 24 hours or are scrubbed earlier on ack/discard; tombstones last
+seven days. Local saved PNGs are not off-device backups. Portable exports materialize
+canonical image bytes, stop on missing bytes, and report a download request rather
+than verified file storage. External artwork remains labelled references.
+Deployment, billing and real Safari/home-screen validation remain
+[separate activation gates](RELAY-ACTIVATION.md). Legacy BYOK generation is unchanged.
 
 ---
 
@@ -69,7 +136,9 @@ This view separates three things that are easy to conflate:
 
 Account auth, synced documents, and backend blob calls pass through `src/backend/`.
 `createBackend()` (`src/backend/index.js`) selects one adapter set — `auth`, `store`,
-`blobs` — from `VITE_BACKEND` (`local` | `supabase` | `aws`, default `local`). The
+`blobs` — from `VITE_BACKEND` (`local` | `supabase`, default `local`) independently
+of `VITE_AUTH_BACKEND` (`local` | `supabase`). Cloud storage requires real auth;
+`aws` is reserved, not selectable. The
 Supabase adapter is statically bundled today, but its client is constructed lazily only
 when that adapter is selected. Optional AI calls use direct HTTP modules under
 `src/data/`; they do not bypass this persistence boundary because they do not own
@@ -115,10 +184,10 @@ The local adapter and an in-memory mock run through the same contract test
 requiring provider credentials. The Supabase adapter implements the same documented
 interface but is not exercised by that offline suite; AWS remains reserved.
 
-**Owner gating.** `src/backend/owner.js` defines a single owner account by email
-(`VITE_OWNER_EMAIL`). The owner keeps the curated `DEFAULT_ARTISTS`; every other
-account starts empty. This rule is applied in two places that must agree — the sync
-reconcile *and* the first render — see §2.
+**Owner gating.** Private real-auth libraries require `VITE_PRIVATE_OWNER_ID` to
+match the authenticated user ID before mounting owner storage. `VITE_OWNER_EMAIL`
+only controls offline legacy owner seeding; it grants no private access. Real-auth
+libraries start empty and cannot inherit legacy unclassified image caches.
 
 ### React composition and route ownership
 

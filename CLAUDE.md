@@ -56,6 +56,26 @@ This is a personal app for one user (the owner). (A read-only share link for the
   exhibitor list is nobody's private data), winners are purged (they carry photos
   the user took). JSON export/import backup still available.
 
+### Image Refinement Relay
+
+- Inline Refine this exists for original and variant images, not text-only results.
+  Exact prepared PNG, Change/Keep/palette and compiled prompt are reviewed before
+  consent. Manual copy/export/import remains available offline; provider attribution
+  is user-import provenance, never relay verification.
+- Private real auth is independent from device-local storage. Owner access uses
+  `VITE_PRIVATE_OWNER_ID` / auth sub, not an email match. Public Pages builds keep
+  local auth and an empty relay URL. Never add a production fake-auth bypass.
+- Browser journal commits exact bytes/ID before POST. Recovery never automatically
+  sends another paid request. Verified PNG upload/readback plus checked canonical
+  variant receipt must precede ack; otherwise leave the service copy recoverable.
+- Relay source/result bytes last 24 hours; request tombstones last seven days.
+  Provider uncertainty requires explicit new-payment confirmation. A local save or
+  download request is not an off-device backup; portable export embeds canonical bytes.
+- `npm run test:relay` runs offline Node tests; `npm run test:e2e:refinement` runs
+  fictional auth/relay browser proofs, separately from default demo E2E. Guide capture:
+  `scripts/captureRefinementGuide.mjs`. Operations: `docs/RELAY-ACTIVATION.md` and
+  `server/README.md`. Hosting, paid activation and live requests are unapproved.
+
 ### PWA Requirements
 - `manifest.json` with app name, icons, dark background colour
 - Service worker for offline support

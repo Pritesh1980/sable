@@ -78,6 +78,8 @@ On a phone, swipe left / right between concepts, swipe down to close, and tap th
 
 ## Refine an image
 
+![The refinement drawer with a fictional prepared source](../public/guide/concept-refinement.png)
+
 Choose **Refine this** on the original image or an image-bearing AI result. Text-only
 results have no refinement action. The drawer shows the prepared source without cropping;
 if Sable cannot read it, choose a PNG, JPEG or WebP file explicitly. External image links
@@ -107,6 +109,13 @@ of previously accepted jobs.
 Saved refinements show **Original and variation** side by side on desktop and stacked
 on a phone. A deleted parent is labelled **Source image unavailable** without hiding
 the child. Rating, **Mark Best** and **Try on skin** act on the saved variation.
+
+![A saved variation compared with its original source](../public/guide/concept-refinement-compare.png)
+
+Paid results remain recoverable on the relay for 24 hours until a verified local save
+and acknowledgement remove the service copy. A local save is not an off-device backup;
+use the full-library export and check the downloaded file. Private activation requires
+[separate operational approval](RELAY-ACTIVATION.md).
 
 ## Try a concept on skin
 

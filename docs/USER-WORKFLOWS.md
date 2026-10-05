@@ -200,8 +200,39 @@ request necessarily supplies its key to the selected provider. Visual artist mat
 runs on-device. Generation, screenshot analysis, and **Ask Gemini** / suggestion
 **Refresh** are the provider-bound paths; discovery sends aggregate style-tag counts, up
 to eight saved style descriptors, and an exclusion list of known or dismissed handles,
-but no saved images. The discovery and image-generation clients currently put the Gemini
-key in the provider request URL; screenshot analysis sends it in a request header.
+but no saved images. Gemini keys are sent in the `x-goog-api-key` request header,
+never the URL. The existing BYOK generation routes are unchanged by refinement.
+
+### Refine A Selected Image
+
+```mermaid
+flowchart TB
+  IMAGE["Original or saved image result<br/>Refine this"] --> REVIEW["Prepared source / Change / Keep / palette<br/>review exact outgoing prompt"]
+  REVIEW --> MODE{"Private paid capability enabled?"}
+  MODE -- no --> COPY["Copy refinement prompt<br/>export source separately"]
+  COPY --> IMPORT["Attach image in chosen AI<br/>import raster with explicit provider attribution"]
+  MODE -- yes --> CONSENT["Provider/profile disclosure<br/>consent and storage-risk acknowledgement"]
+  CONSENT --> JOURNAL["Journal exact bytes and request ID"]
+  JOURNAL --> REQUEST["One paid request"]
+  REQUEST --> RECOVER["Check recovery after interruption<br/>same bytes and ID, no automatic new payment"]
+  RECOVER --> DEST{"Original destination still exists?"}
+  DEST -- no --> CHOOSE["Choose an existing concept"]
+  DEST -- yes --> SAVE["Verify PNG and canonical save<br/>then acknowledge relay"]
+  CHOOSE --> SAVE
+  IMPORT --> COMPARE["Original and separate child<br/>deleted parent labelled unavailable"]
+  SAVE --> COMPARE
+  COMPARE --> RATE["Rating / Best / Try on skin"]
+  RATE --> BACKUP["Export full portable library<br/>confirm file and restore in fresh context"]
+```
+
+Text-only results have no refinement action. Read failures offer explicit raster
+selection, not silent third-party fetching. Current draft edits never change a
+retained retry's saved image/prompt. An expired request or uncertain provider outcome
+requires confirmation before a new paid request. Closing is not cancellation.
+Known successful destinations recover automatically; deleting a concept prevents
+automatic import into it. A committed local result remains device-local unless a
+separate cloud-storage build is configured. The service copy lasts only 24 hours;
+export the full library, confirm the download and keep an off-device copy.
 
 Relief export creates a printable heightmap-style STL. It is an optional downstream use
 of an image result, not a new concept type.
@@ -304,7 +335,9 @@ checked, especially when the app reports a name-prefix match rather than a handl
 
 Every edit is local first. With a remote backend configured, sync is the normal
 cross-device path for account collections; the default local/demo adapter stays on
-one device. A downloaded backup is an extra document restore point.
+one device. Real login alone does not enable cloud sync. A downloaded portable backup
+embeds canonical local image bytes; external links remain references. Test restoring
+it in a fresh context rather than relying on the original browser cache.
 
 ```mermaid
 flowchart TB

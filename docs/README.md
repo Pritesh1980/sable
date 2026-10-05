@@ -8,9 +8,13 @@ shows who else in your collection sits closest. From there it goes as deep as yo
 want — ranking, tattoo ideas linked to artists, concepts, conventions and studios.
 
 It runs in your browser and installs to your phone's home screen like a native app.
-Sign in with your account and your data syncs across devices, with a local copy kept
-on each device so the app still works offline. The taste model runs on your device,
-so your reference images never leave it.
+Real login and storage are separate: device-local builds keep the library on that
+device; only cloud-storage builds sync across devices. Export a portable backup
+before moving devices. The taste model runs on-device. Explicit AI actions can
+send their selected image or instructions with consent; they are not background sync.
+
+Image refinement is covered in [AI concepts](06-concepts.md#refine-an-image).
+Private paid activation remains an [unactivated approval checklist](RELAY-ACTIVATION.md).
 
 ![The Wall — Sable's home](../public/guide/wall.png)
 

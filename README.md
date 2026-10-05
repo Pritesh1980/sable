@@ -72,7 +72,7 @@ The sign-in screen also links straight to it (**No account? View the demo →**)
 
 Three ideas carry the design:
 
-- **A vendor-SDK boundary.** The app never imports a persistence vendor SDK. Account auth, synced documents and backend blobs pass through `src/backend/`, where one factory selects an adapter set from `VITE_BACKEND` (`local` | `supabase` | `aws`). Changing provider means writing one new adapter, not editing app code.
+- **A vendor-SDK boundary.** Account auth, synced documents and backend blobs pass through `src/backend/`. Storage (`VITE_BACKEND=local|supabase`) and auth (`VITE_AUTH_BACKEND=local|supabase`) are independent; cloud storage requires real auth. AWS remains reserved, not selectable. Changing provider means writing an adapter, not editing app code.
 - **Local-first sync.** `localStorage` and IndexedDB are the always-available cache; changes mirror to the backend and reconcile per record by last-write-wins on `updatedAt`. The UI never waits for a network.
 - **On-device visual matching.** CLIP embeddings are computed in the browser, so building artist and concept matches never uploads the saved reference library.
 
@@ -116,7 +116,7 @@ restore.
 
 ## Testing philosophy
 
-The project is built TDD-first: behaviour is specified in a failing test before implementation, and any change to seed data must keep the data-integrity tests green. The suite is 1956 Vitest tests across 187 files (`src/test/`), covering pure data modules directly and hooks/components via Testing Library. A contract test (`src/test/readmeClaims.test.js`) asserts the file count exactly and bounds the claimed test total against the statically visible case declarations, with headroom for generated `it.each` cases. Non-bundled files that Vitest can't import — like the hand-rolled service worker — follow a pure-module + contract-test pattern: the logic lives in importable modules (`src/sw/precache.js`, `src/sw/swStrategy.js`) with unit tests, plus contract tests (`src/test/precache.test.js`, `src/test/swStrategy.test.js`) that read `public/sw.js` as text and assert its key invariants. The local adapter and an in-memory mock share a contract test (`src/test/backendContract.test.js`), proving the seam without provider credentials; the suite is pinned to the offline local backend so it runs without secrets or network — in CI too.
+The project is built TDD-first: behaviour is specified in a failing test before implementation, and any change to seed data must keep the data-integrity tests green. The suite is 1958 Vitest tests across 188 files (`src/test/`), covering pure data modules directly and hooks/components via Testing Library. A contract test (`src/test/readmeClaims.test.js`) asserts the file count exactly and bounds the claimed test total against the statically visible case declarations, with headroom for generated `it.each` cases. Non-bundled files that Vitest can't import — like the hand-rolled service worker — follow a pure-module + contract-test pattern: the logic lives in importable modules (`src/sw/precache.js`, `src/sw/swStrategy.js`) with unit tests, plus contract tests (`src/test/precache.test.js`, `src/test/swStrategy.test.js`) that read `public/sw.js` as text and assert its key invariants. The local adapter and an in-memory mock share a contract test (`src/test/backendContract.test.js`), proving the seam without provider credentials; the suite is pinned to the offline local backend so it runs without secrets or network — in CI too.
 
 Alongside it, a Playwright suite (`e2e/`, `npm run test:e2e`) drives the built demo on an emulated iPhone. It covers what jsdom has no way to see: page width at 320–390px, real touch swipes and pinches, which overlay is actually on top, a fake camera, canvas and WebGL, and the downloaded STL parsed byte by byte. It also runs a second build under the `/sable/` sub-path the public demo is served from. It runs as its own CI job; see [docs/MAINTAINING.md](docs/MAINTAINING.md#browser-tests-e2e).
 
@@ -126,6 +126,8 @@ Alongside it, a Playwright suite (`e2e/`, `npm run test:e2e`) drives the built d
 npm test          # run the Vitest suite once
 npm run test:watch
 npm run test:e2e  # browser suite (npx playwright install chromium, once)
+npm run test:e2e:refinement  # fictional private auth/relay browser proofs
+npm run test:relay          # server offline tests (npm --prefix server ci first)
 npm run lint
 npm run build
 npm run preview
@@ -148,11 +150,20 @@ Runtime edits are stored locally in the browser and mirrored to the selected bac
 - IndexedDB: artist image arrays and blob bytes, the on-device style index, and winner-tattoo photos (bulky, so only an id goes in `localStorage`)
 - Device-local only (never synced): theme, font size, API keys, the style index, convention line-ups and winner boards
 
-Use **Manage → Export Backup** before clearing browser data or doing larger data edits.
-The JSON includes artists, ideas, boards, concepts, notes, ranks, tags, convention
-overrides, and current image values. Inline `data:` images are embedded, but backend
-image blobs are not fetched into the file; use account sync to move those between
-devices.
+Use **Settings → Export Backup** before clearing browser data or moving a device-local
+library. The portable JSON embeds canonical saved image bytes, including paid results;
+external portfolio and bundled artwork remain references. Missing local bytes stop the
+export rather than yielding a partial file. Sable reports a download request, not proof
+the file was saved or copied off-device. Test import in a fresh context.
+
+**Image refinement** keeps an original and a separate child with lineage. Manual
+copy-prompt, separate source export and attributed raster import work without a relay.
+The private owner-only relay adds explicit consent for one paid variation, exact-input
+journaling, reload recovery and checked local save before acknowledgement. Legacy BYOK
+generation remains unchanged. The relay is **unactivated**: hosting, auth-plan costs,
+provider billing, real iPhone validation and live paid calls require
+[separate approval](docs/RELAY-ACTIVATION.md). Operations are documented in
+[server/README.md](server/README.md).
 
 ## PWA Notes
 

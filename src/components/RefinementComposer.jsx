@@ -152,7 +152,7 @@ export default function RefinementComposer({ state, capabilities, persistence, o
             {storageRisk && <label className="flex items-start gap-3 min-h-11 py-2"><input type="checkbox" checked={storageAccepted}
               onChange={event => setStorageAccepted(event.target.checked)} className="mt-1 accent-v2-accent" />
               <span>I understand browser storage may be cleared. A saved image is not an off-device backup.</span></label>}
-            <button type="button" onClick={() => onSubmit?.({ storageWarningAccepted: storageAccepted })}
+            <button type="button" onClick={() => { setConsent(false); onSubmit?.({ storageWarningAccepted: storageAccepted }) }}
               disabled={!sourceUrl || !validDraft || !consent || (storageRisk && !storageAccepted) || busy || unresolved}
               className={`${BUTTON} bg-v2-accent border-v2-accent w-full`}>
               <Sparkles size={18} aria-hidden="true" />Generate one variation
