@@ -13,6 +13,7 @@ export default function ArtistImage({
   className = '',
   fallbackClassName = '',
   monogramClassName = 'text-4xl',
+  fallback = null,
   sizes = '100vw',
   ...imgProps
 }) {
@@ -125,6 +126,8 @@ export default function ArtistImage({
   }
 
   if (!displaySrc || failed) {
+    // A caller's own empty state (e.g. Top5Hero's rank glyph) replaces the monogram.
+    if (fallback) return fallback
     return (
       <div
         className={`w-full h-full flex items-center justify-center bg-ink-muted ${className} ${fallbackClassName}`}

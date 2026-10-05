@@ -301,4 +301,19 @@ describe('ArtistImage', () => {
     render(<ArtistImage src={undefined} label="@m3.inkd" />)
     expect(screen.getByText('M')).toBeInTheDocument()
   })
+
+  // A caller can swap the monogram for its own empty state (#113) — Top5Hero
+  // shows the rank glyph — while keeping the boundary's loading and retry.
+  it('renders a custom fallback instead of the monogram when there is no image', () => {
+    render(<ArtistImage src="" label="Zed" fallback={<span data-testid="rank">3</span>} />)
+    expect(screen.getByTestId('rank')).toBeInTheDocument()
+    expect(screen.queryByText('Z')).not.toBeInTheDocument()
+  })
+
+  it('renders the custom fallback when the image fails to load', async () => {
+    render(<ArtistImage src="/missing.jpg" label="Zed" fallback={<span data-testid="rank">3</span>} />)
+    fireEvent.error(screen.getByRole('img', { hidden: true }))
+    await waitFor(() => expect(screen.getByTestId('rank')).toBeInTheDocument())
+    expect(screen.queryByRole('img', { hidden: true })).not.toBeInTheDocument()
+  })
 })
