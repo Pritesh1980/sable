@@ -20,6 +20,12 @@ import { clearComposerDraft, loadComposerDraft, saveComposerDraft } from '../dat
 import { generateImageWithGemini } from '../data/geminiImage'
 import { buildImagePrompt, buildTextPrompt } from '../data/conceptPrompts'
 import { useUndoableRemoval } from '../hooks/useUndoableRemoval'
+import { useConceptRefinement } from '../hooks/useConceptRefinement'
+import { backend } from '../backend'
+import { createRelayClient } from '../data/imageJobs/relayClient'
+import { pendingImageJobs } from '../data/imageJobs/pendingJobs'
+
+const OFFLINE_RELAY = createRelayClient({ auth: backend.auth })
 
 function conceptActionLabel(concept) {
   return String(concept?.prompt || concept?.id || 'this concept').trim() || 'this concept'
@@ -82,7 +88,10 @@ function KeyField({ label, help, placeholder, value, onSave, onRemove }) {
   )
 }
 
-export default function Concepts({ concepts, setConcepts, artists = [], ideas = [], backupOwnerId, onExportBackup, backupRevision }) {
+export default function Concepts({ concepts, setConcepts, commitConcepts, artists = [], ideas = [], backupOwnerId,
+  onExportBackup, backupRevision, ownerScope = backend.ownerScope, blobs = backend.blobs,
+  relay = OFFLINE_RELAY, journal = pendingImageJobs }) {
+  useConceptRefinement({ ownerId: backupOwnerId, ownerScope, concepts, commitConcepts, blobs, relay, journal })
   // A concept carries its image, variants and notes; deleting one goes through
   // the app's Undo bar rather than being final (#95). Durable: the removal is
   // already persisted, so the offer must outlive the viewer closing.

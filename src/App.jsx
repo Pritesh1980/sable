@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router'
 import { UndoProvider } from './context/UndoContext'
 import Nav from './components/Nav'
@@ -12,6 +12,8 @@ import { mergeConventionOverrides } from './data/conventions'
 import { useAuth } from './context/useAuth'
 import { backend } from './backend'
 import { requestPortableExport } from './data/portableBackup'
+import { createRelayClient } from './data/imageJobs/relayClient'
+import { pendingImageJobs } from './data/imageJobs/pendingJobs'
 
 // The Wall (home) stays eager — it's the first paint. Every other page is
 // route-split so the initial bundle (and the SW precache built from it) stays
@@ -37,6 +39,18 @@ export default function App() {
 
 function AppShell() {
   const auth = useAuth()
+  const ownerId = auth?.user?.id
+  const relay = useMemo(() => createRelayClient({
+    baseUrl: backend.capabilities.realAuth && ownerId && ownerId === backend.privateOwnerId
+      ? import.meta.env.VITE_AI_RELAY_URL : undefined,
+    auth: { async getAccessToken(options) {
+      const snapshot = backend.ownerScope.capture()
+      if (snapshot.ownerId !== ownerId) throw new Error('owner_changed')
+      const token = await backend.auth.getAccessToken(options)
+      backend.ownerScope.assertCurrent(snapshot)
+      return token
+    } },
+  }), [ownerId])
   const [artists, setArtists] = useArtistStorage()
   const [ideas, setIdeas] = useStorage('tattoo_ideas', [], ideasCodec)
   const [concepts, setConcepts, commitConcepts] = useStorage('tattoo_concepts', [], conceptsCodec)
@@ -89,7 +103,7 @@ function AppShell() {
             <Route path="/brief" element={<Brief ideas={ideas} setIdeas={setIdeas} artists={artists} mergedConventions={mergedConventions} boards={boards} setBoards={setBoards} />} />
             <Route path="/conventions" element={<Conventions artists={artists} setArtists={setArtists} conventionOverrides={conventionOverrides} setConventionOverrides={setConventionOverrides} conventionLineups={conventionLineups} setConventionLineups={setConventionLineups} conventionWinners={conventionWinners} setConventionWinners={setConventionWinners} />} />
             <Route path="/studios" element={<Studios artists={artists} />} />
-            <Route path="/concepts" element={<Concepts concepts={concepts} setConcepts={setConcepts} commitConcepts={commitConcepts} artists={artists} ideas={ideas} backupOwnerId={auth?.user?.id} onExportBackup={exportFullLibrary} backupRevision={backupRevision} />} />
+            <Route path="/concepts" element={<Concepts concepts={concepts} setConcepts={setConcepts} commitConcepts={commitConcepts} artists={artists} ideas={ideas} backupOwnerId={ownerId} onExportBackup={exportFullLibrary} backupRevision={backupRevision} ownerScope={backend.ownerScope} blobs={backend.blobs} relay={relay} journal={pendingImageJobs} />} />
             <Route path="/boards" element={<Navigate to="/brief?tab=boards" replace />} />
             <Route path="/help" element={<Help />} />
             <Route
