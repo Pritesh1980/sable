@@ -2,6 +2,7 @@ import { lazy, Suspense, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
 import { resolveTransitionMode } from '../lib/gl'
+import useImageSrc from '../hooks/useImageSrc'
 
 // three.js lives in this lazily-imported chunk only — never in the initial bundle.
 const Top5Coverflow = lazy(() => import('./Top5Coverflow'))
@@ -13,11 +14,15 @@ const statusLabel = (s) =>
 // A single cover that degrades to the rank glyph if the image is absent or
 // fails to load (e.g. the public build ships without the curated seed images).
 function CoverTile({ item }) {
+  // item.image is the stored ref; resolve it here (#113) — a { url, addedAt }
+  // photo used to reach <img src> as "[object Object]", and a static path
+  // missed the deploy base.
+  const { src } = useImageSrc(item.image)
   const [failed, setFailed] = useState(false)
-  if (item.image && !failed) {
+  if (src && !failed) {
     return (
       <img
-        src={item.image}
+        src={src}
         alt=""
         className="w-full h-full object-cover"
         onError={() => setFailed(true)}

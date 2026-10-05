@@ -55,3 +55,26 @@ describe('Top5Hero (static fallback path)', () => {
     expect(screen.getByText(/top five/i)).toBeInTheDocument()
   })
 })
+
+describe('Top5Hero cover images (#113)', () => {
+  const withImage = (image) => [{ id: 'x', rank: 1, handle: 'zoia.ink', status: 'researching', images: [image] }]
+  const coverSrc = (container) => container.querySelector('button img')?.getAttribute('src')
+
+  it('renders a { url, addedAt } photo from its url, never "[object Object]"', () => {
+    const { container } = render(
+      <MemoryRouter>
+        <Top5Hero artists={withImage({ url: 'images/artists/zoia/1.jpg', addedAt: '2026-09-01T00:00:00.000Z' })} bench={[]} />
+      </MemoryRouter>,
+    )
+    expect(coverSrc(container)).toBe('/images/artists/zoia/1.jpg')
+  })
+
+  it('applies the deploy base to a base-relative static path', () => {
+    const { container } = render(
+      <MemoryRouter>
+        <Top5Hero artists={withImage('images/artists/zoia/1.jpg')} bench={[]} />
+      </MemoryRouter>,
+    )
+    expect(coverSrc(container)).toBe('/images/artists/zoia/1.jpg')
+  })
+})

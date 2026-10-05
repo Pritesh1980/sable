@@ -114,15 +114,27 @@ describe('buildWallItems', () => {
     expect(item.isRecent).toBe(false)
   })
 
-  it('normalises unresolved blob-key refs to an empty string src', () => {
-    // item.image is always a displayable string (see imageSrc); keyed refs
-    // that haven't been resolved to a URL yet come back as '' so consumers
-    // fall back to the monogram instead of rendering "[object Object]".
+  it('carries a blob-key ref as the ref itself, never a resolved string (#113)', () => {
+    // Selectors hold refs; the render boundary (ArtistImage / useImageSrc)
+    // resolves them. A keyed ref used to be flattened to '' here, which lost
+    // the key and made "loading" indistinguishable from "no image".
     const items = buildWallItems(artists, { now: NOW })
     const item = items.find((i) => i.artistId === 'zoia.ink' && i.imageIndex === 1)
-    expect(item.image).toBe('')
+    expect(item.image).toEqual({ key: 'user/1/artists/zoia.ink/2.jpg' })
     expect(item.addedAt).toBeUndefined()
     expect(item.isRecent).toBe(false)
+  })
+
+  it('carries a { url, addedAt } ref and a base-relative static path unchanged (#113)', () => {
+    const ref = { url: 'images/artists/a/1.jpg', addedAt: NOW.toISOString() }
+    const items = buildWallItems(
+      [{ id: 'a', handle: 'a', images: [ref, 'images/artists/a/2.jpg'] }],
+      { now: NOW },
+    )
+    expect(items[0].image).toBe(ref)
+    expect(items[0].addedAt).toBe(NOW.toISOString())
+    // No deploy base baked in: the boundary applies it at display time.
+    expect(items[1].image).toBe('images/artists/a/2.jpg')
   })
 
   it('marks images with a recent addedAt as isRecent', () => {

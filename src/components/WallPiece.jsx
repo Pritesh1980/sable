@@ -8,7 +8,6 @@ import GeneratedArtworkNotice from './GeneratedArtworkNotice'
 // target: dragging an image file over a piece adds it to that piece's artist.
 export default function WallPiece({ item, onOpen, onDropImage }) {
   const [dragOver, setDragOver] = useState(false)
-  const src = typeof item.image === 'string' ? item.image : item.image?.url || ''
 
   function handleDragOver(e) {
     if (!onDropImage) return
@@ -39,7 +38,7 @@ export default function WallPiece({ item, onOpen, onDropImage }) {
       onDrop={handleDrop}
     >
       <ArtistImage
-        src={src}
+        src={item.image}
         label={item.artistName}
         loading="lazy"
         sizes="auto, (max-width: 617px) 100vw, (max-width: 923px) 50vw, (max-width: 1229px) 33vw, 25vw"
@@ -65,7 +64,7 @@ export default function WallPiece({ item, onOpen, onDropImage }) {
             {item.studioName}
           </small>
         )}
-        <GeneratedArtworkNotice images={[src]} />
+        <GeneratedArtworkNotice images={[item.image]} />
       </figcaption>
     </figure>
   )
