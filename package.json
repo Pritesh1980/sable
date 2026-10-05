@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "test:e2e:refinement": "playwright test --config playwright.refinement.config.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "audit:targets": "node scripts/auditTouchTargets.mjs",

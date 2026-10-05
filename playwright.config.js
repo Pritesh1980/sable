@@ -31,7 +31,9 @@ const iphone = {
 
 export default defineConfig({
   testDir: 'e2e',
+  outputDir: 'test-results/public',
   testMatch: '**/*.e2e.js',
+  testIgnore: '**/refinement*.e2e.js',
   fullyParallel: true,
   forbidOnly: CI,
   retries: CI ? 1 : 0,
@@ -50,7 +52,7 @@ export default defineConfig({
     launchOptions: { args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] },
   },
   projects: [
-    { name: 'iphone', use: iphone, testIgnore: ['**/*.desktop.e2e.js', '**/*.subpath.e2e.js'] },
+    { name: 'iphone', use: iphone, testIgnore: ['**/*.desktop.e2e.js', '**/*.subpath.e2e.js', '**/refinement*.e2e.js'] },
     { name: 'iphone-subpath', use: { ...iphone, baseURL: `http://localhost:${SUB_PORT}/sable/` }, testMatch: '**/*.subpath.e2e.js' },
     { name: 'desktop', use: { browserName: 'chromium', viewport: { width: 1280, height: 900 } }, testMatch: '**/*.desktop.e2e.js' },
   ],

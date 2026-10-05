@@ -71,6 +71,7 @@ artifacts/
 
 # Playwright
 /dist-sable/
+/dist-refinement*/
 /playwright-report/
 /test-results/
 /blob-report/

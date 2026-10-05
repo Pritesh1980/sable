@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Copy, Download, LoaderCircle, RefreshCw, Sparkles, Upload, X } from 'lucide-react'
 import useDialogFocus, { isTopmostDialog } from '../hooks/useDialogFocus'
 import { compileRefinementPrompt, LIMITS } from '../../shared/imageJobs'
@@ -29,6 +29,22 @@ const ERRORS = {
   draft_changed: 'The draft changed before upload. Review it and try again.',
   active_quota_exceeded: 'A variation is already in progress. Check recovery before starting another.',
   daily_quota_exceeded: 'The daily variation limit has been reached.',
+}
+
+function SavedRequestInput({ pending }) {
+  const imageRef = useRef(null)
+  useEffect(() => {
+    if (!pending.source || !imageRef.current) return
+    const image = imageRef.current
+    const url = URL.createObjectURL(pending.source)
+    image.src = url
+    return () => { image.removeAttribute('src'); URL.revokeObjectURL(url) }
+  }, [pending.source])
+  return <section aria-label="Saved request input" className="border-t border-v2-hairline mt-5 pt-4 space-y-3">
+    <h3 className="text-sm">Saved request input</h3>
+    <img ref={imageRef} alt="Saved request source" className="w-full max-h-64 object-contain bg-v2-ink" />
+    <pre aria-label="Saved request prompt" className="font-v2-ui text-sm text-v2-muted whitespace-pre-wrap break-words">{pending.request.prompt}</pre>
+  </section>
 }
 
 export default function RefinementComposer({ state, capabilities, persistence, onDraftChange, onSubmit,
@@ -143,6 +159,7 @@ export default function RefinementComposer({ state, capabilities, persistence, o
             </button>
           </section>
         )}
+        {state.pending && !state.pending.accepted && <SavedRequestInput pending={state.pending} />}
         {(state.job || state.error || state.pending) && <section className="border-t border-v2-hairline mt-5 pt-4 space-y-3 text-sm">
           {state.job && <p role="status">{state.phase === 'saved' ? 'Variation saved' : STATUS[state.job.state]}</p>}
           {state.error && <p role="alert" className="text-v2-cream">{ERRORS[state.error.code] || 'The variation could not be completed. Check recovery or use the manual actions.'}</p>}

@@ -83,3 +83,15 @@ it('requires explicit provider attribution and file selection before importing a
   fireEvent.click(screen.getByRole('button', { name: 'Import variation' }))
   expect(importing).toHaveBeenCalledWith(file, 'chatgpt')
 })
+
+it('discloses the immutable retry input separately from newer draft edits', () => {
+  vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:saved-request')
+  vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+  const retained = { source: new Blob(['old bytes'], { type: 'image/png' }), accepted: false,
+    request: { prompt: 'Exact previously submitted prompt' } }
+  render(<RefinementComposer state={{ ...state, draft: { ...draft, change: 'New edits' }, pending: retained }}
+    capabilities={caps} persistence="granted" onClose={() => {}} />)
+  expect(screen.getByLabelText('Saved request prompt')).toHaveTextContent(retained.request.prompt)
+  expect(screen.getByRole('img', { name: 'Saved request source' })).toHaveAttribute('src', 'blob:saved-request')
+  expect(screen.getByLabelText('Change')).toHaveValue('New edits')
+})
