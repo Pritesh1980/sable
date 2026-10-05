@@ -10,7 +10,8 @@
 // v5 makes every cache key base-relative so the app works when served from a
 // sub-path (GitHub Pages, /sable/) as well as from a root host.
 // v6 also precaches the bounded shipped demo artwork for offline browsing.
-const CACHE_NAME = 'tattoo-v6'
+// v7 bypasses private relay status and result responses even on same-origin hosts.
+const CACHE_NAME = 'tattoo-v7'
 
 // The path this SW is served from is the deploy base: '/sw.js' → '/',
 // '/sable/sw.js' → '/sable/'. Deriving it here keeps this file correct at any
@@ -137,6 +138,14 @@ self.addEventListener('fetch', (event) => {
   // never be cached — bypass entirely. Google Fonts are the sole exception and
   // fall through to the cache-first block below.
   if (!isFont && url.origin !== self.location.origin) return
+
+  // Private paid-job metadata and result bytes are never runtime-cached.
+  if (url.pathname === '/v1/image-capabilities'
+      || url.pathname === '/v1/image-jobs'
+      || url.pathname.startsWith('/v1/image-jobs/')
+      || url.pathname === BASE + 'v1/image-capabilities'
+      || url.pathname === BASE + 'v1/image-jobs'
+      || url.pathname.startsWith(BASE + 'v1/image-jobs/')) return
 
   const isNavigation = request.mode === 'navigate' || request.destination === 'document'
 

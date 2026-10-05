@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { runInNewContext } from 'node:vm'
 import { swStrategy, FONT_HOSTS } from '../sw/swStrategy'
 
-const sameOrigin = (over = {}) => ({ method: 'GET', mode: 'no-cors', destination: '', sameOrigin: true, ...over })
+const sameOrigin = (over = {}) => ({ method: 'GET', mode: 'no-cors', destination: '', sameOrigin: true,
+  pathname: '/assets/app.js', ...over })
 
 describe('swStrategy', () => {
   it('bypasses non-GET requests', () => {
@@ -25,6 +27,14 @@ describe('swStrategy', () => {
     expect(swStrategy(sameOrigin({ destination: 'script' }))).toBe('cache-first')
     expect(swStrategy(sameOrigin({ destination: 'style' }))).toBe('cache-first')
     expect(swStrategy(sameOrigin({ destination: 'image' }))).toBe('cache-first')
+  })
+
+  it('bypasses same-origin relay endpoints and descendants', () => {
+    for (const pathname of ['/v1/image-capabilities', '/v1/image-jobs',
+      '/v1/image-jobs/00000000-0000-4000-8000-000000000001/result']) {
+      expect(swStrategy(sameOrigin({ pathname }))).toBe('bypass')
+    }
+    expect(swStrategy(sameOrigin({ pathname: '/v1/image-jobs-extra' }))).toBe('cache-first')
   })
 
   it('cache-firsts Google Fonts even though they are cross-origin, so fonts work offline', () => {
@@ -72,5 +82,34 @@ describe('public/sw.js contract', () => {
     // The bypass guard must be gated on a font check, not an unconditional
     // cross-origin return — otherwise fonts would never be cached.
     expect(sw).toMatch(/!isFont && url\.origin !== self\.location\.origin/)
+  })
+
+  it('bypasses relay paths before cache routing', () => {
+    expect(sw).toMatch(/pathname === BASE \+ 'v1\/image-capabilities'/)
+    expect(sw).toMatch(/pathname === BASE \+ 'v1\/image-jobs'/)
+    expect(sw).toMatch(/pathname\.startsWith\(BASE \+ 'v1\/image-jobs\/'\)/)
+  })
+
+  it('the installed worker bypasses root relay paths from a sub-path deployment', () => {
+    const handlers = {}
+    runInNewContext(sw, {
+      URL,
+      caches: { match: () => Promise.resolve(null) },
+      fetch: () => Promise.resolve({ ok: false }),
+      self: {
+        location: { pathname: '/sable/sw.js', origin: 'https://sable.example' },
+        addEventListener: (name, handler) => { handlers[name] = handler },
+      },
+    })
+    for (const pathname of ['/v1/image-capabilities', '/v1/image-jobs',
+      '/v1/image-jobs/00000000-0000-4000-8000-000000000001/result',
+      '/sable/v1/image-jobs']) {
+      let intercepted = false
+      handlers.fetch({
+        request: { url: `https://sable.example${pathname}`, method: 'GET', mode: 'cors', destination: '' },
+        respondWith: () => { intercepted = true },
+      })
+      expect(intercepted).toBe(false)
+    }
   })
 })

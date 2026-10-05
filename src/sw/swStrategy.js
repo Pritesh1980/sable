@@ -20,10 +20,12 @@
 // real typography offline.
 export const FONT_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com']
 
-export function swStrategy({ method, mode, destination, sameOrigin, host }) {
+export function swStrategy({ method, mode, destination, sameOrigin, host, pathname }) {
   if (method !== 'GET') return 'bypass'
   if (FONT_HOSTS.includes(host)) return 'cache-first'
   if (!sameOrigin) return 'bypass'
+  if (pathname === '/v1/image-capabilities' || pathname === '/v1/image-jobs'
+      || pathname?.startsWith('/v1/image-jobs/')) return 'bypass'
   if (mode === 'navigate' || destination === 'document') return 'network-first'
   return 'cache-first'
 }
