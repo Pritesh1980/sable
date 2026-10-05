@@ -21,7 +21,7 @@ export default function useImageSrc(ref) {
   useEffect(() => {
     if (!needsAsync) return undefined
     let live = true
-    resolveImage(key).then((src) => {
+    void resolveImage(key).then((src) => {
       if (live) setSettled({ key, src })
     })
     return () => {

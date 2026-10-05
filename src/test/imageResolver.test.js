@@ -57,6 +57,31 @@ describe('resolveImageRef (synchronous)', () => {
   })
 })
 
+describe('only image-safe schemes reach an <img src> (#113)', () => {
+  it('drops script and document schemes, in both the sync and async paths', async () => {
+    for (const bad of ['javascript:alert(1)', 'JaVaScRiPt:alert(1)', 'vbscript:x', 'file:///etc/passwd', 'data:text/html,<script>1</script>']) {
+      expect(resolveImageRef(bad)).toEqual({ status: 'none', src: '' })
+      expect(resolveImageRef({ url: bad })).toEqual({ status: 'none', src: '' })
+      expect(await resolveImage(bad)).toBe('')
+    }
+  })
+
+  it('keeps https, blob:, data:image and relative paths', () => {
+    for (const ok of ['https://example.com/a.jpg', 'http://example.com/a.jpg', 'blob:http://localhost/abc', 'data:image/png;base64,AAAA']) {
+      expect(resolveImageRef(ok)).toEqual({ status: 'ready', src: ok })
+    }
+    expect(resolveImageRef('/images/a.jpg').status).toBe('ready')
+    expect(resolveImageRef('images/a.jpg').status).toBe('ready')
+  })
+
+  it('drops an unsafe url handed back by the blob cache or backend', async () => {
+    registerBlobUrl('user/u1/evil.jpg', 'javascript:alert(1)')
+    expect(resolveImageRef({ key: 'user/u1/evil.jpg' })).toEqual({ status: 'loading', src: '' })
+    getUrl.mockResolvedValue('javascript:alert(2)')
+    expect(await resolveImage({ key: 'user/u1/evil2.jpg' })).toBe('')
+  })
+})
+
 describe('resolveImage (asynchronous)', () => {
   it('resolves a blob key over the backend', async () => {
     getUrl.mockResolvedValue('https://signed.example/b')

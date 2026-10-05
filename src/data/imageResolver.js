@@ -18,7 +18,7 @@ import { refKey } from './imageRef'
 export function resolveImageRef(ref) {
   const key = refKey(ref)
   if (key) {
-    const src = getCachedBlobUrl(key)
+    const src = safeSrc(getCachedBlobUrl(key))
     return src ? { status: 'ready', src } : { status: 'loading', src: '' }
   }
   const src = displayString(ref)
@@ -30,7 +30,7 @@ export function resolveImageRef(ref) {
 export async function resolveImage(ref) {
   try {
     const key = refKey(ref)
-    return key ? (await resolveBlobKey(key)) || '' : displayString(ref)
+    return key ? safeSrc(await resolveBlobKey(key)) : displayString(ref)
   } catch {
     return ''
   }
@@ -38,5 +38,17 @@ export async function resolveImage(ref) {
 
 function displayString(ref) {
   const raw = typeof ref === 'string' ? ref : ref?.url
-  return resolveAssetPath(raw)
+  return safeSrc(resolveAssetPath(raw))
+}
+
+// This is the one choke point for what reaches an <img src> (#113). An <img>
+// never runs script, but a stored ref is user-influenced data (imports, synced
+// records), so only image-safe schemes pass: http(s), blob:, data:image/ and
+// scheme-less paths. Anything else (javascript:, file:, data:text/html …) is
+// treated as no image.
+const HAS_SCHEME = /^[a-z][a-z0-9+.-]*:/i
+const SAFE_SCHEME = /^(?:https?:|blob:|data:image\/)/i
+function safeSrc(src) {
+  if (!src) return ''
+  return !HAS_SCHEME.test(src) || SAFE_SCHEME.test(src) ? src : ''
 }
