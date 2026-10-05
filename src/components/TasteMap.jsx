@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import ArtistImage from './ArtistImage'
 import { loadVectors, buildStyleIndex } from '../data/styleIndex'
 import { layoutTasteMap } from '../data/tasteMap'
-import { getImageUrl } from '../data/planning'
 
 // One colour per style tag, readable on the dark ground.
 const STYLE_COLOURS = {
@@ -140,7 +139,7 @@ export default function TasteMap({ artists, onOpenArtist, onClose }) {
                   style={{ width: nodeSize, height: nodeSize, borderColor: STYLE_COLOURS[style] || STYLE_COLOURS.other }}
                 >
                   <ArtistImage
-                    src={getImageUrl(artist.images?.[0])}
+                    src={artist.images?.[0]}
                     label={artistLabel(artist)}
                     className="h-full w-full object-cover"
                     monogramClassName="text-xs"

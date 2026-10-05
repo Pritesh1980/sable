@@ -609,10 +609,16 @@ localStorage, IndexedDB and the remote store — so a build-time base written in
 record outlives the build that made it, and a later move to a different base would
 strand every stored path on every device. Seed data is therefore base-relative
 (`images/artists/…`), and `resolveAssetPath` (`src/data/assetPath.js`) applies the base
-at display time, inside the two accessors everything renders through: `imageSrc`
-(artists) and `getImageUrl` (ideas/concepts). It passes protocol URLs (`blob:`,
-`data:`, `http(s):`) through untouched and rebases legacy root-absolute or
-already-based paths, so stored records heal on read rather than needing a migration.
+at display time. Artist photos render through one boundary: `ArtistImage` takes the
+stored ref and resolves it with `useImageSrc` (`src/hooks/useImageSrc.js`, backed by
+`src/data/imageResolver.js`), so selectors such as `buildWallItems` carry refs, never
+resolved strings. A ref is a static path, a display URL, `{ url, addedAt }` or a blob
+key (`src/data/imageRef.js`: `isBlobKey` is `startsWith('user/')`, `refIdentity` is
+key-first and base-independent); a cached key is `ready` on the first render, an
+uncached one is `loading` until it resolves. Ideas and concepts still go through
+`getImageUrl`. `resolveAssetPath` passes protocol URLs (`blob:`, `data:`, `http(s):`)
+through untouched and rebases legacy root-absolute or already-based paths, so stored
+records heal on read rather than needing a migration.
 
 ### Build and delivery pipeline
 

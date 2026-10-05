@@ -2,6 +2,7 @@ import { lazy, Suspense, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
 import { resolveTransitionMode } from '../lib/gl'
+import ArtistImage from './ArtistImage'
 
 // three.js lives in this lazily-imported chunk only — never in the initial bundle.
 const Top5Coverflow = lazy(() => import('./Top5Coverflow'))
@@ -12,22 +13,20 @@ const statusLabel = (s) =>
 
 // A single cover that degrades to the rank glyph if the image is absent or
 // fails to load (e.g. the public build ships without the curated seed images).
+// It renders through ArtistImage (#113): the stored ref is resolved there — a
+// { url, addedAt } photo used to reach <img src> as "[object Object]" and a
+// static path missed the deploy base — and the expired-URL retry comes with it.
 function CoverTile({ item }) {
-  const [failed, setFailed] = useState(false)
-  if (item.image && !failed) {
-    return (
-      <img
-        src={item.image}
-        alt=""
-        className="w-full h-full object-cover"
-        onError={() => setFailed(true)}
-      />
-    )
-  }
   return (
-    <span className="flex items-center justify-center w-full h-full bg-ink-card text-cream-muted/50 font-display text-2xl">
-      {item.rank}
-    </span>
+    <ArtistImage
+      src={item.image}
+      className="w-full h-full object-cover"
+      fallback={
+        <span className="flex items-center justify-center w-full h-full bg-ink-card text-cream-muted/50 font-display text-2xl">
+          {item.rank}
+        </span>
+      }
+    />
   )
 }
 

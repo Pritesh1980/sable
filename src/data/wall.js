@@ -47,7 +47,10 @@ function studioNameOf(studioId) {
 }
 
 // Flattens artists into one entry per image, preserving artist order then
-// image order (stable — no shuffling).
+// image order (stable — no shuffling). Items carry the stored image *ref*
+// (`image`), never a resolved string: the render boundary (ArtistImage /
+// useImageSrc) resolves it, so a blob key that is not cached yet is "loading"
+// rather than indistinguishable from "no image" (#113).
 export function buildWallItems(artists = [], { now = new Date() } = {}) {
   const items = []
   for (const artist of artists) {
@@ -61,7 +64,7 @@ export function buildWallItems(artists = [], { now = new Date() } = {}) {
         handle: artist.handle,
         styles: artist.tags || [],
         studioName,
-        image: imageSrc(image),
+        image,
         imageIndex,
         addedAt,
         isRecent: isRecent(addedAt, now),

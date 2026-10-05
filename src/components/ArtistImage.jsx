@@ -1,5 +1,5 @@
 import { useState, useRef, useLayoutEffect } from 'react'
-import { imageSrc } from '../data/wall'
+import useImageSrc from '../hooks/useImageSrc'
 import { refreshedBlobUrl } from '../data/blobUrls'
 import { demoResponsiveProps } from '../data/demoArtwork'
 
@@ -13,12 +13,15 @@ export default function ArtistImage({
   className = '',
   fallbackClassName = '',
   monogramClassName = 'text-4xl',
+  fallback = null,
   sizes = '100vw',
   ...imgProps
 }) {
-  // Accept both image shapes (plain string, or { url, addedAt } refs) and
-  // apply the deploy base — callers pass raw refs straight from artist data.
-  const resolved = imageSrc(src)
+  // The render boundary (#113): `src` is a stored image ref — a plain string,
+  // a { url, addedAt } or { key } object — and is resolved here, so callers pass
+  // raw refs straight from their data. A blob key not cached yet shows the
+  // fallback until it resolves.
+  const { src: resolved } = useImageSrc(src)
   const trimmed = label.startsWith('@') ? label.slice(1) : label
   const initial = (trimmed.trim()[0] || '?').toUpperCase()
 
@@ -123,6 +126,8 @@ export default function ArtistImage({
   }
 
   if (!displaySrc || failed) {
+    // A caller's own empty state (e.g. Top5Hero's rank glyph) replaces the monogram.
+    if (fallback) return fallback
     return (
       <div
         className={`w-full h-full flex items-center justify-center bg-ink-muted ${className} ${fallbackClassName}`}

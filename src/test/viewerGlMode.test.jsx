@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import WallViewer from '../components/WallViewer'
 import ConceptViewer from '../components/ConceptViewer'
 import { resolveTransitionMode } from '../lib/gl'
+import { registerBlobUrl, clearBlobUrls } from '../data/blobUrls'
 
 // Stub the real GL stage with a sentinel so we can detect which branch each
 // viewer renders. The mode gate itself (resolveTransitionMode) is unit-tested
@@ -50,6 +51,31 @@ describe('WallViewer transition-mode wiring', () => {
     expect(screen.queryByTestId('gl-crossfade')).not.toBeInTheDocument()
     // css path renders the ArtistImage <img> with the artist label as alt text.
     expect(screen.getByAltText(/Victor Portugal — blackwork/)).toBeInTheDocument()
+  })
+})
+
+// Wall items carry the stored ref (#113), so the viewer must resolve the
+// current image itself before handing a URL to the imperative GL stage.
+describe('WallViewer resolves the ref for the GL stage (#113)', () => {
+  const item = (image) => [{ ...wallItems[0], image }]
+  const glSrc = () => screen.getByTestId('gl-crossfade').getAttribute('data-src')
+
+  beforeEach(() => {
+    clearBlobUrls()
+    resolveTransitionMode.mockReturnValue('webgl')
+  })
+  afterEach(() => vi.unstubAllEnvs())
+
+  it('applies the deploy base to a base-relative static path', () => {
+    vi.stubEnv('BASE_URL', '/sable/')
+    render(<WallViewer items={item('images/victorportugal/1.jpg')} onClose={vi.fn()} onGenerate={vi.fn()} />)
+    expect(glSrc()).toBe('/sable/images/victorportugal/1.jpg')
+  })
+
+  it('resolves a cached { key } ref to its display url', () => {
+    registerBlobUrl('user/u1/a.jpg', 'https://signed.example/a')
+    render(<WallViewer items={item({ key: 'user/u1/a.jpg' })} onClose={vi.fn()} onGenerate={vi.fn()} />)
+    expect(glSrc()).toBe('https://signed.example/a')
   })
 })
 
