@@ -26,10 +26,23 @@ async function capture(page, name) {
   await page.screenshot({ path: `${output}${name}.png`, fullPage: false })
   console.log(`Captured ${name}`)
 }
+async function captureIntake(page) {
+  await page.goto('/gallery')
+  await page.getByRole('button', { name: /^\+ Add$/i }).click()
+  await page.getByLabel('Choose files').setInputFiles(fileURLToPath(new URL('../public/images/demo/mora.blackfern/fern-v4.webp', import.meta.url)))
+  await page.getByLabel('Instagram *').fill('@fern.study')
+  await capture(page, 'artist-capture')
+  await page.goto('/settings')
+  await capture(page, 'settings')
+  await page.goto('/help')
+  await capture(page, 'help-overview')
+}
 try {
   for (const mobile of [false, true]) {
+    if (process.env.GUIDE_CAPTURE_ONLY === 'intake' && !mobile) continue
     const context = await browser.newContext({ baseURL, serviceWorkers: 'block',
       viewport: mobile ? { width: 430, height: 920 } : { width: 1280, height: 900 },
+      ...(mobile ? { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1' } : {}),
       isMobile: mobile, hasTouch: mobile })
     await context.route('**/*', (route) => {
       const url = new URL(route.request().url())
@@ -40,6 +53,12 @@ try {
     const errors = []
     page.on('pageerror', (error) => errors.push(error.message))
     await openDemo(page, '/', { storage })
+    if (process.env.GUIDE_CAPTURE_ONLY === 'intake') {
+      await captureIntake(page)
+      expect(errors).toEqual([])
+      await context.close()
+      continue
+    }
     if (!mobile) {
       await capture(page, 'wall')
       await page.getByRole('figure', { name: 'Mora Vane' }).first().click()
@@ -89,6 +108,7 @@ try {
       await capture(page, 'manage-list')
       await page.getByText('Mora Vane', { exact: true }).first().click()
       await capture(page, 'manage-artist-expanded')
+      await captureIntake(page)
     }
     expect(errors).toEqual([])
     await context.close()

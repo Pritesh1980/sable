@@ -8,65 +8,72 @@
 
 ## Add an artist — the quick way
 
-Tap **+ Add artist** in the Wall's top bar (the empty Wall offers the same button). One
-small form does the whole onboarding:
+Tap **+ Add artist** on the Wall or **+ Add** on the Artists page. Both open the
+same capture form.
 
-1. Paste the **Instagram handle or the full Instagram URL** — the handle is extracted
-   automatically.
-2. Optionally add a **display name** (e.g. *Carlos Valera* for `@carl245tattoo`).
-3. Toggle their **style tags**.
-4. **Drop or paste a few screenshots** right in the form if you have them handy.
-5. Save — their photos join the Wall immediately, each wearing a red *new* dot.
+![The compact artist capture form](../public/guide/artist-capture.png)
 
-If the handle already exists, Sable offers to **add the images to that artist** instead of
-creating a duplicate.
+1. **Choose files**, drop or paste screenshots if you have them. Several photos can
+   be attached before you enter a handle. **Paste** reads the clipboard only when tapped.
+2. Enter an **Instagram handle or profile link**, such as `@mora.blackfern` or
+   `https://www.instagram.com/mora.blackfern/`. Post, reel and story links are
+   rejected: they do not identify the artist.
+3. Tap **Save**. No optional metadata is required; the default status is Researching.
+
+**Details** starts collapsed and holds display name, tags, status and a style note.
+You can add or edit those later. **Artist saved** confirms the local library update;
+it does not claim cloud sync or an off-device backup.
+
+For an existing handle, attach photos and tap **Add images to … instead**. Sable
+preserves the artist's existing details and confirms the number of photos added.
+With no photos, **Already in your collection** appears and the append action is disabled.
+
+Cancel, Escape, a backdrop tap and **Full manage view** ask before discarding an
+edited capture. Declining keeps the fields and photos. During Save, dismissal and
+repeat submission are disabled; an error leaves the capture open for retry. This
+protection applies while the form is open, not to reload, sign-out or app termination.
 
 ### Auto-fill from a screenshot
 
-Both add forms — the Wall's **+ Add artist** and the Artists page's **+ Add** — can fill
-themselves from an Instagram screenshot. Drop, paste or choose one and, with a Gemini key
-set (Concepts → AI setup), the handle and name are read from the screenshot, style tags
-are suggested from the artwork itself, and a draft style note is written for you to edit.
-The same read also locates the tattoo in the picture, and the screenshot is **cropped to
-the artwork** on your device — so Instagram's status bar, buttons and comments don't end
-up in your collection, or in the taste score. The crop becomes the artist's first
-reference image; the form tells you it cropped and offers **Use the whole screenshot** if
-the box clipped something you wanted. If you've built the on-device style index, you also get a **taste fit**
-score before you even add them — a first read on whether this artist belongs in your
-collection. Without a key, the screenshot still attaches uncropped; you fill in the
-details yourself, and the taste score is marked *rough* because it is measuring the whole
-screenshot rather than just the tattoo. The **Full manage view** link in the form's footer jumps to the
-heavy-duty editor below.
+Attaching a photo never starts an AI request. With a Gemini key saved
+(Concepts → AI setup), tap **Auto-fill** to analyse the first staged screenshot.
+This sends that image to Gemini and may incur provider charges. It suggests a
+handle, name, tags and style note without overwriting your edits.
 
-### Share a screenshot straight from Instagram
+The same analysis locates the artwork and crops it on your device. **Use the whole
+screenshot** restores the original if the crop clips something you wanted. Where an
+on-device style index already exists, the form can also show a taste-fit score.
+Without a key, photos remain uncropped and manual capture works normally; the
+optional **Taste fit** action scores the whole screenshot and marks it rough.
 
-Sable installs as a share destination, so a screenshot can go from Instagram into the
-add-artist form without saving it to your camera roll first.
+### Share from Instagram
 
-**Android / desktop Chrome.** Install Sable to your home screen, then **Share → Sable**
-from anywhere. The screenshot lands in the add-artist form with auto-fill already
-running.
+**Android / desktop Chrome.** An installed Sable app accepts shared image files.
+**Share → Sable** opens capture with the photo attached, ready for a manual handle
+or an explicit Auto-fill tap. This image-share route does not import shared text.
 
-**iPhone.** Safari doesn't support apps registering as share destinations
-([WebKit bug 194593](https://bugs.webkit.org/show_bug.cgi?id=194593)), so iOS needs a
-one-off Shortcut instead.
+**iPhone.** Use a one-off Shortcut and then paste into Sable. Settings shows
+**Install Share to Sable** only when an actual iCloud Shortcut link is configured.
+No signed Shortcut is bundled with this repository; without a link, use the setup
+guide and build it manually:
 
-The fastest way: open **Settings** inside Sable on your iPhone and tap **Install Share
-to Sable** — installs a working Shortcut directly, nothing to build by hand.
+1. New Shortcut → **Show in Share Sheet** → accept **Images, URLs and Text**.
+2. **Copy to Clipboard**, using Shortcut Input. If Instagram shares multiple items,
+   select the intended screenshot or profile link first rather than combining them.
+3. **Open URL** → your deployment's fixed share address. For the public demo this is
+   `https://pritesh1980.github.io/sable/share`; a root deployment uses `/share`.
+   Do not put screenshot bytes or the shared text into the URL.
+4. Name it **Sable**.
 
-To build your own copy instead, do it manually in the Shortcuts app:
+After **Share → Sable**, tap **Paste** in capture. If clipboard image reading is
+unavailable or denied, **Choose files** still works; for a profile link, long-press
+the Instagram field and paste there. A screenshot needs the artist's handle unless
+you explicitly use Auto-fill.
 
-1. New Shortcut → turn on **Show in Share Sheet**, and set *Accepted Types* to **Images**
-2. Add **Copy to Clipboard** (input: Shortcut Input)
-3. Add **Open URL** → `https://pritesh1980.github.io/sable/share`
-4. Name it **Sable**
-
-Either way, from Instagram: **Share → Sable**, then paste (long-press → Paste) into the
-form that opens. The screenshot is already on your clipboard, so it's one tap plus a
-paste.
-
-Either way the form opens ready — with a Gemini key set, auto-fill runs as soon as the
-screenshot is attached.
+**Real-iPhone acceptance is pending.** The recipe can open Safari rather than the
+installed home-screen app, which may mean a different session or local library.
+Use the intended Sable context; do not assume your library has transferred between
+them. Desktop browser tests do not verify that phone handoff.
 
 ## Add photos as you find them
 

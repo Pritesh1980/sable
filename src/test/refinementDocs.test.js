@@ -13,6 +13,8 @@ it('documents manual fallback, durability limits and deferred activation', () =>
   expect(activation).toContain('8 MiB')
   expect(activation).toContain('dispatched')
   const help = readFileSync('src/pages/Help.jsx', 'utf8')
+  expect(readFileSync('docs/02-managing-artists.md', 'utf8')).toContain('artist-capture.png')
+  expect(help).toContain('artist-capture.png')
   expect(help).toContain('only cloud-storage builds sync')
   expect(help).not.toContain('stored in your account, and synced')
   expect(help + concepts).not.toContain('$0.04')
