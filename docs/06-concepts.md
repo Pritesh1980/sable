@@ -102,7 +102,10 @@ the result.
 When a result has an image, choose **Make STL**. You can also start from a reference image
 in an idea (its **3D print** button), or pick any photo on your device with **Use another
 image…** inside the drawer. (Images pasted as a link from another website may be blocked
-by the browser; upload them instead.)
+by the browser; upload them instead.) Your saved photos are read from a copy the browser
+can always use, so they work however they're stored. If a photo can't be read right now —
+for example, it isn't downloaded to this device and you're offline — the drawer says it is
+**available when online** and keeps **Download STL** disabled until you reconnect.
 
 Pick a **Style**:
 

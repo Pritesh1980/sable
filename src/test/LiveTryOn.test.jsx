@@ -160,4 +160,21 @@ describe('LiveTryOn', () => {
     }))
     expect(onClose).toHaveBeenCalled()
   })
+
+  // #114: the composite is drawn onto a canvas, so the design must be readable
+  // bytes. A design that cannot be read used to be swallowed silently, leaving
+  // the raw (possibly cross-origin) url in place and a snapshot that then failed.
+  it('says the design is available when online, and blocks saving, when it cannot be read', async () => {
+    h.toData.mockRejectedValue(new Error('offline'))
+    render(<LiveTryOn designUrl="https://signed.example/design.png" label="Moth" onSave={vi.fn()} onClose={vi.fn()} />)
+    expect(await screen.findByText(/available when online/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save snapshot' })).toBeDisabled()
+  })
+
+  it('swaps in the readable copy of a cross-origin design', async () => {
+    h.toData.mockResolvedValue('data:image/png;base64,COPY')
+    render(<LiveTryOn designUrl="https://signed.example/design.png" label="Moth" onSave={vi.fn()} onClose={vi.fn()} />)
+    await waitFor(() => expect(overlay()).toHaveAttribute('src', 'data:image/png;base64,COPY'))
+    expect(screen.queryByText(/available when online/i)).not.toBeInTheDocument()
+  })
 })

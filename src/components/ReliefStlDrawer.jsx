@@ -1,3 +1,4 @@
+import useImageBytes from '../hooks/useImageBytes'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { buildReliefStl, DEFAULT_RELIEF_SETTINGS } from '../data/reliefStl'
 import { CANVAS_READ_ERROR, imageToHeightmap, loadPhotoForRelief } from '../data/reliefImage'
@@ -141,7 +142,9 @@ function ReliefStlDrawerContent({ source, onClose }) {
     // Keyed on loadedSrc too: a new picture can load into the same element.
   }, [shownView, imageElement, loadedSrc, settings.detail])
 
-  const imageUrl = ownImage?.url || source.imageUrl
+  // The pixels are read back for the preview and the download, so the <img>
+  // must be same-origin: a signed url would taint the canvas (#114).
+  const bytes = useImageBytes(ownImage?.url || source.imageUrl)
   const sourceLabel = ownImage?.label || source.label || 'Selected image'
   const filenameSlug = slugify(ownImage?.label || source.filenameSeed || source.label)
   const downloadDisabled = validation.errors.length > 0 || !imageElement
@@ -267,14 +270,20 @@ function ReliefStlDrawerContent({ source, onClose }) {
               ))}
             </div>
             {/* Stays mounted under the other views: the download reads its pixels. */}
-            <img
-              src={imageUrl}
-              alt={`${sourceLabel} STL source`}
-              onLoad={handleImageLoad}
-              onError={handleImageError}
-              hidden={shownView !== 'image'}
-              className="aspect-[4/3] w-full rounded-xs border border-ink-border bg-ink-muted object-contain"
-            />
+            {bytes.status === 'ready' ? (
+              <img
+                src={bytes.src}
+                alt={`${sourceLabel} STL source`}
+                onLoad={handleImageLoad}
+                onError={handleImageError}
+                hidden={shownView !== 'image'}
+                className="aspect-[4/3] w-full rounded-xs border border-ink-border bg-ink-muted object-contain"
+              />
+            ) : (
+              <div className="flex aspect-[4/3] w-full items-center justify-center rounded-xs border border-ink-border bg-ink-muted px-4 text-center font-mono text-[0.6875rem] uppercase tracking-widest text-cream-muted">
+                {bytes.status === 'loading' ? 'Loading image…' : 'This image is available when online.'}
+              </div>
+            )}
             <label className="inline-flex cursor-pointer items-center rounded-xs border border-ink-border px-3 py-2 font-mono text-[0.6875rem] uppercase tracking-widest text-cream-muted transition-colors hover:text-cream">
               Use another image…
               <input
