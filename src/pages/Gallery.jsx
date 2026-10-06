@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
+import { X } from 'lucide-react'
 import { takeSharedImage } from '../sw/shareTarget'
 import {
   DndContext,
@@ -29,7 +30,8 @@ import CompareView from '../components/CompareView'
 import TagPill from '../components/TagPill'
 import AddArtistForm from '../components/AddArtistForm'
 import ArtistTable from '../components/ArtistTable'
-import QuickAddArtist from '../components/QuickAddArtist'
+import AddArtistModal from '../components/AddArtistModal'
+import { useAuth } from '../context/useAuth'
 import { STYLE_TAGS, createArtist } from '../data/artists'
 
 function ArtistGrid({ items, sensors, onDragStart, onDragEnd, onDragCancel, onOpen, onSaveImages, editing, onLongPress }) {
@@ -82,7 +84,8 @@ function ArtistGrid({ items, sensors, onDragStart, onDragEnd, onDragCancel, onOp
 }
 
 export default function Gallery({ artists, setArtists, mergedConventions = [] }) {
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const userId = useAuth()?.user?.id
   const [activeTag, setActiveTag] = useState(null)
   const [selected, setSelected] = useState(null)
   const [viewMode, setViewMode] = useState('filmstrip')
@@ -111,6 +114,18 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
   // there is no file to collect, so it opens empty and ready for a paste.
   const [quickAdding, setQuickAdding] = useState(() => searchParams.get('shared') === '1')
   const [sharedFile, setSharedFile] = useState(null)
+  const [sharedFilePending, setSharedFilePending] = useState(() => searchParams.get('shared') === '1')
+  const [captureReceipt, setCaptureReceipt] = useState(null)
+  function closeCapture() {
+    setQuickAdding(false)
+    setSharedFile(null)
+    setSharedFilePending(false)
+    if (searchParams.has('shared')) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('shared')
+      setSearchParams(next, { replace: true })
+    }
+  }
 
   // Collecting the stash is destructive, and StrictMode runs this twice: the
   // first pass would delete the image, then its cleanup would discard the
@@ -123,7 +138,9 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
     let cancelled = false
     if (!consumeRef.current) consumeRef.current = takeSharedImage(import.meta.env.BASE_URL)
     consumeRef.current.then((file) => {
-      if (!cancelled && file) setSharedFile(file)
+      if (cancelled) return
+      if (file) setSharedFile(file)
+      setSharedFilePending(false)
     })
     return () => { cancelled = true }
   }, [searchParams])
@@ -499,13 +516,22 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
       )}
 
       {quickAdding && (
-        <QuickAddArtist
+        <AddArtistModal
           artists={artists}
-          onAdd={addArtist}
-          onClose={() => { setQuickAdding(false); setSharedFile(null) }}
+          setArtists={setArtists}
+          userId={userId}
+          onClose={closeCapture}
+          onManage={() => changeManage(true)}
+          onSaved={setCaptureReceipt}
           initialFile={sharedFile}
+          initialFilePending={sharedFilePending}
         />
       )}
+
+      {captureReceipt && <p role="status" className="fixed bottom-24 left-4 right-4 sm:left-auto sm:max-w-md z-40 bg-v2-surface border border-v2-hairline px-3 flex items-center gap-3 font-v2-ui text-sm text-v2-cream">
+        <span className="min-w-0 break-words">{captureReceipt.kind === 'created' ? 'Artist saved' : `${captureReceipt.imageCount} ${captureReceipt.imageCount === 1 ? 'photo' : 'photos'} added to @${artists.find((a) => a.id === captureReceipt.artistId)?.handle || captureReceipt.artistId}`}</span>
+        <button type="button" aria-label="Dismiss save confirmation" title="Dismiss confirmation" className="shrink-0 w-11 h-11 flex items-center justify-center text-v2-muted" onClick={() => setCaptureReceipt(null)}><X size={18} /></button>
+      </p>}
 
       {ranking && (
         <RankingMode

@@ -4,6 +4,7 @@ import { buildWallItems, stampAddedAt } from '../data/wall'
 import WallPiece from '../components/WallPiece'
 import WallViewer from '../components/WallViewer'
 import AddArtistModal from '../components/AddArtistModal'
+import { X } from 'lucide-react'
 import ConsiderShelf from '../components/ConsiderShelf'
 import DiscoverMore from '../components/DiscoverMore'
 import RankRail from '../components/RankRail'
@@ -72,6 +73,7 @@ export default function Wall({ artists = [], ideas = [], setArtists = () => {}, 
   const items = buildWallItems(artists)
   const [viewerIndex, setViewerIndex] = useState(null)
   const [addArtistOpen, setAddArtistOpen] = useState(false)
+  const [captureReceipt, setCaptureReceipt] = useState(null)
   const [addArtistInitial, setAddArtistInitial] = useState(null)
   const [rankBoardOpen, setRankBoardOpen] = useState(false)
   const [dismissedSuggestions, setDismissedSuggestions] = useStorage('tattoo_dismissed_suggestions', [])
@@ -270,10 +272,16 @@ export default function Wall({ artists = [], ideas = [], setArtists = () => {}, 
           setArtists={setArtists}
           userId={user?.id}
           initial={addArtistInitial || undefined}
+          onSaved={setCaptureReceipt}
           onClose={() => { setAddArtistOpen(false); setAddArtistInitial(null) }}
           onManage={() => { setAddArtistOpen(false); setAddArtistInitial(null) }}
         />
       )}
+
+      {captureReceipt && <p role="status" className="fixed bottom-24 left-4 right-4 sm:left-auto sm:max-w-md z-40 bg-v2-surface border border-v2-hairline px-3 flex items-center gap-3 font-v2-ui text-sm text-v2-cream">
+        <span className="min-w-0 break-words">{captureReceipt.kind === 'created' ? 'Artist saved' : `${captureReceipt.imageCount} ${captureReceipt.imageCount === 1 ? 'photo' : 'photos'} added to @${artists.find((a) => a.id === captureReceipt.artistId)?.handle || captureReceipt.artistId}`}</span>
+        <button type="button" aria-label="Dismiss save confirmation" title="Dismiss confirmation" className="shrink-0 w-11 h-11 flex items-center justify-center text-v2-muted" onClick={() => setCaptureReceipt(null)}><X size={18} /></button>
+      </p>}
 
       {rankBoardOpen && (
         <RankBoard

@@ -3,17 +3,22 @@ import { backend } from '../backend'
 import { registerBlobUrl } from '../data/blobUrls'
 
 function compressImage(file, maxDim = 900, quality = 0.78) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader()
+    reader.onerror = () => reject(new Error('Could not read this photo'))
+    reader.onabort = () => reject(new Error('Photo reading was cancelled'))
     reader.onload = (e) => {
       const img = new Image()
+      img.onerror = () => reject(new Error('Could not decode this photo'))
       img.onload = () => {
+        try {
         const scale = Math.min(maxDim / img.width, maxDim / img.height, 1)
         const canvas = document.createElement('canvas')
         canvas.width = Math.round(img.width * scale)
         canvas.height = Math.round(img.height * scale)
         canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
         resolve(canvas.toDataURL('image/jpeg', quality))
+        } catch (error) { reject(error) }
       }
       img.src = e.target.result
     }
@@ -46,8 +51,11 @@ function dataUrlToBlob(dataUrl) {
 // displayable URL strings. Callers store these strings exactly as they stored
 // compressImages() output before; the storage hooks map them back to keys on
 // persist. `scope` is one of 'artists' | 'ideas' | 'concepts'.
-export async function uploadImages(files, { userId, scope, id }) {
+export async function uploadImages(files, { userId, scope, id, requireStored = false }) {
+  if (requireStored && !userId) throw new Error('Photo owner unavailable')
+  const owner = requireStored ? backend.ownerScope.capture() : null
   const dataUrls = await compressImages(files)
+  if (owner) backend.ownerScope.assertCurrent(owner)
   // No signed-in user → keep the compressed data-URLs locally (they live in the
   // offline cache and get migrated to blobs on the next authed load).
   if (!userId) return dataUrls
@@ -55,9 +63,12 @@ export async function uploadImages(files, { userId, scope, id }) {
     dataUrls.map(async (dataUrl) => {
       const key = `user/${userId}/${scope}/${id}/${uuid()}.jpg`
       try {
+        if (owner) backend.ownerScope.assertCurrent(owner)
         await backend.blobs.upload(userId, key, dataUrlToBlob(dataUrl), 'image/jpeg')
+        if (owner) backend.ownerScope.assertCurrent(owner)
         registerBlobUrl(key, dataUrl)
       } catch (e) {
+        if (requireStored) throw e
         console.error('[tattoo] image upload failed:', e)
       }
       return dataUrl

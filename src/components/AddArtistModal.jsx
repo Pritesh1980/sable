@@ -1,5 +1,9 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
+import { ClipboardPaste, ImagePlus, Sparkles, X } from 'lucide-react'
+import { backend } from '../backend'
+import useDialogFocus, { isTopmostDialog } from '../hooks/useDialogFocus'
+import { readCaptureClipboard } from '../data/clipboardIntake'
 import { STYLE_TAGS, parseInstagramHandle, createArtist } from '../data/artists'
 import { uploadImages, compressImages } from '../hooks/useImageUpload'
 import { stampAddedAt } from '../data/wall'
@@ -14,20 +18,28 @@ function emptyAiPrefill() {
   return { handle: null, name: null, styleNote: null, tags: new Set() }
 }
 
-// Quick-add modal for the Wall bar's "+ Add artist" — one compact v2-styled
-// form: handle, optional name, style tags, and an optional immediate image
-// drop/paste zone. Heavy editing (studio, notes, provenance) stays in the
-// full manage view, linked from the footer. Saved images are stamped with
-// stampAddedAt so the wall's recent dots light up immediately.
-//
-// Screenshot analysis (issue #21, same intake as QuickAddArtist/#20): the
-// first staged image is read by a Gemini vision call to prefill handle, name,
-// tags and a draft style note — never overwriting anything already typed —
-// and, when the on-device style index exists, scored against the taste model.
-export default function AddArtistModal({ artists = [], setArtists, userId, onClose, onManage, initial }) {
+function StagedImage({ file, index, onRemove }) {
+  const imageRef = useRef(null)
+  useEffect(() => {
+    const next = URL.createObjectURL(file)
+    imageRef.current.src = next
+    return () => URL.revokeObjectURL(next)
+  }, [file])
+  return <div className="flex items-center gap-1">
+    <img ref={imageRef} alt={`Staged reference ${index + 1}`} className="w-16 h-16 object-cover rounded-xs" />
+    <button type="button" onClick={onRemove} aria-label={`Remove staged image ${index + 1}`} title="Remove image"
+      className="w-11 h-11 flex items-center justify-center text-v2-muted hover:text-v2-cream">
+      <X size={18} />
+    </button>
+  </div>
+}
+
+// One capture surface for the Wall, Gallery and share landing route.
+export default function AddArtistModal({ artists = [], setArtists, userId, onClose, onManage, initial, initialFile = null, initialFilePending = false, onSaved }) {
   const [handle, setHandle] = useState(initial?.handle || '')
   const [name, setName] = useState(initial?.name || '')
   const [tags, setTags] = useState(initial?.tags || [])
+  const [status, setStatus] = useState('researching')
   const [staged, setStaged] = useState([])
   const [dragOver, setDragOver] = useState(false)
   const [error, setError] = useState('')
@@ -53,6 +65,68 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
   // Reading, cropping and scoring are in flight: saving now would store the
   // screenshot the crop was meant to replace.
   const [intakeBusy, setIntakeBusy] = useState(false)
+  const [clipboardBusy, setClipboardBusy] = useState(false)
+  const [pendingSave, setPendingSave] = useState(null)
+  const saveLock = useRef(false)
+  const alive = useRef(true)
+  const consumedFiles = useRef(new Set())
+  const tagRevision = useRef(0)
+  const handleRef = useRef(handle)
+  const baseline = useRef({ handle: initial?.handle || '', name: initial?.name || '', tags: initial?.tags || [] })
+  const dialogRef = useDialogFocus(true)
+
+  useEffect(() => {
+    alive.current = true
+    return () => {
+      alive.current = false
+      analysisSeq.current += 1
+      tasteSeq.current += 1
+    }
+  }, [])
+
+  useEffect(() => { handleRef.current = handle }, [handle])
+  useEffect(() => {
+    if (!initialFile?.type?.startsWith('image/') || consumedFiles.current.has(initialFile)) return
+    consumedFiles.current.add(initialFile)
+    commitStaged([...stagedRef.current, initialFile])
+  }, [initialFile])
+
+  // Observe the committed library, not a side effect inside a replayable state updater.
+  useEffect(() => {
+    if (!pendingSave) return
+    // This receipt observes an external host's committed update, then clears the pending operation.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPendingSave(null)
+    try {
+      backend.ownerScope.assertCurrent(pendingSave.owner)
+      if (pendingSave.userId !== userId) throw new Error('Owner changed')
+      const artist = artists.find((a) => a.id === pendingSave.artistId && a.generation === pendingSave.generation)
+      if (!artist || !pendingSave.images.every((image) => artist.images?.includes(image))) throw new Error('Artist changed')
+      onSaved?.({ kind: pendingSave.kind, artistId: artist.id, imageCount: pendingSave.images.length })
+      onClose()
+    } catch {
+      setError('The library changed during this save. Your capture is still here; try again.')
+    } finally {
+      saveLock.current = false
+      setSaving(false)
+    }
+  }, [pendingSave, artists, userId, onSaved, onClose])
+
+  const dirty = initialFilePending || staged.length > 0 || handle !== baseline.current.handle || name !== baseline.current.name ||
+    JSON.stringify(tags) !== JSON.stringify(baseline.current.tags) || styleNote !== '' || status !== 'researching'
+  function mayDismiss() {
+    return !saveLock.current && (!dirty || window.confirm('Discard this artist capture?'))
+  }
+  function dismiss() { if (mayDismiss()) onClose() }
+  useEffect(() => {
+    function onKey(event) {
+      if (event.key !== 'Escape' || !isTopmostDialog(dialogRef.current)) return
+      event.preventDefault()
+      if (!saveLock.current && (!dirty || window.confirm('Discard this artist capture?'))) onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [dirty, onClose, dialogRef])
 
   const cleanHandle = parseInstagramHandle(handle)
   const duplicate = cleanHandle
@@ -60,6 +134,7 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
     : null
 
   function toggleTag(tag) {
+    tagRevision.current += 1
     // Once the user touches an AI-added tag, it becomes user-owned and must not
     // be removed later just because the source screenshot is removed.
     aiPrefill.current.tags.delete(tag)
@@ -110,10 +185,10 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
     if (!images.length) return
     const next = [...stagedRef.current, ...images]
     commitStaged(next)
-    if (!activeAnalysisFile.current) startAnalysis(next[0])
   }
 
   async function analyzeFirst(file, seq) {
+    const tagsAtStart = tagRevision.current
     setIntakeBusy(true)
     setUncropped(null)
     try {
@@ -161,7 +236,7 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
           aiPrefill.current.name = result.name
           return result.name
         })
-        if (result.tags?.length) setTags((current) => {
+        if (result.tags?.length && tagsAtStart === tagRevision.current) setTags((current) => {
           const added = result.tags.filter((tag) => !current.includes(tag))
           added.forEach((tag) => aiPrefill.current.tags.add(tag))
           return [...new Set([...current, ...result.tags])]
@@ -173,9 +248,8 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
         })
         setIntakeNote(result.handle ? '' : 'Handle not visible in the screenshot — type it above.')
       }
-    } catch (e) {
+    } catch {
       if (!analysisIsCurrent(seq)) return
-      console.error('[tattoo] screenshot intake failed:', e)
       setIntakeNote('Analysis failed — check your Gemini key/connection.')
     } finally {
       if (analysisSeq.current === seq) {
@@ -235,7 +309,6 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
     setAnalyzing(false)
     setIntakeBusy(false)
     clearAiOwnedState()
-    if (next.length) startAnalysis(next[0])
   }
 
   function handleDrop(e) {
@@ -245,12 +318,31 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
   }
 
   function handlePaste(e) {
-    addFiles(e.clipboardData?.files)
+    const files = Array.from(e.clipboardData?.files || []).filter((f) => f.type?.startsWith('image/'))
+    if (!files.length || saveLock.current) return
+    e.preventDefault()
+    addFiles(files)
   }
 
-  async function stampedUploads(scopeId) {
-    if (!staged.length) return []
-    const uploaded = await uploadImages(staged, { userId, scope: 'artists', id: scopeId })
+  async function pasteCapture() {
+    setClipboardBusy(true)
+    const result = await readCaptureClipboard(navigator.clipboard)
+    if (!alive.current) return
+    setClipboardBusy(false)
+    if (saveLock.current) return
+    if (result.kind === 'image') addFiles([result.file])
+    else if (result.kind === 'text') {
+      if (!handleRef.current || window.confirm('Replace the entered Instagram handle?')) {
+        aiPrefill.current.handle = null
+        setHandle(result.text)
+        setError('')
+      }
+    } else setIntakeNote('Choose a photo or paste a profile link into the Instagram field.')
+  }
+
+  async function stampedUploads(scopeId, files) {
+    if (!files.length) return []
+    const uploaded = await uploadImages(files, { userId, scope: 'artists', id: scopeId, requireStored: true })
     return uploaded.map((u) => stampAddedAt(u))
   }
 
@@ -259,232 +351,143 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
     // Enter in a text field submits the form directly, bypassing the disabled
     // button — so the guard has to live here too, or the screenshot the crop was
     // about to replace is what gets stored (#24 review).
-    if (intakeBusy) return
-    if (!cleanHandle) { setError('Instagram handle is required'); return }
-    if (duplicate) return
-    setSaving(true)
-    try {
-      const images = await stampedUploads(cleanHandle)
-      const artist = createArtist(
-        { handle: cleanHandle, name: name.trim(), tags, styleNote: styleNote.trim() },
-        artists
-      )
-      if (!artist) { setError(`@${cleanHandle} is already in your collection`); return }
-      artist.images = images
-      setArtists((prev) => [...prev, artist])
-      onClose()
-    } finally {
-      setSaving(false)
+    if (initialFilePending || intakeBusy || saveLock.current || clipboardBusy) return
+    if (!cleanHandle) {
+      setError(handle.trim() ? 'Use an artist handle or profile link, not a post or reel link.' : 'Instagram handle is required')
+      return
     }
+    if (duplicate) return
+    await saveCapture(null)
   }
 
   async function handleAddToExisting() {
-    if (!duplicate) return
+    if (!duplicate || !staged.length || initialFilePending || intakeBusy || clipboardBusy || saveLock.current) return
+    await saveCapture(duplicate)
+  }
+
+  async function saveCapture(target) {
+    saveLock.current = true
     setSaving(true)
+    setError('')
     try {
-      const images = await stampedUploads(duplicate.id)
-      setArtists((prev) =>
-        prev.map((a) => (a.id === duplicate.id ? { ...a, images: [...(a.images || []), ...images] } : a))
-      )
-      onClose()
-    } finally {
+      const owner = backend.ownerScope.capture()
+      const files = stagedRef.current
+      const images = await stampedUploads(target?.id || cleanHandle, files)
+      if (!alive.current) return
+      backend.ownerScope.assertCurrent(owner)
+      if (stagedRef.current !== files) throw new Error('Capture changed during upload')
+      const artist = target || createArtist({ handle: cleanHandle, name: name.trim(), tags, status, styleNote: styleNote.trim(), images }, artists)
+      setArtists((prev) => {
+        try { backend.ownerScope.assertCurrent(owner) } catch { return prev }
+        if (target) return prev.map((a) => a.id === target.id && a.generation === target.generation
+          ? { ...a, images: [...(a.images || []), ...images] } : a)
+        if (prev.some((a) => a.handle.toLowerCase() === cleanHandle.toLowerCase())) return prev
+        const rank = Math.max(0, ...prev.map((a) => a.rank || 0)) + 1
+        return [...prev, { ...artist, rank }]
+      })
+      setPendingSave({ kind: target ? 'images-added' : 'created', artistId: artist.id,
+        generation: artist.generation, images, owner, userId })
+    } catch {
+      if (!alive.current) return
+      setError('Could not save this capture. Your photos are still here; try again.')
+      saveLock.current = false
       setSaving(false)
     }
   }
 
+  const inputClass = 'w-full min-h-11 bg-v2-ink border border-v2-hairline rounded-xs px-3 py-2 text-sm text-v2-cream font-v2-ui outline-hidden focus:border-v2-accent placeholder-v2-muted'
   return (
-    <div
-      className="fixed inset-0 z-50 bg-v2-ink/90 backdrop-blur-xs flex items-start sm:items-center justify-center overflow-y-auto animate-fade-in"
-      onClick={onClose}
-    >
-      <form
-        onSubmit={handleSave}
-        onPaste={handlePaste}
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md bg-v2-surface border border-v2-hairline rounded-xs p-6 m-4 mt-16 sm:mt-4 animate-slide-up"
-      >
-        <h2 className="font-v2-display text-v2-cream text-[1.1rem] tracking-[0.2em] uppercase mb-5">
-          Add an artist
-        </h2>
-
-        <label htmlFor="quick-add-handle" className="block font-v2-ui text-[0.68rem] tracking-[0.14em] uppercase text-v2-muted mb-1.5">
-          Instagram *
-        </label>
-        <input
-          id="quick-add-handle"
-          autoFocus
-          className="w-full bg-v2-ink border border-v2-hairline rounded-xs px-3 py-2 text-sm text-v2-cream font-v2-ui outline-hidden focus:border-v2-accent placeholder-v2-muted mb-3.5"
-          placeholder="@handle or Instagram URL"
-          value={handle}
-          onChange={(e) => {
-            aiPrefill.current.handle = null
-            setHandle(e.target.value)
-            setError('')
-          }}
-        />
-
-        <label htmlFor="quick-add-name" className="block font-v2-ui text-[0.68rem] tracking-[0.14em] uppercase text-v2-muted mb-1.5">
-          Display name
-        </label>
-        <input
-          id="quick-add-name"
-          className="w-full bg-v2-ink border border-v2-hairline rounded-xs px-3 py-2 text-sm text-v2-cream font-v2-ui outline-hidden focus:border-v2-accent placeholder-v2-muted mb-4"
-          placeholder="Full name (optional)"
-          value={name}
-          onChange={(e) => {
-            aiPrefill.current.name = null
-            setName(e.target.value)
-          }}
-        />
-
-        {styleNote && (
-          <>
-            <label htmlFor="quick-add-stylenote" className="block font-v2-ui text-[0.68rem] tracking-[0.14em] uppercase text-v2-muted mb-1.5">
-              Style note (AI draft)
-            </label>
-            <textarea
-              id="quick-add-stylenote"
-              rows={2}
-              className="w-full bg-v2-ink border border-v2-hairline rounded-xs px-3 py-2 text-sm text-v2-cream font-v2-ui outline-hidden focus:border-v2-accent placeholder-v2-muted mb-4 resize-none"
-              value={styleNote}
-              onChange={(e) => {
-                aiPrefill.current.styleNote = null
-                setStyleNote(e.target.value)
-              }}
-            />
-          </>
-        )}
-
-        <p className="font-v2-ui text-[0.68rem] tracking-[0.14em] uppercase text-v2-muted mb-2">Style tags</p>
-        <div className="flex flex-wrap gap-1.5 mb-4">
-          {STYLE_TAGS.map((tag) => (
-            <button
-              key={tag}
-              type="button"
-              onClick={() => toggleTag(tag)}
-              className={`font-v2-ui text-[0.7rem] tracking-wide uppercase px-2 py-1 rounded-xs border transition-colors ${
-                tags.includes(tag)
-                  ? 'border-v2-accent text-v2-accent bg-v2-accent/10'
-                  : 'border-v2-hairline text-v2-muted hover:text-v2-cream hover:border-v2-cream'
-              }`}
-            >
-              {tag}
-            </button>
-          ))}
-        </div>
-
-        <p className="font-v2-ui text-[0.68rem] tracking-[0.14em] uppercase text-v2-muted mb-2">Reference images (optional)</p>
-        <div
-          className={`border-2 border-dashed rounded-xs px-4 py-5 text-center transition-colors ${
-            dragOver ? 'border-v2-accent bg-v2-accent/5' : 'border-v2-hairline'
-          }`}
-          onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={handleDrop}
-        >
-          <p className="font-v2-ui text-v2-muted text-xs mb-1">Drop images here, or paste (⌘V)</p>
-          <label className="cursor-pointer">
-            <span className="font-v2-ui text-xs text-v2-accent tracking-widest uppercase">Choose files</span>
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => { addFiles(e.target.files); e.target.value = '' }}
-            />
-          </label>
-        </div>
-
-        {staged.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-3">
-            {staged.map((file, i) => (
-              <div key={`${file.name}-${i}`} className="relative">
-                <img
-                  src={URL.createObjectURL(file)}
-                  alt={`Staged reference ${i + 1}`}
-                  className="w-14 h-14 object-cover rounded-xs"
-                />
-                <button
-                  type="button"
-                  onClick={() => removeStaged(i)}
-                  aria-label={`Remove staged image ${i + 1}`}
-                  className="absolute -top-1.5 -right-1.5 w-4 h-4 flex items-center justify-center rounded-full bg-v2-ink border border-v2-hairline text-v2-muted text-[0.6rem] hover:text-v2-cream"
-                >
-                  ×
+    <div className="fixed inset-0 z-[60] bg-v2-ink/90 backdrop-blur-xs flex items-start sm:items-center justify-center overflow-y-auto animate-fade-in"
+      onClick={dismiss}>
+      <form ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="capture-title" tabIndex={-1}
+        onSubmit={handleSave} onPaste={handlePaste} onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md bg-v2-surface border border-v2-hairline rounded-xs m-3 sm:m-4 my-6 sm:my-4 max-h-[calc(100dvh-3rem)] overflow-y-auto outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-v2-accent">
+        <div className="p-5">
+          <h2 id="capture-title" className="font-v2-display text-v2-cream text-xl mb-4">Add an artist</h2>
+          {initialFilePending && <p role="status" className="font-v2-ui text-xs text-v2-muted mb-3">Loading shared photo...</p>}
+          <fieldset disabled={saving} className="min-w-0">
+            <div data-testid="capture-images"
+              className={`border border-dashed rounded-xs p-3 transition-colors ${dragOver ? 'border-v2-accent bg-v2-accent/5' : 'border-v2-hairline'}`}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+              onDragLeave={() => setDragOver(false)} onDrop={(e) => { if (!saveLock.current) handleDrop(e); else e.preventDefault() }}>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="relative inline-flex min-h-11 items-center gap-2 px-2 cursor-pointer font-v2-ui text-sm text-v2-accent">
+                  <ImagePlus size={18} aria-hidden="true" />Choose files
+                  <input type="file" accept="image/*" multiple aria-label="Choose files"
+                    className="absolute inset-0 opacity-0 w-full cursor-pointer"
+                    onChange={(e) => { addFiles(e.target.files); e.target.value = '' }} />
+                </label>
+                <button type="button" onClick={pasteCapture} disabled={clipboardBusy}
+                  className="inline-flex min-h-11 items-center gap-2 px-2 font-v2-ui text-sm text-v2-cream disabled:opacity-40">
+                  <ClipboardPaste size={18} aria-hidden="true" />{clipboardBusy ? 'Pasting...' : 'Paste'}
                 </button>
               </div>
-            ))}
-          </div>
-        )}
-
-        {(analyzing || tasteFit !== null || intakeNote) && (
-          <div className="mt-3">
-            {analyzing && (
-              <p className="font-v2-ui text-xs text-v2-muted" role="status">Reading screenshot…</p>
-            )}
-            {tasteFit !== null && (
-              <p data-testid="intake-taste" className="font-v2-ui text-xs text-v2-accent">
+              {staged.length > 0 && <div className="flex flex-wrap gap-2 mt-2">
+                {staged.map((file, i) => <StagedImage key={`${file.name}-${i}`} file={file} index={i} onRemove={() => removeStaged(i)} />)}
+              </div>}
+            </div>
+            {staged.length > 0 && <button type="button" disabled={intakeBusy}
+              onClick={() => startAnalysis(stagedRef.current[0])}
+              className="inline-flex items-center gap-2 min-h-11 font-v2-ui text-xs text-v2-accent disabled:opacity-40">
+              <Sparkles size={16} aria-hidden="true" />{localStorage.getItem('gemini_api_key') ? 'Auto-fill' : 'Taste fit'}
+            </button>}
+            {(analyzing || intakeBusy || tasteFit !== null || intakeNote || uncropped) && <div className="my-2 font-v2-ui text-xs">
+              {intakeBusy && <p className="text-v2-muted" role="status">{analyzing ? 'Reading screenshot...' : 'Preparing screenshot...'}</p>}
+              {tasteFit !== null && <p data-testid="intake-taste" className="text-v2-accent">
                 Taste fit {Math.round(tasteFit * 100)}%{tasteRough ? ' · rough' : ''}
-              </p>
-            )}
-            {uncropped && (
-              <p className="font-v2-ui text-xs text-v2-muted/80">
-                Cropped to the tattoo.{' '}
-                <button
-                  type="button"
-                  onClick={useWholeScreenshot}
-                  className="text-v2-accent underline"
-                >
-                  Use the whole screenshot
-                </button>
-              </p>
-            )}
-            {intakeNote && <p className="font-v2-ui text-xs text-v2-muted/80">{intakeNote}</p>}
-          </div>
-        )}
-
-        {error && <p className="font-v2-ui text-v2-accent text-xs mt-3">{error}</p>}
-
-        {duplicate && (
-          <div className="mt-3.5 pt-3.5 border-t border-v2-hairline">
-            <p className="font-v2-ui text-v2-muted text-xs mb-2">
-              @{cleanHandle} is already in your collection.
-            </p>
-            <button
-              type="button"
-              onClick={handleAddToExisting}
-              disabled={saving || intakeBusy}
-              className="font-v2-ui text-xs text-v2-accent tracking-widest uppercase hover:brightness-110 disabled:opacity-40"
-            >
-              Add images to {duplicate.name || `@${duplicate.handle}`} instead
-            </button>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between mt-6 pt-4 border-t border-v2-hairline">
-          <Link
-            to="/gallery?mode=manage"
-            onClick={() => onManage?.()}
-            className="font-v2-ui text-xs tracking-widest uppercase text-v2-muted hover:text-v2-cream"
-          >
+              </p>}
+              {uncropped && <p className="text-v2-muted">Cropped to the tattoo.{' '}
+                <button type="button" onClick={useWholeScreenshot} className="min-h-11 text-v2-accent underline">Use the whole screenshot</button>
+              </p>}
+              {intakeNote && <p className="text-v2-muted" role="status">{intakeNote}</p>}
+            </div>}
+            <label htmlFor="quick-add-handle" className="block font-v2-ui text-xs text-v2-muted mt-4 mb-2">Instagram *</label>
+            <input id="quick-add-handle" className={inputClass} placeholder="@handle or Instagram URL"
+              autoCapitalize="none" autoCorrect="off" spellCheck={false} value={handle}
+              onChange={(e) => { aiPrefill.current.handle = null; handleRef.current = e.target.value; setHandle(e.target.value); setError('') }} />
+            {duplicate && <div className="mt-3 font-v2-ui text-xs">
+              <p className="text-v2-muted">Already in your collection: @{duplicate.handle}</p>
+              <button type="button" onClick={handleAddToExisting} disabled={initialFilePending || intakeBusy || clipboardBusy || !staged.length}
+                className="min-h-11 text-v2-accent disabled:opacity-40">
+                Add images to {duplicate.name || `@${duplicate.handle}`} instead
+              </button>
+            </div>}
+            <details className="mt-3 border-t border-v2-hairline font-v2-ui">
+              <summary className="min-h-11 content-center cursor-pointer text-sm text-v2-muted">Details</summary>
+              <label htmlFor="quick-add-name" className="block text-xs text-v2-muted mb-2">Display name</label>
+              <input id="quick-add-name" className={inputClass} placeholder="Full name (optional)" value={name}
+                onChange={(e) => { aiPrefill.current.name = null; setName(e.target.value) }} />
+              <p className="text-xs text-v2-muted mt-3 mb-1">Style tags</p>
+              <div className="flex flex-wrap gap-1.5">
+                {STYLE_TAGS.map((tag) => <button key={tag} type="button" onClick={() => toggleTag(tag)}
+                  aria-pressed={tags.includes(tag)}
+                  className={`min-h-11 text-xs px-2 rounded-xs border ${tags.includes(tag) ? 'border-v2-accent text-v2-accent bg-v2-accent/10' : 'border-v2-hairline text-v2-muted'}`}>
+                  {tag}
+                </button>)}
+              </div>
+              <label htmlFor="capture-status" className="block text-xs text-v2-muted mt-3 mb-2">Status</label>
+              <select id="capture-status" className={inputClass} value={status} onChange={(e) => setStatus(e.target.value)}>
+                {['researching', 'shortlisted', 'contact-next', 'contacted', 'maybe', 'pass'].map((value) => <option key={value} value={value}>{value}</option>)}
+              </select>
+              <label htmlFor="quick-add-stylenote" className="block text-xs text-v2-muted mt-3 mb-2">Style note</label>
+              <textarea id="quick-add-stylenote" rows={2} className={inputClass} value={styleNote}
+                onChange={(e) => { aiPrefill.current.styleNote = null; setStyleNote(e.target.value) }} />
+            </details>
+          </fieldset>
+          {error && <p role="alert" className="font-v2-ui text-v2-accent text-xs mt-3">{error}</p>}
+          <Link to="/gallery?mode=manage"
+            onClick={(e) => { if (!mayDismiss()) e.preventDefault(); else { onManage?.(); onClose() } }}
+            className="inline-flex items-center min-h-11 mt-2 font-v2-ui text-xs text-v2-muted hover:text-v2-cream">
             Full manage view
           </Link>
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="font-v2-ui text-sm text-v2-muted hover:text-v2-cream px-2"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving || intakeBusy || !!duplicate}
-              className="bg-v2-accent text-v2-cream font-v2-ui text-sm rounded-xs px-5 py-2 transition-colors hover:brightness-110 disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              {saving ? 'Saving…' : 'Save'}
-            </button>
-          </div>
+        </div>
+        <div className="sticky bottom-0 bg-v2-surface flex justify-end gap-3 px-5 py-3 border-t border-v2-hairline">
+          <button type="button" onClick={dismiss} disabled={saving}
+            className="min-h-11 px-3 font-v2-ui text-sm text-v2-muted disabled:opacity-40">Cancel</button>
+          <button type="submit" disabled={initialFilePending || saving || intakeBusy || clipboardBusy || !!duplicate}
+            className="min-h-11 bg-v2-accent text-v2-cream font-v2-ui text-sm rounded-xs px-5 disabled:opacity-30">
+            {saving ? 'Saving...' : 'Save'}
+          </button>
         </div>
       </form>
     </div>

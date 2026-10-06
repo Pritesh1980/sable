@@ -1,6 +1,19 @@
 import { useEffect, useRef } from 'react'
 
-const FOCUSABLE = 'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+const FOCUSABLE = 'a[href], button, textarea, input, select, summary, [tabindex]:not([tabindex="-1"])'
+
+function available(node) {
+  if (node.matches(':disabled, input[type="hidden"]') || node.closest('[hidden], [inert]')) return false
+  for (let parent = node; parent; parent = parent.parentElement) {
+    const style = getComputedStyle(parent)
+    if (style.display === 'none' || style.visibility === 'hidden') return false
+    if (parent.tagName === 'DETAILS' && !parent.open) {
+      const summary = [...parent.children].find((child) => child.tagName === 'SUMMARY')
+      if (!summary?.contains(node)) return false
+    }
+  }
+  return true
+}
 
 /** Controls the undo toast may own while a dialog is open. The toast paints above
  *  modals but lives outside them, so a trap that ignored it would make Undo
@@ -53,11 +66,11 @@ export default function useDialogFocus(open) {
 
     function handleKeyDown(e) {
       if (e.key !== 'Tab' || !containerRef.current) return
-      if (!ownsFocus(containerRef.current)) return
+      if (!ownsFocus(containerRef.current) || !isTopmostDialog(containerRef.current)) return
       const focusable = [
         ...containerRef.current.querySelectorAll(FOCUSABLE),
         ...undoToastFocusables(),
-      ]
+      ].filter(available)
       if (focusable.length === 0) {
         e.preventDefault()
         return
