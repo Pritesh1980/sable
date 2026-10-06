@@ -50,8 +50,8 @@ export default function Settings({ artists, setArtists, ideas, setIdeas, boards,
           {shortcutUrl ? (
             <>
               <p className="text-cream-muted/90 text-sm font-body leading-relaxed mb-3">
-                Install the Shortcut once, then Share → Sable from Instagram drops a
-                screenshot straight into the add-artist form.
+                Install the Shortcut once, then Share → Sable from Instagram opens
+                the capture form. Paste the screenshot or profile link there.
               </p>
               <a
                 href={shortcutUrl}
@@ -63,7 +63,8 @@ export default function Settings({ artists, setArtists, ideas, setIdeas, boards,
           ) : (
             <p className="text-cream-muted/90 text-sm font-body leading-relaxed">
               Safari doesn't let web apps register as share destinations, so sharing a
-              screenshot in from Instagram needs a one-off Shortcut. Follow the{' '}
+              screenshot or profile link from Instagram needs a one-off Shortcut.
+              Paste the shared input after Sable opens. Follow the{' '}
               <a
                 href={MANAGING_ARTISTS_GUIDE_URL}
                 target="_blank"
@@ -72,7 +73,7 @@ export default function Settings({ artists, setArtists, ideas, setIdeas, boards,
               >
                 setup guide
               </a>{' '}
-              — it takes about a minute.
+              to set it up.
             </p>
           )}
         </div>

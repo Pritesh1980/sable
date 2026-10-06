@@ -119,6 +119,19 @@ describe('createArtist', () => {
 })
 
 describe('parseInstagramHandle', () => {
+  it.each([
+    'https://www.instagram.com/p/ABC123/',
+    'https://www.instagram.com/reel/ABC123/',
+    'https://www.instagram.com/stories/mora.blackfern/123/',
+    'https://instagram.com.evil.invalid/mora.blackfern/',
+    'https://evil.invalid/instagram.com/mora.blackfern/',
+    'https://www.instagram.com/%ZZ/',
+    'https://user:password@instagram.com/mora.blackfern/',
+    'two handles',
+    'a'.repeat(31),
+  ])('rejects non-profile input %s', (input) => {
+    expect(parseInstagramHandle(input)).toBe('')
+  })
   it('strips @ and whitespace', () => {
     expect(parseInstagramHandle(' @zoia.ink ')).toBe('zoia.ink')
   })
