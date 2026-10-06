@@ -301,6 +301,21 @@ it('requires explicit new-payment confirmation after an unknown provider outcome
   expect(prepareRefinementSource).toHaveBeenCalledOnce()
 })
 
+it('restores an uncertain recovered job into the new-payment confirmation gate after reload', async () => {
+  await addMarker()
+  relay.list.mockResolvedValue([{ ...job, state: 'outcome_unknown', errorCode: 'provider_uncertain' }])
+  await mount(); await open()
+  await submit()
+  expect(relay.submit).not.toHaveBeenCalled()
+  expect(hook.result.current.state.error.code).toBe('confirmation_required')
+  expect(hook.result.current.state.job.state).toBe('outcome_unknown')
+  await act(async () => { await hook.result.current.retryUnaccepted({ confirmed: false }) })
+  expect(relay.submit).not.toHaveBeenCalled()
+  await act(async () => { await hook.result.current.retryUnaccepted({ confirmed: true }) })
+  expect(relay.submit).toHaveBeenCalledOnce()
+  expect(relay.submit.mock.calls[0][0].requestId).not.toBe(job.requestId)
+})
+
 it('blocks POST if the draft changes while its exact input transaction is committing', async () => {
   await mount(); await open()
   const gate = deferred(), put = journal.put.bind(journal)

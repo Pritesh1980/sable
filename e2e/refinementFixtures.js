@@ -49,7 +49,7 @@ export async function installRelay(context, options = {}) {
   const relay = { posts: 0, dispatches: 0, ackProofs: [], requests: [], attemptIds: [], job: null, lastJob: null, enabled: options.enabled !== false,
     lostResponse: Boolean(options.lostResponse), expired: false, resultExpired: false,
     complete() { if (this.job) { this.job.state = 'succeeded'; this.job.completedAt = new Date().toISOString(); this.job.expiresAt = new Date(Date.now() + 86400000).toISOString() } },
-    uncertain() { if (this.job) { this.job.state = 'outcome_unknown'; this.job.errorCode = 'outcome_unknown' } },
+    uncertain() { if (this.job) { this.job.state = 'outcome_unknown'; this.job.errorCode = 'provider_uncertain' } },
   }
   await context.route(/https?:\/\/[^/]*(?:openai\.com|supabase\.(?:co|com))\//, route => route.abort())
   await context.route('http://localhost:4199/**', async route => {

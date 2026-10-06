@@ -279,7 +279,8 @@ export function useConceptRefinement({ ownerId, ownerScope, concepts, commitConc
         draftRevision: pending.destination.draftRevision, phase: 'recoverable' })
       }
       patch({ capabilities: caps, recoverableJobs, pending, recovering: false,
-        job: current.current.job ?? jobs.find(job => ACTIVE.has(job.state)) ?? null })
+        job: current.current.job ?? jobs.find(job => ACTIVE.has(job.state))
+          ?? jobs.find(job => job.state === 'outcome_unknown') ?? null })
       for (const job of recoverableJobs) {
         if (job.state === 'succeeded' && job.destination
             && latest.current.concepts.some(row => row.id === job.destination.conceptId)) {

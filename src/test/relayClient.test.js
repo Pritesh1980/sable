@@ -136,7 +136,17 @@ it('rejects resubmitting accepted markers and obtains a current token for recove
   expect(auth.getAccessToken).toHaveBeenCalledTimes(4)
 })
 
+it.each(['provider_uncertain', 'provider_rejected', 'input_unavailable', 'worker_disabled'])(
+  'keeps worker terminal code %s readable in status and a mixed recovery list', async errorCode => {
+    const terminal = { ...job, state: errorCode === 'provider_uncertain' ? 'outcome_unknown' : 'failed', errorCode }
+    fetchImpl.mockResolvedValueOnce(json(terminal)).mockResolvedValueOnce(json([terminal, job]))
+    expect(await client.status(id)).toEqual(terminal)
+    expect(await client.list()).toEqual([terminal, job])
+  },
+)
+
 it.each([{ ...job, resultUrl: 'https://external.example/private.png' }, { ...job, id: 'not-a-uuid' },
+  { ...job, errorCode: 'private_provider_details' },
   { ...job, state: 'invented' }, { ...job, sourceImageDigest: 'a'.repeat(64) + '\n' },
   { ...job, request: { ...request, prompt: 'changed' } },
   { ...job, generation: { ...job.generation, provenance: 'user-import' } }])('rejects malformed or external-URL jobs', async malformed => {

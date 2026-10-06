@@ -10,7 +10,8 @@ const SAFE_CODES = new Set(['unauthorized', 'owner_forbidden', 'origin_forbidden
   'idempotency_conflict', 'active_quota_exceeded', 'daily_quota_exceeded', 'job_not_found',
   'job_conflict', 'result_expired', 'result_unavailable', 'storage_unavailable', 'provider_failed',
   'provider_unavailable', 'outcome_unknown', 'invalid_image', 'image_too_large', 'body_too_large',
-  'upload_timeout', 'internal_error'])
+  'upload_timeout', 'internal_error', 'provider_uncertain', 'provider_rejected',
+  'input_unavailable', 'worker_disabled'])
 const CLIENT_CODES = new Set([...SAFE_CODES, 'auth_unavailable', 'relay_invalid_response',
   'relay_error', 'relay_unavailable', 'acceptance_unknown', 'invalid_source', 'result_digest_mismatch'])
 const fail = (code, status = 502, serverTime) => imageJobError(code, status, serverTime)
