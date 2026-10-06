@@ -55,7 +55,6 @@ const LEGACY_ALLOWLIST = [
   'src/components/Nav.jsx',
   'src/components/PromptPackComposer.jsx',
   'src/components/ProtectedRoute.jsx',
-  'src/components/QuickAddArtist.jsx',
   'src/components/RankingMode.jsx',
   'src/components/ReliefStlDrawer.jsx',
   'src/components/SortableArtistCard.jsx',

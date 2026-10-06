@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { useState } from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import AddArtistModal from '../components/AddArtistModal'
@@ -35,22 +36,33 @@ const existing = [{ id: 'zoia.ink', handle: 'zoia.ink', name: '', rank: 1, image
 function renderModal(props = {}) {
   const setArtists = vi.fn()
   const onClose = vi.fn()
+  function Harness() {
+    const [artists, update] = useState(existing)
+    return <AddArtistModal artists={artists} setArtists={(updater) => { setArtists(updater); update(updater) }} onClose={onClose} {...props} />
+  }
   render(
     <MemoryRouter>
-      <AddArtistModal artists={existing} setArtists={setArtists} onClose={onClose} {...props} />
+      <Harness />
     </MemoryRouter>
   )
+  fireEvent.click(screen.getByText('Details'))
   return { setArtists, onClose }
 }
 
-function stageImage() {
+function analyzeStaged() {
+  fireEvent.click(screen.getByRole('button', { name: /^(auto-fill|taste fit)$/i }))
+}
+
+function stageImage(analyze = true) {
   const file = new File(['x'], 'shot.png', { type: 'image/png' })
   fireEvent.change(screen.getByLabelText(/choose files/i), { target: { files: [file] } })
+  if (analyze) analyzeStaged()
 }
 
 function stageImages(...names) {
   const files = names.map((name) => new File(['x'], name, { type: 'image/png' }))
   fireEvent.change(screen.getByLabelText(/choose files/i), { target: { files } })
+  analyzeStaged()
   return files
 }
 
@@ -229,6 +241,7 @@ describe('AddArtistModal screenshot analysis', () => {
 
     await waitFor(() => expect(analyzeScreenshotWithGemini).toHaveBeenCalledTimes(1))
     fireEvent.click(screen.getByLabelText(/remove staged image 1/i))
+    analyzeStaged()
 
     await waitFor(() => expect(analyzeScreenshotWithGemini).toHaveBeenCalledTimes(2))
     await waitFor(() =>
@@ -271,6 +284,7 @@ describe('AddArtistModal screenshot analysis', () => {
 
     await waitFor(() => expect(embed).toHaveBeenCalledTimes(1))
     fireEvent.click(screen.getByLabelText(/remove staged image 1/i))
+    analyzeStaged()
 
     await waitFor(() => expect(embed).toHaveBeenCalledTimes(2))
     await waitFor(() => expect(screen.getByTestId('intake-taste')).toHaveTextContent(/taste fit 0%/i))
@@ -324,6 +338,7 @@ describe('AddArtistModal screenshot analysis', () => {
 
     await waitFor(() => expect(cropImageToDataUrl).toHaveBeenCalledTimes(1))
     fireEvent.click(screen.getByLabelText(/remove staged image 1/i))
+    analyzeStaged()
 
     await waitFor(() => expect(cropImageToDataUrl).toHaveBeenCalledTimes(2))
     await waitFor(() =>
@@ -360,6 +375,7 @@ describe('AddArtistModal screenshot analysis', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'blackwork' }))
     fireEvent.click(screen.getByLabelText(/remove staged image 1/i))
+    analyzeStaged()
 
     await waitFor(() => expect(analyzeScreenshotWithGemini).toHaveBeenCalledTimes(2))
     await waitFor(() => expect(screen.getByRole('button', { name: /^save$/i })).toBeEnabled())
@@ -395,14 +411,14 @@ describe('AddArtistModal screenshot analysis', () => {
     renderModal()
     stageImage()
     await waitFor(() => expect(analyzeScreenshotWithGemini).toHaveBeenCalledTimes(1))
-    stageImage()
+    stageImage(false)
     await new Promise((r) => setTimeout(r, 50))
     expect(analyzeScreenshotWithGemini).toHaveBeenCalledTimes(1)
   })
 })
 
 describe('AddArtistModal', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => { vi.clearAllMocks(); localStorage.clear() })
 
   it('normalises a pasted Instagram URL, applies tags, and saves a new artist in two clicks', async () => {
     const { setArtists, onClose } = renderModal()
@@ -455,6 +471,8 @@ describe('AddArtistModal', () => {
 
     expect(screen.getByRole('button', { name: /^save$/i })).toBeDisabled()
     const offer = screen.getByRole('button', { name: /add images to.*instead/i })
+    expect(offer).toBeDisabled()
+    stageImage(false)
     fireEvent.click(offer)
 
     // No new artist is ever created for a duplicate handle — the guard routes

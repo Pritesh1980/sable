@@ -7,6 +7,7 @@ import { useAuth } from '../context/useAuth'
 import { clearBlobUrls, keyForUrl } from '../data/blobUrls'
 import { STAGED_IMAGES_DB, readOutbox } from '../data/stagedImageStore'
 import { backend } from '../backend'
+import { stageImages } from '../data/imageStaging'
 
 // #110, bug 2, then #115. Quick-add (and the share target, which opens it)
 // kept the screenshot as a bare data URL that was never uploaded, so it never
@@ -17,6 +18,7 @@ const SHOT = 'data:image/jpeg;base64,U0hPVA=='
 vi.mock('../hooks/useImageUpload', async (importOriginal) => ({
   ...(await importOriginal()),
   compressImages: vi.fn(async () => [SHOT]),
+  uploadImages: vi.fn(async (_files, ctx) => stageImages([SHOT], ctx)),
 }))
 vi.mock('../data/screenshotIntake', () => ({
   analyzeScreenshotWithGemini: vi.fn(async () => null),
@@ -43,7 +45,7 @@ async function quickAdd(handleValue) {
   const file = new File(['x'], 'shot.png', { type: 'image/png' })
   fireEvent.paste(document.body, { clipboardData: { files: [file], types: ['Files'] } })
   const handle = await screen.findByPlaceholderText('@handle or Instagram URL')
-  const submit = screen.getByRole('button', { name: 'Add Artist' })
+  const submit = screen.getByRole('button', { name: 'Save' })
   await waitFor(() => expect(submit).not.toBeDisabled())
   fireEvent.change(handle, { target: { value: handleValue } })
   fireEvent.click(submit)
@@ -78,7 +80,7 @@ describe('quick-add stages its screenshot (#110, #115)', () => {
 
     await waitFor(() => expect(setArtists).toHaveBeenCalledTimes(1))
     const added = setArtists.mock.calls[0][0]([existing]).find((a) => a.id === 'new.artist')
-    expect(added.images).toEqual([SHOT])
+    expect(added.images).toEqual([expect.objectContaining({ url: SHOT })])
     expect(keyWhenAdded).toMatch(/^user\/u1\/artists\/new\.artist\//)
     expect(readOutbox().map((e) => e.key)).toEqual([keyWhenAdded])
     // Nothing to re-save: the add itself carried the key.
@@ -97,7 +99,7 @@ describe('quick-add stages its screenshot (#110, #115)', () => {
     await quickAdd('new.artist')
 
     expect(setArtists).toHaveBeenCalledTimes(1)
-    expect(setArtists.mock.calls[0][0]([existing]).find((a) => a.id === 'new.artist').images).toEqual([SHOT])
+    expect(setArtists.mock.calls[0][0]([existing]).find((a) => a.id === 'new.artist').images).toEqual([expect.objectContaining({ url: SHOT })])
     expect(keyForUrl(SHOT)).toBeNull()
     expect(readOutbox()).toEqual([])
   })
