@@ -89,6 +89,6 @@ describe('Settings page: iOS share-to-Sable (#45)', () => {
     renderSettings()
     expect(screen.getByText(/share to sable/i)).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /install/i })).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /setup guide/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /setup guide/i })).toHaveAttribute('href', expect.stringContaining('#share-from-instagram'))
   })
 })

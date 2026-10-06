@@ -18,7 +18,10 @@ const SHOT = 'data:image/jpeg;base64,U0hPVA=='
 vi.mock('../hooks/useImageUpload', async (importOriginal) => ({
   ...(await importOriginal()),
   compressImages: vi.fn(async () => [SHOT]),
-  uploadImages: vi.fn(async (_files, ctx) => stageImages([SHOT], ctx)),
+  uploadImages: vi.fn(async (_files, ctx) => {
+    if (ctx.requireStored && !ctx.userId) throw new Error('Photo owner unavailable')
+    return stageImages([SHOT], ctx)
+  }),
 }))
 vi.mock('../data/screenshotIntake', () => ({
   analyzeScreenshotWithGemini: vi.fn(async () => null),
@@ -88,7 +91,7 @@ describe('quick-add stages its screenshot (#110, #115)', () => {
     expect(setArtists).toHaveBeenCalledTimes(1)
   })
 
-  it('signed out, adds the artist straight away with the screenshot as it is', async () => {
+  it('signed out, retains the photo without claiming a durable save', async () => {
     const setArtists = vi.fn()
     render(
       <MemoryRouter initialEntries={['/gallery']}>
@@ -98,8 +101,9 @@ describe('quick-add stages its screenshot (#110, #115)', () => {
 
     await quickAdd('new.artist')
 
-    expect(setArtists).toHaveBeenCalledTimes(1)
-    expect(setArtists.mock.calls[0][0]([existing]).find((a) => a.id === 'new.artist').images).toEqual([expect.objectContaining({ url: SHOT })])
+    expect(await screen.findByRole('alert')).toHaveTextContent(/try again/i)
+    expect(setArtists).not.toHaveBeenCalled()
+    expect(screen.getByAltText('Staged reference 1')).toBeInTheDocument()
     expect(keyForUrl(SHOT)).toBeNull()
     expect(readOutbox()).toEqual([])
   })

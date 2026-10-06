@@ -14,6 +14,12 @@ When you change UI under `src/pages/` or `src/components/`, update the matching 
 
 ## Regenerating screenshots
 
+For capture-only updates, run `node scripts/captureIntakeGuide.mjs`
+against the isolated server below. This refreshes `artist-capture.png` (430 × 920),
+`settings.png` with the iPhone-only Shortcut setup copy, and `help-overview.png`.
+Wall and Gallery now both use `AddArtistModal`; screenshot analysis must be started
+explicitly, never by silently adding a key or sending a paid request during capture.
+
 Screenshots are captured against the dev server with Playwright at a phone viewport
 (`430 × 920`), plus a couple at desktop width (`1280 × 900`). Capture **viewport** shots,
 not `fullPage` — the fixed bottom nav floats to the middle on full-page captures.

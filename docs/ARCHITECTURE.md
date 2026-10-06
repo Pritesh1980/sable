@@ -519,7 +519,8 @@ On supported installed PWAs, the service worker handles the share POST itself;
 GitHub Pages cannot serve that POST. **iOS Safari does not support Web Share Target**
 ([WebKit tracking issue](https://bugs.webkit.org/show_bug.cgi?id=194593), checked
 17 September 2026). On iPhone, use the Shortcut/paste route: it reaches the same
-intake screen without this POST path. See the [setup guide](02-managing-artists.md#share-a-screenshot-straight-from-instagram).
+intake screen without this POST path. Its real-device session/context remains unverified.
+See the [setup guide](02-managing-artists.md#share-from-instagram).
 
 ```mermaid
 flowchart TB
@@ -541,16 +542,20 @@ flowchart TB
   SW --> LAND --> TAKE
   STASH --> TAKE --> STAGE
   PASTE --> STAGE
-  STAGE -- "key available" --> AI --> CROP --> TASTE
-  STAGE -- "no key: whole image, rough score" --> TASTE
+  STAGE -- "explicit Auto-fill tap; key required" --> AI --> CROP --> TASTE
+  STAGE -- "explicit Taste fit tap; no key, rough score" --> TASTE
+  STAGE -- "manual capture; no AI required" --> VERIFY
   TASTE --> VERIFY --> SAVE
 ```
 
 Async results belong to one staged file and analysis generation. Removing that file
-invalidates its pending results, clears only AI-owned prefills, and starts analysis of
-the next file. Taste scoring has an additional revision guard so restoring the whole
+invalidates its pending results and clears only unchanged AI-owned prefills. A new
+analysis requires another explicit tap. Taste scoring has an additional revision guard so restoring the whole
 screenshot cannot be overwritten by a late crop score. Saving a new artist is blocked
-while intake processing is busy. See `AddArtistModal.jsx`, `screenshotCrop.js`, and
+while share hydration or intake processing is busy. Capture's strict upload option
+requires stored image bytes before mutating the library; failures retain the draft.
+The user-keyed app lifecycle and artist generations fence the final append. The receipt observes the
+committed local update, not cloud sync. See `AddArtistModal.jsx`, `screenshotCrop.js`, and
 `src/sw/shareTarget.js`.
 
 Saved-image removal uses a separate recovery path: the removal persists immediately,

@@ -4,7 +4,7 @@ import { useAuth } from '../context/useAuth'
 import { isIOS, getShareShortcutUrl } from '../data/platform'
 
 const MANAGING_ARTISTS_GUIDE_URL =
-  'https://github.com/Pritesh1980/sable/blob/main/docs/02-managing-artists.md#share-a-screenshot-straight-from-instagram'
+  'https://github.com/Pritesh1980/sable/blob/main/docs/02-managing-artists.md#share-from-instagram'
 
 export default function Settings({ artists, setArtists, ideas, setIdeas, boards, setBoards, concepts, setConcepts, conventionOverrides, setConventionOverrides }) {
   const auth = useAuth()

@@ -42,49 +42,6 @@ export async function uploadImages(files, { userId, scope, id, requireStored = f
   return results.map((result) => result.url)
 }
 
-function dataUrlToBlob(dataUrl) {
-  const [meta, b64] = dataUrl.split(',')
-  // "data:image/png;base64" -> "image/png", by index rather than a lazy regex.
-  const colon = meta.indexOf(':')
-  const semi = meta.indexOf(';', colon + 1)
-  const mime = (colon >= 0 && semi > colon ? meta.slice(colon + 1, semi) : '') || 'image/jpeg'
-  const bin = atob(b64)
-  const arr = new Uint8Array(bin.length)
-  for (let i = 0; i < bin.length; i += 1) arr[i] = bin.charCodeAt(i)
-  return new Blob([arr], { type: mime })
-}
-
-// Compress the given files, upload each to blob storage under a canonical
-// per-user key, register the resolved URL in the cache, and return the
-// displayable URL strings. Callers store these strings exactly as they stored
-// compressImages() output before; the storage hooks map them back to keys on
-// persist. `scope` is one of 'artists' | 'ideas' | 'concepts'.
-export async function uploadImages(files, { userId, scope, id, requireStored = false }) {
-  if (requireStored && !userId) throw new Error('Photo owner unavailable')
-  const owner = requireStored ? backend.ownerScope.capture() : null
-  const dataUrls = await compressImages(files)
-  if (owner) backend.ownerScope.assertCurrent(owner)
-  // No signed-in user → keep the compressed data-URLs locally (they live in the
-  // offline cache and get migrated to blobs on the next authed load).
-  if (!userId) return dataUrls
-  return Promise.all(
-    dataUrls.map(async (dataUrl) => {
-      const key = `user/${userId}/${scope}/${id}/${uuid()}.jpg`
-      try {
-        if (owner) backend.ownerScope.assertCurrent(owner)
-        await backend.blobs.upload(userId, key, dataUrlToBlob(dataUrl), 'image/jpeg')
-        if (owner) backend.ownerScope.assertCurrent(owner)
-        registerBlobUrl(key, dataUrl)
-      } catch (e) {
-        if (requireStored) throw e
-        console.error('[tattoo] image upload failed:', e)
-      }
-      return dataUrl
-    })
-  )
->>>>>>> 9a52b7f (feat(intake): unify and protect artist capture)
-}
-
 // Stage an already-compressed data URL (no re-compression) and return its key,
 // or null if it couldn't or shouldn't be staged. Used by the storage-layer
 // image codecs to move inline data URLs out of documents.

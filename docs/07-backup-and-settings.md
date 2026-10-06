@@ -16,6 +16,15 @@ you export a full snapshot you control — and it's where your account and sign-
 
 ![The Settings page with the backup panel](../public/guide/settings.png)
 
+## Share to Sable on iPhone
+
+Settings offers **Install Share to Sable** only when a real iCloud Shortcut link is
+configured. Otherwise it links to the [manual setup guide](02-managing-artists.md#share-from-instagram).
+The Shortcut copies a selected screenshot or profile link and opens Sable; you
+still paste in capture. Real-phone acceptance and Safari versus installed-app
+session behaviour remain pending. Photo selection and manual profile-link paste
+are available when clipboard reading is denied or unsupported.
+
 ## Export a backup
 
 Tap **Export Backup**. A single JSON file downloads — named with the date, e.g.

@@ -1,5 +1,15 @@
 # Instagram Capture Polish Implementation Plan
 
+## Main integration, 7 October 2026
+
+The Instagram-only port preserves main's durable `imageStaging` and upload outbox.
+Capture accepts successful local staging even when remote uploads fail, but retains
+the form when neither device storage nor upload can preserve a photo. Account
+changes use main's user-keyed app lifecycle rather than the unmerged relay's owner
+API. Only capture documentation and its three affected guide images are updated.
+The verification counts below describe the original feature branch; the README
+records the integrated source suite. No refinement relay or paid testing is included.
+
 > **For agentic workers:** Use `superpowers:executing-plans` for native implementation, or `superpowers:subagent-driven-development` only if the user selects delegation. Work task-by-task using the checkboxes. This plan is awaiting review and execution approval; writing it does not authorize implementation.
 
 **Goal:** Make screenshots and Instagram profile links easy to bring into Sable and save with minimal form filling on an iPhone.
@@ -84,8 +94,8 @@ The owner saves either screenshots or profile links from Instagram. Both transfe
 - [ ] Prototype this recipe in Shortcuts: accept Images, URLs and Text; Copy Shortcut Input to Clipboard; Open the deployment's fixed `/share` URL. Do not encode images or the raw input in the URL. If mixed input is supplied, copy the selected item rather than concatenating image bytes with text.
 - [ ] Confirm whether it returns to the same Sable storage context/session or opens Safari separately. If contexts differ, document that limitation; do not call the flow verified or add an automatic-login workaround.
 - [ ] Treat an explicit Paste action as the default. Test clipboard reading only from a tap; retain long-press paste in the handle field and photo selection when image reading is unavailable.
-- [ ] Add/update Settings tests for configured and absent Shortcut URLs. A configured link may show an install action; an absent link must show the manual setup route. The text must not claim images arrive automatically on iPhone.
-- [ ] Run `npm test -- --dir src src/test/platform.test.js src/test/Settings.test.jsx`. Commit only the relevant copy/tests after observing their red-to-green result.
+- [x] Add/update Settings tests for configured and absent Shortcut URLs. A configured link may show an install action; an absent link must show the manual setup route. The text must not claim images arrive automatically on iPhone.
+- [x] Run `npm test -- --dir src src/test/platform.test.js src/test/Settings.test.jsx`. Commit only the relevant copy/tests after observing their red-to-green result.
 
 **Human gate:** The owner can publish an updated iCloud Shortcut link and provide it for `VITE_IOS_SHORTCUT_URL`. Until then, the manual recipe remains the supported route. Lack of a published link does not block app polish, but the full handoff success criterion remains pending.
 
@@ -93,7 +103,7 @@ The owner saves either screenshots or profile links from Instagram. Both transfe
 
 **Files:** Modify `src/data/artists.js`; extend `src/test/artists.test.js` and existing add-form tests when validation messages change.
 
-- [ ] Add table-driven failing cases to the existing parser suite:
+- [x] Add table-driven failing cases to the existing parser suite:
 
 ```js
 it.each([
@@ -112,11 +122,11 @@ it.each([
 })
 ```
 
-- [ ] Run `npm test -- --dir src src/test/artists.test.js`; confirm the new invalid-link cases fail against the old parser.
-- [ ] Use `URL` for URL parsing, an exact Instagram host allowlist (`instagram.com`, `www.instagram.com`, `m.instagram.com`), and `http:`/`https:` only. Reject credentials, multiple nonempty path segments and reserved routes (`p`, `reel`, `reels`, `stories`, `explore`, `accounts`, `direct`, `tv`, `share`). Decode one segment with a caught `decodeURIComponent` failure. Validate the resulting handle against ASCII letters/digits/underscore/period, length 1-30. Do not change IDs of previously saved artists.
-- [ ] Bare handles use the same character/length validation. Existing lowercase/uppercase preservation and profile query-string cases remain green.
-- [ ] In capture, invalid input produces an actionable field error: `Use an artist handle or profile link, not a post or reel link.` It never triggers scraping or a paid lookup.
-- [ ] Run parser and form tests; commit `fix(intake): reject non-profile Instagram links`.
+- [x] Run `npm test -- --dir src src/test/artists.test.js`; confirm the new invalid-link cases fail against the old parser.
+- [x] Use `URL` for URL parsing, an exact Instagram host allowlist (`instagram.com`, `www.instagram.com`, `m.instagram.com`), and `http:`/`https:` only. Reject credentials, multiple nonempty path segments and reserved routes (`p`, `reel`, `reels`, `stories`, `explore`, `accounts`, `direct`, `tv`, `share`). Decode one segment with a caught `decodeURIComponent` failure. Validate the resulting handle against ASCII letters/digits/underscore/period, length 1-30. Do not change IDs of previously saved artists.
+- [x] Bare handles use the same character/length validation. Existing lowercase/uppercase preservation and profile query-string cases remain green.
+- [x] In capture, invalid input produces an actionable field error: `Use an artist handle or profile link, not a post or reel link.` It never triggers scraping or a paid lookup.
+- [x] Run parser and form tests; commit `fix(intake): reject non-profile Instagram links`.
 
 ## Task 3: Make The Existing Capture Form Minimal And Mobile-Friendly
 
@@ -124,8 +134,8 @@ it.each([
 
 **Deliverable:** One compact form: image preview/photo picker and explicit clipboard action, handle/profile-link field, collapsed optional details, Save and Cancel. The metadata controls retain their existing fields and meanings.
 
-- [ ] Write failing DOM tests showing that optional details start collapsed, a valid profile link saves with no optional edits, and the photo picker accepts multiple images before entering a handle. Use the existing render/upload mocks.
-- [ ] Add clipboard tests with structured fake `ClipboardItem` values:
+- [x] Write failing DOM tests showing that optional details start collapsed, a valid profile link saves with no optional edits, and the photo picker accepts multiple images before entering a handle. Use the existing render/upload mocks.
+- [x] Add clipboard tests with structured fake `ClipboardItem` values:
 
 ```js
 it('returns an image without parsing clipboard HTML', async () => {
@@ -146,51 +156,51 @@ it('does not retry after permission denial', async () => {
 })
 ```
 
-- [ ] Also test text-only read, absent `read` with supported `readText`, no clipboard object, empty data and rejected image conversion. Never read HTML, log clipboard contents or fetch a pasted link.
-- [ ] Implement the helper with a deliberate single read. Prefer the first supported image; otherwise use `text/plain`. Return a manual result on denial/failure. Only fall back to `readText` when `read` is absent, not after it rejects.
-- [ ] Wire a user-triggered `ClipboardPaste` icon/text control to the helper. Images go through existing `addFiles`; text fills the handle input only when empty, or asks before replacing a user-edited value. Manual results leave current fields/files untouched. Retain actual `paste` event handling and photo selection.
-- [ ] Reorder the JSX without inventing a new component framework. Use a native `<details><summary>Details</summary>...</details>` for name, tags, status and notes; keep labels and existing token classes. Use Lucide icons with accessible names; no desktop keyboard instructions on mobile.
-- [ ] Make screenshot analysis an explicit Auto-fill action when a key exists, not a side effect of attaching a photo. Compression/upload readiness still gates Save. AI-owned field tracking, stale-result guards and crop restoration remain in place; analyses finishing after manual edits/removal do not clobber them. Update the existing analysis tests to click Auto-fill before awaiting results.
-- [ ] Run `npm test -- --dir src src/test/clipboardIntake.test.js src/test/AddArtistModal.test.jsx src/test/artistSaveRace.test.jsx`. Commit `feat(intake): streamline mobile artist capture`.
+- [x] Also test text-only read, absent `read` with supported `readText`, no clipboard object, empty data and rejected image conversion. Never read HTML, log clipboard contents or fetch a pasted link.
+- [x] Implement the helper with a deliberate single read. Prefer the first supported image; otherwise use `text/plain`. Return a manual result on denial/failure. Only fall back to `readText` when `read` is absent, not after it rejects.
+- [x] Wire a user-triggered `ClipboardPaste` icon/text control to the helper. Images go through existing `addFiles`; text fills the handle input only when empty, or asks before replacing a user-edited value. Manual results leave current fields/files untouched. Retain actual `paste` event handling and photo selection.
+- [x] Reorder the JSX without inventing a new component framework. Use a native `<details><summary>Details</summary>...</details>` for name, tags, status and notes; keep labels and existing token classes. Use Lucide icons with accessible names; no desktop keyboard instructions on mobile.
+- [x] Make screenshot analysis an explicit Auto-fill action when a key exists, not a side effect of attaching a photo. Compression/upload readiness still gates Save. AI-owned field tracking, stale-result guards and crop restoration remain in place; analyses finishing after manual edits/removal do not clobber them. Update the existing analysis tests to click Auto-fill before awaiting results.
+- [x] Run `npm test -- --dir src src/test/clipboardIntake.test.js src/test/AddArtistModal.test.jsx src/test/artistSaveRace.test.jsx`. Commit `feat(intake): streamline mobile artist capture`.
 
 ## Task 4: Route Wall And Shared Gallery Through That Form
 
 **Files:** Modify `src/pages/Gallery.jsx`, `src/pages/Wall.jsx`, `src/components/AddArtistModal.jsx`, `src/test/routes.test.jsx` and `src/test/v2-tokens.spec.js`; migrate relevant coverage from `src/test/QuickAddArtist.test.jsx` to `src/test/AddArtistModal.test.jsx`. Retire `src/components/QuickAddArtist.jsx` and its test file only once their behaviours have equivalent coverage.
 
-- [ ] Add failing tests for `initialFile` under `StrictMode`: the same incoming File attaches once, a non-image is ignored, and rerenders do not reset edited fields. A different incoming image attaches once through the same path as the picker.
-- [ ] Add route tests proving `/gallery?shared=1` mounts the canonical form and passes the consumed image. Keep the existing `consumeRef` one-time promise in Gallery; do not rewrite service-worker cache consumption.
-- [ ] In `AddArtistModal`, consume `initialFile` idempotently using a ref-held set of consumed File identities and the existing staged-file functions. Do not attach it during render or mutate files in the prop.
-- [ ] Replace Gallery's runtime `QuickAddArtist` with `AddArtistModal`, supplying the existing `artists`, `setArtists`, authenticated `userId`, `initialFile`, `onClose` and `onManage` boundary. Leave the heavy Manage `AddArtistForm` and its `addArtist()` caller intact.
-- [ ] Gallery currently has no auth hook. Read `userId` from `useAuth()?.user?.id`; do not infer it from an email or hard-code a fallback owner. Supply the existing fictional auth context in tests that save images. Remove the retired filename from the token-contract file inventory after migrating its coverage.
-- [ ] On close/success, remove only the consumed `shared` query parameter with router replacement, preserving other Gallery parameters. Reload must not reopen an already consumed capture. Keep paths basename-relative.
-- [ ] Preserve the Wall's existing suggestion-prefill `initial` behaviour. Do not send the user to a new page solely to add an artist.
-- [ ] Run the form, route, share-target and service-worker contract tests. Confirm migrated crop, no-key, initial-file and paste/drop proofs exist before removing the retired form/tests. Commit `refactor(intake): share one artist capture form`.
+- [x] Add failing tests for `initialFile` under `StrictMode`: the same incoming File attaches once, a non-image is ignored, and rerenders do not reset edited fields. A different incoming image attaches once through the same path as the picker.
+- [x] Add route tests proving `/gallery?shared=1` mounts the canonical form and passes the consumed image. Keep the existing `consumeRef` one-time promise in Gallery; do not rewrite service-worker cache consumption.
+- [x] In `AddArtistModal`, consume `initialFile` idempotently using a ref-held set of consumed File identities and the existing staged-file functions. Do not attach it during render or mutate files in the prop.
+- [x] Replace Gallery's runtime `QuickAddArtist` with `AddArtistModal`, supplying the existing `artists`, `setArtists`, authenticated `userId`, `initialFile`, `onClose` and `onManage` boundary. Leave the heavy Manage `AddArtistForm` and its `addArtist()` caller intact.
+- [x] Gallery currently has no auth hook. Read `userId` from `useAuth()?.user?.id`; do not infer it from an email or hard-code a fallback owner. Supply the existing fictional auth context in tests that save images. Remove the retired filename from the token-contract file inventory after migrating its coverage.
+- [x] On close/success, remove only the consumed `shared` query parameter with router replacement, preserving other Gallery parameters. Reload must not reopen an already consumed capture. Keep paths basename-relative.
+- [x] Preserve the Wall's existing suggestion-prefill `initial` behaviour. Do not send the user to a new page solely to add an artist.
+- [x] Run the form, route, share-target and service-worker contract tests. Confirm migrated crop, no-key, initial-file and paste/drop proofs exist before removing the retired form/tests. Commit `refactor(intake): share one artist capture form`.
 
 ## Task 5: Protect Pending Capture And Confirm The Correct Save
 
 **Files:** Modify `src/components/AddArtistModal.jsx`, `src/pages/Wall.jsx`, `src/pages/Gallery.jsx`, `src/hooks/useDialogFocus.js`; extend `src/test/AddArtistModal.test.jsx`, `src/test/artistSaveRace.test.jsx` and route tests. Add `src/test/useDialogFocus.test.jsx` for the shared focus utility if its existing behaviour needs the disclosure fix described below.
 
-- [ ] Add failing tests for dirty Cancel, Escape, backdrop and Manage-link dismissal. Rejecting the discard prompt keeps entered fields and every staged file; confirming discards them. A clean form closes directly. Use the existing dialog/focus conventions and `useDialogFocus` if required; test nested Escape handling.
-- [ ] The current focus trap queries inputs even inside a closed native disclosure. Pin Tab order through the handle, Details summary and Save without visiting hidden metadata. Include `summary` in its focusable selector and filter controls hidden by a closed disclosure or inert/hidden ancestors; keep summary itself reachable. Test reopened details, focus restoration and existing viewer/undo-toast behaviour before changing this shared hook. Browser Tab tests must exercise actual focus, not just DOM presence.
-- [ ] Funnel in-app dismissals through one guard. During an active save, disable dismissal and repeat submit. A successful save bypasses the dirty-discard prompt; upload errors keep the form open, restore controls and show a retryable error. No unload/storage recovery promise.
-- [ ] Test case-insensitive existing handles with photos: append canonical uploads while preserving every existing metadata field. For duplicate links with no photos, show `Already in your collection`; disable the append action rather than emitting a misleading save receipt.
-- [ ] Keep upload destination and final library write tied to the same artist identity and owner. Capture the current owner scope before asynchronous upload and assert it before updating; if the target artist was removed/replaced during upload, do not resurrect it. Extend the existing identity/owner race tests rather than starting a storage refactor.
-- [ ] Emit `onSaved({ kind: 'created', artistId, imageCount })` or `onSaved({ kind: 'images-added', artistId, imageCount })` only after successful local library mutation. The Wall/Gallery hosts render `Artist saved` or `2 photos added to @handle` in `role="status"`, without claiming cloud sync or opening Instagram automatically.
-- [ ] Test rejected upload, repeated Save, owner transition, existing-artist replacement and a late analysis result. Assert no extra artist or metadata overwrite and no success receipt for failure.
-- [ ] Run affected intake, owner/identity and Gallery/Wall tests; commit `fix(intake): protect captures and repeat saves`.
+- [x] Add failing tests for dirty Cancel, Escape, backdrop and Manage-link dismissal. Rejecting the discard prompt keeps entered fields and every staged file; confirming discards them. A clean form closes directly. Use the existing dialog/focus conventions and `useDialogFocus` if required; test nested Escape handling.
+- [x] The current focus trap queries inputs even inside a closed native disclosure. Pin Tab order through the handle, Details summary and Save without visiting hidden metadata. Include `summary` in its focusable selector and filter controls hidden by a closed disclosure or inert/hidden ancestors; keep summary itself reachable. Test reopened details, focus restoration and existing viewer/undo-toast behaviour before changing this shared hook. Browser Tab tests must exercise actual focus, not just DOM presence.
+- [x] Funnel in-app dismissals through one guard. During an active save, disable dismissal and repeat submit. A successful save bypasses the dirty-discard prompt; upload errors keep the form open, restore controls and show a retryable error. No unload/storage recovery promise.
+- [x] Test case-insensitive existing handles with photos: append canonical uploads while preserving every existing metadata field. For duplicate links with no photos, show `Already in your collection`; disable the append action rather than emitting a misleading save receipt.
+- [x] Keep upload destination and final library write tied to the same artist identity and owner. Capture the current owner scope before asynchronous upload and assert it before updating; if the target artist was removed/replaced during upload, do not resurrect it. Extend the existing identity/owner race tests rather than starting a storage refactor.
+- [x] Emit `onSaved({ kind: 'created', artistId, imageCount })` or `onSaved({ kind: 'images-added', artistId, imageCount })` only after successful local library mutation. The Wall/Gallery hosts render `Artist saved` or `2 photos added to @handle` in `role="status"`, without claiming cloud sync or opening Instagram automatically.
+- [x] Test rejected upload, repeated Save, owner transition, existing-artist replacement and a late analysis result. Assert no extra artist or metadata overwrite and no success receipt for failure.
+- [x] Run affected intake, owner/identity and Gallery/Wall tests; commit `fix(intake): protect captures and repeat saves`.
 
 ## Task 6: Prove The App Flow And Update The Guide
 
 **Files:** Create `e2e/intake.e2e.js`; extend `e2e/routes.subpath.e2e.js`; update `docs/02-managing-artists.md`, `docs/07-backup-and-settings.md` (Shortcut setup wording only), matching `src/pages/Help.jsx` sections, `README.md` test counts, `docs/MAINTAINING.md` and `scripts/captureGuide.mjs`; add `public/guide/artist-capture.png` and reference it in the guide and Help. Extend `src/test/refinementDocs.test.js` for that screenshot.
 
-- [ ] Write public-demo E2E for profile link -> saved artist; screenshot -> manual handle -> saved photo; duplicate -> appended photo; rejected post link; denied clipboard -> photo-picker fallback; cancelled discard -> capture retained. Intercept any configured provider origins; never use real imagery or credentials.
-- [ ] Use fresh mobile contexts at 320, 375 and 430 CSS pixels. Check there is no horizontal overflow, the optional section is collapsed and Save is reachable after focusing the handle. Check Escape/focus return on desktop. Use relative navigation for a matching `/sable/` test.
-- [ ] Read canonical saved image refs back after reload using the existing storage fixtures; merely displaying an in-memory preview is not proof of a saved photo.
-- [ ] Update numbered docs and Help together: profile/screenshot inputs, optional metadata, explicit Auto-fill, duplicate append, local-save confirmation, dirty-close limits and the real Shortcut/manual fallback. Show Install Shortcut only when a genuine iCloud link is configured.
-- [ ] Extend `captureGuide.mjs` to capture the compact form as `artist-capture.png` with a fictional demo image in a 430 by 920 mobile context. Reference it in the matching Help section and guide; update the guide image contract. Recapture Wall/Gallery/Settings/Help images only where their visible UI changed.
-- [ ] Update README's exact test/file counts from the completed run, not guessed counts. Update capture instructions and entrypoint references after retiring QuickAddArtist.
-- [ ] Run focused intake E2E, root/subpath build, lint, `npm run docs:check`, screenshot-reference/dimension checks, then `npm test -- --dir src` once. Existing large-chunk warnings are not a new intake regression. Isolate any failed spec before rerunning the whole suite.
-- [ ] Commit `docs(intake): document the quick capture flow` with the guide images and browser proofs.
+- [x] Write public-demo E2E for profile link -> saved artist; screenshot -> manual handle -> saved photo; duplicate -> appended photo; rejected post link; denied clipboard -> photo-picker fallback; cancelled discard -> capture retained. Intercept any configured provider origins; never use real imagery or credentials.
+- [x] Use fresh mobile contexts at 320, 375 and 430 CSS pixels. Check there is no horizontal overflow, the optional section is collapsed and Save is reachable after focusing the handle. Check Escape/focus return on desktop. Use relative navigation for a matching `/sable/` test.
+- [x] Read canonical saved image refs back after reload using the existing storage fixtures; merely displaying an in-memory preview is not proof of a saved photo.
+- [x] Update numbered docs and Help together: profile/screenshot inputs, optional metadata, explicit Auto-fill, duplicate append, local-save confirmation, dirty-close limits and the real Shortcut/manual fallback. Show Install Shortcut only when a genuine iCloud link is configured.
+- [x] Extend `captureGuide.mjs` to capture the compact form as `artist-capture.png` with a fictional demo image in a 430 by 920 mobile context. Reference it in the matching Help section and guide; update the guide image contract. Recapture Wall/Gallery/Settings/Help images only where their visible UI changed.
+- [x] Update README's exact test/file counts from the completed run, not guessed counts. Update capture instructions and entrypoint references after retiring QuickAddArtist.
+- [x] Run focused intake E2E, root/subpath build, lint, `npm run docs:check`, screenshot-reference/dimension checks, then `npm test -- --dir src` once. Existing large-chunk warnings are not a new intake regression. Isolate any failed spec before rerunning the whole suite.
+- [x] Commit `docs(intake): document the quick capture flow` with the guide images and browser proofs.
 
 ## Task 7: Real iPhone Acceptance And Release Gate
 
@@ -216,4 +226,30 @@ it('does not retry after permission denial', async () => {
 - Every task has named file owners and a verification step. Parser -> form -> shared entry points -> save protections -> browser/docs integration is dependency ordered.
 - The real-iPhone/Shortcut publication gate is explicit, not assumed. Manual fallback is a supported outcome, not an invisible workaround.
 - Existing image and analysis ownership boundaries are reused; no destructive data migration is planned.
-- **Execution status:** awaiting the user's plan review and execution-method selection.
+- **Execution status:** approved for native execution; repository implementation verified. Real-iPhone acceptance and iCloud Shortcut publication remain pending.
+
+## Repository Evidence (6 October 2026)
+
+- Native implementation on `codex/instagram-capture-polish`, based on `252012d`.
+- Parser and Shortcut copy: 42 focused tests passed after observing nine failures.
+- Capture, routes, share contracts and focus integration: 117 focused tests passed.
+- The first complete source run found one missing focus affordance (1991 passed,
+  one failed). The fix and the final review's delayed-share-image race were pinned
+  with focused tests. Final source suite: **1994 passed across 191 files**.
+- Root/subpath browser tests cover manual profile capture, stored photo readback after
+  reload, duplicate append, invalid post links, clipboard denial, cancelled discard,
+  desktop Tab/Escape and the consumed share query. Mobile widths: 320, 375 and 430.
+  A 420px available-height check found Nav above Save; capture now paints above it.
+- Final browser proof: **12 passed**, including root and `/sable/` builds and
+  the dedicated installed-app offline route check. Lint passed; docs check parsed
+  23 Mermaid diagrams across four files; guide-reference/dimension tests passed.
+- One bounded read-only review found the delayed shared-photo race. Save now waits
+  for share hydration, and a changed staged-file list during upload retains the
+  capture instead of closing. Two regression tests failed before this fix.
+- Screenshot capture was limited to `artist-capture.png`, iPhone Settings and Help
+  overview, using fictional demo imagery and no provider key.
+- Strict stored-photo upload is opt-in for capture only. Read/decode/storage failures
+  retain the form for retry; no image/document schema or sync migration was added.
+- Phone-only Tasks 1 and 7 have no physical-device evidence. No tap-count improvement,
+  shared Safari/PWA session, signed Shortcut, deployment or paid activation is claimed.
+- Unrelated `CLAUDE.md` edits were preserved. This branch has not been pushed or merged.
