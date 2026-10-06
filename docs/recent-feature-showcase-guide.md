@@ -1,15 +1,17 @@
 # Recent Feature Showcase Guide
 
-Use this checklist to try out the features added recently.
+This walkthrough describes the current code, not a particular branch. Use fictional
+demo data for screenshots. Live refinement testing and paid activation remain parked;
+do not enable a relay or send paid requests as part of this walkthrough.
 
 - Start the app:
   - Run `npm run dev`.
   - Open the local URL shown by Vite.
-  - The latest AI Results work is on `master` — no separate branch needed.
+  - Home is the artwork Wall; open the drawer for **Pipeline**.
 
 - Try AI Concepts prompt packs:
   - Go to **AI**.
-  - In **Prompt Pack**, type a tattoo idea or choose a Brief idea.
+  - Open **+ New concept**, then **+ Prompt packs**; type an idea or choose a Brief idea.
   - Click **Generate Prompt Pack**.
   - Switch between **ChatGPT**, **Adobe Firefly**, **Gemini**, and **Claude** prompts.
   - Save the prompt pack.
@@ -39,7 +41,7 @@ Use this checklist to try out the features added recently.
   - Review the match rationale explaining why each artist fits.
 
 - Try Dashboard match rationales:
-  - Go to **Home**.
+  - Go to **⋯ → Pipeline**.
   - Look at idea-to-artist matches.
   - Check the rationale text shown alongside suggested matches.
 
@@ -56,8 +58,17 @@ Use this checklist to try out the features added recently.
   - Optionally open `docs/06-concepts.md` for the longer written guide.
 
 - Try backup/export:
-  - Go to **More -> Manage**.
-  - Use export/backup to confirm saved concepts, variants, artists, and brief data are included in your local app data.
+  - Go to **Settings → Export Backup**.
+  - Canonical image bytes are embedded; external/static links remain references.
+  - Test restoring into a fresh test context, not your real library. Real login alone
+    does not move a device-local library to another device.
+
+- Try manual refinement without paid activation:
+  - Open **Refine this** on an image result; text-only results cannot be refined.
+  - Review the prepared source, **Change**, **Keep** and palette.
+  - Use **Copy refinement prompt** and **Export source image**, then import a result.
+  - Browser API keys do not activate the private refinement relay. Keep live paid
+    requests parked until separately approved.
 
 - End with one full example concept:
   - Save a prompt pack.

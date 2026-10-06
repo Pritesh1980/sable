@@ -58,12 +58,19 @@ The same guidance is built into the app under **⋯ → Help**:
 
 ![The in-app Help page](../public/guide/help-overview.png)
 
-> **On a fresh install** your artists, studios and conventions are already loaded.
-> Ideas, boards and AI concepts start empty — those are the things you create.
+> **Fresh libraries depend on the build.** The public demo loads six fictional artists
+> and three sample ideas. Real-auth private libraries start empty; legacy local owner
+> builds can seed the curated artist list.
+> Studios and conventions are shipped reference data; boards and concepts start empty.
 
 ---
 
 ## The workflows
+
+This index, the numbered guides, architecture/workflow maps and in-app Help describe
+the current code. Dated files under `plans/` and `superpowers/` are historical design
+records, not activation instructions. The shared guide screenshots were refreshed
+on 6 October 2026 using fictional data.
 
 1. **[Getting started](01-getting-started.md)** — the Wall, the full-screen viewer, moving around.
 2. **[Managing artists](02-managing-artists.md)** — add artists, photos, tags, status, notes.

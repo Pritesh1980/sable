@@ -7,9 +7,9 @@
 
 **Every tattoo artist you love, in one place.**
 
-Sable gathers the artists you've collected — off Instagram, out of the camera roll — into a gallery built for browsing, then learns your taste by *looking* at their work instead of making you label it. It installs to your phone, works offline, and your reference images never leave the device.
+Sable gathers the artists you've collected — off Instagram, out of the camera roll — into a gallery built for browsing, then learns your taste by *looking* at their work instead of making you label it. It installs to your phone and works offline. Visual matching runs on-device; cloud-storage builds and explicit AI requests can send selected images off-device.
 
-![The Wall — Sable's home screen with the Top-5 dock and artist masonry](docs/images/wall.png)
+![The Wall — Sable's home screen with the Top-5 dock and artist masonry](public/guide/wall.png)
 
 - **One place, organised by artist.** Not two hundred saved posts — each artist's work, handle, styles and your own notes together on one card.
 - **Built for looking.** Four ways through the collection (filmstrip, compare, grid, style wall) plus the Wall home. Their work at full size, on black.
@@ -23,7 +23,8 @@ Not built yet — the direction the on-device taste model is aimed at:
 
 - **Artists you haven't found yet.** Sable already models your taste from the collection you've ranked; the missing piece is a candidate pool to score against it.
 - **Matches explained in your own reference points** — "sits between the artists you ranked #2 and #7" rather than a bare similarity score.
-- **A style-space map**, where the collection clusters by real visual kinship instead of six hand-picked tags.
+- **Broader discovery beyond the saved library.** The existing **Map** clusters indexed
+  artists by visual similarity; discovering new candidates remains future work.
 
 The full reasoning is in [docs/ai-vision.md](docs/ai-vision.md).
 
@@ -46,7 +47,7 @@ The sign-in screen also links straight to it (**No account? View the demo →**)
 
 | Artists gallery | Brief (ideas) |
 | --- | --- |
-| ![Ranked artist gallery in filmstrip view](docs/images/gallery.png) | ![Tattoo ideas with style tags, placements and linked artists](docs/images/brief.png) |
+| ![Ranked artist gallery in filmstrip view](public/guide/gallery-filmstrip.png) | ![Tattoo ideas with style tags, placements and linked artists](public/guide/brief-list.png) |
 
 ## What It Includes
 
@@ -57,7 +58,8 @@ The sign-in screen also links straight to it (**No account? View the demo →**)
 - **Convention Radar**: curated UK convention shortlist with distances from Milton Keynes and artist attendance override support. Each show also takes its published **artist index** (Big London 2026 ships with the app; a bookmarklet grabber handles other shows' lazy-loading lists) and its **competition winners** — pasted in, grouped by award category, cross-referenced against the gallery, with photos of the winning tattoos attached per winner.
 - **Studios**: artist grouping by studio and reachability.
 - **AI Concepts**: multi-provider prompt packs (ChatGPT, Adobe Firefly, Gemini, Claude) built from free text or a Brief idea, paste-back of AI results as rated variants with a "Best" pick, optional in-app image generation via an OpenAI (DALL·E 3) or Gemini key with artist-style steering, relief STL export from image results, and style-based artist matching on each concept.
-- **Manage**: artist CRUD, tags, statuses, studios, notes, image import, and backup/import.
+- **Manage**: artist CRUD, tags, statuses, studios, notes and image import. Backup/import
+  lives in **Settings**.
 
 ## Tech Stack
 

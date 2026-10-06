@@ -648,7 +648,7 @@ flowchart TB
   CURATED["Bundled studios and curated picks<br/>priority / wildcard reasons"]
   PICKS["Top picks<br/>Must see · Wildcards · Worth a look<br/>unmatched curated picks reported"]
   KEEP["Explicit Add artist / attendance toggle"]
-  SYNC["Gallery and attendance setters<br/>normal backend sync"]
+  SYNC["Gallery and attendance setters<br/>selected storage adapter"]
 
   SHOW --> GRAB --> HASH --> PARSE
   PASTE --> PARSE --> STORE
@@ -679,7 +679,7 @@ flowchart TB
   BYTES -- "photo id only" --> BOARD
   MATCH --> VIEW["ConventionWinners view<br/>award groups and match rationale"]
   VIEW -- "explicit Add" --> KEEP["Gallery artist with award note<br/>and convention attendance"]
-  KEEP --> SYNC["Normal account sync"]
+  KEEP --> SYNC["Selected library storage"]
 ```
 
 Winners are imported from pasted text, not automatically fetched by Gemini. Match

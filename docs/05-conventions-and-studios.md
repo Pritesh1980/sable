@@ -111,8 +111,9 @@ A later import **merges** rather than replaces, so re-pasting an updated line-up
 everything you'd already worked through — and an imported entry wins over a shipped one, so a
 moved booth gets corrected rather than duplicated. **Clear list** empties the index, including
 a shipped line-up, and it stays cleared until you import again. Anything you import is stored
-on this device only (it's re-importable in seconds); the artists you add from it sync as
-normal.
+on this device only (it's re-importable in seconds). Artists and attendance you save
+follow the selected library storage: device-local by default, synced only in
+cloud-storage builds.
 
 ### Competition winners
 
@@ -187,7 +188,8 @@ attached, which are the one part a re-import can't bring back. **Clear results**
 board.
 
 Winners are stored **on this device only** and are cleared when you sign out, because the
-photos are yours. The artists you add from the board sync as normal.
+photos are yours. Artists you add from the board follow the selected library storage;
+only cloud-storage builds sync them across devices.
 
 ---
 
@@ -197,6 +199,10 @@ photos are yours. The artists you add from the board sync as normal.
 by distance**, so you can see which are realistically reachable and who you could see where.
 
 ![The Studios page](../public/guide/studios.png)
+
+The fictional demo has no studio assignments, so this screenshot shows the empty
+state. Assign a studio in an artist's detail view to populate it; Sable only shows
+studios linked to your saved artists, not every shipped studio.
 
 - Only studios that have at least one of *your* artists appear.
 - Each card lists those artists as chips — **tap a chip to open their Instagram**.

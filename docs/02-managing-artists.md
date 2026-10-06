@@ -78,6 +78,9 @@ You don't need a form to grow a portfolio:
   whichever artist is on screen.
 
 Either way the new photo is stamped as recent and wears a red dot for two weeks.
+Images stay in the selected storage: device-local builds keep them in this browser;
+only cloud-storage builds sync them to your other devices. Real login alone does not
+enable cloud sync.
 
 ## The manage table
 

@@ -1,5 +1,9 @@
 # Sable — Improvement Plan (July 2026)
 
+> Historical planning snapshot. Counts, screenshots and proposed work below describe
+> July 2026, not the current build. See [the maintained guide](README.md) and `BACKLOG.md`
+> for current behaviour and outstanding work.
+
 Focus: **ease of use** (Pritesh's daily tattoo-planning workflow on iPhone) and
 **portfolio impact** (a public repo + live demo a reviewer can be impressed by
 in under two minutes). Code-quality and test-infrastructure work is explicitly

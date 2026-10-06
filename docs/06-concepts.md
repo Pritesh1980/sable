@@ -38,10 +38,11 @@ tab and back never loses it. It clears when the concept saves.
 ### AI setup — keys and providers
 
 Open **AI setup** in the composer to add an **OpenAI key** (DALL·E 3) or a **Gemini key**,
-each stored only on your device. Both are **paid APIs that need billing enabled**
-(≈$0.04/image); a Google AI Pro subscription does **not** cover Gemini *API* usage — to
+each stored only on your device. Both need **provider API billing**, with prices depending
+on the model and provider. A Google AI Pro subscription does **not** cover Gemini *API* usage — to
 stay free, use **Copy prompt** and paste the result back instead. With both keys set, a
-provider toggle appears.
+provider toggle appears. These browser keys are separate from private relay activation;
+adding a key does not enable paid refinement.
 
 ### Prompt packs
 
@@ -79,6 +80,9 @@ On a phone, swipe left / right between concepts, swipe down to close, and tap th
 ## Refine an image
 
 ![The refinement drawer with a fictional prepared source](../public/guide/concept-refinement.png)
+
+The refinement screenshots use synthetic source images and an intercepted test relay.
+They illustrate implemented controls, not a live paid deployment or a real provider result.
 
 Choose **Refine this** on the original image or an image-bearing AI result. Text-only
 results have no refinement action. The drawer shows the prepared source without cropping;
@@ -135,8 +139,8 @@ the curve of the body and the photo's lighting. Tap **Save as variant** to keep 
 concept next to your other results, or **Change photo…** to try another angle.
 
 This needs a Gemini key (set it in AI setup on this page). Your photo and the design are sent
-to Google's Gemini image model — about $0.04 per image — and nothing is kept unless you save
-the result.
+to Google's Gemini image model, subject to its API billing and data controls. Sable adds
+the preview to your library only when you save it; this is not a promise about provider retention.
 
 ## Export a relief STL
 
