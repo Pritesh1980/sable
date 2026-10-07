@@ -127,11 +127,62 @@ describe('legacy overlay (D2)', () => {
     await dbPut('a', ['data:image/png;base64,LEGACY'])
     await policy.onMount()
 
-    const shown = codec.toDisplay([{ id: 'a', images: [] }])
+    const shown = await codec.toDisplay([{ id: 'a', images: [] }])
     expect(shown[0].images).toEqual(['data:image/png;base64,LEGACY'])
-    expect(codec.toDisplay(shown)[0].images).toEqual(['data:image/png;base64,LEGACY']) // not doubled
+    expect((await codec.toDisplay(shown))[0].images).toEqual(['data:image/png;base64,LEGACY']) // not doubled
 
     const [edited] = policy.onEdit([shown[0]], [{ ...shown[0], images: [] }], '2026-01-01T00:00:00Z')
-    expect(codec.toDisplay([edited])[0].images).toEqual([]) // stays deleted
+    expect((await codec.toDisplay([edited]))[0].images).toEqual([]) // stays deleted
+  })
+
+  // On a cold reload nothing is registered yet, so a cached data url that is
+  // really one of the artist's own keyed photos (the local backend resolves a
+  // key to exactly those bytes) looks "legacy" until the key is resolved.
+  it('does not show a keyed photo a second time from the cache after a cold reload', async () => {
+    const key = 'user/u1/artists/a/own.jpg'
+    const bytes = 'data:image/jpeg;base64,T1dOLVBIT1RP'
+    await backend.blobs.upload('u1', key, bytes, 'image/jpeg')
+    await dbPut('a', [bytes])
+    clearBlobUrls()
+    const { policy, codec } = createArtistsPolicy()
+    await policy.onMount()
+
+    const shown = await codec.toDisplay([{ id: 'a', images: [{ key }] }])
+    expect(shown[0].images).toEqual([{ key }])
+  })
+
+  it('still shows a true legacy photo first, once, beside the artist\'s own keyed photo', async () => {
+    const key = 'user/u1/artists/a/own.jpg'
+    await backend.blobs.upload('u1', key, 'data:image/jpeg;base64,T1dO', 'image/jpeg')
+    await dbPut('a', ['data:image/png;base64,TRUELEGACY'])
+    clearBlobUrls()
+    const { policy, codec } = createArtistsPolicy()
+    await policy.onMount()
+
+    const shown = await codec.toDisplay([{ id: 'a', images: [{ key }] }])
+    expect(shown[0].images).toEqual(['data:image/png;base64,TRUELEGACY', { key }])
+    expect((await codec.toDisplay(shown))[0].images).toEqual(['data:image/png;base64,TRUELEGACY', { key }])
+  })
+
+  it('resolves nothing for an artist whose cache holds no unrecognised data url', async () => {
+    await dbPut('a', [{ key: 'user/u1/artists/a/own.jpg' }, 'images/artists/a/1.jpg'])
+    const { policy, codec } = createArtistsPolicy()
+    await policy.onMount()
+    const getUrl = vi.spyOn(backend.blobs, 'getUrl')
+
+    await codec.toDisplay([{ id: 'a', images: [{ key: 'user/u1/artists/a/own.jpg' }] }, { id: 'b', images: [{ key: 'user/u1/artists/b/x.jpg' }] }])
+    expect(getUrl).not.toHaveBeenCalled()
+  })
+
+  it('resolves nothing when every cached data url is already recognised', async () => {
+    registerBlobUrl('user/u1/artists/a/old.jpg', 'data:image/png;base64,KNOWN')
+    await dbPut('a', ['data:image/png;base64,KNOWN'])
+    const { policy, codec } = createArtistsPolicy()
+    await policy.onMount()
+    const getUrl = vi.spyOn(backend.blobs, 'getUrl')
+
+    const shown = await codec.toDisplay([{ id: 'a', images: [{ key: 'user/u1/artists/a/own.jpg' }] }])
+    expect(getUrl).not.toHaveBeenCalled()
+    expect(shown[0].images).toEqual([{ key: 'user/u1/artists/a/own.jpg' }])
   })
 })

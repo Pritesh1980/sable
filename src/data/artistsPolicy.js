@@ -12,9 +12,9 @@
 // #102). The codec is the identity apart from the D2 legacy overlay.
 
 import { DEFAULT_ARTISTS } from './artists'
-import { refIdentity } from './imageRef'
+import { refIdentity, refKey } from './imageRef'
 import { reconcileRecords, nowStamp } from '../backend/sync'
-import { keyForUrl } from './blobUrls'
+import { keyForUrl, resolveBlobKey } from './blobUrls'
 import {
   dbPut,
   dbGetAll,
@@ -180,7 +180,10 @@ export function createArtistsPolicy() {
   const codec = {
     toCanonical: (v) => v.map(canonicalizeArtist),
     // D2: the only display-only addition until #118 retires the legacy cache.
-    toDisplay: (v) => v.map((a) => withLegacyLocalPhotos(a, imageMap[a.id])),
+    toDisplay: (v) => Promise.all(v.map(async (a) => {
+      await registerOwnPhotos(a, imageMap[a.id])
+      return withLegacyLocalPhotos(a, imageMap[a.id])
+    })),
     // Artist photos upload at add time (src/data/imageStaging.js); nothing is
     // left to move at flush.
     ensureUploaded: async () => 0,
@@ -318,6 +321,22 @@ export function createArtistsPolicy() {
   }
 
   return { policy, codec }
+}
+
+// Whether a cached data url is "legacy" is read off the key<->url map, which is
+// empty after a reload. On the local backend a keyed photo resolves to exactly
+// the data url the cache may hold for it (every pre-#115 edit and every
+// migrated upload left one there), so the artist's own keys are resolved —
+// which registers them — before the overlay decides. buildArtists did the same
+// by resolving every ref first. Only an artist whose cache holds a data url
+// nothing recognises pays for it; resolveBlobKey never rejects, so offline the
+// overlay simply behaves as before.
+async function registerOwnPhotos(a, idbImages) {
+  const unknown = Array.isArray(idbImages) &&
+    idbImages.some((s) => typeof s === 'string' && s.startsWith('data:') && !keyForUrl(s))
+  if (!unknown) return
+  const keys = (a.images || []).map(refKey).filter(Boolean)
+  await Promise.all(keys.map((key) => resolveBlobKey(key)))
 }
 
 function cacheImages(a) {
