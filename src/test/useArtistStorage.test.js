@@ -1,60 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { createElement } from 'react'
-import { applyDefaults, mergeStaticImages, stripImages, useArtistStorage } from '../hooks/useArtistStorage'
+import { useArtistStorage } from '../hooks/useArtistStorage'
+import { applyDefaults } from '../data/artistsPolicy'
 import { AuthProvider } from '../context/AuthContext'
 import { useAuth } from '../context/useAuth'
 import { DEFAULT_ARTISTS } from '../data/artists'
+import { resolveImage } from '../data/imageResolver'
 
 // ── Pure function tests ───────────────────────────────────────────────────────
-
-// Review finding (codex): seed paths went base-relative while legacy IndexedDB
-// caches still hold the root-absolute form. Comparing the raw strings treats
-// them as different images, so every curated image appears twice — and the
-// duplicate is then persisted.
-describe('mergeStaticImages', () => {
-  it('treats a legacy root-absolute path and its base-relative twin as one image', () => {
-    const merged = mergeStaticImages(
-      ['/images/artists/zoia.ink/1.jpg'],
-      ['images/artists/zoia.ink/1.jpg']
-    )
-    expect(merged).toEqual(['/images/artists/zoia.ink/1.jpg'])
-  })
-
-  it('still appends static images the cache does not have', () => {
-    const merged = mergeStaticImages(
-      ['/images/artists/zoia.ink/1.jpg'],
-      ['images/artists/zoia.ink/1.jpg', 'images/artists/zoia.ink/2.jpg']
-    )
-    expect(merged).toEqual([
-      '/images/artists/zoia.ink/1.jpg',
-      'images/artists/zoia.ink/2.jpg',
-    ])
-  })
-
-  it('leaves uploaded data-URLs in place', () => {
-    const merged = mergeStaticImages(['data:image/png;base64,AAA'], ['images/artists/a/1.jpg'])
-    expect(merged).toEqual(['data:image/png;base64,AAA', 'images/artists/a/1.jpg'])
-  })
-})
-
-describe('stripImages', () => {
-  it('removes images from every artist', () => {
-    const input = [
-      { id: 'a', handle: 'a', images: ['data:image/jpeg;base64,abc'], rank: 1 },
-      { id: 'b', handle: 'b', images: [], rank: 2 },
-    ]
-    const result = stripImages(input)
-    expect(result[0]).not.toHaveProperty('images')
-    expect(result[1]).not.toHaveProperty('images')
-  })
-
-  it('preserves all other fields', () => {
-    const input = [{ id: 'a', handle: 'foo', name: 'Foo', tags: ['blackwork'], images: [], rank: 1, studio: 'x' }]
-    const [out] = stripImages(input)
-    expect(out).toMatchObject({ id: 'a', handle: 'foo', name: 'Foo', tags: ['blackwork'], rank: 1, studio: 'x' })
-  })
-})
 
 describe('applyDefaults', () => {
   it('adds missing fields from DEFAULT_ARTISTS', () => {
@@ -132,10 +86,10 @@ describe('useArtistStorage', () => {
   const wrapper = ({ children }) =>
     createElement(AuthProvider, null, createElement(Gate, null, children))
 
-  // Resolves once the session is up and the hook has mounted — NOT once images
-  // have hydrated: every artist paints with `images: []` and the photos arrive
-  // from IndexedDB afterwards. Assert on images inside a waitFor; reading them
-  // straight after this was the spec's long-standing flake under load.
+  // Resolves once the session is up and the hook has mounted — NOT once the
+  // legacy IndexedDB photos (the D2 overlay) or a migration have landed: those
+  // arrive afterwards. Assert on them inside a waitFor; reading images straight
+  // after this was the spec's long-standing flake under load.
   async function renderOwned() {
     const { result } = renderHook(() => useArtistStorage(), { wrapper })
     await waitFor(() => expect(result.current).toBeTruthy())
@@ -226,12 +180,16 @@ describe('useArtistStorage', () => {
       expect(localStorage.getItem('tattoo_artists')).toBeNull()
     })
 
-    // Migrated data-URL should appear first, followed by any static defaults
+    // The migrated photo comes first — as the key it was uploaded under (#116),
+    // which resolves to its bytes — followed by any static defaults.
     await waitFor(() => {
       const hydrated = result.current[0].find((a) => a.id === DEFAULT_ARTISTS[0].id)
-      expect(hydrated.images[0]).toBe('data:image/jpeg;base64,migratedimg')
+      expect(hydrated.images[0]).toEqual({ key: expect.stringMatching(/^user\//) })
     })
     const migrated = result.current[0].find((a) => a.id === DEFAULT_ARTISTS[0].id)
+    expect(await resolveImage(migrated.images[0])).toBe('data:image/jpeg;base64,migratedimg')
+    // Shown once: as its key, not also as the legacy data URL it came from.
+    expect(migrated.images).not.toContain('data:image/jpeg;base64,migratedimg')
     // Static paths from DEFAULT_ARTISTS are merged in after the upload
     const def = DEFAULT_ARTISTS.find((a) => a.id === DEFAULT_ARTISTS[0].id)
     def.images.forEach((p) => expect(migrated.images).toContain(p))
@@ -264,8 +222,10 @@ describe('useArtistStorage', () => {
     const second = await renderOwned()
     await waitFor(() => {
       const migratedAgain = second.current[0].find((a) => a.id === DEFAULT_ARTISTS[0].id)
-      expect(migratedAgain.images[0]).toBe(dataUrl)
+      expect(migratedAgain.images[0]).toEqual({ key: expect.stringMatching(/^user\//) })
     })
+    const key = second.current[0].find((a) => a.id === DEFAULT_ARTISTS[0].id).images[0].key
+    expect(await resolveImage({ key })).toBe(dataUrl)
   })
 
   // #32 (react-hooks/exhaustive-deps flags the missing `user` on this effect's

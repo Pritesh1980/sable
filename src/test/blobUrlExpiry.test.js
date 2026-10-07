@@ -126,8 +126,8 @@ describe('review follow-ups (#29)', () => {
 })
 
 // #82. Resolving a key into a display URL happens once, at hydration — the
-// result is baked into long-lived React state (useArtistStorage's
-// buildArtists, imageCodec.js for ideas/concepts). #29 keeps the *cache*
+// result is baked into long-lived React state (imageCodec.js for
+// ideas/concepts; artists hold refs since #116). #29 keeps the *cache*
 // honest about TTL, but nothing re-derives a value already sitting in state
 // from it, so an hour-plus-idle session can end up rendering an <img> whose
 // src is a genuinely expired signed URL. refreshedBlobUrl is the recovery

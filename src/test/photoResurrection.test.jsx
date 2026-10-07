@@ -1,13 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { AuthProvider } from '../context/AuthContext'
 import { useAuth } from '../context/useAuth'
-import {
-  useArtistStorage,
-  buildArtists,
-  applyImageTombstones,
-  removedImageTombstones,
-} from '../hooks/useArtistStorage'
+import { useArtistStorage } from '../hooks/useArtistStorage'
+import { applyDefaults, applyImageTombstones, removedImageTombstones } from '../data/artistsPolicy'
+import { withLegacyLocalPhotos } from '../data/legacyArtistImages'
 import { backend } from '../backend'
 import { clearBlobUrls, registerBlobUrl } from '../data/blobUrls'
 import { DEFAULT_ARTISTS } from '../data/artists'
@@ -43,51 +40,49 @@ const renderSynced = () =>
 
 // #55 part 1: buildArtists's idbImages branch ignored the reconciled canonical
 // a.images entirely whenever any IndexedDB cache existed, so a stale local
-// cache could keep showing a photo another device had already removed.
-describe('buildArtists (pure)', () => {
+// cache could keep showing a photo another device had already removed. Since
+// #116 the only reader of that cache is the D2 legacy overlay.
+describe('the legacy IndexedDB overlay (pure)', () => {
   beforeEach(() => clearBlobUrls())
 
-  it('a stale IndexedDB cache does not resurrect a photo removed from canonical images', async () => {
+  it('a stale IndexedDB cache does not resurrect a photo removed from canonical images', () => {
     // X was migrated at some point (registered), same as any real image the
     // app has ever displayed — a plain "starts with data:" check can't tell
     // this apart from a genuinely un-migrated upload under the local backend,
     // which resolves every blob (migrated or not) to a data-URL.
     registerBlobUrl('user/u1/k-x', 'data:image/jpeg;base64,X_STALE')
-    const meta = [{ id: 'x', handle: 'x', images: [{ key: 'user/u1/k-y' }] }] // canonical: only Y now
-    const imageMap = { x: ['data:image/jpeg;base64,X_STALE', 'data:image/jpeg;base64,Y_CACHED'] }
-    const built = await buildArtists(meta, imageMap, false)
-    // Y's key won't resolve without a real blob store, so it may come back
-    // empty — the point is X must be gone, not resurrected from the cache.
-    expect(built[0].images).not.toContain('data:image/jpeg;base64,X_STALE')
+    const artist = { id: 'x', handle: 'x', images: [{ key: 'user/u1/k-y' }] } // canonical: only Y now
+    const shown = withLegacyLocalPhotos(artist, ['data:image/jpeg;base64,X_STALE'])
+    expect(shown.images).toEqual([{ key: 'user/u1/k-y' }])
   })
 
-  it('still shows a legacy un-migrated local upload with no canonical ref yet', async () => {
-    const meta = [{ id: 'x', handle: 'x', images: [] }]
-    const imageMap = { x: ['data:image/jpeg;base64,UNMIGRATED'] }
-    const built = await buildArtists(meta, imageMap, false)
-    expect(built[0].images).toContain('data:image/jpeg;base64,UNMIGRATED')
+  it('still shows a legacy un-migrated local upload with no canonical ref yet', () => {
+    const artist = { id: 'x', handle: 'x', images: [] }
+    const shown = withLegacyLocalPhotos(artist, ['data:image/jpeg;base64,UNMIGRATED'])
+    expect(shown.images).toEqual(['data:image/jpeg;base64,UNMIGRATED'])
   })
+})
 
-  // #55 review (codex + agy): a removed DEFAULT_ARTISTS curated static image
-  // was re-added on every buildArtists call regardless of canonical removal
-  // or a tombstone — mergeStaticImages doesn't know about either. Removing a
-  // curated seed image was completely ineffective.
-  it('does not re-add a curated DEFAULT_ARTISTS image that has a tombstone', async () => {
+// #55 review (codex + agy): a removed DEFAULT_ARTISTS curated static image was
+// re-added on every load regardless of canonical removal or a tombstone.
+// Removing a curated seed image was completely ineffective. Since #116 the
+// starter photos join the stored rows through applyDefaults (D1).
+describe('curated starter photos and their tombstones', () => {
+  it('does not re-add a curated DEFAULT_ARTISTS image that has a tombstone', () => {
     const staticPath = DEFAULT_ARTISTS[0].images[0]
-    const meta = [{
-      id: DEFAULT_ARTISTS[0].id,
-      handle: DEFAULT_ARTISTS[0].handle,
+    const stored = [{
+      ...DEFAULT_ARTISTS[0],
       images: [],
       removedImages: [{ ref: staticPath, removedAt: '2026-07-01T00:00:00Z' }],
     }]
-    const built = await buildArtists(meta, {}, true)
-    expect(built[0].images).not.toContain(staticPath)
+    const [out] = applyDefaults(stored)
+    expect(out.images).not.toContain(staticPath)
+    expect(out.images).toEqual(DEFAULT_ARTISTS[0].images.slice(1))
   })
 
-  it('still shows curated DEFAULT_ARTISTS images that were never removed', async () => {
-    const meta = [{ id: DEFAULT_ARTISTS[0].id, handle: DEFAULT_ARTISTS[0].handle, images: [] }]
-    const built = await buildArtists(meta, {}, true)
-    expect(built[0].images).toEqual(expect.arrayContaining(DEFAULT_ARTISTS[0].images))
+  it('still shows curated DEFAULT_ARTISTS images that were never removed', () => {
+    const [out] = applyDefaults([{ ...DEFAULT_ARTISTS[0], images: [] }])
+    expect(out.images).toEqual(DEFAULT_ARTISTS[0].images)
   })
 })
 
@@ -130,8 +125,10 @@ describe('a stale local image cache does not resurrect a remotely-removed photo'
 
     const { result } = renderSynced()
     await waitFor(() => expect(result.current.store[0]).toHaveLength(1))
-    await waitFor(() => expect(result.current.store[0][0].images).toContain('data:image/jpeg;base64,Y'))
+    // Y is shown as its ref (#116); X is not brought back from the stale cache.
+    await waitFor(() => expect(result.current.store[0][0].images).toContainEqual({ key }))
     expect(result.current.store[0][0].images).not.toContain('data:image/jpeg;base64,X_STALE')
+    expect(result.current.store[0][0].images).toHaveLength(1)
   })
 })
 
@@ -234,7 +231,7 @@ describe('end-to-end: a removed photo survives a stale whole-record write from a
       first.result.current.store[1]((prev) =>
         prev.map((a) =>
           a.id === 'c1'
-            ? { ...a, images: a.images.filter((img) => img !== 'data:image/jpeg;base64,X') }
+            ? { ...a, images: a.images.filter((img) => img?.key !== keyX) }
             : a
         )
       )
@@ -264,8 +261,8 @@ describe('end-to-end: a removed photo survives a stale whole-record write from a
     const second = renderSynced()
     await waitFor(() => expect(second.result.current.store[0]).toHaveLength(1))
     await waitFor(() => expect(second.result.current.store[0][0].notes).toBe('from device B'))
-    expect(second.result.current.store[0][0].images).not.toContain('data:image/jpeg;base64,X')
-    expect(second.result.current.store[0][0].images).toContain('data:image/jpeg;base64,Y')
+    expect(second.result.current.store[0][0].images).not.toContainEqual({ key: keyX })
+    expect(second.result.current.store[0][0].images).toContainEqual({ key: keyY })
   })
 })
 
@@ -290,7 +287,7 @@ describe('re-adding a tombstoned photo clears its tombstone (#55)', () => {
 
     const first = renderSynced()
     await waitFor(() => expect(first.result.current.store[0]).toHaveLength(1))
-    await waitFor(() => expect(first.result.current.store[0][0].images).toContain('data:image/jpeg;base64,X'))
+    await waitFor(() => expect(first.result.current.store[0][0].images).toContainEqual({ key }))
 
     // Remove it — a tombstone is recorded.
     act(() => {
@@ -303,17 +300,18 @@ describe('re-adding a tombstoned photo clears its tombstone (#55)', () => {
       expect(meta[0].removedImages).toHaveLength(1)
     })
 
-    // The user changes their mind and adds the exact same photo back.
+    // The user changes their mind and adds the exact same photo back (as undo
+    // does: the ref itself).
     act(() => {
       first.result.current.store[1]((prev) =>
-        prev.map((a) => (a.id === 'c1' ? { ...a, images: ['data:image/jpeg;base64,X'] } : a))
+        prev.map((a) => (a.id === 'c1' ? { ...a, images: [{ key }] } : a))
       )
     })
     await waitFor(() => {
       const meta = JSON.parse(localStorage.getItem('tattoo_artists_meta'))
       expect(meta[0].removedImages).toEqual([])
     })
-    expect(first.result.current.store[0][0].images).toContain('data:image/jpeg;base64,X')
+    expect(first.result.current.store[0][0].images).toContainEqual({ key })
 
     // Reload — reconciliation must not strip the re-added photo back out.
     // The seed row already had { key } from the start, so checking for its
@@ -328,12 +326,17 @@ describe('re-adding a tombstoned photo clears its tombstone (#55)', () => {
     }, { timeout: 3000 })
     first.unmount()
 
-    // The initial-paint state (before the async pull/reconcile effect
-    // resolves) has this artist's images as [] by design — wait for the
-    // real resolved content, not just the record's presence.
+    // The cached row already holds the photo from the first paint (#116), so
+    // wait for the pull's reconciliation to have run before asserting.
+    const list = vi.spyOn(backend.store, 'list')
     const second = renderSynced()
     await waitFor(() => expect(second.result.current.store[0]).toHaveLength(1))
-    await waitFor(() => expect(second.result.current.store[0][0].images.length).toBeGreaterThan(0))
-    expect(second.result.current.store[0][0].images).toContain('data:image/jpeg;base64,X')
+    await waitFor(() => expect(list).toHaveBeenCalled())
+    await act(async () => {
+      await list.mock.results[0].value
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    })
+    expect(second.result.current.store[0][0].images).toContainEqual({ key })
+    list.mockRestore()
   })
 })

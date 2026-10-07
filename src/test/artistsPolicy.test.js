@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { createArtistsPolicy, applyDefaults } from '../data/artistsPolicy'
+import { createArtistsPolicy, applyDefaults, canonicalizeArtist } from '../data/artistsPolicy'
 import { dbGetAll } from '../data/legacyArtistImages'
 import { DEFAULT_ARTISTS } from '../data/artists'
 
@@ -32,13 +32,12 @@ describe('initial (#25 first-paint parity)', () => {
     expect(policy.initial(cache, ctxOther).map((a) => a.id)).toEqual(['mine'])
   })
 
-  it('shows every ref as pending, with no images yet', () => {
+  // #116: the stored refs are the state, so every photo is in place from the
+  // first paint; nothing is held aside as "pending".
+  it('paints the stored refs themselves, in place', () => {
     const [a] = policy.initial([{ id: 'mine', images: ['images/a.jpg', { key: 'user/u/k.jpg' }] }], ctxOther)
-    expect(a.images).toEqual([])
-    expect(a.unresolvedImages).toEqual([
-      { ref: 'images/a.jpg', index: 0, pending: true },
-      { ref: { key: 'user/u/k.jpg' }, index: 1, pending: true },
-    ])
+    expect(a.images).toEqual(['images/a.jpg', { key: 'user/u/k.jpg' }])
+    expect(a).not.toHaveProperty('unresolvedImages')
   })
 })
 
@@ -138,6 +137,17 @@ describe('merge', () => {
       expect(value[0].images).toEqual([{ key: 'user/u/artists/a/1.jpg' }, 'images/x.jpg'])
     })
 
+    it('keeps one copy of an uploaded photo the artist already holds, in the uploaded position', () => {
+      const key = 'user/u/artists/a/1.jpg'
+      const { value } = policy.merge({
+        local: [{ id: 'a', images: ['images/x.jpg', { key }], updatedAt: OLD }],
+        remote: [],
+        prep,
+        ctx: ctxOther,
+      })
+      expect(value[0].images).toEqual([{ key }, 'images/x.jpg'])
+    })
+
     it('asks for a second push that restamps only artists whose canonical images changed', () => {
       const merged = policy.merge({
         local: [
@@ -165,6 +175,19 @@ describe('merge', () => {
       })
       expect(merged.pushDisplay).toBeUndefined()
     })
+  })
+})
+
+describe('canonicalizeArtist (the persisted form)', () => {
+  it('round-trips a row of stored refs unchanged', () => {
+    const row = { id: 'a', notes: 'n', images: [{ key: 'user/u/artists/a/1.jpg', addedAt: OLD }, 'images/x.jpg'] }
+    expect(canonicalizeArtist(row)).toEqual(row)
+    expect(canonicalizeArtist(canonicalizeArtist(row))).toEqual(row)
+  })
+
+  it('strips an un-keyed inline data url, which is never stored', () => {
+    const row = { id: 'a', images: ['data:image/png;base64,AAA', 'images/x.jpg'] }
+    expect(canonicalizeArtist(row).images).toEqual(['images/x.jpg'])
   })
 })
 

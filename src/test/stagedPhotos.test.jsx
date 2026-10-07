@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { createElement } from 'react'
-import { useArtistStorage, displayCacheImages } from '../hooks/useArtistStorage'
+import { useArtistStorage } from '../hooks/useArtistStorage'
+import { displayCacheImages } from '../data/legacyArtistImages'
+import { resolveImage } from '../data/imageResolver'
 import { useStorage } from '../hooks/useStorage'
 import { ideasCodec } from '../data/imageCodec'
 import { AuthProvider } from '../context/AuthContext'
@@ -16,6 +18,8 @@ import { backend } from '../backend'
 // to vanish on reload: stored as { url: dataUrl }, it was dropped from the
 // cache and the remote, and the local-only display path never restored it.
 // Staged first, it has a key and a durable copy before it ever enters state.
+// Since #116 state holds that key; the photo shows by resolving it (the tile's
+// useImageSrc), which serves the staged device copy.
 
 const PHOTO = 'data:image/jpeg;base64,b2ZmbGluZSBwaG90bw=='
 const STAMP = '2026-09-01T10:00:00.000Z'
@@ -113,8 +117,9 @@ describe('a photo added while its upload fails (#115)', () => {
     clearBlobUrls() // nothing about the photo survives in memory
     const second = await mount()
 
-    await waitFor(() => expect(stateRow(second).images).toEqual([{ url: PHOTO, addedAt: expect.any(String) }]))
-    expect(stateRow(second).unresolvedImages).toBeUndefined()
+    expect(stateRow(second).images).toEqual([{ key, addedAt: expect.any(String) }])
+    expect(stateRow(second)).not.toHaveProperty('unresolvedImages')
+    expect(await resolveImage(stateRow(second).images[0])).toBe(PHOTO)
     expect(cachedRow().images).toEqual([{ key, addedAt: expect.any(String) }])
     expectNoBase64InLocalStorage()
   })
@@ -133,7 +138,8 @@ describe('a photo added while its upload fails (#115)', () => {
     // push carries the key while blob storage is still down.
     await waitFor(async () => expect((await remoteRow())?.images).toEqual([{ key, addedAt: expect.any(String) }]), { timeout: 3000 })
     expect(readOutbox().map((e) => e.key)).toEqual([key])
-    expect(stateRow(second).images).toEqual([{ url: PHOTO, addedAt: expect.any(String) }])
+    expect(stateRow(second).images).toEqual([{ key, addedAt: expect.any(String) }])
+    expect(await resolveImage(stateRow(second).images[0])).toBe(PHOTO)
 
     upload.mockRestore()
     getUrl.mockRestore()
@@ -229,9 +235,10 @@ describe('after the upload lands on a signed-URL backend', () => {
 
     // Shown once, from the key's device copy (offline-safe) rather than the
     // signed URL, and never also as a legacy data-URL entry beside it.
-    await waitFor(() => expect(JSON.stringify(stateRow(second).images)).toContain(PHOTO))
-    await new Promise((resolve) => setTimeout(resolve, 50))
+    await new Promise((resolve) => setTimeout(resolve, 50)) // past the D2 overlay's hydration
     expect(stateRow(second).images).toHaveLength(1)
+    expect(stateRow(second).images[0].key).toBe(key)
+    expect(await resolveImage(stateRow(second).images[0])).toBe(PHOTO)
     expect(keyForUrl(PHOTO)).toBe(key)
   })
 })
