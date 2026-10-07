@@ -53,14 +53,6 @@ beforeEach(async () => {
 })
 afterEach(() => vi.restoreAllMocks())
 
-beforeEach(async () => {
-  localStorage.clear()
-  clearBlobUrls()
-  await clearLegacyCache()
-  vi.spyOn(console, 'error').mockImplementation(() => {})
-})
-afterEach(() => vi.restoreAllMocks())
-
 // State is its own normalised form: normalising again changes nothing. (Inline
 // data urls are kept by normalisation, so the legacy-cache overlay satisfies this too;
 // only *persisting* strips them.)

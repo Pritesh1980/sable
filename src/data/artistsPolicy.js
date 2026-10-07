@@ -111,8 +111,10 @@ export function normalizeArtistImages(images = []) {
 
 const sameList = (a, b) => Array.isArray(b) && a.length === b.length && a.every((v, i) => v === b[i])
 
-// The persisted form of an artist. State already is this, apart from the legacy-cache
-// legacy overlay, which persisting strips (inline data urls are never stored).
+// This is the persisted form of an artist: images canonicalised, inline data URLs
+// stripped. Artist state already is this form apart from the legacy-cache overlay
+// (never-migrated IndexedDB photos shown inline), which persisting strips so base64
+// never reaches localStorage or the remote store.
 export function canonicalizeArtist(a) {
   return { ...a, images: canonicalizeImages(a.images) }
 }
