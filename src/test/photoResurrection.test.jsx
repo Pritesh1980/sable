@@ -52,8 +52,8 @@ describe('buildArtists (pure)', () => {
     // app has ever displayed — a plain "starts with data:" check can't tell
     // this apart from a genuinely un-migrated upload under the local backend,
     // which resolves every blob (migrated or not) to a data-URL.
-    registerBlobUrl('k-x', 'data:image/jpeg;base64,X_STALE')
-    const meta = [{ id: 'x', handle: 'x', images: [{ key: 'k-y' }] }] // canonical: only Y now
+    registerBlobUrl('user/u1/k-x', 'data:image/jpeg;base64,X_STALE')
+    const meta = [{ id: 'x', handle: 'x', images: [{ key: 'user/u1/k-y' }] }] // canonical: only Y now
     const imageMap = { x: ['data:image/jpeg;base64,X_STALE', 'data:image/jpeg;base64,Y_CACHED'] }
     const built = await buildArtists(meta, imageMap, false)
     // Y's key won't resolve without a real blob store, so it may come back
@@ -172,24 +172,31 @@ describe('applyImageTombstones (pure, reconcile layer)', () => {
   })
 
   it('unions tombstones from both sides, keeping the later removedAt for the same ref', () => {
+    // k-x is tombstoned on both sides (local later); k-z only on the remote.
     const local = [{
       id: 'c1', images: [],
-      removedImages: [{ ref: { key: 'k-x' }, removedAt: '2026-07-01T00:00:00Z' }],
+      removedImages: [{ ref: { key: 'user/u1/k-x' }, removedAt: '2026-07-15T00:00:00Z' }],
       updatedAt: '2026-07-01T00:00:00Z',
     }]
     const remote = [{
       id: 'c1', images: [],
-      removedImages: [{ ref: { key: 'k-x' }, removedAt: '2026-07-15T00:00:00Z' }],
+      removedImages: [
+        { ref: { key: 'user/u1/k-x' }, removedAt: '2026-07-01T00:00:00Z' },
+        { ref: { key: 'user/u1/k-z' }, removedAt: '2026-07-02T00:00:00Z' },
+      ],
       updatedAt: '2026-08-01T00:00:00Z',
     }]
     const merged = [remote[0]]
 
     const result = applyImageTombstones(merged, local, remote)
-    expect(result[0].removedImages).toEqual([{ ref: { key: 'k-x' }, removedAt: '2026-07-15T00:00:00Z' }])
+    expect(result[0].removedImages).toEqual([
+      { ref: { key: 'user/u1/k-x' }, removedAt: '2026-07-15T00:00:00Z' },
+      { ref: { key: 'user/u1/k-z' }, removedAt: '2026-07-02T00:00:00Z' },
+    ])
   })
 
   it('leaves a record with no tombstones on either side untouched', () => {
-    const record = { id: 'c1', images: [{ key: 'k-y' }], updatedAt: '2026-08-01T00:00:00Z' }
+    const record = { id: 'c1', images: [{ key: 'user/u1/k-y' }], updatedAt: '2026-08-01T00:00:00Z' }
     const result = applyImageTombstones([record], [], [record])
     expect(result[0]).toBe(record)
   })
