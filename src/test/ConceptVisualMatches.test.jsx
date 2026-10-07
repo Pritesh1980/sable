@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import ConceptVisualMatches from '../components/ConceptVisualMatches'
 import { loadVectors, vectorFor } from '../data/styleIndex'
+import { refIdentity } from '../data/imageRef'
 
 vi.mock('../data/styleIndex', () => ({
   loadVectors: vi.fn(async () => new Map()),
@@ -14,9 +15,9 @@ const artists = [
   { id: 'victor', name: 'Victor', handle: 'victorportugal', images: ['/v1.jpg'], tags: [] },
 ]
 const vectors = new Map([
-  ['/z1.jpg', [0, 1]],
-  ['/k1.jpg', [1, 0.05]],
-  ['/v1.jpg', [0.6, 0.6]],
+  [refIdentity('/z1.jpg'), [0, 1]],
+  [refIdentity('/k1.jpg'), [1, 0.05]],
+  [refIdentity('/v1.jpg'), [0.6, 0.6]],
 ])
 const concept = { id: 'c1', prompt: 'night forest', imageUrl: '/concepts/c1.png' }
 

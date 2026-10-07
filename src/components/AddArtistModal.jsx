@@ -5,7 +5,7 @@ import { uploadImages, compressImages } from '../hooks/useImageUpload'
 import { stampAddedAt } from '../data/wall'
 import { analyzeScreenshotWithGemini } from '../data/screenshotIntake'
 import { cropImageToDataUrl, dataUrlToFile } from '../data/screenshotCrop'
-import { cosineSimilarity } from '../data/embeddings'
+import { cosineSimilarity, vectorLookup } from '../data/embeddings'
 import { buildTasteVector } from '../data/taste'
 import { loadVectors } from '../data/styleIndex'
 import { getEmbedder } from '../data/embedder'
@@ -213,7 +213,7 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
     try {
       const vectors = await loadVectors(artists)
       if (vectors.size === 0) return
-      const taste = buildTasteVector(artists, (s) => vectors.get(s) || null)
+      const taste = buildTasteVector(artists, vectorLookup(vectors))
       if (!taste) return
       const embed = await getEmbedder()
       const score = cosineSimilarity(taste, await embed(dataUrl))

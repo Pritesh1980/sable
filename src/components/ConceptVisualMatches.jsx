@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { rankArtistsByVector, cosineSimilarity } from '../data/embeddings'
+import { rankArtistsByVector, cosineSimilarity, vectorLookup } from '../data/embeddings'
 import { buildTasteVector } from '../data/taste'
 import { loadVectors, vectorFor } from '../data/styleIndex'
 
@@ -28,7 +28,7 @@ export default function ConceptVisualMatches({ artists, concept }) {
           setState({ status: 'failed' })
           return
         }
-        const getVec = (s) => vectors.get(s) || null
+        const getVec = vectorLookup(vectors)
         const matches = rankArtistsByVector(artists, vec, getVec)
         const taste = buildTasteVector(artists, getVec)
         const tasteFit = taste ? cosineSimilarity(taste, vec) : null

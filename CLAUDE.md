@@ -70,7 +70,7 @@ This is a personal app for one user (the owner). (A read-only share link for the
   stores the expiring URL in place of its key. Every add path **stages** its image first (#115, `src/data/imageStaging.js`): bytes go to IndexedDB `tattoo-staged-images-v1` and an entry to the `tattoo_upload_outbox` + `tattoo_device_copies` localStorage lists *before* the key reaches state, so an offline or failed upload survives a reload and is retried on launch, on the `online` event and on every flush; `resolveBlobKey` reads the device copy first (kept after upload too, so an offline reload still shows the photo). Both stores are device-local and purged on sign-out. The first pull also reads dirty state / pending deletes
   *after* `await store.list(...)`, not before. Device-local and NOT synced: `tattoo_theme`, `tattoo_font`,
   `openai_api_key`, `gemini_api_key`, the Taste Engine's embedding index
-  (IndexedDB `tattoo-style-index-v1` — derivable from images, keyed by model id,
+  (IndexedDB `tattoo-style-index-v2` — derivable from images, keyed by model id and photo identity,
   rebuilt per device), `tattoo_convention_lineups`, `tattoo_convention_winners`,
   and the winner-photo bytes (IndexedDB `tattoo-winner-photos-v1`). The two
   convention stores differ on sign-out: line-ups stay (a show's published

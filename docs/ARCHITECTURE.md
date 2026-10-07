@@ -483,7 +483,7 @@ the library is only ever reached through a **dynamic** `import()` inside one emb
 module — a guarantee a code comment cannot make.
 
 The index is treated as a cache, not as data: it lives in IndexedDB
-(`tattoo-style-index-v1`), keyed by model id, excluded from sync, and rebuilt per
+(`tattoo-style-index-v2`), keyed by model id and photo identity (`refIdentity`, stable across sessions), excluded from sync, and rebuilt per
 device — because it is fully derivable from images the device already has. Losing it
 costs time, never data.
 
