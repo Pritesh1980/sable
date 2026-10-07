@@ -59,13 +59,20 @@ This is a personal app for one user (the owner). (A read-only share link for the
   (`src/data/imageCodec.js`) wired into `useStorage` — the in-memory value stays a
   displayable URL (so consumers like STL export are unchanged) while only `{ key }`
   is persisted/synced. **A ref that can't be resolved (offline) is kept, not dropped**
-  (#101): artists carry `unresolvedImages: [{ ref, index }]` and `canonicalizeArtist`
-  reinserts them at their old position on save (deduped by `refIdentity`); concepts do
-  the same via `unresolvedImageKey` in `imageCodec.js`. Never write a save path that
-  persists only the resolved list — a device that starts offline would delete its own
-  photos from the server. The UI draws those refs as "Available when online" tiles
-  (#102, `photoSlots` in `src/data/offlineImages.js`, `OfflinePhoto.jsx`); refs listed
-  before first hydration carry `pending: true` and must never be drawn. Never drop a superseded URL's reverse mapping in
+  (#101): concepts do it via `unresolvedImageKey` in `imageCodec.js`; **artists hold the
+  stored refs themselves** (#116): `artist.images` is static paths, `{ key }` and
+  `{ url, addedAt }`, nothing is held aside, so there is no side list to reinsert and
+  `canonicalizeArtist` only strips inline data URLs. `initial()` paints the stored rows
+  directly (the owner's starter photos are unioned in by `applyDefaults`, tombstone-aware,
+  de-duplicated by identity). `codec.toDisplay` does one display-only thing: the D2
+  legacy overlay of never-migrated IndexedDB data URLs (`withLegacyLocalPhotos`,
+  retired by #118). `onEdit` normalises whatever a producer emitted into refs
+  (`normalizeArtistImages`). Never write a save path that persists only a resolved list
+  — a device that starts offline would delete its own photos from the server. The UI
+  renders one `PhotoTile` per ref (`src/components/PhotoTile.jsx`): ready is interactive,
+  `loading` is an empty `aria-busy` box (never the "Available when online" tile),
+  `unavailable` is the `OfflinePhoto` tile; a photo that is not ready cannot be opened or
+  edited. Never drop a superseded URL's reverse mapping in
   `blobUrls.js` (#110): state can still hold it, and canonicalizing an unmapped URL
   stores the expiring URL in place of its key. Every add path **stages** its image first (#115, `src/data/imageStaging.js`): bytes go to IndexedDB `tattoo-staged-images-v1` and an entry to the `tattoo_upload_outbox` + `tattoo_device_copies` localStorage lists *before* the key reaches state, so an offline or failed upload survives a reload and is retried on launch, on the `online` event and on every flush; `resolveBlobKey` reads the device copy first (kept after upload too, so an offline reload still shows the photo). Both stores are device-local and purged on sign-out. The first pull also reads dirty state / pending deletes
   *after* `await store.list(...)`, not before. Device-local and NOT synced: `tattoo_theme`, `tattoo_font`,
@@ -292,8 +299,10 @@ them. Keep messages terse and conventional (e.g. `feat(home): …`, `docs: …`)
   failing spec isolated; if green there and CI is green, it's environment, not
   your change. CI is the arbiter. **But "environment" often means a test race that
   load exposes.** Two were root-caused in Sept 2026: `useArtistStorage` read images
-  straight after mount, but artists paint with `images: []` and hydrate from
-  IndexedDB afterwards, so assert on images inside `waitFor`. `a11yAffordances` hit
+  straight after mount, but artists painted with `images: []` and hydrated from
+  IndexedDB afterwards, so assert on images inside `waitFor` (since #116 artists paint
+  their stored refs at once, but the D2 legacy overlay still lands asynchronously, so the
+  `waitFor` stays). `a11yAffordances` hit
   the 5s timeout because its tag lookup was quadratic in file length. A recurring
   "flake" is worth a timing run (`npx vitest run --reporter=json`) before the next
   shrug.
