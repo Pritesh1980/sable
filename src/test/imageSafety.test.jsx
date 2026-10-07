@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { createElement } from 'react'
-import { useArtistStorage, canonicalizeImages } from '../hooks/useArtistStorage'
+import { useArtistStorage } from '../hooks/useArtistStorage'
+import { canonicalizeImages } from '../data/artistsPolicy'
 import { withStagedImages } from '../data/imageStaging'
 import { AuthProvider } from '../context/AuthContext'
 import { useAuth } from '../context/useAuth'
@@ -83,11 +84,14 @@ describe('an expired signed URL is never saved in place of its key (#110, bug 1)
     vi.spyOn(backend.blobs, 'getUrl').mockImplementation(async (key) => `https://signed.example/${key}?v=${++n}`)
 
     const { result } = renderHook(() => useArtistStorage(), { wrapper })
-    await waitFor(() => expect(stateRow(result, firstId)?.images[0]).toMatch(/^https:\/\/signed\.example\//))
-    const shown = stateRow(result, firstId).images[0]
+    await waitFor(() => expect(stateRow(result, firstId)?.images[0]).toEqual({ key: KEY }))
+    // The photo's tile resolves its key to a signed URL (#116: state holds the
+    // key, the tile the URL).
+    const shown = await resolveBlobKey(KEY)
+    expect(shown).toMatch(/^https:\/\/signed\.example\//)
 
     // An hour later the photo's <img> errors and ArtistImage asks for a fresh
-    // URL (#82) — state still holds `shown`.
+    // URL (#82) — the old one is still registered.
     const now = Date.now()
     vi.spyOn(Date, 'now').mockReturnValue(now + 3600_000)
     const fresh = await resolveBlobKey(KEY)
