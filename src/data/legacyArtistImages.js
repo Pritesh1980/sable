@@ -57,7 +57,7 @@ export async function dbGetAll() {
 }
 
 // What the IndexedDB display cache keeps of an artist's photos. Its only reader
-// is buildArtists' legacy path, which shows a cached data URL that has no key —
+// is the legacy overlay below, which shows a cached data URL that has no key —
 // so a photo that *has* a key goes in as its ref, never as the data URL it was
 // added with. Otherwise, on a backend whose URLs are not the bytes (Supabase
 // signs one per key), a reload resolves the key to a new URL, the cached data
@@ -69,6 +69,19 @@ export function displayCacheImages(images = []) {
     if (!key) return img
     return typeof img === 'object' && img.addedAt ? { key, addedAt: img.addedAt } : { key }
   })
+}
+
+// D2 (#116): a photo that exists only as an un-keyed data url in the legacy
+// IndexedDB cache (never migrated) still has to show. Prepended like the old
+// buildArtists legacy path; retired by the #118 sweep. A data url that is
+// registered to a key is NOT legacy — the local backend resolves every blob to
+// one, and showing it as well as its { key } would duplicate the photo.
+export function withLegacyLocalPhotos(artist, idbImages) {
+  const have = new Set(artist.images || [])
+  const legacy = Array.isArray(idbImages)
+    ? idbImages.filter((s) => typeof s === 'string' && s.startsWith('data:') && !keyForUrl(s) && !have.has(s))
+    : []
+  return legacy.length ? { ...artist, images: [...legacy, ...(artist.images || [])] } : artist
 }
 
 // Move artists (and their photos) out of the pre-split `tattoo_artists` key:
@@ -89,11 +102,10 @@ export async function importOldArtistsKey({ hasMeta, saveMeta }) {
 // blob store and register key↔url so canonicalizeImages can map them to { key }.
 // Local data-URLs are left in IndexedDB (display cache) and not deleted here.
 // Returns the { artistId, key } pairs it actually uploaded, so the caller can
-// fold them into canonical `images` before the next buildArtists — otherwise
-// a freshly-migrated image is registered (has a key) but not yet represented
-// in any artist's canonical images, and buildArtists's #55 fix (which no
-// longer trusts the IndexedDB cache for anything already registered) would
-// drop it from display and from the metadata pushed right after.
+// fold them into the artists' `images` — otherwise a freshly-migrated image is
+// registered (has a key), so the legacy overlay no longer shows it, but is not
+// yet in any artist's images, and would be dropped from display and from the
+// metadata pushed right after.
 export async function migrateLegacyImages(userId, imageMap) {
   const migrated = []
   for (const [artistId, images] of Object.entries(imageMap)) {

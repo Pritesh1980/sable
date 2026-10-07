@@ -1,17 +1,15 @@
 import { useState, useRef, useEffect } from 'react'
 import TagPill from './TagPill'
 import ArtistImage from './ArtistImage'
-import OfflinePhoto from './OfflinePhoto'
+import PhotoTile from './PhotoTile'
 import GeneratedArtworkNotice from './GeneratedArtworkNotice'
 import SimilarArtists from './SimilarArtists'
 import { STYLE_TAGS, DEFAULT_STUDIOS } from '../data/artists'
 import { uploadImages } from '../hooks/useImageUpload'
 import { useAuth } from '../context/useAuth'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
-import { imageSrc } from '../data/wall'
-import { photoSlots, fromSlots } from '../data/offlineImages'
+import { refIdentity } from '../data/imageRef'
 import { useEscapeToClose } from '../hooks/useDialogFocus'
-import { activateOnKey } from '../a11y/activate'
 
 export default function ArtistDetail({ artist, onClose, onSave, attendingConventions = [], allArtists = [], onSelectArtist }) {
   const [images, setImages] = useState(artist.images || [])
@@ -48,26 +46,17 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
   const imagesRef = useRef(artist.images || [])
   const carouselRef = useRef(null)
   const { user } = useAuth() || {}
-  // Photos that can't load right now keep their place as placeholders (#102).
-  // Snapshotted like `images`, since their positions are relative to it.
-  // Refs still waiting for first hydration aren't placeholders and aren't ours
-  // to reposition, so a save then leaves the stored list alone.
-  const [unresolved, setUnresolved] = useState(artist.unresolvedImages)
-  const unresolvedRef = useRef(artist.unresolvedImages)
-  const [ownsUnresolved] = useState(() =>
-    Boolean(artist.unresolvedImages?.length) && !artist.unresolvedImages.some((u) => u.pending))
-  const slots = photoSlots(images, unresolved)
 
   useEffect(() => {
     const el = carouselRef.current
-    if (!el || slots.length === 0) return
+    if (!el || images.length === 0) return
     function onScroll() {
-      const itemWidth = el.scrollWidth / slots.length
+      const itemWidth = el.scrollWidth / images.length
       if (itemWidth > 0) setCurrentIdx(Math.round(el.scrollLeft / itemWidth))
     }
     el.addEventListener('scroll', onScroll, { passive: true })
     return () => el.removeEventListener('scroll', onScroll)
-  }, [slots.length])
+  }, [images.length])
 
   const instagramUrl = `https://www.instagram.com/${artist.handle}/`
   const currentStatus = ARTIST_STATUSES.find((s) => s.value === normalizeArtistStatus(artist.status))
@@ -77,16 +66,10 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
   // captured whenever the upload/remove/reorder started — silently revert a
   // tag or status change that had landed in the meantime through a different
   // auto-save.
-  function saveImages(newImages, newUnresolved = unresolvedRef.current) {
+  function saveImages(newImages) {
     imagesRef.current = newImages
-    unresolvedRef.current = newUnresolved
     setImages(newImages)
-    setUnresolved(newUnresolved)
-    onSave(identityRef.current.id, identityRef.current.generation, (current) => (
-      ownsUnresolved
-        ? { ...current, images: newImages, unresolvedImages: newUnresolved }
-        : { ...current, images: newImages }
-    ))
+    onSave(identityRef.current.id, identityRef.current.generation, (current) => ({ ...current, images: newImages }))
   }
 
   async function handleFiles(e) {
@@ -102,18 +85,17 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
     }
   }
 
-  // Both act on slot positions, placeholders included, so an offline photo
-  // keeps its place relative to its neighbours.
+  // Positions are in the one list, offline photos included, so they keep their
+  // place relative to their neighbours.
   function removeImage(pos) {
     if (!window.confirm('Remove this photo?')) return
-    const next = fromSlots(slots.filter((_, i) => i !== pos))
-    saveImages(next.images, next.unresolvedImages)
+    saveImages(imagesRef.current.filter((_, i) => i !== pos))
   }
 
   function setCover(pos) {
     if (pos === 0) return
-    const next = fromSlots([slots[pos], ...slots.filter((_, i) => i !== pos)])
-    saveImages(next.images, next.unresolvedImages)
+    const list = imagesRef.current
+    saveImages([list[pos], ...list.filter((_, i) => i !== pos)])
   }
 
   function toggleTag(tag) {
@@ -243,9 +225,9 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-mono text-cream-muted tracking-widest uppercase">
                 Photos
-                {slots.length > 0 && (
+                {images.length > 0 && (
                   <span className="text-cream-muted/90 ml-2">
-                    {Math.min(currentIdx, slots.length - 1) + 1} / {slots.length}
+                    {Math.min(currentIdx, images.length - 1) + 1} / {images.length}
                   </span>
                 )}
               </p>
@@ -278,60 +260,30 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
         </div>
 
         {/* Carousel — escapes the max-w-screen-sm content column */}
-        {slots.length > 0 && (
+        {images.length > 0 && (
           <div className="mb-8">
             <div
               ref={carouselRef}
               className="flex gap-3 overflow-x-auto snap-x snap-mandatory px-5 pb-3"
             >
-              {slots.map((slot, pos) => slot.kind === 'offline' ? (
-                <div
-                  key={`offline-${pos}`}
-                  className={`relative snap-center shrink-0 w-[88%] sm:w-[520px] aspect-[4/5] rounded-xs overflow-hidden ${pos === 0 ? 'ring-1 ring-accent' : ''}`}
-                >
-                  <OfflinePhoto className="w-full h-full" />
-                </div>
-              ) : (
-                <div
-                  key={`image-${slot.imageIndex}`}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`View image ${pos + 1} full screen`}
-                  onKeyDown={activateOnKey(() => setLightbox(slot.imageIndex))}
-                  className={`relative snap-center shrink-0 w-[88%] sm:w-[520px] aspect-[4/5] bg-ink-muted rounded-xs overflow-hidden cursor-pointer ${pos === 0 ? 'ring-1 ring-accent' : ''}`}
-                  onClick={() => setLightbox(slot.imageIndex)}
-                >
-                  <ArtistImage src={slot.src} label={artist.name || `@${artist.handle}`} className="w-full h-full object-cover" monogramClassName="text-6xl" loading="lazy" />
-
-                  {pos === 0 && (
-                    <div className="absolute top-3 left-3 bg-accent/80 text-cream text-[0.6875rem] font-mono tracking-widest px-2 py-1 rounded-xs uppercase">
-                      Cover
-                    </div>
-                  )}
-
-                  <div className="absolute top-3 right-3 flex gap-1.5">
-                    {pos !== 0 && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setCover(pos) }}
-                        className="text-[0.6875rem] font-mono text-cream tracking-widest uppercase bg-ink-black/70 hover:bg-ink-black px-2.5 py-1 rounded-xs transition-colors backdrop-blur-xs"
-                      >
-                        Set cover
-                      </button>
-                    )}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); removeImage(pos) }}
-                      className="w-7 h-7 flex items-center justify-center text-accent text-xl leading-none bg-ink-black/70 hover:bg-ink-black rounded-xs transition-colors backdrop-blur-xs"
-                      title="Remove photo"
-                    >×</button>
-                  </div>
-                </div>
+              {images.map((image, pos) => (
+                <PhotoTile
+                  key={`${refIdentity(image) ?? 'photo'}:${pos}`}
+                  image={image}
+                  label={artist.name || `@${artist.handle}`}
+                  position={pos}
+                  isCover={pos === 0}
+                  onOpen={() => setLightbox(pos)}
+                  onSetCover={() => setCover(pos)}
+                  onRemove={() => removeImage(pos)}
+                />
               ))}
             </div>
 
             {/* Dot indicator */}
-            {slots.length > 1 && (
+            {images.length > 1 && (
               <div className="flex justify-center gap-1.5 mt-2">
-                {slots.map((_, pos) => (
+                {images.map((_, pos) => (
                   <span
                     key={pos}
                     className={`h-1 rounded-full transition-all ${
@@ -460,7 +412,7 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
           onClick={closeLightbox}
         >
           <ArtistImage
-            src={imageSrc(images[lightbox])}
+            src={images[lightbox]}
             loading="eager"
             sizes="100vw"
             label={artist.name || `@${artist.handle}`}

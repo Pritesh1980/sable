@@ -7,19 +7,7 @@ import { createArtistsPolicy, META_KEY } from '../data/artistsPolicy'
 // Artists are a collection like any other (#112): the protocol runs in the sync
 // engine, and everything artist-specific — owner seeding, tombstones, the legacy
 // photo cache and its migration — is the policy in src/data/artistsPolicy.js.
-// This hook only binds one store to React. The names below stay exported from
-// here because components and specs import them from this path.
-export {
-  applyDefaults,
-  applyImageTombstones,
-  buildArtists,
-  canonicalizeImages,
-  displayFromCanonical,
-  mergeStaticImages,
-  removedImageTombstones,
-  stripImages,
-} from '../data/artistsPolicy'
-export { displayCacheImages } from '../data/legacyArtistImages'
+// This hook only binds one store to React.
 
 export function useArtistStorage() {
   const user = useAuth()?.user || null
