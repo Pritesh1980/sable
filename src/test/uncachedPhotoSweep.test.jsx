@@ -203,11 +203,15 @@ describe('uncached { key } photo across artist-photo surfaces (D6)', () => {
     expect(screen.queryByRole('img', { name: /Zoia/ })).not.toBeInTheDocument()
   })
 
-  it('Top5Hero: the cover tile for the offline photo shows the monogram', async () => {
+  it('Top5Hero: the cover tile for the offline photo is present, with the rank glyph and no dead img', async () => {
     const { container } = render(
       <MemoryRouter><Top5Hero artists={[OFFLINE]} bench={[NONE]} /></MemoryRouter>,
     )
     await waitFor(() => expect(getUrl).toHaveBeenCalled())
+    // The artist's tile must actually be there: its focus button, holding the
+    // hero's own rank-glyph fallback (Top5Hero passes `fallback`, so no monogram).
+    const tile = await screen.findByRole('button', { name: 'Focus Zoia (rank 1)' })
+    expect(tile.querySelector('span.bg-ink-card')).toHaveTextContent('1')
     expect(within(container).queryByRole('img')).not.toBeInTheDocument()
   })
 
