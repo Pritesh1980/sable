@@ -19,9 +19,9 @@ export default function ArtistImage({
 }) {
   // The render boundary (#113): `src` is a stored image ref — a plain string,
   // a { url, addedAt } or { key } object — and is resolved here, so callers pass
-  // raw refs straight from their data. A blob key not cached yet shows the
-  // fallback until it resolves.
-  const { src: resolved } = useImageSrc(src)
+  // raw refs straight from their data. A blob key not cached yet shows an
+  // empty box until it resolves.
+  const { src: resolved, status } = useImageSrc(src)
   const trimmed = label.startsWith('@') ? label.slice(1) : label
   const initial = (trimmed.trim()[0] || '?').toUpperCase()
 
@@ -128,14 +128,20 @@ export default function ArtistImage({
   if (!displaySrc || failed) {
     // A caller's own empty state (e.g. Top5Hero's rank glyph) replaces the monogram.
     if (fallback) return fallback
+    // Still resolving: a neutral empty box, so the letter doesn't flash and
+    // then vanish when the photo arrives. An unavailable photo keeps the letter.
+    const loading = status === 'loading' && !failed
     return (
       <div
         className={`w-full h-full flex items-center justify-center bg-ink-muted ${className} ${fallbackClassName}`}
         aria-label={label || 'No image'}
+        aria-busy={loading ? 'true' : undefined}
       >
-        <span className={`text-cream-muted/10 font-display ${monogramClassName}`} aria-hidden="true">
-          {initial}
-        </span>
+        {!loading && (
+          <span className={`text-cream-muted/10 font-display ${monogramClassName}`} aria-hidden="true">
+            {initial}
+          </span>
+        )}
       </div>
     )
   }

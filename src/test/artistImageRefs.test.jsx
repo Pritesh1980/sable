@@ -47,4 +47,20 @@ describe('ArtistImage with stored refs (#113)', () => {
     render(<ArtistImage src={{ url: 'images/artists/a/1.jpg', addedAt: '2026-01-01T00:00:00Z' }} label="A" />)
     expect(screen.getByRole('img')).toHaveAttribute('src', '/images/artists/a/1.jpg')
   })
+
+  it('shows an empty box, not the monogram letter, while an uncached key resolves', async () => {
+    let resolveUrl
+    getUrl.mockReturnValue(new Promise((r) => { resolveUrl = r }))
+    const { container } = render(<ArtistImage src={{ key: 'user/u1/slow.jpg' }} label="Zoia" />)
+    expect(screen.queryByText('Z')).not.toBeInTheDocument()
+    expect(container.querySelector('[aria-busy="true"]')).toBeInTheDocument()
+    resolveUrl('https://signed.example/slow')
+    await waitFor(() => expect(screen.getByRole('img')).toHaveAttribute('src', 'https://signed.example/slow'))
+  })
+
+  it('keeps the monogram for a key that could not be resolved', async () => {
+    getUrl.mockRejectedValue(new Error('offline'))
+    render(<ArtistImage src={{ key: 'user/u1/gone.jpg' }} label="Zoia" />)
+    expect(await screen.findByText('Z')).toBeInTheDocument()
+  })
 })
