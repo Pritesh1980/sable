@@ -139,14 +139,14 @@ describe('a stale local image cache does not resurrect a remotely-removed photo'
 // field must not resurrect a photo that has a tombstone.
 describe('removedImageTombstones (pure)', () => {
   it('records a tombstone for each canonical ref present before but not after', () => {
-    const prev = ['data:should-not-appear', { key: 'k1' }, { key: 'k2' }]
-    const next = [{ key: 'k1' }]
+    const prev = ['data:should-not-appear', { key: 'user/u1/k1' }, { key: 'user/u1/k2' }]
+    const next = [{ key: 'user/u1/k1' }]
     const tombstones = removedImageTombstones(prev, next, '2026-07-01T00:00:00Z')
-    expect(tombstones).toEqual([{ ref: { key: 'k2' }, removedAt: '2026-07-01T00:00:00Z' }])
+    expect(tombstones).toEqual([{ ref: { key: 'user/u1/k2' }, removedAt: '2026-07-01T00:00:00Z' }])
   })
 
   it('produces nothing when nothing was removed', () => {
-    expect(removedImageTombstones([{ key: 'k1' }], [{ key: 'k1' }], '2026-07-01T00:00:00Z')).toEqual([])
+    expect(removedImageTombstones([{ key: 'user/u1/k1' }], [{ key: 'user/u1/k1' }], '2026-07-01T00:00:00Z')).toEqual([])
   })
 })
 
@@ -154,21 +154,21 @@ describe('applyImageTombstones (pure, reconcile layer)', () => {
   it('keeps a photo removed on one device out of the winning record, even though the other device\'s newer unrelated edit would otherwise resurrect it', () => {
     // Device A: removed photo X, tombstoned it.
     const local = [{
-      id: 'c1', notes: 'old note', images: [{ key: 'k-y' }],
-      removedImages: [{ ref: { key: 'k-x' }, removedAt: '2026-07-01T00:00:00Z' }],
+      id: 'c1', notes: 'old note', images: [{ key: 'user/u1/k-y' }],
+      removedImages: [{ ref: { key: 'user/u1/k-x' }, removedAt: '2026-07-01T00:00:00Z' }],
       updatedAt: '2026-07-01T00:00:00Z',
     }]
     // Device B: stale copy still has X, edited only notes — later timestamp,
     // legitimately wins the whole-record merge.
     const remote = [{
-      id: 'c1', notes: 'new note', images: [{ key: 'k-x' }, { key: 'k-y' }],
+      id: 'c1', notes: 'new note', images: [{ key: 'user/u1/k-x' }, { key: 'user/u1/k-y' }],
       updatedAt: '2026-08-01T00:00:00Z',
     }]
     const merged = [remote[0]] // reconcileRecords would pick remote here (newer)
 
     const result = applyImageTombstones(merged, local, remote)
     expect(result[0].notes).toBe('new note') // the newer content still wins
-    expect(result[0].images).toEqual([{ key: 'k-y' }]) // X stays removed
+    expect(result[0].images).toEqual([{ key: 'user/u1/k-y' }]) // X stays removed
   })
 
   it('unions tombstones from both sides, keeping the later removedAt for the same ref', () => {

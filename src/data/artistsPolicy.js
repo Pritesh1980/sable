@@ -13,6 +13,7 @@
 
 import { DEFAULT_ARTISTS } from './artists'
 import { resolveAssetPath } from './assetPath'
+import { refIdentity } from './imageRef'
 import { reconcileRecords, nowStamp } from '../backend/sync'
 import { resolveBlobKey, keyForUrl } from './blobUrls'
 import {
@@ -36,6 +37,29 @@ export function stripImages(artists) {
   })
 }
 
+export function dedupeRefs(refs = []) {
+  const seen = new Set()
+  return refs.filter((ref) => {
+    const id = refIdentity(ref)
+    if (!id) return true
+    if (seen.has(id)) return false
+    seen.add(id)
+    return true
+  })
+}
+
+// DEFAULT_ARTISTS' static photos are the owner's starter gallery. They go after
+// the artist's own photos, never twice, and never back in once removed (#55).
+export function withStarterPhotos(images = [], starters = [], removedImages = []) {
+  const have = new Set(images.map(refIdentity).filter(Boolean))
+  const doomed = new Set(removedImages.map((t) => refIdentity(t.ref)).filter(Boolean))
+  const add = starters.filter((s) => {
+    const id = refIdentity(s)
+    return id && !have.has(id) && !doomed.has(id)
+  })
+  return add.length ? [...images, ...add] : images
+}
+
 // Fill in any fields present in defaults but missing from a stored record,
 // and append any DEFAULT_ARTISTS entries not yet in the stored list.
 export function applyDefaults(artists) {
@@ -46,6 +70,8 @@ export function applyDefaults(artists) {
     for (const key of Object.keys(def)) {
       if (!(key in a)) out[key] = def[key]
     }
+    const images = withStarterPhotos(a.images, def.images, a.removedImages)
+    if (images !== a.images) out.images = images
     return out
   })
   const storedIds = new Set(artists.map((a) => a.id))
@@ -113,15 +139,6 @@ export function canonicalizeArtist(a) {
 function unhydrated(a) {
   const refs = Array.isArray(a.images) ? a.images : []
   return { ...a, images: [], unresolvedImages: refs.map((ref, index) => ({ ref, index, pending: true })) }
-}
-
-// Stable string identity for a canonical image ref, used only to compare
-// refs for tombstone bookkeeping (#55) — never persisted or displayed.
-function refIdentity(ref) {
-  if (typeof ref === 'string') return resolveAssetPath(ref)
-  if (ref?.key) return `key:${ref.key}`
-  if (ref?.url) return `url:${ref.url}`
-  return null
 }
 
 // Every canonical ref present before but missing after becomes a tombstone,
