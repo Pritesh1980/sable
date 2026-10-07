@@ -401,7 +401,7 @@ is static paths, `{ key }` and `{ url, addedAt }`, one entry per photo, so an un
 ref is simply still in the list and `canonicalizeArtist` has nothing to reinsert (it
 only strips inline data URLs). `initial()` paints those rows directly; for the owner
 `applyDefaults` unions the starter photos in, tombstone-aware and de-duplicated by
-identity. `codec.toDisplay` is async and does one display-only thing, the D2 legacy
+identity. `codec.toDisplay` is async and does one display-only thing, the legacy-cache
 overlay: never-migrated IndexedDB data URLs are prepended (idempotent; for an artist
 whose cache holds data URLs not yet recognised it first resolves that artist's own blob
 keys, so a keyed photo is not shown twice), and `onEdit` refreshes the in-memory legacy

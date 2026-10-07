@@ -3,12 +3,12 @@ import { useState } from 'react'
 import { render, screen, waitFor, fireEvent, within, cleanup } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 
-// Consumer sweep (#116, D6). Artist state holds stored *refs*, so every surface
+// Consumer sweep (#116). Artist state holds stored *refs*, so every surface
 // that lists photos can meet a `{ key }` whose bytes are not cached (yet). Each
 // case gives a surface an artist whose ONLY photo is such a key — offline, so
 // the key never resolves — beside an artist with no photos, and pins that the
 // surface (a) renders, (b) shows the monogram rather than a broken <img>, and
-// (c) counts the offline photo (D6) while still excluding the photo-less artist.
+// (c) counts the offline photo while still excluding the photo-less artist.
 
 const getUrl = vi.fn()
 vi.mock('../backend', () => ({
@@ -70,7 +70,7 @@ const settledMonogram = async (scope, label = 'Zoia') => {
   expect(within(scope).getAllByLabelText(label).length).toBeGreaterThan(0)
 }
 
-describe('uncached { key } photo across artist-photo surfaces (D6)', () => {
+describe('uncached { key } photo across artist-photo surfaces (counts include offline photos)', () => {
   it('ArtistCard: counts as having photos (no empty state) and shows the monogram', async () => {
     const { container } = render(<ArtistCard artist={OFFLINE} onOpen={vi.fn()} onSaveImages={vi.fn()} />)
     expect(screen.queryByText(/no photos|add photo/i)).not.toBeInTheDocument()

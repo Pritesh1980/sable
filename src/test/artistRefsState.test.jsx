@@ -11,7 +11,7 @@ import { createArtistsPolicy } from '../data/artistsPolicy'
 import { backend } from '../backend'
 
 // #116: artist state holds the stored refs themselves. Display resolution is
-// per tile (useImageSrc); the only display-only addition left is the D2 legacy
+// per tile (useImageSrc); the only display-only addition left is the legacy-cache
 // IndexedDB overlay.
 
 const KEY = 'user/u1/artists/zoia/own-photo.jpg'
@@ -108,7 +108,7 @@ describe('artist state holds refs (#116)', () => {
     expect(localStorage.getItem('tattoo_artists_meta')).not.toContain('INLINE')
   })
 
-  it('shows a legacy IndexedDB-only photo (the D2 overlay) and keeps it when another photo is added', async () => {
+  it('shows a legacy IndexedDB-only photo (the legacy overlay) and keeps it when another photo is added', async () => {
     seedReturningUser({ ownPhoto: false })
     await dbPut(firstId, ['data:image/png;base64,LEGACY'])
     const result = await mount()
@@ -120,8 +120,8 @@ describe('artist state holds refs (#116)', () => {
   })
 })
 
-// Policy-level: the D2 overlay is idempotent and a deleted legacy photo stays deleted.
-describe('legacy overlay (D2)', () => {
+// Policy-level: the legacy overlay is idempotent and a deleted legacy photo stays deleted.
+describe('legacy overlay', () => {
   it('is idempotent and does not bring a deleted legacy photo back', async () => {
     const { policy, codec } = createArtistsPolicy()
     await dbPut('a', ['data:image/png;base64,LEGACY'])

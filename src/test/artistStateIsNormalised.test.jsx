@@ -62,7 +62,7 @@ beforeEach(async () => {
 afterEach(() => vi.restoreAllMocks())
 
 // State is its own normalised form: normalising again changes nothing. (Inline
-// data urls are kept by normalisation, so the D2 legacy overlay satisfies this too;
+// data urls are kept by normalisation, so the legacy-cache overlay satisfies this too;
 // only *persisting* strips them.)
 const expectNormalised = (rows) =>
   rows.forEach((a) => expect(normalizeArtistImages(a.images)).toEqual(a.images))

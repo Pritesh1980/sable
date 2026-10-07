@@ -235,7 +235,7 @@ describe('after the upload lands on a signed-URL backend', () => {
 
     // Shown once, from the key's device copy (offline-safe) rather than the
     // signed URL, and never also as a legacy data-URL entry beside it.
-    await new Promise((resolve) => setTimeout(resolve, 50)) // past the D2 overlay's hydration
+    await new Promise((resolve) => setTimeout(resolve, 50)) // past the legacy overlay's hydration
     expect(stateRow(second).images).toHaveLength(1)
     expect(stateRow(second).images[0].key).toBe(key)
     expect(await resolveImage(stateRow(second).images[0])).toBe(PHOTO)

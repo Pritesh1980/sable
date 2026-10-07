@@ -64,8 +64,8 @@ This is a personal app for one user (the owner). (A read-only share link for the
   `{ url, addedAt }`, nothing is held aside, so there is no side list to reinsert and
   `canonicalizeArtist` only strips inline data URLs. `initial()` paints the stored rows
   directly (the owner's starter photos are unioned in by `applyDefaults`, tombstone-aware,
-  de-duplicated by identity). `codec.toDisplay` does one display-only thing: the D2
-  legacy overlay of never-migrated IndexedDB data URLs (`withLegacyLocalPhotos`,
+  de-duplicated by identity). `codec.toDisplay` does one display-only thing: the
+  legacy-cache overlay of never-migrated IndexedDB data URLs (`withLegacyLocalPhotos`,
   retired by #118). `onEdit` normalises whatever a producer emitted into refs
   (`normalizeArtistImages`). Never write a save path that persists only a resolved list
   — a device that starts offline would delete its own photos from the server. The UI
@@ -301,7 +301,7 @@ them. Keep messages terse and conventional (e.g. `feat(home): …`, `docs: …`)
   load exposes.** Two were root-caused in Sept 2026: `useArtistStorage` read images
   straight after mount, but artists painted with `images: []` and hydrated from
   IndexedDB afterwards, so assert on images inside `waitFor` (since #116 artists paint
-  their stored refs at once, but the D2 legacy overlay still lands asynchronously, so the
+  their stored refs at once, but the legacy-cache overlay still lands asynchronously, so the
   `waitFor` stays). `a11yAffordances` hit
   the 5s timeout because its tag lookup was quadratic in file length. A recurring
   "flake" is worth a timing run (`npx vitest run --reporter=json`) before the next

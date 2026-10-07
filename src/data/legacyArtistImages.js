@@ -71,7 +71,7 @@ export function displayCacheImages(images = []) {
   })
 }
 
-// D2 (#116): a photo that exists only as an un-keyed data url in the legacy
+// Legacy-cache overlay (#116): a photo that exists only as an un-keyed data url in the legacy
 // IndexedDB cache (never migrated) still has to show. Prepended like the old
 // buildArtists legacy path; retired by the #118 sweep. A data url that is
 // registered to a key is NOT legacy — the local backend resolves every blob to

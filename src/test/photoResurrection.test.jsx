@@ -41,7 +41,7 @@ const renderSynced = () =>
 // #55 part 1: buildArtists's idbImages branch ignored the reconciled canonical
 // a.images entirely whenever any IndexedDB cache existed, so a stale local
 // cache could keep showing a photo another device had already removed. Since
-// #116 the only reader of that cache is the D2 legacy overlay.
+// #116 the only reader of that cache is the legacy-cache overlay.
 describe('the legacy IndexedDB overlay (pure)', () => {
   beforeEach(() => clearBlobUrls())
 
@@ -66,7 +66,7 @@ describe('the legacy IndexedDB overlay (pure)', () => {
 // #55 review (codex + agy): a removed DEFAULT_ARTISTS curated static image was
 // re-added on every load regardless of canonical removal or a tombstone.
 // Removing a curated seed image was completely ineffective. Since #116 the
-// starter photos join the stored rows through applyDefaults (D1).
+// starter photos join the stored rows through applyDefaults.
 describe('curated starter photos and their tombstones', () => {
   it('does not re-add a curated DEFAULT_ARTISTS image that has a tombstone', () => {
     const staticPath = DEFAULT_ARTISTS[0].images[0]

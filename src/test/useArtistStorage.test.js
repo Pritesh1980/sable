@@ -87,7 +87,7 @@ describe('useArtistStorage', () => {
     createElement(AuthProvider, null, createElement(Gate, null, children))
 
   // Resolves once the session is up and the hook has mounted — NOT once the
-  // legacy IndexedDB photos (the D2 overlay) or a migration have landed: those
+  // legacy IndexedDB photos (the legacy overlay) or a migration have landed: those
   // arrive afterwards. Assert on them inside a waitFor; reading images straight
   // after this was the spec's long-standing flake under load.
   async function renderOwned() {

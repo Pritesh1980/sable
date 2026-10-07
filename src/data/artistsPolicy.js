@@ -9,7 +9,7 @@
 //   - the empty-remote seed push and the post-migration restamp.
 // State holds the stored refs themselves (#116): each tile resolves its own
 // photo (useImageSrc), so an offline start keeps every ref in place (#101,
-// #102). The codec is the identity apart from the D2 legacy overlay.
+// #102). The codec is the identity apart from the legacy-cache overlay.
 
 import { DEFAULT_ARTISTS } from './artists'
 import { refIdentity, refKey } from './imageRef'
@@ -75,11 +75,11 @@ export function applyDefaults(artists) {
 }
 
 // Turn images into canonical, syncable refs: blob-backed display URLs (what
-// the producers still emit, D4) → { key }, static paths / external URLs →
+// the producers still emit, normalised here) → { key }, static paths / external URLs →
 // string — carrying `addedAt` through wherever it's present. Un-keyed data URLs
 // (legacy IndexedDB photos the migration has not uploaded, or a failed stage)
 // are dropped from the persisted form so base64 never lands in localStorage or
-// the remote store; `keepInline` keeps them for in-memory state (D2, D5).
+// the remote store; `keepInline` keeps them for in-memory state (legacy overlay; never persisted).
 export function canonicalizeImages(images = [], { keepInline = false } = {}) {
   const out = []
   for (const img of images) {
@@ -111,7 +111,7 @@ export function normalizeArtistImages(images = []) {
 
 const sameList = (a, b) => Array.isArray(b) && a.length === b.length && a.every((v, i) => v === b[i])
 
-// The persisted form of an artist. State already is this, apart from the D2
+// The persisted form of an artist. State already is this, apart from the legacy-cache
 // legacy overlay, which persisting strips (inline data urls are never stored).
 export function canonicalizeArtist(a) {
   return { ...a, images: canonicalizeImages(a.images) }
@@ -179,7 +179,7 @@ export function createArtistsPolicy() {
 
   const codec = {
     toCanonical: (v) => v.map(canonicalizeArtist),
-    // D2: the only display-only addition until #118 retires the legacy cache.
+    // Legacy-cache overlay: the only display-only addition until #118 retires the legacy cache.
     toDisplay: (v) => Promise.all(v.map(async (a) => {
       await registerOwnPhotos(a, imageMap[a.id])
       return withLegacyLocalPhotos(a, imageMap[a.id])
@@ -303,12 +303,12 @@ export function createArtistsPolicy() {
       return stamped.map((row) => {
         const prevA = prevById.get(row?.id)
         if (!row || (prevA && prevA.images === row.images)) return row
-        // Whatever the producer emitted becomes refs here, once (D4).
+        // Whatever the producer emitted becomes refs here, once, at the edit boundary.
         const images = normalizeArtistImages(row.images)
         const a = sameList(images, row.images) ? row : { ...row, images }
         cacheImages(a)
         // Keep the in-memory legacy cache in step with what was just written, so a
-        // legacy photo the user deleted is not re-shown by a later toDisplay (D2).
+        // legacy photo the user deleted is not re-shown by a later toDisplay.
         imageMap[a.id] = displayCacheImages(a.images || [])
         if (!prevA) return a
         const liveIds = new Set(a.images.map(refIdentity).filter(Boolean))
