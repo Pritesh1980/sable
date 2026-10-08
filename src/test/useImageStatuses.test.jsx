@@ -37,4 +37,19 @@ describe('useImageStatuses', () => {
     rerender()
     expect(getUrl.mock.calls.length).toBe(calls)
   })
+
+  it('a key seen ready stays ready while its cached url is refreshed', async () => {
+    await backend.blobs.upload('u1', HERE, 'data:image/jpeg;base64,QUJD', 'image/jpeg')
+    const { result, rerender } = renderHook(() => useImageStatuses([HERE]))
+    await waitFor(() => expect(result.current).toEqual(['ready']))
+    // Mounted again with the key already cached: ready at once, never "settled".
+    const warm = renderHook(() => useImageStatuses([HERE]))
+    expect(warm.result.current).toEqual(['ready'])
+    // The cache entry goes (a TTL refresh reads the same way): still ready.
+    clearBlobUrls()
+    warm.rerender()
+    expect(warm.result.current).toEqual(['ready'])
+    rerender()
+    expect(result.current).toEqual(['ready'])
+  })
 })

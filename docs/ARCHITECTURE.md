@@ -323,9 +323,10 @@ The lifecycle is written down because React runs it twice in development:
   hydration or pull result from an older epoch is discarded, as the hook's per-effect
   `cancelled` flags used to do. A start's work begins a microtask later, so StrictMode's
   start → stop → start in development lists the remote once, not twice.
-- **Hydration is independent of the first pull.** The generic engine resolves cached
-  refs to display URLs even while `list()` hangs offline (artists have nothing to
-  resolve: they paint refs, and `toDisplay` only overlays legacy photos). A hydration that loses the race to an edit or to
+- **Hydration is independent of the first pull.** It runs even while `list()` hangs
+  offline. Every collection paints stored refs, so there is little to do: the idea and
+  concept codecs warm the URL cache, and the artists' `toDisplay` only overlays legacy
+  photos. A hydration that loses the race to an edit or to
   the pull is dropped rather than applied over them, so a late one can never undo an
   edit or hide rows the pull brought in.
 - **`stop()` cancels the pending push but not a flush in flight.** That flush still lands
@@ -429,9 +430,11 @@ Where a producer still hands back a display URL, saving turns it into a ref thro
 the URL→key map in `src/data/blobUrls.js`. A superseded URL keeps its mapping for the
 session (#110): dropping it, as the map once did to stay small, meant the next save
 stored an expiring URL in place of the key, and last-write-wins spread that to every
-device. State now holds refs everywhere (#116, #117), so only two things still use the
-map: the artist add paths (`uploadImages` returns display URLs that `onEdit` normalises)
-and the legacy-cache overlay, both due to go with #118. Recovering an expired image no
+device. State now holds refs everywhere (#116, #117), and what still uses the map is
+what remains to go with #118: the artist add paths (`uploadImages` returns display URLs
+that `onEdit` normalises), the legacy-cache overlay, and the "already staged this
+session" check in staging and backup (`needsStaging`, `isEmbeddable`), which hand back
+the known key rather than a second copy. Recovering an expired image no
 longer needs it: an `<img>` error re-resolves by the key in the ref (`refreshBlobKey`).
 
 ### Bytes are staged before the key exists

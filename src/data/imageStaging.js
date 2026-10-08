@@ -198,13 +198,16 @@ export async function stageImageRefs(dataUrls = [], ctx) {
 
 // Runs `commit(keys)` once every inline photo in `images` (URLs or { url }
 // refs) is staged: keys[i] is the key for images[i], or '' when that image
-// needed no staging. With nothing to stage — no inline photo, or nobody signed
+// has none (a web url, or nobody signed in). With nothing to stage — no inline photo, or nobody signed
 // in — it commits at once, synchronously, exactly as the caller did before
 // staging existed.
 export function withStagedImages(images = [], ctx, commit) {
   const inline = images.map((image) => needsStaging(image, ctx))
+  // A photo this session has already staged needs no second copy, but its key
+  // is still what belongs in state.
+  const known = images.map((image) => keyForUrl(urlOf(image)) || '')
   if (!inline.some(Boolean)) {
-    commit(images.map(() => ''))
+    commit(known)
     return undefined
   }
   return Promise.all(
@@ -213,7 +216,7 @@ export function withStagedImages(images = [], ctx, commit) {
     // Nothing is committed for a photo that failed to stage: its base64 would
     // reach persisted state.
     if (results.some((r) => r?.failed)) reportStagingFailure()
-    else commit(results.map((r) => r?.key || ''))
+    else commit(results.map((r, i) => r?.key || known[i]))
   })
 }
 

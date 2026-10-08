@@ -41,6 +41,15 @@ describe('staging hands back keys', () => {
     expect(commit).toHaveBeenCalledWith([''])
   })
 
+  it('hands back the key of a photo already staged this session, not nothing', async () => {
+    const first = vi.fn()
+    await withStagedImages([PHOTO], ctx, first)
+    const [[key]] = first.mock.calls[0]
+    const again = vi.fn()
+    withStagedImages([PHOTO, 'https://example.com/a.jpg'], ctx, again)
+    expect(again).toHaveBeenCalledWith([key, ''])
+  })
+
   it('stageImageRefs returns a { key } per photo', async () => {
     const refs = await stageImageRefs([PHOTO], ctx)
     expect(refs).toHaveLength(1)

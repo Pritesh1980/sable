@@ -10,6 +10,16 @@ export default function useImageStatuses(refs = []) {
   const [settled, setSettled] = useState(() => new Map()) // key -> 'ready' | 'unavailable'
   const sync = refs.map((ref) => resolveImageRef(ref).status)
   const keys = refs.map(refKey)
+  // A key seen ready stays ready: when its cached url reaches its TTL the cache
+  // reports it as loading while it refreshes, and a piece must not drop out of
+  // the viewer (and back in) for that.
+  const seenReady = keys.filter((key, i) => key && sync[i] === 'ready' && !settled.has(key))
+  // Adjusting state during render: it is empty again on the re-render this causes.
+  if (seenReady.length) {
+    const next = new Map(settled)
+    for (const key of seenReady) next.set(key, 'ready')
+    setSettled(next)
+  }
   // A string, so a re-created list of the same refs does not restart anything.
   const pending = keys.filter((key, i) => key && sync[i] === 'loading' && !settled.has(key)).join('\n')
 

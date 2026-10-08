@@ -151,6 +151,16 @@ export async function createBackupWithImages(state, { exportedAt, onProgress } =
   return { backup: { ...base, version: BACKUP_VERSION, data }, skipped }
 }
 
+// Idea and concept state hold stored refs, so a photo with a key goes back as
+// that key: { key, note } for an idea, the bare string for a concept. Artists
+// take the image as it is (their edits are normalised into refs on the way in).
+function storedRef(image, scope, key) {
+  if (!key) return image
+  if (scope === 'ideas') return { key, note: (typeof image === 'object' && image.note) || '' }
+  if (scope === 'concepts') return key
+  return image
+}
+
 // Sends the photos a backup carries as data urls through the normal staging and
 // upload path, so they gain keys of the importing account. Signed out there is
 // nowhere to upload to and the data is returned as it came. A photo that cannot
@@ -159,18 +169,13 @@ export async function restoreBackupImages(data, { userId } = {}) {
   if (!userId) return { data, failed: 0 }
   let failed = 0
   const out = await mapBackupImages(data, async (image, { scope, id }) => {
-    if (!needsStaging(image, { userId })) return image
+    if (!needsStaging(image, { userId })) return storedRef(image, scope, keyForUrl(urlOf(image)))
     const staged = await stageImage(urlOf(image), { userId, scope, id })
     if (staged.failed) {
       failed += 1
       return null
     }
-    // Idea state holds stored refs, so an idea photo comes back as its key.
-    if (scope === 'ideas' && staged.key) {
-      return { key: staged.key, note: (typeof image === 'object' && image.note) || '' }
-    }
-    // Concept state holds the stored string, so a concept image comes back as its key.
-    if (scope === 'concepts') return staged.key || staged.url
+    if (staged.key && scope !== 'artists') return storedRef(image, scope, staged.key)
     return typeof image === 'string' ? staged.url : { ...image, url: staged.url }
   })
   return { data: out, failed }

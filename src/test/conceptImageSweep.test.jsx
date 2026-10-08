@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import ConceptPiece from '../components/ConceptPiece'
 import Concepts from '../pages/Concepts'
@@ -94,6 +94,36 @@ describe('the concept viewer only holds pieces it can show', () => {
     const viewer = await screen.findByRole('dialog', { name: 'Concept: Wolf' })
     // Second of the two it can show — not third of three.
     await waitFor(() => expect(viewer.textContent).toMatch(/02\s*\/\s*2/))
+  })
+})
+
+describe('the open viewer stays on its concept while other images resolve', () => {
+  function Harness({ initial }) {
+    const [concepts, setConcepts] = useState(initial)
+    return (
+      <MemoryRouter initialEntries={['/concepts']}>
+        <Concepts concepts={concepts} setConcepts={setConcepts} artists={[]} ideas={[]} />
+      </MemoryRouter>
+    )
+  }
+
+  it('does not jump to an earlier piece that becomes showable later', async () => {
+    const LATE = 'user/u1/concepts/c0/late.jpg'
+    let deliver
+    const late = new Promise((resolve) => { deliver = resolve })
+    const realGetUrl = backend.blobs.getUrl.getMockImplementation()
+    backend.blobs.getUrl.mockImplementation((key) => (key === LATE ? late : realGetUrl(key)))
+    render(<Harness initial={[
+      { id: 'c0', prompt: 'Raven', imageUrl: LATE, tags: [] },
+      { id: 'c1', prompt: 'Moth', imageUrl: HERE, tags: [] },
+    ]} />)
+    fireEvent.click(await screen.findByRole('img', { name: 'Moth' }))
+    const viewer = await screen.findByRole('dialog', { name: 'Concept: Moth' })
+    expect(viewer.textContent).toMatch(/01\s*\/\s*1/)
+
+    await act(async () => { deliver(PHOTO) })
+    await waitFor(() => expect(screen.getByRole('dialog').textContent).toMatch(/02\s*\/\s*2/))
+    expect(screen.getByRole('dialog', { name: 'Concept: Moth' })).toBeInTheDocument()
   })
 })
 

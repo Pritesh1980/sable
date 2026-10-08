@@ -155,6 +155,19 @@ describe('restoreBackupImages', () => {
     expect(stageImage).toHaveBeenCalledTimes(5)
   })
 
+  it('gives ideas and concepts the key of a photo this session already knows, never its base64', async () => {
+    registerBlobUrl('user/u2/known.jpg', PNG)
+    const { data: out } = await restoreBackupImages({
+      artists: [], boards: [], conventionOverrides: {},
+      ideas: [{ id: 'i', images: [{ url: PNG, note: 'x' }] }],
+      concepts: [{ id: 'c', imageUrl: PNG, variants: [{ id: 'v', imageUrl: PNG }] }],
+    }, ctx)
+    expect(out.ideas[0].images).toEqual([{ key: 'user/u2/known.jpg', note: 'x' }])
+    expect(out.concepts[0].imageUrl).toBe('user/u2/known.jpg')
+    expect(out.concepts[0].variants[0].imageUrl).toBe('user/u2/known.jpg')
+    expect(stageImage).not.toHaveBeenCalled()
+  })
+
   it('leaves the data untouched when nobody is signed in (nowhere to upload)', async () => {
     const data = { artists: [{ id: 'a', images: [PNG] }], ideas: [], boards: [], concepts: [], conventionOverrides: {} }
     const { data: out } = await restoreBackupImages(data, { userId: null })

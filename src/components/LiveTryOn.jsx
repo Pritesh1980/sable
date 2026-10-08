@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { loadPhotoForRelief } from '../data/reliefImage'
+import { refKey } from '../data/imageRef'
+import { resolveImageRef } from '../data/imageResolver'
 import { imageUrlToDataUrl, shrinkImageDataUrl } from '../data/skinPreview'
 import {
   CARD_HEIGHT_MM,
@@ -51,7 +53,7 @@ export default function LiveTryOn({ designUrl, label = 'Design', onSave, onClose
   // A design linked from another site would taint the snapshot canvas; draw
   // from local bytes instead. Falls back to the URL (display still works).
   // designUrl is a stored ref (a blob key, a url or inline bytes); only inline
-  // bytes can be shown as they are, the rest arrive from the effect below.
+  // bytes are shown as they are, the rest arrive from the effect below.
   const [designSrc, setDesignSrc] = useState(() => (String(designUrl).startsWith('data:') ? designUrl : ''))
   const baseWidth = Math.min(stageW, stageH) * 0.45
   const [transform, setTransform] = useState(() => ({ x: stageW / 2, y: stageH * 0.42, scale: 1, rotation: 0 }))
@@ -78,7 +80,12 @@ export default function LiveTryOn({ designUrl, label = 'Design', onSave, onClose
     let cancelled = false
     imageUrlToDataUrl(designUrl)
       .then((url) => { if (!cancelled) setDesignSrc(url) })
-      .catch(() => { if (!cancelled) setUnreadableDesign(designUrl) })
+      .catch(() => {
+        if (cancelled) return
+        setUnreadableDesign(designUrl)
+        // A web url whose bytes can't be read (no CORS) can still be shown.
+        if (!refKey(designUrl)) setDesignSrc(resolveImageRef(designUrl).src)
+      })
     return () => { cancelled = true }
   }, [designUrl])
 
