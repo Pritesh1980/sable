@@ -304,8 +304,9 @@ import and the IndexedDB photo cache, `src/data/legacyArtistImages.js`),
 `beforeFirstPull` runs before the list (the one-time legacy photo migration) and hands
 its result to `merge`, which replaces the generic reconcile (LWW, image tombstones #55,
 owner defaults, the empty-remote seed push, the post-migration restamp), and `onEdit`
-runs on the stamped rows (tombstones, display cache). `buildArtists` and
-`canonicalizeArtist` remain the temporary artist codec. `src/test/collectionStore.test.js`
+runs on the stamped rows (normalising to refs, tombstones, display cache). Artist state
+holds the stored refs themselves (#116), so the codec is thin: `toCanonical` is
+`canonicalizeArtist` and `toDisplay` only adds the legacy overlay (§3). `src/test/collectionStore.test.js`
 and `collectionStorePolicy.test.js` pin the engine without React;
 `artistsPolicy.test.js` pins each artist rule.
 
@@ -322,8 +323,9 @@ The lifecycle is written down because React runs it twice in development:
   hydration or pull result from an older epoch is discarded, as the hook's per-effect
   `cancelled` flags used to do. A start's work begins a microtask later, so StrictMode's
   start → stop → start in development lists the remote once, not twice.
-- **Hydration is independent of the first pull.** Cached refs resolve to display URLs
-  even while `list()` hangs offline. A hydration that loses the race to an edit or to
+- **Hydration is independent of the first pull.** The generic engine resolves cached
+  refs to display URLs even while `list()` hangs offline (artists have nothing to
+  resolve: they paint refs, and `toDisplay` only overlays legacy photos). A hydration that loses the race to an edit or to
   the pull is dropped rather than applied over them, so a late one can never undo an
   edit or hide rows the pull brought in.
 - **`stop()` cancels the pending push but not a flush in flight.** That flush still lands
@@ -354,16 +356,18 @@ again remounts and re-runs the initializer. A direct signed-in identity swap rem
 it too, because the shell is keyed by the user's id (§10).
 
 The guarantee is **membership parity with the cache**, not with the final state: a
-later pull can still add remote rows the cache never had, and images hydrate
-separately. Those are hydration, not a flash of the wrong identities.
+later pull can still add remote rows the cache never had. That is a pull, not a flash
+of the wrong identities. (Artist photos no longer hydrate separately: the rows paint
+with their refs, #116.)
 
 ---
 
 ## 3. Images never travel inside documents
 
 A synced record carries a small canonical reference — a storage key — while the bytes
-live in blob storage. In memory the same field is a displayable URL, so components
-(and features like STL export) are unaware of the split.
+live in blob storage. For ideas and concepts the in-memory field is a displayable URL, so
+components (and features like STL export) are unaware of the split; artists hold the
+stored refs themselves (#116) and resolve each at display time.
 
 ```mermaid
 flowchart LR
@@ -392,16 +396,25 @@ not be reachable. Before #101 an unresolved ref simply vanished from the in-memo
 list, and the next save wrote that shortened list back — a device that merely
 *started* offline would then have removed its own photos from the server.
 
-Now the hook keeps what it could not resolve. Artists carry a side field,
-`unresolvedImages: [{ ref, index }]`; `canonicalizeArtist` reinserts each ref at its
-original position on save, skipping any whose identity is already present so a ref that
-resolves later is never saved twice. Concepts and their variants do the same through
-`unresolvedImageKey` in `imageCodec.js`. What the user sees is unchanged: a photo that
-cannot load is drawn as an "Available when online" tile at its original position
-(#102): `photoSlots` (`src/data/offlineImages.js`) rebuilds the canonical order for the
-artist carousel, and a concept with an `unresolvedImageKey` stays on the wall as an
-offline piece rather than dropping into Drafts. Refs listed before first hydration carry
-`pending: true` and are never drawn, so a normal online start shows no placeholder flash.
+Now nothing is held aside. Artist state holds the stored refs (#116): `artist.images`
+is static paths, `{ key }` and `{ url, addedAt }`, one entry per photo, so an unresolved
+ref is simply still in the list and `canonicalizeArtist` has nothing to reinsert (it
+only strips inline data URLs). `initial()` paints those rows directly; for the owner
+`applyDefaults` unions the starter photos in, tombstone-aware and de-duplicated by
+identity. `codec.toDisplay` is async and does one display-only thing, the legacy-cache
+overlay: never-migrated IndexedDB data URLs are prepended (idempotent; for an artist
+whose cache holds data URLs not yet recognised it first resolves that artist's own blob
+keys, so a keyed photo is not shown twice), and `onEdit` refreshes the in-memory legacy
+cache. `onEdit` also normalises whatever a producer emitted into refs
+(`normalizeArtistImages`, `dedupeRefs`) and writes the tombstones. Concepts and their
+variants still use `unresolvedImageKey` in `imageCodec.js`. What the user sees is
+unchanged: `ArtistDetail` renders one `PhotoTile` per ref (`src/components/PhotoTile.jsx`).
+A ready photo is interactive; a key still resolving is an empty `aria-busy` box, so a
+normal online start shows no placeholder flash; an unavailable one is the `OfflinePhoto`
+"Available when online" tile at its original position (#102). Remove and Set-cover act
+on the latest list, and a photo that is not ready cannot be opened or edited. A concept
+with an `unresolvedImageKey` stays on the wall as an offline piece rather than dropping
+into Drafts. Photo counts ("N with photos", the ranking queue) include offline photos.
 
 ### An old URL must still lead back to its key
 
@@ -410,7 +423,8 @@ Saving turns display values back into refs through the URL→key map in
 long after its TTL refresh. So a superseded URL keeps its mapping for the session
 (#110). Dropping it, as the map once did to stay small, meant the next save stored
 the expiring URL in place of the key, and last-write-wins spread that to every
-device. Keeping refs in state, planned in #109, removes the reverse map altogether.
+device. Keeping refs in state removes the reverse map altogether: artists now do (#116), ideas
+and concepts are planned in #109.
 
 ### Bytes are staged before the key exists
 
@@ -803,8 +817,9 @@ between listeners and `fireEvent` does not.
 
 Two specs failed intermittently under full-suite load and were long written off as a
 fake-IndexedDB artefact (#23). Both had real causes. `useArtistStorage` read an artist's
-images straight after mount, but artists paint with `images: []` and hydrate from
-IndexedDB afterwards, so the assertions now wait for them. `a11yAffordances` scanned each
+images straight after mount, but artists then painted with `images: []` and hydrated
+from IndexedDB afterwards, so the assertions wait for them (since #116 artists paint
+their refs at once; the legacy overlay is still async). `a11yAffordances` scanned each
 file for the tag around every expression, which is quadratic in file length; it hit the
 5 s timeout under load, and now runs in milliseconds with identical results. Looking for
 the second cause also exposed the offline data-loss bug described in §3. The protocol

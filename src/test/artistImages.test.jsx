@@ -6,6 +6,7 @@ import { useArtistStorage } from '../hooks/useArtistStorage'
 import { DEFAULT_ARTISTS } from '../data/artists'
 import { backend } from '../backend'
 import { clearBlobUrls } from '../data/blobUrls'
+import { resolveImage } from '../data/imageResolver'
 
 const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>
 
@@ -71,9 +72,9 @@ describe('artist image blob pipeline', () => {
 
     const { result } = renderSynced()
     await waitFor(() => expect(result.current.store[0]).toHaveLength(1))
-    await waitFor(() =>
-      expect(result.current.store[0][0].images[0]).toBe('data:image/jpeg;base64,REMOTE')
-    )
+    // State holds the ref (#116); it resolves to the photo's bytes.
+    await waitFor(() => expect(result.current.store[0][0].images[0]).toEqual({ key }))
+    expect(await resolveImage(result.current.store[0][0].images[0])).toBe('data:image/jpeg;base64,REMOTE')
   })
 
   it('migrates a legacy IndexedDB data-URL to a blob key in the remote metadata', async () => {
