@@ -185,22 +185,53 @@ function reportStagingFailure() {
   if (typeof globalThis.alert === 'function') globalThis.alert(message)
 }
 
-// Runs `commit` once every inline photo in `images` (URLs or { url } refs) is
-// staged, so the state update it makes already carries their keys. With
-// nothing to stage — no inline photo, or nobody signed in — it commits at once,
-// synchronously, exactly as the caller did before staging existed.
+// The stored ref for a staged photo: its key, or the url itself when there was
+// nothing to stage (signed out, or not an inline photo).
+const stagedRef = (result) => (result.key ? { key: result.key } : { url: result.url })
+
+// stageImages, returning stored refs for state instead of display urls.
+export async function stageImageRefs(dataUrls = [], ctx) {
+  const results = await Promise.all(Array.from(dataUrls, (dataUrl) => stageImage(dataUrl, ctx)))
+  if (results.some((r) => r.failed)) reportStagingFailure()
+  return results.filter((r) => !r.failed).map(stagedRef)
+}
+
+// Runs `commit(keys)` once every inline photo in `images` (URLs or { url }
+// refs) is staged: keys[i] is the key for images[i], or '' when that image
+// needed no staging. With nothing to stage — no inline photo, or nobody signed
+// in — it commits at once, synchronously, exactly as the caller did before
+// staging existed.
 export function withStagedImages(images = [], ctx, commit) {
-  const inline = images.filter((image) => needsStaging(image, ctx))
-  if (!inline.length) {
-    commit()
+  const inline = images.map((image) => needsStaging(image, ctx))
+  if (!inline.some(Boolean)) {
+    commit(images.map(() => ''))
     return undefined
   }
-  return Promise.all(inline.map((image) => stageImage(urlOf(image), ctx))).then((results) => {
+  return Promise.all(
+    images.map((image, i) => (inline[i] ? stageImage(urlOf(image), ctx) : null)),
+  ).then((results) => {
     // Nothing is committed for a photo that failed to stage: its base64 would
     // reach persisted state.
-    if (results.some((r) => r.failed)) reportStagingFailure()
-    else commit()
+    if (results.some((r) => r?.failed)) reportStagingFailure()
+    else commit(results.map((r) => r?.key || ''))
   })
+}
+
+// An inline photo found in stored data (saved before staging existed, or while
+// signed out) is staged once per session: a second pass over the same rows —
+// after an edit raced the first — gets the same key back, not a second copy.
+const stagedInline = new Map() // `${userId}\n${dataUrl}` -> Promise<key|null>
+export function stageInlineOnce(dataUrl, { userId, scope, id } = {}) {
+  if (!userId || !isBase64DataUrl(dataUrl)) return Promise.resolve(null)
+  const memo = `${userId}\n${dataUrl}`
+  if (!stagedInline.has(memo)) {
+    // A failure is not remembered: the next flush tries again.
+    stagedInline.set(memo, stageImage(dataUrl, { userId, scope, id }).then((r) => {
+      if (!r.key) stagedInline.delete(memo)
+      return r.key || null
+    }))
+  }
+  return stagedInline.get(memo)
 }
 
 // Retries every queued upload belonging to `userId`. Resolves to how many
