@@ -5,6 +5,7 @@ import { useAuth } from '../context/useAuth'
 import { useStorage } from '../hooks/useStorage'
 import { ideasCodec, conceptsCodec } from '../data/imageCodec'
 import { backend } from '../backend'
+import { resolveImage } from '../data/imageResolver'
 import { clearBlobUrls } from '../data/blobUrls'
 
 const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>
@@ -43,7 +44,7 @@ describe('idea/concept image migration to blobs', () => {
     await clearStore('tattoo-blobs-v1', 'blobs')
   })
 
-  it('migrates an inline idea image to a blob key, keeping the display URL in memory', async () => {
+  it('migrates an inline idea image to a blob key, in state and remotely', async () => {
     localStorage.setItem(
       'tattoo_ideas',
       JSON.stringify([{ id: 'i1', title: 'Koi', images: [{ url: 'data:image/jpeg;base64,IDEA', note: 'n' }] }])
@@ -63,8 +64,8 @@ describe('idea/concept image migration to blobs', () => {
     const key = rows[0].images[0].key
     expect(await backend.blobs.getUrl(key)).toBe('data:image/jpeg;base64,IDEA')
 
-    // In memory the idea still exposes a displayable URL (consumers unchanged).
-    expect(result.current.store[0][0].images[0].url).toBe('data:image/jpeg;base64,IDEA')
+    // State holds the same stored ref, not the bytes.
+    await waitFor(() => expect(result.current.store[0][0].images[0]).toEqual({ key, note: 'n' }))
   })
 
   it('migrates concept top-level and variant images to blob keys', async () => {
@@ -91,12 +92,15 @@ describe('idea/concept image migration to blobs', () => {
       expect(rows[0]?.variants?.[0]?.imageUrl.startsWith('data:')).toBe(false)
     })
 
-    // In memory both resolve back to displayable data-URLs.
-    expect(result.current.store[0][0].imageUrl).toBe('data:image/png;base64,TOP')
-    expect(result.current.store[0][0].variants[0].imageUrl).toBe('data:image/png;base64,VAR')
+    // State holds the same keys as the remote row, and they resolve to the bytes.
+    const [row] = await backend.store.list('concepts')
+    await waitFor(() => expect(result.current.store[0][0].imageUrl).toBe(row.imageUrl))
+    expect(result.current.store[0][0].variants[0].imageUrl).toBe(row.variants[0].imageUrl)
+    expect(await resolveImage(row.imageUrl)).toBe('data:image/png;base64,TOP')
+    expect(await resolveImage(row.variants[0].imageUrl)).toBe('data:image/png;base64,VAR')
   })
 
-  it('resolves a remote idea {key} image on a fresh device', async () => {
+  it('holds a remote idea {key} image as its ref on a fresh device, and it resolves', async () => {
     const key = 'user/local-artist@studio.com/ideas/i9/x.jpg'
     // The remote row must be written under the same signed-in identity that
     // will later read it back (#28 namespaces the local backend's simulated
@@ -109,9 +113,8 @@ describe('idea/concept image migration to blobs', () => {
 
     const { result } = render('tattoo_ideas', [], ideasCodec)
     await waitFor(() =>
-      expect(result.current.store[0].find((i) => i.id === 'i9')?.images?.[0]?.url).toBe(
-        'data:image/jpeg;base64,CLOUD'
-      )
+      expect(result.current.store[0].find((i) => i.id === 'i9')?.images?.[0]?.key).toBe(key)
     )
+    expect(await resolveImage({ key })).toBe('data:image/jpeg;base64,CLOUD')
   })
 })

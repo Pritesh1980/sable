@@ -11,7 +11,10 @@ import { STYLE_TAGS, PLACEMENTS } from '../data/artists'
 import { IDEA_STATUSES, matchArtistsToIdea } from '../data/brief'
 import { buildIdeaBrief } from '../data/export'
 import { compressImages } from '../hooks/useImageUpload'
-import { stageImages, withStagedImages } from '../data/imageStaging'
+import { stageImageRefs, withStagedImages } from '../data/imageStaging'
+import { imageUrlToDataUrl } from '../data/skinPreview'
+import RefImage from '../components/RefImage'
+import OfflinePhoto from '../components/OfflinePhoto'
 import { useAuth } from '../context/useAuth'
 import { useUndoableRemoval } from '../hooks/useUndoableRemoval'
 import { analyzeIdeaImageWithGemini } from '../data/screenshotIntake'
@@ -19,7 +22,6 @@ import {
   ARTIST_STATUSES,
   buildMatchRationale,
   getImageNote,
-  getImageUrl,
   matchArtistsForIdea,
   normalizeArtistStatus,
   normalizeReferenceImages,
@@ -98,14 +100,20 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
   // are filled; nothing the user typed is overwritten.
   const geminiKey = localStorage.getItem('gemini_api_key') || ''
   const analyzableImage = normalizeReferenceImages(draft.images)
-    .map((image) => getImageUrl(image))
-    .find((url) => url.startsWith('data:'))
+    .find((image) => image.key || image.url.startsWith('data:'))
 
   async function analyzeImage() {
     setAnalyzing(true)
     setAnalyzeNote('')
     try {
-      const result = await analyzeIdeaImageWithGemini(geminiKey, analyzableImage)
+      let dataUrl
+      try {
+        dataUrl = await imageUrlToDataUrl(analyzableImage.key || analyzableImage.url)
+      } catch {
+        setAnalyzeNote('That photo is not available right now.')
+        return
+      }
+      const result = await analyzeIdeaImageWithGemini(geminiKey, dataUrl)
       if (!result) {
         setAnalyzeNote("Couldn't draft an idea from this image.")
       } else {
@@ -131,8 +139,9 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
     } catch (e) {
       console.error('[tattoo] idea image intake failed:', e)
       setAnalyzeNote('Analysis failed — check your Gemini key/connection.')
+    } finally {
+      setAnalyzing(false)
     }
-    setAnalyzing(false)
   }
 
   const matches = matchArtistsForIdea(draft, artists)
@@ -166,9 +175,9 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
       // at once.
       // Save stays disabled until it lands, or the idea would save without it.
       setUploading(true)
-      const staging = withStagedImages([url], { userId, scope: 'ideas', id: idea.id || 'misc' }, () => {
+      const staging = withStagedImages([url], { userId, scope: 'ideas', id: idea.id || 'misc' }, ([key]) => {
         touch('images')
-        setDraft((d) => ({ ...d, images: [...(d.images || []), { url, note: '' }] }))
+        setDraft((d) => ({ ...d, images: [...(d.images || []), key ? { key, note: '' } : { url, note: '' }] }))
       })
       void Promise.resolve(staging).finally(() => setUploading(false))
     }
@@ -183,7 +192,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
       // Staged before they join the draft (#115): saved, the idea stores each
       // photo's { key }, never its base64, and the bytes wait on this device
       // until the upload lands. A new idea has no id yet, hence 'misc'.
-      const urls = await stageImages(await compressImages(files), {
+      const refs = await stageImageRefs(await compressImages(files), {
         userId,
         scope: 'ideas',
         id: idea.id || 'misc',
@@ -191,7 +200,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
       touch('images')
       setDraft((d) => ({
         ...d,
-        images: [...(d.images || []), ...urls.map((url) => ({ url, note: '' }))],
+        images: [...(d.images || []), ...refs.map((ref) => ({ ...ref, note: '' }))],
       }))
     } finally {
       setUploading(false)
@@ -255,9 +264,10 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
   // Rendered after the modal rather than inside it, so the drawer is fixed to
   // the screen whatever the modal's animation or scroll is doing.
   const [stlSource, setStlSource] = useState(null)
-  function makeStl(url, index) {
+  function makeStl(image, index) {
     const label = `${draft.title?.trim() || 'Idea'} reference ${index + 1}`
-    setStlSource({ imageUrl: url, label, filenameSeed: label })
+    // A string the drawer can key on and resolve: the blob key, or the url.
+    setStlSource({ imageUrl: image.key || image.url, label, filenameSeed: label })
   }
 
   async function copyBrief() {
@@ -378,12 +388,16 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
           {analyzeNote && <p className="font-body text-xs text-cream-muted/70 mb-2">{analyzeNote}</p>}
           {draft.images?.length > 0 && (
             <div className="grid grid-cols-2 gap-2 mb-3">
-              {images.map((image, index) => {
-                const url = getImageUrl(image)
-                return (
+              {images.map((image, index) => (
                 <div key={itemIdentity(image) || index} className="bg-ink-muted rounded-xs overflow-hidden border border-ink-border">
                   <div className="relative aspect-square group">
-                    <img src={url} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                    <RefImage
+                      src={image}
+                      className="w-full h-full object-cover"
+                      onError={(e) => { e.currentTarget.style.display = 'none' }}
+                      loading={<div className="w-full h-full bg-ink-muted" aria-busy="true" />}
+                      fallback={<OfflinePhoto className="w-full h-full" />}
+                    />
                     {/* 44pt hit area, 24px chip. The padding puts the chip exactly
                         where it sat when the button itself was 24px. */}
                     <button
@@ -394,7 +408,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
                       <span className="w-6 h-6 bg-ink-dark/80 text-accent rounded-full text-xs flex items-center justify-center">×</span>
                     </button>
                     <button
-                      onClick={() => makeStl(url, index)}
+                      onClick={() => makeStl(image, index)}
                       aria-label={`3D print reference ${index + 1}`}
                       className="absolute bottom-0 left-0 h-11 min-w-11 flex items-end p-1 can-hover:opacity-0 group-hover:opacity-100 transition-opacity"
                     >
@@ -409,8 +423,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
                     onChange={(e) => updateImageNote(image, e.target.value)}
                   />
                 </div>
-                )
-              })}
+              ))}
             </div>
           )}
           <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={addFiles} />

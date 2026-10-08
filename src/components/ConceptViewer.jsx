@@ -8,6 +8,7 @@ import ConceptVariantLab from './ConceptVariantLab'
 import ConceptVisualMatches from './ConceptVisualMatches'
 import GeneratedArtworkNotice from './GeneratedArtworkNotice'
 import GlCrossfade from './GlCrossfade'
+import RefImage from './RefImage'
 import ViewerSheetToggle from './ViewerSheetToggle'
 import SavedPromptPack from './SavedPromptPack'
 import TagPill from './TagPill'
@@ -105,6 +106,13 @@ function InfoPanel({ item, artists, onClose, onSaveTags, onAddVariant, onMarkBes
 // rather than artist image groups. Variants + STL export live behind the
 // info panel (toggle with I or the button below).
 //
+// The place `delta` pieces on from `place`, wrapping round.
+function stepped(place, items, delta) {
+  const at = items.findIndex((item) => item.id === place.id)
+  const next = ((at === -1 ? place.index : at) + delta + items.length) % items.length
+  return { id: items[next]?.id, index: next }
+}
+
 // `initialIndex` is read once, at mount — the caller (Concepts.jsx) only ever
 // mounts this fresh per open (`viewerOpen && <ConceptViewer key={viewerIndex}
 // .../>`), never changes it on a live instance, so there is nothing to
@@ -127,7 +135,12 @@ export default function ConceptViewer({
   onMakeStl,
   onTryOnSkin,
 }) {
-  const [index, setIndex] = useState(initialIndex)
+  // The open piece is tracked by id as well as position: `items` holds only the
+  // pieces whose image can be shown, so it can grow while the viewer is open (an
+  // image resolving), and a position alone would then point at another concept.
+  const [place, setPlace] = useState(() => ({ id: items[initialIndex]?.id, index: initialIndex }))
+  const found = items.findIndex((item) => item.id === place.id)
+  const index = found === -1 ? place.index : found
   const [showInfo, setShowInfo] = useState(false)
   // Resolve the transition renderer once per viewer open (not per keypress).
   const [transitionMode] = useState(resolveTransitionMode)
@@ -139,7 +152,7 @@ export default function ConceptViewer({
   const sheetId = useId()
 
   function step(delta) {
-    setIndex((i) => (i + delta + items.length) % items.length)
+    setPlace((p) => stepped(p, items, delta))
   }
 
   const gestures = useSwipeTap({
@@ -165,11 +178,11 @@ export default function ConceptViewer({
       switch (e.key) {
         case 'ArrowLeft':
           e.preventDefault()
-          setIndex((i) => (i - 1 + items.length) % items.length)
+          setPlace((p) => stepped(p, items, -1))
           break
         case 'ArrowRight':
           e.preventDefault()
-          setIndex((i) => (i + 1) % items.length)
+          setPlace((p) => stepped(p, items, 1))
           break
         case 'i':
         case 'I':
@@ -185,7 +198,7 @@ export default function ConceptViewer({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [open, items.length, onClose, dialogRef])
+  }, [open, items, onClose, dialogRef])
 
   if (!open || !items[index]) return null
 
@@ -257,7 +270,7 @@ export default function ConceptViewer({
           </div>
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
-            <img
+            <RefImage
               key={current.id}
               src={current.imageUrl}
               alt={current.title}

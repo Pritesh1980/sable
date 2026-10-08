@@ -3,19 +3,25 @@
 // in the top-left corner when the concept has saved results.
 import GeneratedArtworkNotice from './GeneratedArtworkNotice'
 import OfflinePhoto from './OfflinePhoto'
+import useImageSrc from '../hooks/useImageSrc'
 
 export default function ConceptPiece({ item, onOpen }) {
+  // item.imageUrl is the stored ref; a piece can be opened once it resolves.
+  const { src, status } = useImageSrc(item.imageUrl)
+  const ready = status === 'ready'
   return (
     <figure
-      className={`relative mb-[6px] break-inside-avoid overflow-hidden group ${item.offline ? '' : 'cursor-zoom-in'}`}
-      onClick={item.offline ? undefined : () => onOpen(item)}
+      className={`relative mb-[6px] break-inside-avoid overflow-hidden group ${ready ? 'cursor-zoom-in' : ''}`}
+      onClick={ready ? () => onOpen(item) : undefined}
     >
-      {item.offline ? (
+      {status === 'loading' ? (
+        <div className="w-full aspect-square bg-ink-muted" aria-busy="true" />
+      ) : !ready ? (
         <OfflinePhoto className="w-full aspect-square" />
       ) : (
         <>
           <img
-            src={item.imageUrl}
+            src={src}
             alt={item.title}
             loading="lazy"
             className="w-full block grayscale-[0.15] group-hover:grayscale-0 transition-[filter] duration-300"

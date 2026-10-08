@@ -85,7 +85,7 @@ describe('BackupPanel import (#114)', () => {
     importFile({ version: 2, data: { ideas: [{ id: 'i', images: [{ url: PNG, note: 'n' }] }] } })
     expect(await screen.findByText('Backup imported.')).toBeInTheDocument()
     expect(stageImage).toHaveBeenCalledWith(PNG, { userId: 'u2', scope: 'ideas', id: 'i' })
-    expect(setIdeas).toHaveBeenCalledWith([{ id: 'i', images: [{ url: 'staged-url', note: 'n' }] }])
+    expect(setIdeas).toHaveBeenCalledWith([{ id: 'i', images: [{ key: 'user/u2/ideas/i/new.jpg', note: 'n' }] }])
   })
 
   it('still imports a v1 backup with no embedded photos', async () => {

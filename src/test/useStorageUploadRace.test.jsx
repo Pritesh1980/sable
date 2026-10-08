@@ -32,13 +32,13 @@ function armGate(rounds = 1) {
 const SLOW_CODEC = {
   toCanonical: (v) => v,
   toDisplay: async (v) => v,
-  ensureUploaded: async () => {
+  ensureUploaded: async (v) => {
     const g = gate
-    if (!g) return 0
+    if (!g) return { value: v, moved: 0 }
     g.entered += 1
     if (g.entered >= g.rounds) gate = null
     await g.promise
-    return 0
+    return { value: v, moved: 0 }
   },
 }
 

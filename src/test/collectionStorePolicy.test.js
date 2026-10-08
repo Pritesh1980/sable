@@ -85,7 +85,7 @@ describe('policy.onMount', () => {
       codec: {
         toCanonical: (v) => v,
         toDisplay: async (v) => { order.push('display'); return v },
-        ensureUploaded: async () => 0,
+        ensureUploaded: async (v) => ({ value: v, moved: 0 }),
       },
       backend: fakeBackend(),
     })
@@ -102,7 +102,7 @@ describe('policy.onMount', () => {
     const toDisplay = vi.fn(async (v) => v)
     const store = makeStore({
       policy: { onMount: async () => { throw new Error('boom') } },
-      codec: { toCanonical: (v) => v, toDisplay, ensureUploaded: async () => 0 },
+      codec: { toCanonical: (v) => v, toDisplay, ensureUploaded: async (v) => ({ value: v, moved: 0 }) },
       backend: fakeBackend(),
     })
     await store.start(null)
@@ -243,7 +243,7 @@ describe('the policy context', () => {
   it('passes the start user and the owner flag to the codec', async () => {
     const toDisplay = vi.fn(async (v) => v)
     const store = makeStore({
-      codec: { toCanonical: (v) => v, toDisplay, ensureUploaded: async () => 0 },
+      codec: { toCanonical: (v) => v, toDisplay, ensureUploaded: async (v) => ({ value: v, moved: 0 }) },
       backend: fakeBackend(),
     })
     await store.start(USER)
