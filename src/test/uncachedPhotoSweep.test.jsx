@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { useState } from 'react'
 import { render, screen, waitFor, fireEvent, within, cleanup } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
+import { refIdentity } from '../data/imageRef'
 
 // Consumer sweep (#116). Artist state holds stored *refs*, so every surface
 // that lists photos can meet a `{ key }` whose bytes are not cached (yet). Each
@@ -218,7 +219,7 @@ describe('uncached { key } photo across artist-photo surfaces (counts include of
   it('TasteMap: an artist whose only photo is uncached is not placed (no vector) while an indexed one is', async () => {
     const indexed = { ...NONE, id: 'indexed', handle: 'ink.i', name: 'Indexed', images: ['/i1.jpg'] }
     const also = { ...NONE, id: 'also', handle: 'ink.j', name: 'Also', images: ['/j1.jpg'] }
-    loadVectors.mockResolvedValue(new Map([['/i1.jpg', [1, 0]], ['/j1.jpg', [0, 1]]]))
+    loadVectors.mockResolvedValue(new Map([[refIdentity('/i1.jpg'), [1, 0]], [refIdentity('/j1.jpg'), [0, 1]]]))
     render(<TasteMap artists={[OFFLINE, indexed, also]} onOpenArtist={vi.fn()} onClose={vi.fn()} />)
     expect(await screen.findByRole('button', { name: /Indexed/ })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Zoia/ })).not.toBeInTheDocument()
