@@ -160,7 +160,7 @@ describe('opening the app offline (#101)', () => {
     for (const images of writes) expect(images).toContainEqual({ key: KEY })
   })
 
-  it('keeps a concept’s and its variant’s image keys through the display round-trip', async () => {
+  it('a concept’s and its variant’s image keys are what state holds offline', async () => {
     vi.spyOn(backend.blobs, 'getUrl').mockRejectedValue(new Error('offline'))
     const concept = {
       id: 'c1',
@@ -171,10 +171,8 @@ describe('opening the app offline (#101)', () => {
 
     const display = await conceptsCodec.toDisplay([concept])
 
-    // Nothing to show offline — same as before, so the UI is unchanged…
-    expect(display[0].imageUrl).toBe('')
-    expect(display[0].variants[0].imageUrl).toBe('')
-    // …but what gets cached and synced still points at the photos.
+    // The keys stay in state; whether they can be shown is decided at render.
+    expect(display).toEqual([concept])
     expect(conceptsCodec.toCanonical(display)).toEqual([concept])
   })
 })

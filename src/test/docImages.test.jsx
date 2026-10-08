@@ -92,9 +92,12 @@ describe('idea/concept image migration to blobs', () => {
       expect(rows[0]?.variants?.[0]?.imageUrl.startsWith('data:')).toBe(false)
     })
 
-    // In memory both resolve back to displayable data-URLs.
-    expect(result.current.store[0][0].imageUrl).toBe('data:image/png;base64,TOP')
-    expect(result.current.store[0][0].variants[0].imageUrl).toBe('data:image/png;base64,VAR')
+    // State holds the same keys as the remote row, and they resolve to the bytes.
+    const [row] = await backend.store.list('concepts')
+    await waitFor(() => expect(result.current.store[0][0].imageUrl).toBe(row.imageUrl))
+    expect(result.current.store[0][0].variants[0].imageUrl).toBe(row.variants[0].imageUrl)
+    expect(await resolveImage(row.imageUrl)).toBe('data:image/png;base64,TOP')
+    expect(await resolveImage(row.variants[0].imageUrl)).toBe('data:image/png;base64,VAR')
   })
 
   it('holds a remote idea {key} image as its ref on a fresh device, and it resolves', async () => {

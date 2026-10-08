@@ -169,6 +169,8 @@ export async function restoreBackupImages(data, { userId } = {}) {
     if (scope === 'ideas' && staged.key) {
       return { key: staged.key, note: (typeof image === 'object' && image.note) || '' }
     }
+    // Concept state holds the stored string, so a concept image comes back as its key.
+    if (scope === 'concepts') return staged.key || staged.url
     return typeof image === 'string' ? staged.url : { ...image, url: staged.url }
   })
   return { data: out, failed }

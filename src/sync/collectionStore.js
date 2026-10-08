@@ -135,8 +135,8 @@ export function createCollectionStore({
   let stopped = false
   let parked = [] // edits made while stopped: replayed by the next start, else dropped
   // Set once a hydration or a pull has put display values in memory, so
-  // mount-time hydration runs at most once: it expects canonical input, and on a
-  // display value toDisplay can lose a concept's unresolvedImageKey.
+  // mount-time hydration runs at most once: toDisplay expects canonical input
+  // (it matters for the artists codec, whose display value carries an overlay).
   let hydrated = !codecArg
   let synced = null // the rows last known to match the remote
   let pushTimer = null

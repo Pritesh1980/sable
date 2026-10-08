@@ -127,12 +127,20 @@ describe('ArtistDetail offline photos', () => {
 })
 
 describe('concepts whose image cannot load', () => {
-  const offline = { id: 'c1', prompt: 'Moth', imageUrl: '', unresolvedImageKey: 'user/u1/concepts/c1.png' }
+  // Concept state holds the stored key (#117); "offline" is what rendering it finds.
+  const offline = { id: 'c1', prompt: 'Moth', imageUrl: 'user/u1/concepts/c1.png' }
   const waiting = { id: 'c2', prompt: 'Raven', imageUrl: '' }
 
-  it('stay on the wall as offline pieces', () => {
+  beforeEach(() => {
+    clearBlobUrls()
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(backend.blobs, 'getUrl').mockRejectedValue(new Error('offline'))
+  })
+  afterEach(() => vi.restoreAllMocks())
+
+  it('stay on the wall, carrying their stored key', () => {
     const items = buildConceptWallItems([offline, waiting], [])
-    expect(items.map((i) => [i.id, i.offline])).toEqual([['c1', true]])
+    expect(items.map((i) => [i.id, i.imageUrl])).toEqual([['c1', 'user/u1/concepts/c1.png']])
   })
 
   it('are not drafts; a concept that never had an image is', () => {
@@ -140,12 +148,12 @@ describe('concepts whose image cannot load', () => {
     expect(isDraftConcept(waiting)).toBe(true)
   })
 
-  it('render a placeholder that does not open the viewer', () => {
+  it('render a placeholder that does not open the viewer', async () => {
     const onOpen = vi.fn()
     const [item] = buildConceptWallItems([offline], [])
     render(<ConceptPiece item={item} onOpen={onOpen} />)
+    await waitFor(() => expect(offlineTiles()).toHaveLength(1))
     const tile = offlineTiles()[0]
-    expect(tile).toBeTruthy()
     fireEvent.click(tile)
     expect(onOpen).not.toHaveBeenCalled()
   })
