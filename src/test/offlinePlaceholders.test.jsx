@@ -158,14 +158,14 @@ describe('concepts whose image cannot load', () => {
     expect(onOpen).not.toHaveBeenCalled()
   })
 
-  it('a variant says its image is offline rather than missing', () => {
+  it('a variant says its image is offline rather than missing', async () => {
     const concept = {
       id: 'c1', prompt: 'Moth', variants: [
-        { id: 'v1', provider: 'gemini', imageUrl: '', unresolvedImageKey: 'user/u1/concepts/v1.png', createdAt: '2026-09-01T00:00:00.000Z' },
+        { id: 'v1', provider: 'gemini', imageUrl: 'user/u1/concepts/v1.png', createdAt: '2026-09-01T00:00:00.000Z' },
       ],
     }
     render(<ConceptVariantLab concept={concept} onAddVariant={noop} onMarkBest={noop} onDeleteVariant={noop} onRateVariant={noop} />)
+    await waitFor(() => expect(offlineTiles().length).toBeGreaterThan(0))
     expect(screen.queryByText(/no image/i)).toBeNull()
-    expect(offlineTiles().length).toBeGreaterThan(0)
   })
 })

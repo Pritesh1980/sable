@@ -8,6 +8,7 @@ import ConceptVariantLab from './ConceptVariantLab'
 import ConceptVisualMatches from './ConceptVisualMatches'
 import GeneratedArtworkNotice from './GeneratedArtworkNotice'
 import GlCrossfade from './GlCrossfade'
+import RefImage from './RefImage'
 import ViewerSheetToggle from './ViewerSheetToggle'
 import SavedPromptPack from './SavedPromptPack'
 import TagPill from './TagPill'
@@ -257,7 +258,7 @@ export default function ConceptViewer({
           </div>
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
-            <img
+            <RefImage
               key={current.id}
               src={current.imageUrl}
               alt={current.title}

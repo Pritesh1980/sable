@@ -50,7 +50,9 @@ export default function LiveTryOn({ designUrl, label = 'Design', onSave, onClose
   const { w: stageW, h: stageH } = stage
   // A design linked from another site would taint the snapshot canvas; draw
   // from local bytes instead. Falls back to the URL (display still works).
-  const [designSrc, setDesignSrc] = useState(designUrl)
+  // designUrl is a stored ref (a blob key, a url or inline bytes); only inline
+  // bytes can be shown as they are, the rest arrive from the effect below.
+  const [designSrc, setDesignSrc] = useState(() => (String(designUrl).startsWith('data:') ? designUrl : ''))
   const baseWidth = Math.min(stageW, stageH) * 0.45
   const [transform, setTransform] = useState(() => ({ x: stageW / 2, y: stageH * 0.42, scale: 1, rotation: 0 }))
   const [ink, setInk] = useState(0.88)
@@ -264,7 +266,7 @@ export default function LiveTryOn({ designUrl, label = 'Design', onSave, onClose
 
         <img
           ref={designRef}
-          src={designSrc}
+          src={designSrc || undefined}
           alt={`${label} design overlay`}
           draggable={false}
           className="pointer-events-none absolute max-w-none select-none mix-blend-multiply"
