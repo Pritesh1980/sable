@@ -251,6 +251,21 @@ describe('staging hands back keys', () => {
     expect(await stageImageRefs([PHOTO], { scope: 'ideas', id: 'i1' })).toEqual([{ url: PHOTO }])
   })
 
+  it('stageInlineOnce tries again after a failure', async () => {
+    const { putStagedBytes } = await import('../data/stagedImageStore')
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.stubGlobal('alert', vi.fn())
+    const upload = vi.spyOn(backend.blobs, 'upload').mockRejectedValue(new Error('offline'))
+    const store = await import('../data/stagedImageStore')
+    const put = vi.spyOn(store, 'putStagedBytes').mockRejectedValue(new Error('quota'))
+    const other = 'data:image/jpeg;base64,UkVUUlk='
+    expect(await stageInlineOnce(other, ctx)).toBeNull()
+    put.mockRestore()
+    upload.mockRestore()
+    expect(await stageInlineOnce(other, ctx)).toMatch(/^user\/u1\//)
+    void putStagedBytes
+  })
+
   it('stageInlineOnce reuses the key for the same photo', async () => {
     const first = await stageInlineOnce(PHOTO, ctx)
     const second = await stageInlineOnce(PHOTO, ctx)
@@ -343,7 +358,11 @@ export function stageInlineOnce(dataUrl, { userId, scope, id } = {}) {
   if (!userId || !isBase64DataUrl(dataUrl)) return Promise.resolve(null)
   const memo = `${userId}\n${dataUrl}`
   if (!stagedInline.has(memo)) {
-    stagedInline.set(memo, stageImage(dataUrl, { userId, scope, id }).then((r) => r.key || null))
+    // A failure is not remembered: the next flush tries again.
+    stagedInline.set(memo, stageImage(dataUrl, { userId, scope, id }).then((r) => {
+      if (!r.key) stagedInline.delete(memo)
+      return r.key || null
+    }))
   }
   return stagedInline.get(memo)
 }
@@ -1024,6 +1043,7 @@ export default function ConceptPiece({ item, onOpen }) {
 - `offlineImageRefs.test.jsx` `keeps a concept's and its variant's image keys through the display round-trip`: becomes "…are what state holds offline": `toDisplay` returns the concept unchanged.
 - `concepts.spec.js`: drop `offline` / `unresolvedImageKey` expectations; add the stored-key-is-not-a-draft case if not already covered above.
 - `backupV2.test.js`: a restored concept's `imageUrl` is a `user/` key.
+- `backupV2.test.js`: also pin export — a concept and a variant whose `imageUrl` is a `user/` key are embedded as `data:` URLs by `createBackupWithImages` (`isEmbeddable` already recognises a bare key through `refKey`; this guards it).
 
 - [ ] **Step 5: Run and verify**
 
