@@ -1,14 +1,17 @@
 import { keyForUrl, resolveBlobKey } from './blobUrls'
 import { uploadDataUrl } from '../hooks/useImageUpload'
+import { warmImageCache } from './imageResolver'
+import { stageInlineOnce } from './imageStaging'
 
 // Image codecs for the document collections that carry images (ideas, concepts).
-// Each codec lets useStorage keep the in-memory value as displayable URLs — so
-// every render/consumer (including concept STL export and variant rendering)
-// stays unchanged — while persisting/syncing small canonical { key } refs and
-// keeping bytes in blob storage.
 //
-//   toCanonical(value)            display → canonical (url → key) for storage
-//   toDisplay(value)  → Promise   canonical → display (key → resolved url)
+// Ideas hold the stored form in memory — { key, note } / { url, note } — and
+// every consumer resolves at render (#117); their codec only warms the URL
+// cache and moves inline photos stored before staging existed. Concepts still
+// keep a displayable URL in memory and persist the key.
+//
+//   toCanonical(value)            in-memory → stored
+//   toDisplay(value)  → Promise   stored → in-memory
 //   ensureUploaded(value, ctx)    upload any inline data-URLs → { value, moved }
 
 // A bare blob key (e.g. user/<uid>/concepts/<id>/<uuid>.jpg) — i.e. not a
@@ -25,45 +28,38 @@ function isBlobKey(s) {
 const canonUrl = (url) => (url ? keyForUrl(url) || url : url)
 const displayUrl = async (url) => (isBlobKey(url) ? (await resolveBlobKey(url)) || '' : url)
 
-// ── ideas: images is [{ url, note } | { key, note }] ──────────────────────────
+// ── ideas: images is [{ key, note } | { url, note }] — state holds this form ──
 
-function canonIdeaImages(images = []) {
-  return images.map((img) => {
-    if (typeof img === 'string') {
-      const key = keyForUrl(img)
-      return key ? { key } : { url: img, note: '' }
-    }
-    const url = img.url || ''
-    const key = img.key || keyForUrl(url)
-    return key ? { key, note: img.note || '' } : { url, note: img.note || '' }
-  })
+const ideaImage = (img) => {
+  if (typeof img === 'string') return { url: img, note: '' }
+  if (img?.key) return { key: img.key, note: img.note || '' }
+  return { url: img?.url || '', note: img?.note || '' }
 }
-
-async function displayIdeaImages(images = []) {
-  return Promise.all(
-    images.map(async (img) => {
-      if (typeof img === 'string') return { url: img, note: '' }
-      if (img.key) return { url: (await resolveBlobKey(img.key)) || '', note: img.note || '', key: img.key }
-      return { url: img.url || '', note: img.note || '' }
-    })
-  )
-}
+const ideaRefs = (ideas) => ideas.flatMap((i) => i.images || [])
 
 export const ideasCodec = {
-  toCanonical: (ideas = []) => ideas.map((i) => ({ ...i, images: canonIdeaImages(i.images || []) })),
-  toDisplay: async (ideas = []) =>
-    Promise.all(ideas.map(async (i) => ({ ...i, images: await displayIdeaImages(i.images || []) }))),
+  toCanonical: (ideas = []) => ideas.map((i) => ({ ...i, images: (i.images || []).map(ideaImage) })),
+  toDisplay: async (ideas = []) => {
+    warmImageCache(ideaRefs(ideas))
+    return ideas
+  },
   ensureUploaded: async (ideas = [], { userId }) => {
     let moved = 0
+    const next = []
     for (const idea of ideas) {
-      for (const img of idea.images || []) {
+      let images = idea.images
+      for (const [i, img] of (idea.images || []).entries()) {
         const url = typeof img === 'string' ? img : img?.url
-        if (url && url.startsWith('data:') && !keyForUrl(url)) {
-          if (await uploadDataUrl(url, { userId, scope: 'ideas', id: idea.id || 'misc' })) moved += 1
-        }
+        if (img?.key || typeof url !== 'string' || !url.startsWith('data:')) continue
+        const key = await stageInlineOnce(url, { userId, scope: 'ideas', id: idea.id || 'misc' })
+        if (!key) continue
+        if (images === idea.images) images = [...idea.images]
+        images[i] = { key, note: (typeof img === 'object' && img.note) || '' }
+        moved += 1
       }
+      next.push(images === idea.images ? idea : { ...idea, images })
     }
-    return { value: ideas, moved }
+    return { value: moved ? next : ideas, moved }
   },
 }
 

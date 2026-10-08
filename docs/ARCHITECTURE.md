@@ -365,9 +365,9 @@ with their refs, #116.)
 ## 3. Images never travel inside documents
 
 A synced record carries a small canonical reference — a storage key — while the bytes
-live in blob storage. For ideas and concepts the in-memory field is a displayable URL, so
-components (and features like STL export) are unaware of the split; artists hold the
-stored refs themselves (#116) and resolve each at display time.
+live in blob storage. Artists (#116) and ideas (#117) hold the stored refs themselves in
+memory and resolve each at display time. For concepts the in-memory field is still a
+displayable URL, so their components are unaware of the split.
 
 ```mermaid
 flowchart LR
@@ -406,7 +406,10 @@ overlay: never-migrated IndexedDB data URLs are prepended (idempotent; for an ar
 whose cache holds data URLs not yet recognised it first resolves that artist's own blob
 keys, so a keyed photo is not shown twice), and `onEdit` refreshes the in-memory legacy
 cache. `onEdit` also normalises whatever a producer emitted into refs
-(`normalizeArtistImages`, `dedupeRefs`) and writes the tombstones. Concepts and their
+(`normalizeArtistImages`, `dedupeRefs`) and writes the tombstones. Idea state holds the
+stored `{ key, note }` / `{ url, note }` form too: `ideasCodec` only warms the URL cache
+and, through `ensureUploaded` (which hands back the value it changed), swaps an inline
+photo stored before staging existed for its key. Concepts and their
 variants still use `unresolvedImageKey` in `imageCodec.js`. What the user sees is
 unchanged: `ArtistDetail` renders one `PhotoTile` per ref (`src/components/PhotoTile.jsx`).
 A ready photo is interactive; a key still resolving is an empty `aria-busy` box, so a

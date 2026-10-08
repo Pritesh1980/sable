@@ -56,8 +56,9 @@ This is a personal app for one user (the owner). (A read-only share link for the
   synced data with bytes in blob storage (`src/data/blobUrls.js`, `uploadImages`);
   legacy IndexedDB/inline images migrate to blobs on first authed load. Idea and
   concept images use the same key-based blob storage via per-collection codecs
-  (`src/data/imageCodec.js`) wired into `useStorage` — the in-memory value stays a
-  displayable URL (so consumers like STL export are unchanged) while only `{ key }`
+  (`src/data/imageCodec.js`) wired into `useStorage`. **Idea state holds the stored
+  `{ key, note }` ref** (#117) and resolves where it renders (`RefImage`, `useImageSrc`);
+  for concepts the in-memory value is still a displayable URL while only the key
   is persisted/synced. **A ref that can't be resolved (offline) is kept, not dropped**
   (#101): concepts do it via `unresolvedImageKey` in `imageCodec.js`; **artists hold the
   stored refs themselves** (#116): `artist.images` is static paths, `{ key }` and

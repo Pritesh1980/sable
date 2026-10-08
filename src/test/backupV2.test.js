@@ -124,7 +124,7 @@ describe('restoreBackupImages', () => {
     stageImage.mockResolvedValue({ key: 'user/u2/new.jpg', url: 'staged' })
   })
 
-  it('stages each embedded photo under the right scope and swaps in the returned display url', async () => {
+  it('stages each embedded photo under the right scope: a key for an idea, the display url elsewhere', async () => {
     const data = {
       artists: [{ id: 'a', images: [PNG, { url: PNG, note: 'n' }, 'images/a.jpg'] }],
       ideas: [{ id: 'i', images: [{ url: PNG, note: 'x' }] }],
@@ -135,7 +135,7 @@ describe('restoreBackupImages', () => {
     const { data: out, failed } = await restoreBackupImages(data, ctx)
     expect(failed).toBe(0)
     expect(out.artists[0].images).toEqual(['staged', { url: 'staged', note: 'n' }, 'images/a.jpg'])
-    expect(out.ideas[0].images).toEqual([{ url: 'staged', note: 'x' }])
+    expect(out.ideas[0].images).toEqual([{ key: 'user/u2/new.jpg', note: 'x' }])
     expect(out.concepts[0].imageUrl).toBe('staged')
     expect(out.concepts[0].variants[0].imageUrl).toBe('staged')
     expect(stageImage).toHaveBeenCalledWith(PNG, { userId: 'u2', scope: 'artists', id: 'a' })

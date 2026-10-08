@@ -37,7 +37,7 @@ function formatImageList(images = []) {
   return images.map((image, index) => {
     const url = getImageUrl(image)
     const note = getImageNote(image)
-    const label = url.startsWith('data:') ? '[uploaded photo]' : url
+    const label = (refKey(image) || url.startsWith('data:')) ? '[uploaded photo]' : url
     return `${index + 1}. ${label}${note ? `\n   Note: ${note}` : ''}`
   }).join('\n')
 }
@@ -164,6 +164,10 @@ export async function restoreBackupImages(data, { userId } = {}) {
     if (staged.failed) {
       failed += 1
       return null
+    }
+    // Idea state holds stored refs, so an idea photo comes back as its key.
+    if (scope === 'ideas' && staged.key) {
+      return { key: staged.key, note: (typeof image === 'object' && image.note) || '' }
     }
     return typeof image === 'string' ? staged.url : { ...image, url: staged.url }
   })
