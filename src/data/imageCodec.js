@@ -9,7 +9,7 @@ import { uploadDataUrl } from '../hooks/useImageUpload'
 //
 //   toCanonical(value)            display → canonical (url → key) for storage
 //   toDisplay(value)  → Promise   canonical → display (key → resolved url)
-//   ensureUploaded(value, ctx)    upload any inline data-URLs, return count moved
+//   ensureUploaded(value, ctx)    upload any inline data-URLs → { value, moved }
 
 // A bare blob key (e.g. user/<uid>/concepts/<id>/<uuid>.jpg) — i.e. not a
 // data:/http(s)/blob: URL nor a static "/..." path.
@@ -63,7 +63,7 @@ export const ideasCodec = {
         }
       }
     }
-    return moved
+    return { value: ideas, moved }
   },
 }
 
@@ -115,6 +115,6 @@ export const conceptsCodec = {
         await tryUpload(v.imageUrl, c.id)
       }
     }
-    return moved
+    return { value: concepts, moved }
   },
 }

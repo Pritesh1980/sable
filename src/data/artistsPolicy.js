@@ -188,7 +188,7 @@ export function createArtistsPolicy() {
     })),
     // Artist photos upload at add time (src/data/imageStaging.js); nothing is
     // left to move at flush.
-    ensureUploaded: async () => 0,
+    ensureUploaded: async (v) => ({ value: v, moved: 0 }),
   }
 
   const policy = {
