@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
-import { canonicalizeImages, displayFromCanonical } from '../hooks/useArtistStorage'
+import { canonicalizeImages, normalizeArtistImages } from '../data/artistsPolicy'
+import { resolveImage } from '../data/imageResolver'
 import { useArtistStorage } from '../hooks/useArtistStorage'
 import { AuthProvider } from '../context/AuthContext'
 import { useAuth } from '../context/useAuth'
@@ -9,8 +10,9 @@ import { registerBlobUrl, clearBlobUrls } from '../data/blobUrls'
 import { backend } from '../backend'
 
 // Schema tests proving `addedAt` (stamped by the quick-add / drop-zone flows,
-// W1's stampAddedAt) survives the full persistence round trip: display image
-// → canonical ref (localStorage / remote) → back to a display image.
+// W1's stampAddedAt) survives the full persistence round trip: what a producer
+// emits → canonical ref (localStorage / remote) → artist state, which holds
+// that ref itself since #116.
 
 describe('canonicalizeImages preserves addedAt', () => {
   beforeEach(() => clearBlobUrls())
@@ -45,31 +47,29 @@ describe('canonicalizeImages preserves addedAt', () => {
   })
 })
 
-describe('displayFromCanonical preserves addedAt', () => {
+describe('artist state keeps addedAt on its refs (#116)', () => {
   beforeEach(() => clearBlobUrls())
 
-  it('resolves a { key, addedAt } ref back to { url, addedAt }', async () => {
+  it('normalizes a { url, addedAt } a producer emitted to { key, addedAt }', () => {
+    registerBlobUrl('user/1/artists/a/n.jpg', 'data:image/jpeg;base64,NNN')
+    const stamped = stampAddedAt('data:image/jpeg;base64,NNN')
+    expect(normalizeArtistImages([stamped])).toEqual([{ key: 'user/1/artists/a/n.jpg', addedAt: stamped.addedAt }])
+  })
+
+  it('keeps a { url, addedAt } static path as it is', () => {
+    const ref = { url: '/images/static.jpg', addedAt: '2026-07-01T00:00:00.000Z' }
+    expect(normalizeArtistImages([ref])).toEqual([ref])
+  })
+
+  it('a { key, addedAt } ref still resolves to its photo', async () => {
     const key = 'user/1/artists/a/resolve.jpg'
     await backend.blobs.upload('1', key, 'data:image/jpeg;base64,BBB', 'image/jpeg')
-    const [display] = await displayFromCanonical([{ key, addedAt: '2026-07-01T00:00:00.000Z' }])
-    expect(display).toEqual({ url: 'data:image/jpeg;base64,BBB', addedAt: '2026-07-01T00:00:00.000Z' })
-  })
-
-  it('resolves a { url, addedAt } ref (no key) back to itself', async () => {
-    const [display] = await displayFromCanonical([{ url: '/images/static.jpg', addedAt: '2026-07-01T00:00:00.000Z' }])
-    expect(display).toEqual({ url: '/images/static.jpg', addedAt: '2026-07-01T00:00:00.000Z' })
-  })
-
-  it('resolves a ref with no addedAt back to a plain string, unchanged from before', async () => {
-    const key = 'user/1/artists/a/plain.jpg'
-    await backend.blobs.upload('1', key, 'data:image/jpeg;base64,CCC', 'image/jpeg')
-    const [display] = await displayFromCanonical([{ key }])
-    expect(display).toBe('data:image/jpeg;base64,CCC')
+    expect(await resolveImage({ key, addedAt: '2026-07-01T00:00:00.000Z' })).toBe('data:image/jpeg;base64,BBB')
   })
 })
 
 // End-to-end: a device with an empty local IndexedDB cache (a "second device")
-// hydrating purely from the remote canonical record must still see addedAt.
+// pulling purely from the remote canonical record must still see addedAt.
 describe('addedAt survives a cross-device round trip through useArtistStorage', () => {
   const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>
 
@@ -78,7 +78,7 @@ describe('addedAt survives a cross-device round trip through useArtistStorage', 
     clearBlobUrls()
   })
 
-  it('hydrates addedAt from a remote { key, addedAt } canonical ref', async () => {
+  it('pulls addedAt from a remote { key, addedAt } canonical ref', async () => {
     const key = 'user/local-second@device.com/artists/c1/x.jpg'
     // The remote row must be written under the same signed-in identity that
     // will later read it back (#28 namespaces the local backend's simulated
@@ -103,6 +103,7 @@ describe('addedAt survives a cross-device round trip through useArtistStorage', 
     await waitFor(() => expect(result.current.store[0]).toHaveLength(1))
 
     const [artist] = result.current.store[0]
-    expect(artist.images[0]).toEqual({ url: 'data:image/jpeg;base64,REMOTE', addedAt: '2026-07-01T00:00:00.000Z' })
+    expect(artist.images[0]).toEqual({ key, addedAt: '2026-07-01T00:00:00.000Z' })
+    expect(await resolveImage(artist.images[0])).toBe('data:image/jpeg;base64,REMOTE')
   })
 })

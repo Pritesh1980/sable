@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { createElement } from 'react'
 import { useArtistStorage } from '../hooks/useArtistStorage'
+import useImageSrc from '../hooks/useImageSrc'
 import { AuthProvider } from '../context/AuthContext'
 import { useAuth } from '../context/useAuth'
 import { DEFAULT_ARTISTS } from '../data/artists'
@@ -13,7 +14,9 @@ import { backend } from '../backend'
 // own photo refs ({ key }) out of the offline cache: a key that can't be
 // resolved *right now* became '' in the display value, and the cache is
 // written by canonicalizing that display value. And an artist edit made while
-// the first pull was in flight was reverted when the pull landed.
+// the first pull was in flight was reverted when the pull landed. Since #116
+// state holds the refs themselves and each tile resolves its own photo
+// (useImageSrc), so "unavailable" is a per-photo status, not a state field.
 
 const KEY = 'user/u1/artists/zoia/own-photo.jpg'
 const STAMP = '2026-09-01T10:00:00.000Z'
@@ -48,9 +51,21 @@ function goOffline() {
 async function mount() {
   const { result } = renderHook(() => useArtistStorage(), { wrapper })
   await waitFor(() => expect(result.current).toBeTruthy())
-  // Hydrated: the owner's curated static images have been merged in.
+  // Painted: the owner's starter photos are in the stored rows.
   await waitFor(() => expect(stateRow(result, firstId).images.length).toBeGreaterThan(0))
   return result
+}
+
+// How a tile showing this ref settles: every status it reports, in order.
+async function settledStatuses(ref) {
+  const seen = []
+  const { result } = renderHook(() => {
+    const out = useImageSrc(ref)
+    seen.push(out.status)
+    return out
+  })
+  await waitFor(() => expect(['ready', 'unavailable']).toContain(result.current.status))
+  return { seen, src: result.current.src }
 }
 
 beforeEach(() => {
@@ -78,36 +93,44 @@ describe('opening the app offline (#101)', () => {
 
     const result = await mount()
 
-    await waitFor(() => expect(stateRow(result, firstId).images[0]).toBe(photo))
-    expect(stateRow(result, firstId).unresolvedImages).toBeUndefined()
+    expect(stateRow(result, firstId).images[0]).toEqual({ key: KEY })
+    expect(stateRow(result, firstId)).not.toHaveProperty('unresolvedImages')
+    expect((await settledStatuses(stateRow(result, firstId).images[0])).src).toBe(photo)
     expect(cachedRow(firstId).images[0]).toEqual({ key: KEY })
     noDuplicates(cachedRow(firstId).images)
+    noDuplicates(stateRow(result, firstId).images)
   })
 
-  // #102 draws a placeholder for every non-pending unresolved photo, so a photo
-  // that is merely not hydrated yet must never look unresolved.
+  // #102 draws a placeholder for a photo that is unavailable, so a photo that
+  // is merely still loading must never look unavailable.
   it('online, never marks a photo that is only loading as unavailable', async () => {
     seedReturningUser()
     const photo = 'data:image/jpeg;base64,b3duLXBob3Rv'
     await backend.blobs.upload('u1', KEY, photo, 'image/jpeg')
-    const seen = []
+    const rows = []
     const { result } = renderHook(() => {
       const value = useArtistStorage()
-      seen.push(value?.[0]?.find((a) => a.id === firstId)?.unresolvedImages)
+      rows.push(value?.[0]?.find((a) => a.id === firstId))
       return value
     }, { wrapper })
+    await waitFor(() => expect(result.current).toBeTruthy())
 
-    await waitFor(() => expect(stateRow(result, firstId).images[0]).toBe(photo))
-    const everSeen = seen.flat().filter(Boolean)
-    expect(everSeen.length).toBeGreaterThan(0)
-    for (const entry of everSeen) expect(entry.pending).toBe(true)
+    // The ref is in place in every published value…
+    for (const row of rows.filter(Boolean)) expect(row.images[0]).toEqual({ key: KEY })
+    // …and its tile goes loading → ready, never unavailable.
+    const { seen, src } = await settledStatuses(stateRow(result, firstId).images[0])
+    expect(seen).toContain('loading')
+    expect(seen).not.toContain('unavailable')
+    expect(src).toBe(photo)
   })
 
   it('offline, marks the photo it could not load as unavailable', async () => {
     seedReturningUser()
     goOffline()
     const result = await mount()
-    expect(stateRow(result, firstId).unresolvedImages).toEqual([{ ref: { key: KEY }, index: 0 }])
+    expect(stateRow(result, firstId).images[0]).toEqual({ key: KEY })
+    const { seen } = await settledStatuses(stateRow(result, firstId).images[0])
+    expect(seen.at(-1)).toBe('unavailable')
   })
 
   it('keeps it through an edit made while offline', async () => {

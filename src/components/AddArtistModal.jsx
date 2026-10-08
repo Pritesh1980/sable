@@ -6,9 +6,11 @@ import { readCaptureClipboard } from '../data/clipboardIntake'
 import { STYLE_TAGS, parseInstagramHandle, createArtist } from '../data/artists'
 import { uploadImages, compressImages } from '../hooks/useImageUpload'
 import { stampAddedAt } from '../data/wall'
+import { normalizeArtistImages } from '../data/artistsPolicy'
+import { refIdentity } from '../data/imageRef'
 import { analyzeScreenshotWithGemini } from '../data/screenshotIntake'
 import { cropImageToDataUrl, dataUrlToFile } from '../data/screenshotCrop'
-import { cosineSimilarity } from '../data/embeddings'
+import { cosineSimilarity, vectorLookup } from '../data/embeddings'
 import { buildTasteVector } from '../data/taste'
 import { loadVectors } from '../data/styleIndex'
 import { getEmbedder } from '../data/embedder'
@@ -101,7 +103,8 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
     try {
       if (pendingSave.userId !== userId) throw new Error('Owner changed')
       const artist = artists.find((a) => a.id === pendingSave.artistId && a.generation === pendingSave.generation)
-      if (!artist || !pendingSave.images.every((image) => artist.images?.includes(image))) throw new Error('Artist changed')
+      const savedImages = new Set((artist?.images || []).map(refIdentity))
+      if (!artist || !normalizeArtistImages(pendingSave.images).every((image) => savedImages.has(refIdentity(image)))) throw new Error('Artist changed')
       onSaved?.({ kind: pendingSave.kind, artistId: artist.id, imageCount: pendingSave.images.length })
       onClose()
     } catch {
@@ -284,7 +287,7 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
     try {
       const vectors = await loadVectors(artists)
       if (vectors.size === 0) return
-      const taste = buildTasteVector(artists, (s) => vectors.get(s) || null)
+      const taste = buildTasteVector(artists, vectorLookup(vectors))
       if (!taste) return
       const embed = await getEmbedder()
       const score = cosineSimilarity(taste, await embed(dataUrl))

@@ -5,6 +5,8 @@ import { MemoryRouter } from 'react-router'
 import AddArtistModal from '../components/AddArtistModal'
 import { uploadImages } from '../hooks/useImageUpload'
 import { analyzeScreenshotWithGemini } from '../data/screenshotIntake'
+import { normalizeArtistImages } from '../data/artistsPolicy'
+import { clearBlobUrls, registerBlobUrl } from '../data/blobUrls'
 
 vi.mock('../hooks/useImageUpload', () => ({ uploadImages: vi.fn(), compressImages: vi.fn() }))
 vi.mock('../data/screenshotIntake', () => ({ analyzeScreenshotWithGemini: vi.fn() }))
@@ -12,13 +14,15 @@ vi.mock('../data/styleIndex', () => ({ loadVectors: vi.fn(async () => new Map())
 const photo = () => new File(['fixture'], 'fixture.png', { type: 'image/png' })
 let latest, update
 function open(props = {}, seed = []) {
-  const { initialFile: firstFile, ...modalProps } = props
+  const { initialFile: firstFile, normalizeSaves = false, ...modalProps } = props
   const onClose = vi.fn(), onSaved = vi.fn(), onManage = vi.fn()
   function Harness({ initialFile, userId = 'capture-owner' }) {
     const [artists, setArtists] = useState(seed)
     latest = artists
     update = setArtists
-    return <MemoryRouter><AddArtistModal artists={artists} setArtists={setArtists}
+    const commit = normalizeSaves ? (updater) => setArtists((prev) => updater(prev)
+      .map((artist) => ({ ...artist, images: normalizeArtistImages(artist.images) }))) : setArtists
+    return <MemoryRouter><AddArtistModal artists={artists} setArtists={commit}
       onClose={onClose} onSaved={onSaved} onManage={onManage} initialFile={initialFile} {...modalProps} userId={userId} /></MemoryRouter>
   }
   const view = render(<StrictMode><Harness initialFile={firstFile} /></StrictMode>)
@@ -34,10 +38,25 @@ function attach() {
 }
 beforeEach(() => {
   localStorage.clear()
+  clearBlobUrls()
   vi.restoreAllMocks()
   uploadImages.mockReset().mockResolvedValue(['fixture-saved.jpg'])
 })
 describe('compact capture', () => {
+  it.each([false, true])('confirms a stored-ref save after normalization (existing: %s)', async (existing) => {
+    const url = 'data:image/jpeg;base64,eA=='
+    const key = 'user/capture-owner/artists/mora.blackfern/fixture.jpg'
+    registerBlobUrl(key, url)
+    uploadImages.mockResolvedValueOnce([url])
+    const seed = existing ? [{ id: 'mora.blackfern', handle: 'mora.blackfern', generation: 'one', images: [] }] : []
+    const { onSaved, onClose } = open({ normalizeSaves: true }, seed)
+    handle(); attach()
+    fireEvent.click(screen.getByRole('button', { name: existing ? /add images to/i : /^save$/i }))
+    await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1))
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(latest[0].images).toEqual([expect.objectContaining({ key })])
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
   it('starts with collapsed optional details and no automatic clipboard read', () => {
     const read = vi.fn()
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { read } })

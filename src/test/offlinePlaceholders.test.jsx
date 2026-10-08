@@ -1,128 +1,128 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
-import { photoSlots, fromSlots } from '../data/offlineImages'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { buildConceptWallItems, isDraftConcept } from '../data/concepts'
+import { clearBlobUrls, registerBlobUrl } from '../data/blobUrls'
+import { backend } from '../backend'
 import ArtistDetail from '../components/ArtistDetail'
 import ConceptPiece from '../components/ConceptPiece'
 import ConceptVariantLab from '../components/ConceptVariantLab'
 
 // #102. A photo whose bytes can't be fetched right now (offline, with a network
 // backend) is kept in the data since #101, but was simply missing from the
-// screen. It now shows as a placeholder tile in its place.
+// screen. It now shows as a placeholder tile in its place. Since #116 the
+// artist's images hold the stored refs, and each tile (PhotoTile) resolves its
+// own: unavailable → the placeholder, still loading → an empty busy box.
 
 const KEY = 'user/u1/artists/zoia/own.jpg'
 const offlineTiles = () => screen.queryAllByRole('img', { name: /available when online/i })
 const noop = () => {}
 
-describe('photoSlots', () => {
-  it('is every displayed image, in order, when nothing is unresolved', () => {
-    expect(photoSlots(['a.jpg', 'b.jpg'])).toEqual([
-      { kind: 'image', src: 'a.jpg', imageIndex: 0 },
-      { kind: 'image', src: 'b.jpg', imageIndex: 1 },
-    ])
-  })
-
-  it('puts each unresolved photo back at its original position', () => {
-    const slots = photoSlots(['a.jpg', 'b.jpg'], [
-      { ref: { key: 'k2' }, index: 2 },
-      { ref: { key: 'k0' }, index: 0 },
-    ])
-    expect(slots.map((s) => s.kind === 'image' ? s.src : 'offline')).toEqual(['offline', 'a.jpg', 'offline', 'b.jpg'])
-    expect(slots[3].imageIndex).toBe(1)
-  })
-
-  it('appends a position past the end rather than dropping it', () => {
-    const slots = photoSlots(['a.jpg'], [{ ref: { key: 'k' }, index: 9 }])
-    expect(slots.map((s) => s.kind)).toEqual(['image', 'offline'])
-  })
-
-  it('round-trips: slots back to the displayed list plus offline positions', () => {
-    const unresolved = [{ ref: { key: 'k0' }, index: 0 }, { ref: { key: 'k2' }, index: 2 }]
-    expect(fromSlots(photoSlots(['a.jpg', 'b.jpg'], unresolved))).toEqual({ images: ['a.jpg', 'b.jpg'], unresolvedImages: unresolved })
-  })
-
-  it('ignores refs that are only waiting for first hydration', () => {
-    expect(photoSlots([], [{ ref: { key: 'k' }, index: 0, pending: true }])).toEqual([])
-  })
-})
-
 describe('ArtistDetail offline photos', () => {
   const artist = {
     id: 'zoia.ink', handle: 'zoia.ink', name: '', tags: [], rank: 1, studio: null,
     status: 'researching', notes: '',
-    images: ['a.jpg'],
-    unresolvedImages: [{ ref: { key: KEY }, index: 1 }],
+    images: ['a.jpg', { key: KEY }],
   }
-
-  it('shows a placeholder tile for a photo that cannot load, and counts it', () => {
-    render(<ArtistDetail artist={artist} onClose={noop} onSave={noop} />)
-    expect(offlineTiles()).toHaveLength(1)
-    expect(screen.getByText('1 / 2')).toBeTruthy()
-  })
-
-  // The sheet's photo list is a snapshot taken on open (#79); placeholders are
-  // positioned against it, so they must come from the same snapshot.
-  it('keeps its placeholders in step with its photo snapshot when the prop changes', () => {
-    const { rerender } = render(<ArtistDetail artist={artist} onClose={noop} onSave={noop} />)
-    rerender(<ArtistDetail artist={{ ...artist, unresolvedImages: undefined }} onClose={noop} onSave={noop} />)
-    expect(offlineTiles()).toHaveLength(1)
-  })
-
-  it('shows no placeholder when every photo loaded', () => {
-    render(<ArtistDetail artist={{ ...artist, unresolvedImages: undefined }} onClose={noop} onSave={noop} />)
-    expect(offlineTiles()).toHaveLength(0)
-  })
-
-  // Remove and set cover act on the whole sequence, placeholders included, so
-  // an offline photo keeps its place relative to its neighbours (codex/agy).
-  const U = { ref: { key: KEY }, index: 1 }
-  const aub = { ...artist, images: ['a.jpg', 'b.jpg'], unresolvedImages: [U] }
+  const offline = () => vi.spyOn(backend.blobs, 'getUrl').mockRejectedValue(new Error('offline'))
+  const stillLoading = () => vi.spyOn(backend.blobs, 'getUrl').mockReturnValue(new Promise(() => {}))
+  // The carousel's tiles, in order: what each one is.
+  const tileKinds = () => {
+    const carousel = document.querySelector('.snap-x')
+    return [...carousel.children].map((tile) => {
+      if (tile.querySelector('[aria-label="Photo available when online"]')) return 'offline'
+      if (tile.getAttribute('aria-busy') === 'true') return 'loading'
+      return tile.querySelector('img')?.getAttribute('src') || 'monogram'
+    })
+  }
   function lastSave(onSave, current) {
     return onSave.mock.calls.at(-1)[2](current)
   }
 
-  it('removing a photo before a placeholder moves the placeholder up with it', () => {
+  beforeEach(() => {
+    clearBlobUrls()
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+  })
+  afterEach(() => vi.restoreAllMocks())
+
+  it('shows a placeholder tile for a photo that cannot load, in its place, and counts it', async () => {
+    offline()
+    render(<ArtistDetail artist={artist} onClose={noop} onSave={noop} />)
+    await waitFor(() => expect(offlineTiles()).toHaveLength(1))
+    expect(tileKinds()).toEqual(['/a.jpg', 'offline'])
+    expect(screen.getByText('1 / 2')).toBeTruthy()
+  })
+
+  // The sheet's photo list is a snapshot taken on open (#79); placeholders are
+  // part of it, so a prop change does not drop them.
+  it('keeps its placeholders in step with its photo snapshot when the prop changes', async () => {
+    offline()
+    const { rerender } = render(<ArtistDetail artist={artist} onClose={noop} onSave={noop} />)
+    await waitFor(() => expect(offlineTiles()).toHaveLength(1))
+    rerender(<ArtistDetail artist={{ ...artist, images: ['a.jpg'] }} onClose={noop} onSave={noop} />)
+    expect(offlineTiles()).toHaveLength(1)
+  })
+
+  it('shows no placeholder when every photo loaded', () => {
+    registerBlobUrl(KEY, 'data:image/png;base64,T1dO')
+    render(<ArtistDetail artist={artist} onClose={noop} onSave={noop} />)
+    expect(offlineTiles()).toHaveLength(0)
+    expect(tileKinds()).toEqual(['/a.jpg', 'data:image/png;base64,T1dO'])
+  })
+
+  it('shows a photo that is still loading as an empty busy box, never as unavailable', () => {
+    stillLoading()
+    render(<ArtistDetail artist={artist} onClose={noop} onSave={noop} />)
+    expect(offlineTiles()).toHaveLength(0)
+    expect(tileKinds()).toEqual(['/a.jpg', 'loading'])
+  })
+
+  // Remove and set cover act on the whole sequence, placeholders included, so
+  // an offline photo keeps its place relative to its neighbours (codex/agy).
+  const aub = { ...artist, images: ['a.jpg', { key: KEY }, 'b.jpg'] }
+
+  it('removing a photo before a placeholder moves the placeholder up with it', async () => {
+    offline()
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     const onSave = vi.fn()
     render(<ArtistDetail artist={aub} onClose={noop} onSave={onSave} />)
+    await waitFor(() => expect(offlineTiles()).toHaveLength(1))
     fireEvent.click(screen.getAllByTitle('Remove photo')[0])
     const saved = lastSave(onSave, { ...aub })
-    expect(saved.images).toEqual(['b.jpg'])
-    expect(saved.unresolvedImages).toEqual([{ ref: { key: KEY }, index: 0 }])
-    expect(offlineTiles()).toHaveLength(1)
-    vi.restoreAllMocks()
+    expect(saved.images).toEqual([{ key: KEY }, 'b.jpg'])
+    await waitFor(() => expect(offlineTiles()).toHaveLength(1))
+    expect(tileKinds()).toEqual(['offline', '/b.jpg'])
   })
 
-  it('setting a cover keeps the placeholder after the photo it followed', () => {
+  it('setting a cover keeps the placeholder after the photo it followed', async () => {
+    offline()
     const onSave = vi.fn()
     render(<ArtistDetail artist={aub} onClose={noop} onSave={onSave} />)
+    await waitFor(() => expect(offlineTiles()).toHaveLength(1))
     fireEvent.click(screen.getByText('Set cover'))
     const saved = lastSave(onSave, { ...aub })
-    expect(saved.images).toEqual(['b.jpg', 'a.jpg'])
-    expect(saved.unresolvedImages).toEqual([{ ref: { key: KEY }, index: 2 }])
+    expect(saved.images).toEqual(['b.jpg', 'a.jpg', { key: KEY }])
   })
 
-  it('can replace a cover that is itself offline', () => {
+  it('can replace a cover that is itself offline', async () => {
+    offline()
     const onSave = vi.fn()
-    const coverOffline = { ...aub, unresolvedImages: [{ ref: { key: KEY }, index: 0 }] }
+    const coverOffline = { ...aub, images: [{ key: KEY }, 'a.jpg', 'b.jpg'] }
     render(<ArtistDetail artist={coverOffline} onClose={noop} onSave={onSave} />)
+    await waitFor(() => expect(offlineTiles()).toHaveLength(1))
     fireEvent.click(screen.getAllByText('Set cover')[1])
     const saved = lastSave(onSave, { ...coverOffline })
-    expect(saved.images).toEqual(['b.jpg', 'a.jpg'])
-    expect(saved.unresolvedImages).toEqual([{ ref: { key: KEY }, index: 1 }])
+    expect(saved.images).toEqual(['b.jpg', { key: KEY }, 'a.jpg'])
   })
 
-  it('leaves photos that are still loading alone', () => {
+  it('keeps a photo that is still loading in its place through an edit', () => {
+    stillLoading()
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     const onSave = vi.fn()
-    const pending = [{ ref: { key: KEY }, index: 0, pending: true }]
-    const loading = { ...artist, images: ['a.jpg', 'b.jpg'], unresolvedImages: pending }
+    const loading = { ...artist, images: [{ key: KEY }, 'a.jpg', 'b.jpg'] }
     render(<ArtistDetail artist={loading} onClose={noop} onSave={onSave} />)
     fireEvent.click(screen.getAllByTitle('Remove photo')[0])
     const saved = lastSave(onSave, { ...loading })
-    expect(saved.images).toEqual(['b.jpg'])
-    expect(saved.unresolvedImages).toBe(pending)
-    vi.restoreAllMocks()
+    expect(saved.images).toEqual([{ key: KEY }, 'b.jpg'])
   })
 })
 

@@ -6,6 +6,7 @@ import {
   similarArtists,
   rankArtistsByVector,
   indexCoverage,
+  vectorLookup,
 } from '../data/embeddings'
 
 // Small orthogonal-ish fixture space: artists A and B share a direction,
@@ -18,7 +19,7 @@ const vecs = {
   '/c1.jpg': [0, 0, 3],
   '/c2.jpg': [0, 0.1, 2],
 }
-const getVec = (src) => vecs[src] || null
+const getVec = vectorLookup(new Map(Object.entries(vecs).map(([src, v]) => [`path:${src}`, v])))
 
 const artists = [
   { id: 'a', images: ['/a1.jpg', '/a2.jpg'] },
@@ -104,5 +105,23 @@ describe('indexCoverage', () => {
     const { embedded, total } = indexCoverage(artists, getVec)
     expect(embedded).toBe(5)
     expect(total).toBe(6)
+  })
+})
+
+describe('getVec receives stored refs (#116)', () => {
+  it('hands getVec the stored ref, not a url (#116)', () => {
+    const seen = []
+    const getVec = (image) => { seen.push(image); return [1, 0] }
+    const ref = { key: 'user/u1/a.jpg', addedAt: 'x' }
+    artistCentroids([{ id: 'a', images: [ref, 'images/b.jpg'] }], getVec)
+    expect(seen).toEqual([ref, 'images/b.jpg'])
+  })
+
+  it('vectorLookup maps an image to its vector by identity', () => {
+    const vectors = new Map([['path:/images/b.jpg', [0, 1]], ['key:user/u1/a.jpg', [1, 0]]])
+    const get = vectorLookup(vectors)
+    expect(get('images/b.jpg')).toEqual([0, 1])
+    expect(get({ key: 'user/u1/a.jpg', addedAt: 'x' })).toEqual([1, 0])
+    expect(get('images/missing.jpg')).toBeNull()
   })
 })
