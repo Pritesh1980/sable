@@ -365,25 +365,27 @@ with their refs, #116.)
 ## 3. Images never travel inside documents
 
 A synced record carries a small canonical reference — a storage key — while the bytes
-live in blob storage. Artists (#116) and ideas (#117) hold the stored refs themselves in
-memory and resolve each at display time. For concepts the in-memory field is still a
-displayable URL, so their components are unaware of the split.
+live in blob storage. State holds that stored ref too — artists since #116, ideas,
+concepts and variants since #117 — and each screen resolves it to a displayable URL where
+it renders (`useImageSrc`, `useImageStatuses`, `resolveImage*`).
 
 ```mermaid
 flowchart LR
-  MEM["In memory<br/>displayable URL"]
+  MEM["In memory<br/>stored ref"]
   CODEC{{"per-collection codec"}}
   DOC["Synced document<br/>{ key } only"]
   BLOB[("Blob storage<br/>bytes")]
+  VIEW["Rendered image<br/>short-lived URL"]
   MEM --> CODEC
-  CODEC -- "canonical ref" --> DOC
-  CODEC -- "bytes uploaded once" --> BLOB
-  DOC -. "resolve on read" .-> MEM
-  BLOB -. "resolve on read" .-> MEM
+  CODEC -- "same ref" --> DOC
+  CODEC -- "inline bytes uploaded once" --> BLOB
+  MEM -. "resolve at render" .-> VIEW
+  BLOB -. "bytes" .-> VIEW
 ```
 
-Per-collection codecs (`src/data/imageCodec.js`) translate at the persistence
-boundary. The rule that makes it hold is enforced rather than trusted: base64 data
+Per-collection codecs (`src/data/imageCodec.js`) sit at the persistence boundary: they
+warm the URL cache on load and, through `ensureUploaded` (which hands back the value it
+changed), swap an inline photo stored before staging existed for its key. The rule that makes it hold is enforced rather than trusted: base64 data
 never reaches `localStorage` or the remote store, and there is a test asserting it.
 Legacy inline images migrate to blobs on first authenticated load.
 
@@ -409,29 +411,32 @@ cache. `onEdit` also normalises whatever a producer emitted into refs
 (`normalizeArtistImages`, `dedupeRefs`) and writes the tombstones. Idea state holds the
 stored `{ key, note }` / `{ url, note }` form too: `ideasCodec` only warms the URL cache
 and, through `ensureUploaded` (which hands back the value it changed), swaps an inline
-photo stored before staging existed for its key. Concepts and their
-variants still use `unresolvedImageKey` in `imageCodec.js`. What the user sees is
+photo stored before staging existed for its key. A concept's and a variant's `imageUrl`
+is the stored string as well — a blob key, an external URL or `''` — so there is no
+`unresolvedImageKey` any more. What the user sees is
 unchanged: `ArtistDetail` renders one `PhotoTile` per ref (`src/components/PhotoTile.jsx`).
 A ready photo is interactive; a key still resolving is an empty `aria-busy` box, so a
 normal online start shows no placeholder flash; an unavailable one is the `OfflinePhoto`
 "Available when online" tile at its original position (#102). Remove and Set-cover act
 on the latest list, and a photo that is not ready cannot be opened or edited. A concept
-with an `unresolvedImageKey` stays on the wall as an offline piece rather than dropping
-into Drafts. Photo counts ("N with photos", the ranking queue) include offline photos.
+whose key can't be fetched stays on the wall as an offline piece rather than dropping
+into Drafts (`isDraftConcept` is just "has no image"), and the viewer holds only the
+pieces `useImageStatuses` reports ready. Photo counts ("N with photos", the ranking queue) include offline photos.
 
 ### An old URL must still lead back to its key
 
-Saving turns display values back into refs through the URL→key map in
-`src/data/blobUrls.js`, and a signed URL resolved at hydration can still be in state
-long after its TTL refresh. So a superseded URL keeps its mapping for the session
-(#110). Dropping it, as the map once did to stay small, meant the next save stored
-the expiring URL in place of the key, and last-write-wins spread that to every
-device. Keeping refs in state removes the reverse map altogether: artists now do (#116), ideas
-and concepts are planned in #109.
+Where a producer still hands back a display URL, saving turns it into a ref through
+the URL→key map in `src/data/blobUrls.js`. A superseded URL keeps its mapping for the
+session (#110): dropping it, as the map once did to stay small, meant the next save
+stored an expiring URL in place of the key, and last-write-wins spread that to every
+device. State now holds refs everywhere (#116, #117), so only two things still use the
+map: the artist add paths (`uploadImages` returns display URLs that `onEdit` normalises)
+and the legacy-cache overlay, both due to go with #118. Recovering an expired image no
+longer needs it: an `<img>` error re-resolves by the key in the ref (`refreshBlobKey`).
 
 ### Bytes are staged before the key exists
 
-Every add path (`withStagedImages` / `stageImages` in `src/data/imageStaging.js`) writes
+Every add path (`withStagedImages` / `stageImages` / `stageImageRefs` in `src/data/imageStaging.js`) writes
 the bytes to IndexedDB (`tattoo-staged-images-v1`) and an entry to the
 `tattoo_upload_outbox` list before the `{ key }` ref reaches state, so base64 never
 reaches localStorage or the remote and a photo added offline survives a reload.
