@@ -252,18 +252,16 @@ describe('staging hands back keys', () => {
   })
 
   it('stageInlineOnce tries again after a failure', async () => {
-    const { putStagedBytes } = await import('../data/stagedImageStore')
     vi.spyOn(console, 'error').mockImplementation(() => {})
     vi.stubGlobal('alert', vi.fn())
-    const upload = vi.spyOn(backend.blobs, 'upload').mockRejectedValue(new Error('offline'))
-    const store = await import('../data/stagedImageStore')
-    const put = vi.spyOn(store, 'putStagedBytes').mockRejectedValue(new Error('quota'))
     const other = 'data:image/jpeg;base64,UkVUUlk='
+    // Make the first attempt fail the way this file's existing staging-failure
+    // test does in src/test/imageStaging.test.js (bytes cannot be kept and the
+    // direct upload rejects), then lift the failure.
+    const restore = failStagingOnce()
     expect(await stageInlineOnce(other, ctx)).toBeNull()
-    put.mockRestore()
-    upload.mockRestore()
+    restore()
     expect(await stageInlineOnce(other, ctx)).toMatch(/^user\/u1\//)
-    void putStagedBytes
   })
 
   it('stageInlineOnce reuses the key for the same photo', async () => {
@@ -306,6 +304,8 @@ Add to `src/test/skinPreview.test.js` (inside its existing `describe` for `image
     await expect(imageUrlToDataUrl('user/u1/concepts/c1/gone.jpg')).rejects.toThrow('Could not read the design image.')
   })
 ```
+
+`failStagingOnce()` in `stagingRefs.test.js` is a local helper you write: copy the mocking that `src/test/imageStaging.test.js` uses for its "could be neither kept nor uploaded" case, and return a function that undoes it.
 
 Import `backend` from `'../backend'` and `clearBlobUrls` from `'../data/blobUrls'` there, and call `clearBlobUrls()` in that file's `beforeEach`.
 
