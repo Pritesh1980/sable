@@ -5,7 +5,7 @@ import { ARTIST_STATUSES } from '../data/planning'
 import { compressImages } from '../hooks/useImageUpload'
 import { analyzeScreenshotWithGemini } from '../data/screenshotIntake'
 import { cropImageToDataUrl } from '../data/screenshotCrop'
-import { cosineSimilarity } from '../data/embeddings'
+import { cosineSimilarity, vectorLookup } from '../data/embeddings'
 import { buildTasteVector } from '../data/taste'
 import { loadVectors } from '../data/styleIndex'
 import { getEmbedder } from '../data/embedder'
@@ -152,7 +152,7 @@ export default function QuickAddArtist({ artists = [], onAdd, onClose, initialFi
     try {
       const vectors = await loadVectors(artists)
       if (vectors.size === 0) return
-      const taste = buildTasteVector(artists, (s) => vectors.get(s) || null)
+      const taste = buildTasteVector(artists, vectorLookup(vectors))
       if (!taste) return
       const embed = await getEmbedder()
       const fit = cosineSimilarity(taste, await embed(dataUrl))

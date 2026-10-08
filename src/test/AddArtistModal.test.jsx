@@ -11,7 +11,7 @@ vi.mock('../data/screenshotIntake', () => ({
   analyzeScreenshotWithGemini: vi.fn(),
 }))
 vi.mock('../data/styleIndex', () => ({
-  loadVectors: vi.fn(async () => new Map([['/z1.jpg', [1, 0]]])),
+  loadVectors: vi.fn(async () => new Map([['path:/z1.jpg', [1, 0]]])),
 }))
 vi.mock('../data/taste', () => ({
   buildTasteVector: vi.fn(() => [1, 0]),

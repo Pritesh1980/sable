@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import TasteMap from '../components/TasteMap'
+import { refIdentity } from '../data/imageRef'
 
 const h = vi.hoisted(() => ({ load: vi.fn(), build: vi.fn() }))
 vi.mock('../data/styleIndex', () => ({ loadVectors: h.load, buildStyleIndex: h.build }))
@@ -10,7 +11,7 @@ const artists = [
   { id: 'b', handle: 'ink.b', name: '', tags: ['fine-line'], images: ['/b1.jpg'], rank: 2 },
   { id: 'c', handle: 'ink.c', name: 'Cy Moor', tags: ['realism'], images: ['/c1.jpg'], rank: 3 },
 ]
-const vectors = new Map([['/a1.jpg', [1, 0, 0]], ['/b1.jpg', [0, 1, 0]], ['/c1.jpg', [0, 0, 1]]])
+const vectors = new Map([[refIdentity('/a1.jpg'), [1, 0, 0]], [refIdentity('/b1.jpg'), [0, 1, 0]], [refIdentity('/c1.jpg'), [0, 0, 1]]])
 
 beforeEach(() => {
   h.load.mockReset().mockResolvedValue(vectors)

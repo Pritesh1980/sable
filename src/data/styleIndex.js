@@ -1,14 +1,20 @@
 // Persistent on-device cache of image style embeddings (issue #19).
 // Device-local by design — like tattoo_theme / API keys, embeddings are
 // derivable from the images, so they are never synced; each device builds its
-// own index. Keyed by `${modelId}:${imageSrc}` so a model swap silently starts
-// a fresh index instead of mixing incompatible vector spaces.
+// own index. Keyed by `${modelId}:${identity}` (identity = refIdentity of the
+// stored photo, stable across sessions) so a model swap silently starts a
+// fresh index instead of mixing incompatible vector spaces.
 //
 // Same hand-rolled IndexedDB pattern as backend/local/localBlobs.js.
-import { getImageUrl } from './planning'
+import { refIdentity } from './imageRef'
+import { resolveImage } from './imageResolver'
 import { EMBEDDING_MODEL_ID, getEmbedder } from './embedder'
 
-const DB_NAME = 'tattoo-style-index-v1'
+// v2 keys vectors by photo identity (refIdentity), not by display URL: a signed
+// url changes every session, so the v1 index re-embedded every photo each time
+// (#116). Vectors are derivable, so v1 is simply dropped.
+const DB_NAME = 'tattoo-style-index-v2'
+const LEGACY_DB_NAME = 'tattoo-style-index-v1'
 const STORE = 'vectors'
 
 // One cached connection per session — also lets clearStyleIndex close it, so
@@ -20,7 +26,10 @@ function openDB() {
     dbPromise = new Promise((resolve, reject) => {
       const req = indexedDB.open(DB_NAME, 1)
       req.onupgradeneeded = (e) => e.target.result.createObjectStore(STORE)
-      req.onsuccess = (e) => resolve(e.target.result)
+      req.onsuccess = (e) => {
+        resolve(e.target.result)
+        indexedDB.deleteDatabase(LEGACY_DB_NAME) // fire and forget; vectors are derivable
+      }
       req.onerror = () => reject(req.error)
     })
   }
@@ -54,51 +63,57 @@ async function dbPut(key, value) {
   })
 }
 
-const vecKey = (src) => `${EMBEDDING_MODEL_ID}:${src}`
+const vecKey = (identity) => `${EMBEDDING_MODEL_ID}:${identity}`
 
-const collectSrcs = (artists) => {
-  const srcs = []
+// identity -> the ref it came from (first seen), in collection order.
+function collectRefs(artists) {
+  const refs = new Map()
   for (const artist of artists) {
     for (const image of artist.images || []) {
-      const src = getImageUrl(image)
-      if (src) srcs.push(src)
+      const id = refIdentity(image)
+      if (id && !refs.has(id)) refs.set(id, image)
     }
   }
-  return [...new Set(srcs)]
+  return refs
 }
 
-// Map of image src → vector for every already-indexed image in the collection.
+// Map of photo identity → vector for every already-indexed photo.
 export async function loadVectors(artists) {
-  const srcs = collectSrcs(artists)
-  const rows = await dbGetMany(srcs.map(vecKey))
+  const ids = [...collectRefs(artists).keys()]
+  const rows = await dbGetMany(ids.map(vecKey))
   const out = new Map()
-  for (const src of srcs) {
-    const vec = rows.get(vecKey(src))
-    if (vec) out.set(src, vec)
+  for (const id of ids) {
+    const vec = rows.get(vecKey(id))
+    if (vec) out.set(id, vec)
   }
   return out
 }
 
-// Embed every not-yet-indexed image in the collection. Incremental (existing
-// vectors are skipped) and fault-tolerant (one bad image doesn't kill the
-// build). Returns the full src → vector map when done.
+// Embed every not-yet-indexed photo in the collection. Incremental (existing
+// vectors are skipped) and fault-tolerant (one bad photo doesn't kill the
+// build). Returns the full identity → vector map when done.
 export async function buildStyleIndex(artists, { onProgress } = {}) {
-  const srcs = collectSrcs(artists)
+  const refs = collectRefs(artists)
   const existing = await loadVectors(artists)
-  const missing = srcs.filter((src) => !existing.has(src))
-  const total = srcs.length
+  const missing = [...refs].filter(([id]) => !existing.has(id))
+  const total = refs.size
   let done = total - missing.length
   onProgress?.({ done, total })
   if (!missing.length) return existing
 
   const embed = await getEmbedder()
-  for (const src of missing) {
+  for (const [id, ref] of missing) {
     try {
-      const vec = await embed(src)
-      await dbPut(vecKey(src), vec)
-      existing.set(src, vec)
+      // Resolved here, not stored: a photo that can't be fetched right now is
+      // skipped and picked up by a later build.
+      const src = await resolveImage(ref)
+      if (src) {
+        const vec = await embed(src)
+        await dbPut(vecKey(id), vec)
+        existing.set(id, vec)
+      }
     } catch (e) {
-      console.error('[tattoo] style-index embed failed:', src, e)
+      console.error('[tattoo] style-index embed failed:', id, e)
     }
     done++
     onProgress?.({ done, total })
