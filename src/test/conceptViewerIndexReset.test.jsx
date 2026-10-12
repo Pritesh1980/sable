@@ -46,4 +46,16 @@ describe('ConceptViewer only resets its displayed index across a real remount (#
     // that would need to change first.
     expect(screen.getByAltText('Raven')).toBeInTheDocument()
   })
+
+  it('closes, rather than showing its neighbour, when the open concept leaves the list', () => {
+    const three = [...items, { id: 'c3', title: 'Wolf', imageUrl: '/concepts/3.png', tags: [] }]
+    const onClose = vi.fn()
+    const { rerender } = render(<ConceptViewer items={three} initialIndex={1} open onClose={onClose} />)
+    expect(screen.getByRole('dialog', { name: 'Concept: Moth' })).toBeInTheDocument()
+
+    // Deleted on another device, say: the list arrives without it.
+    rerender(<ConceptViewer items={[three[0], three[2]]} initialIndex={1} open onClose={onClose} />)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
 })

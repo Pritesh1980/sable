@@ -29,6 +29,11 @@ const props = { designUrl: 'data:image/png;base64,DESIGN', label: 'Moth' }
 const overlay = () => screen.getByAltText('Moth design overlay')
 
 describe('LiveTryOn', () => {
+  it('does not hand inline data that is not an image to the overlay', () => {
+    render(<LiveTryOn designUrl="data:text/html,<b>x</b>" label="Moth" onSave={vi.fn()} onClose={vi.fn()} />)
+    expect(overlay().getAttribute('src') || '').toBe('')
+  })
+
   it('still shows an external design whose bytes cannot be read (no CORS)', async () => {
     h.toData.mockRejectedValue(new Error('Could not read the design image.'))
     render(<LiveTryOn designUrl="https://example.com/design.png" label="Moth" onSave={vi.fn()} onClose={vi.fn()} />)

@@ -141,6 +141,13 @@ export default function ConceptViewer({
   const [place, setPlace] = useState(() => ({ id: items[initialIndex]?.id, index: initialIndex }))
   const found = items.findIndex((item) => item.id === place.id)
   const index = found === -1 ? place.index : found
+  // The open piece has left the list (deleted on another device, say). Its
+  // neighbour now sits at this position, and every control here acts on
+  // whatever is showing — so close, rather than slide onto it.
+  const gone = open && place.id !== undefined && found === -1
+  useEffect(() => {
+    if (gone) onClose?.()
+  }, [gone, onClose])
   const [showInfo, setShowInfo] = useState(false)
   // Resolve the transition renderer once per viewer open (not per keypress).
   const [transitionMode] = useState(resolveTransitionMode)
@@ -200,7 +207,7 @@ export default function ConceptViewer({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [open, items, onClose, dialogRef])
 
-  if (!open || !items[index]) return null
+  if (!open || gone || !items[index]) return null
 
   const current = items[index]
 

@@ -3,6 +3,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 import useImageStatuses from '../hooks/useImageStatuses'
 import { clearBlobUrls } from '../data/blobUrls'
 import { backend } from '../backend'
+import { resolveImage } from '../data/imageResolver'
 
 const HERE = 'user/u1/concepts/c1/here.jpg'
 const GONE = 'user/u1/concepts/c2/gone.jpg'
@@ -49,6 +50,23 @@ describe('useImageStatuses', () => {
     clearBlobUrls()
     warm.rerender()
     expect(warm.result.current).toEqual(['ready'])
+    rerender()
+    expect(result.current).toEqual(['ready'])
+  })
+
+  it('a key that failed and later loads is ready, and stays ready', async () => {
+    const getUrl = vi.spyOn(backend.blobs, 'getUrl').mockRejectedValue(new Error('offline'))
+    const { result, rerender } = renderHook(() => useImageStatuses([HERE]))
+    await waitFor(() => expect(result.current).toEqual(['unavailable']))
+
+    // Something else on the page loads it once the connection is back.
+    getUrl.mockRestore()
+    await backend.blobs.upload('u1', HERE, 'data:image/jpeg;base64,QUJD', 'image/jpeg')
+    await resolveImage(HERE)
+    rerender()
+    expect(result.current).toEqual(['ready'])
+    // …and a later cache refresh must not bring the old failure back.
+    clearBlobUrls()
     rerender()
     expect(result.current).toEqual(['ready'])
   })

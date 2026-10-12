@@ -53,8 +53,8 @@ export default function LiveTryOn({ designUrl, label = 'Design', onSave, onClose
   // A design linked from another site would taint the snapshot canvas; draw
   // from local bytes instead. Falls back to the URL (display still works).
   // designUrl is a stored ref (a blob key, a url or inline bytes); only inline
-  // bytes are shown as they are, the rest arrive from the effect below.
-  const [designSrc, setDesignSrc] = useState(() => (String(designUrl).startsWith('data:') ? designUrl : ''))
+  // image bytes are shown as they are, the rest arrive from the effect below.
+  const [designSrc, setDesignSrc] = useState(() => (String(designUrl).startsWith('data:') ? resolveImageRef(designUrl).src : ''))
   const baseWidth = Math.min(stageW, stageH) * 0.45
   const [transform, setTransform] = useState(() => ({ x: stageW / 2, y: stageH * 0.42, scale: 1, rotation: 0 }))
   const [ink, setInk] = useState(0.88)
