@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import ArtistImage from './ArtistImage'
 import GeneratedArtworkNotice from './GeneratedArtworkNotice'
-import { activateOnKey } from '../a11y/activate'
 
 // A single image on the Wall — full-bleed, no chrome. The caption is an
 // engraved plate that only appears on hover; it never intercepts the click
@@ -30,31 +29,34 @@ export default function WallPiece({ item, onOpen, onDropImage }) {
 
   return (
     <figure
-      className={`relative mb-[6px] break-inside-avoid overflow-hidden cursor-zoom-in group ${
+      className={`relative mb-[6px] break-inside-avoid overflow-hidden group ${
         dragOver ? 'ring-2 ring-v2-accent ring-inset' : ''
       }`}
-      role="button"
-      tabIndex={0}
-      aria-label={`Open ${item.artistName}`}
-      onClick={() => onOpen(item)}
-      onKeyDown={activateOnKey(() => onOpen(item))}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <ArtistImage
-        src={item.image}
-        label={item.artistName}
-        loading="lazy"
-        sizes="auto, (max-width: 617px) 100vw, (max-width: 923px) 50vw, (max-width: 1229px) 33vw, 25vw"
-        className="w-full block grayscale-[0.15] group-hover:grayscale-0 transition-[filter] duration-300"
-        fallbackClassName="aspect-[4/5]"
-      />
+      {/* A real button, so Tab + Enter/Space open the piece with no key wiring. */}
+      <button
+        type="button"
+        aria-label={`Open ${item.artistName}`}
+        onClick={() => onOpen(item)}
+        className="block w-full p-0 cursor-zoom-in outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-v2-accent"
+      >
+        <ArtistImage
+          src={item.image}
+          label={item.artistName}
+          loading="lazy"
+          sizes="auto, (max-width: 617px) 100vw, (max-width: 923px) 50vw, (max-width: 1229px) 33vw, 25vw"
+          className="w-full block grayscale-[0.15] group-hover:grayscale-0 transition-[filter] duration-300"
+          fallbackClassName="aspect-[4/5]"
+        />
+      </button>
 
       {item.isRecent && (
         <span
           title="New since your last visit"
-          className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-v2-accent ring-[3px] ring-v2-ink/60"
+          className="pointer-events-none absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-v2-accent ring-[3px] ring-v2-ink/60"
         />
       )}
 
