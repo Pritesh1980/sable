@@ -141,6 +141,12 @@ export function createGlEngine(THREE, mount, { durationMs = 600, onContextLost }
     return [(img && img.width) || 1, (img && img.height) || 1]
   }
 
+  // load() never rejects, but drawing the loaded texture can throw (a lost
+  // context); report it instead of leaving an unhandled rejection.
+  function logRenderError(e) {
+    console.error('[tattoo] crossfade render failed:', e)
+  }
+
   // Load a texture from any URL three understands: http(s), blob:, data:.
   function load(src) {
     return new Promise((resolve) => {
@@ -197,7 +203,7 @@ export function createGlEngine(THREE, mount, { durationMs = 600, onContextLost }
       uniforms.uToRes.value.set(...texRes(tex))
       uniforms.uProgress.value = 1
       renderOnce()
-    })
+    }).catch(logRenderError)
   }
 
   // Animate a crossfade from the current image to `src`.
@@ -227,7 +233,7 @@ export function createGlEngine(THREE, mount, { durationMs = 600, onContextLost }
       startTs = 0
       animating = true
       raf = requestAnimationFrame(tick)
-    })
+    }).catch(logRenderError)
   }
 
   function resize() {

@@ -59,7 +59,7 @@ export function AuthProvider({ children }) {
 
     const unsub = backend.auth.onAuthStateChange((s) => {
       if (!mounted) return
-      applyIdentity(s?.user?.id || null, s)
+      void applyIdentity(s?.user?.id || null, s)
     })
     return () => { mounted = false; unsub?.() }
   }, [])

@@ -15,7 +15,7 @@ test('photo controls stay hidden until the pointer is over the photo', async ({ 
 
 test('wall viewer: arrow keys step through images, Escape closes', async ({ page }) => {
   await openDemo(page, '/')
-  await page.getByRole('figure', { name: 'Mora Vane' }).first().click()
+  await page.getByRole('button', { name: 'Open Mora Vane' }).first().click()
   const viewer = page.getByRole('dialog', { name: / — image \d+ of \d+$/ })
   await expect(viewer).toBeVisible()
   const first = await viewer.getAttribute('aria-label')

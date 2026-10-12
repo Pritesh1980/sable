@@ -160,5 +160,8 @@ describe('GitHub repository configuration', () => {
     const code = hook.split('\n').filter((line) => !line.trim().startsWith('#')).join('\n')
     expect(code).toContain('npm ci')
     expect(code).not.toMatch(/npm install/)
+    // onnxruntime-node's postinstall fetches optional GPU binaries from nuget.org,
+    // which the web proxy drops; skipping it is what lets the install finish.
+    expect(code).toMatch(/ONNXRUNTIME_NODE_INSTALL=skip npm ci/)
   })
 })

@@ -180,7 +180,7 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
     const seq = analysisSeq.current + 1
     analysisSeq.current = seq
     activeAnalysisFile.current = file
-    analyzeFirst(file, seq)
+    void analyzeFirst(file, seq)
   }
 
   function addFiles(files) {
@@ -203,7 +203,7 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
         // Nothing to locate the artwork with, so the score is off the whole
         // screenshot — Instagram chrome included. Say so rather than imply
         // precision the number doesn't have (#24).
-        scoreTaste(dataUrl, { rough: true, seq })
+        void scoreTaste(dataUrl, { rough: true, seq })
         setIntakeNote('Add a Gemini key (Concepts → AI setup) to auto-fill from screenshots.')
         return
       }
@@ -225,7 +225,7 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
           setUncropped({ crop: cropFile, original: file, dataUrl, seq })
         }
       }
-      scoreTaste(cropped, { rough: !didCrop, seq })
+      void scoreTaste(cropped, { rough: !didCrop, seq })
       if (!result) {
         setIntakeNote("Couldn't read artist details from this screenshot.")
       } else {
@@ -275,7 +275,7 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
     activeAnalysisFile.current = uncropped.original
     setTasteFit(null)
     setTasteRough(false)
-    scoreTaste(uncropped.dataUrl, { rough: true, seq: uncropped.seq })
+    void scoreTaste(uncropped.dataUrl, { rough: true, seq: uncropped.seq })
     setUncropped(null)
   }
 
@@ -401,7 +401,7 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
   const inputClass = 'w-full min-h-11 bg-v2-ink border border-v2-hairline rounded-xs px-3 py-2 text-sm text-v2-cream font-v2-ui outline-hidden focus:border-v2-accent placeholder-v2-muted'
   return (
     <div className="fixed inset-0 z-[60] bg-v2-ink/90 backdrop-blur-xs flex items-start sm:items-center justify-center overflow-y-auto animate-fade-in"
-      onClick={dismiss}>
+      role="presentation" onClick={dismiss}>
       <form ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="capture-title" tabIndex={-1}
         onSubmit={handleSave} onPaste={handlePaste} onClick={(e) => e.stopPropagation()}
         className="w-full max-w-md bg-v2-surface border border-v2-hairline rounded-xs m-3 sm:m-4 my-6 sm:my-4 max-h-[calc(100dvh-3rem)] overflow-y-auto outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-v2-accent">

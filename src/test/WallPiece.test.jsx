@@ -60,3 +60,16 @@ describe('WallPiece drop-zone', () => {
     expect(() => fireEvent.drop(figure, makeDropEvent(new File(['x'], 'a.jpg', { type: 'image/jpeg' })))).not.toThrow()
   })
 })
+
+describe('WallPiece keyboard access', () => {
+  it('is a focusable button named for its artist that opens with Enter or Space', () => {
+    const onOpen = vi.fn()
+    render(<WallPiece item={item} onOpen={onOpen} />)
+    const piece = screen.getByRole('button', { name: 'Open zoia.ink' })
+    expect(piece).toHaveAttribute('tabindex', '0')
+    fireEvent.keyDown(piece, { key: 'Enter' })
+    fireEvent.keyDown(piece, { key: ' ' })
+    expect(onOpen).toHaveBeenCalledTimes(2)
+    expect(onOpen).toHaveBeenCalledWith(item)
+  })
+})

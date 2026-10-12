@@ -134,7 +134,7 @@ export default function Wall({ artists = [], ideas = [], setArtists = () => {}, 
     // to the viewer.
     setViewerIndex(null)
     // t7: Concepts composer reads `steer` to pre-select this artist's style.
-    navigate(`/concepts?steer=${item.artistId}`)
+    void navigate(`/concepts?steer=${item.artistId}`)
   }
 
   // Shared by both drop targets — the wall-piece drop zone (#1) and the

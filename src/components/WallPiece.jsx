@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import ArtistImage from './ArtistImage'
 import GeneratedArtworkNotice from './GeneratedArtworkNotice'
+import { activateOnKey } from '../a11y/activate'
 
 // A single image on the Wall — full-bleed, no chrome. The caption is an
 // engraved plate that only appears on hover; it never intercepts the click
@@ -32,7 +33,11 @@ export default function WallPiece({ item, onOpen, onDropImage }) {
       className={`relative mb-[6px] break-inside-avoid overflow-hidden cursor-zoom-in group ${
         dragOver ? 'ring-2 ring-v2-accent ring-inset' : ''
       }`}
+      role="button"
+      tabIndex={0}
+      aria-label={`Open ${item.artistName}`}
       onClick={() => onOpen(item)}
+      onKeyDown={activateOnKey(() => onOpen(item))}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
