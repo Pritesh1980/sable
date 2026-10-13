@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { PLACEMENTS } from '../data/artists'
 import LiveTryOn from './LiveTryOn'
+import RefImage from './RefImage'
 import { isTopmostDialog } from '../hooks/useDialogFocus'
 import { loadPhotoForRelief } from '../data/reliefImage'
 import { generateSkinPreviewWithGemini, imageUrlToDataUrl, shrinkImageDataUrl } from '../data/skinPreview'
@@ -152,7 +153,13 @@ function SkinPreviewContent({ source, apiKey, onSave, onClose }) {
             ) : (
               <div className="grid grid-cols-2 gap-3">
                 <figure>
-                  <img src={source.imageUrl} alt={`${label} design`} className="aspect-square w-full rounded-xs border border-ink-border bg-ink-muted object-contain" />
+                  <RefImage
+                    src={source.imageUrl}
+                    alt={`${label} design`}
+                    className="aspect-square w-full rounded-xs border border-ink-border bg-ink-muted object-contain"
+                    loading={<div className="aspect-square w-full rounded-xs border border-ink-border bg-ink-muted" aria-busy="true" />}
+                    fallback={<div className="aspect-square w-full rounded-xs border border-ink-border bg-ink-muted" />}
+                  />
                   <figcaption className="mt-1 text-xs text-cream-muted">Design</figcaption>
                 </figure>
                 <figure>

@@ -36,6 +36,16 @@ export async function resolveImage(ref) {
   }
 }
 
+// Starts resolving every blob key in `refs`, so the first render after a load
+// or a pull finds them in the cache. Fire and forget: a key that cannot be
+// resolved is reported by whoever renders it.
+export function warmImageCache(refs = []) {
+  for (const ref of refs) {
+    const key = refKey(ref)
+    if (key) void resolveBlobKey(key).catch(() => {})
+  }
+}
+
 // The photo's bytes, or null when they cannot be read right now (offline, an
 // expired url, a missing key). For consumers that need the bytes themselves —
 // backup export, and the pixel consumers that must not read cross-origin

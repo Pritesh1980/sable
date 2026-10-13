@@ -19,6 +19,7 @@ import { clearComposerDraft, loadComposerDraft, saveComposerDraft } from '../dat
 import { generateImageWithGemini } from '../data/geminiImage'
 import { buildImagePrompt, buildTextPrompt } from '../data/conceptPrompts'
 import { stageImage, withStagedImages } from '../data/imageStaging'
+import useImageStatuses from '../hooks/useImageStatuses'
 import { useAuth } from '../context/useAuth'
 import { useUndoableRemoval } from '../hooks/useUndoableRemoval'
 
@@ -181,11 +182,12 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
             placement,
           }))
       const id = Date.now().toString()
-      const { url: imageUrl } = await stageImage(dataUrl, stagingFor(id))
+      // State holds the stored key; signed out there is none and the url stays.
+      const { key, url } = await stageImage(dataUrl, stagingFor(id))
       const concept = {
         id,
         prompt: idea,
-        imageUrl,
+        imageUrl: key || url,
         response: '',
         tags: steerArtist?.tags || [],
         steerArtistId: steerArtistId || undefined,
@@ -234,17 +236,18 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
   // prompt-pack concept, or as a brand new concept from the current idea.
   function handleComposerPaste(dataUrlOrUrl) {
     const id = pendingPasteConceptId || Date.now().toString()
-    void withStagedImages([dataUrlOrUrl], stagingFor(id), () => {
+    void withStagedImages([dataUrlOrUrl], stagingFor(id), ([key]) => {
+      const imageUrl = key || dataUrlOrUrl
       if (pendingPasteConceptId) {
         setConcepts((prev) => prev.map((c) => (
-          c.id === pendingPasteConceptId ? { ...c, imageUrl: dataUrlOrUrl } : c
+          c.id === pendingPasteConceptId ? { ...c, imageUrl } : c
         )))
       } else {
         const steerArtist = artists.find((a) => a.id === steerArtistId)
         const concept = {
           id,
           prompt: idea,
-          imageUrl: dataUrlOrUrl,
+          imageUrl,
           response: '',
           tags: steerArtist?.tags || [],
           steerArtistId: steerArtistId || undefined,
@@ -270,9 +273,10 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
   // Every variant arrives here: the result form, the on-skin preview and the
   // live camera snapshot alike.
   function addVariant(conceptId, input) {
-    void withStagedImages([input.imageUrl], stagingFor(conceptId), () => {
+    void withStagedImages([input.imageUrl], stagingFor(conceptId), ([key]) => {
+      const staged = key ? { ...input, imageUrl: key } : input
       setConcepts((prev) => prev.map((c) => (
-        c.id === conceptId ? addConceptVariant(c, input) : c
+        c.id === conceptId ? addConceptVariant(c, staged) : c
       )))
     })
   }
@@ -313,16 +317,22 @@ export default function Concepts({ concepts, setConcepts, artists = [], ideas = 
   }
 
   const wallItems = useMemo(() => buildConceptWallItems(concepts, artists), [concepts, artists])
-  // The viewer only swipes through pieces it can show; an offline piece holds
-  // its place on the wall but can't be opened until its image loads (#102).
-  const viewerItems = useMemo(() => wallItems.filter((item) => !item.offline), [wallItems])
+  const statuses = useImageStatuses(wallItems.map((item) => item.imageUrl))
+  const statusKey = statuses.join()
+  // The viewer only swipes through pieces it can show; a piece whose image is
+  // not available holds its place on the wall but can't be opened (#102).
+  const viewerItems = useMemo(
+    () => wallItems.filter((_, i) => statusKey.split(',')[i] === 'ready'),
+    [wallItems, statusKey],
+  )
   // Concepts that never had an image can't live on an image wall — a pasted-back
   // result (or a prompt pack awaiting one) stays here until it has one.
   const draftConcepts = useMemo(() => concepts.filter(isDraftConcept), [concepts])
   const viewerOpen = viewerIndex !== null
 
   function openViewer(item) {
-    setViewerIndex(viewerItems.indexOf(item))
+    const index = viewerItems.indexOf(item)
+    if (index !== -1) setViewerIndex(index)
   }
 
   function handleDeleteFromViewer(id) {

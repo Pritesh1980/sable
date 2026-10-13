@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import OfflinePhoto from './OfflinePhoto'
+import RefImage from './RefImage'
 import {
   RESULT_VARIANT_PROVIDERS,
   getConceptVariants,
@@ -314,13 +315,15 @@ function VariantDetails({
       <div className="grid gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
         <div className="space-y-3">
           {imageUrl ? (
-            <img
+            // The stored ref: a saved image that can't be fetched right now is
+            // offline, not missing.
+            <RefImage
               src={imageUrl}
               alt={`${title} result`}
               className="aspect-[4/3] w-full rounded-xs border border-ink-border object-cover"
+              loading={<div className="aspect-[4/3] w-full rounded-xs border border-ink-border bg-ink-muted" aria-busy="true" />}
+              fallback={<OfflinePhoto className="aspect-[4/3] w-full rounded-xs border border-ink-border" />}
             />
-          ) : variant.unresolvedImageKey ? (
-            <OfflinePhoto className="aspect-[4/3] w-full rounded-xs border border-ink-border" />
           ) : (
             <div className="flex aspect-[4/3] w-full items-center justify-center rounded-xs border border-dashed border-ink-border bg-ink-muted/40 text-xs text-cream-muted">
               No image saved
@@ -448,13 +451,13 @@ function VariantCard({
         className="grid w-full gap-3 p-3 text-left transition-colors hover:bg-cream/5 sm:grid-cols-[4.5rem_minmax(0,1fr)]"
       >
         {imageUrl ? (
-          <img
+          <RefImage
             src={imageUrl}
             alt={`${title} thumbnail`}
             className="h-20 w-full rounded-xs border border-ink-border object-cover sm:h-16"
+            loading={<div className="h-20 w-full rounded-xs border border-ink-border bg-ink-muted sm:h-16" aria-busy="true" />}
+            fallback={<OfflinePhoto compact className="h-20 w-full rounded-xs border border-ink-border sm:h-16" />}
           />
-        ) : variant.unresolvedImageKey ? (
-          <OfflinePhoto compact className="h-20 w-full rounded-xs border border-ink-border sm:h-16" />
         ) : (
           <div className="flex h-20 w-full items-center justify-center rounded-xs border border-dashed border-ink-border bg-ink-muted/40 font-mono text-[0.625rem] uppercase tracking-widest text-cream-muted/50 sm:h-16">
             No image

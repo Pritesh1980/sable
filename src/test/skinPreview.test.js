@@ -3,7 +3,10 @@ import {
   buildSkinPreviewPrompt,
   dataUrlToInlineData,
   generateSkinPreviewWithGemini,
+  imageUrlToDataUrl,
 } from '../data/skinPreview'
+import { backend } from '../backend'
+import { clearBlobUrls } from '../data/blobUrls'
 import { GEMINI_IMAGE_MODEL } from '../data/geminiImage'
 
 afterEach(() => vi.restoreAllMocks())
@@ -79,5 +82,25 @@ describe('generateSkinPreviewWithGemini', () => {
     })
     await expect(generateSkinPreviewWithGemini('k', { skinPhoto: photo, design, placement: 'forearm' }))
       .rejects.toThrow('API key not valid')
+  })
+})
+
+describe('imageUrlToDataUrl', () => {
+  it('hands a data URL straight back', async () => {
+    expect(await imageUrlToDataUrl(design)).toBe(design)
+  })
+
+  it('reads a stored blob key through the resolver', async () => {
+    clearBlobUrls()
+    const key = 'user/u1/concepts/c1/design.jpg'
+    await backend.blobs.upload('u1', key, 'data:image/jpeg;base64,QUJD', 'image/jpeg')
+    expect(await imageUrlToDataUrl(key)).toMatch(/^data:image\/jpeg;base64,/)
+  })
+
+  it('rejects when the stored photo is unavailable', async () => {
+    clearBlobUrls()
+    vi.spyOn(backend.blobs, 'getUrl').mockRejectedValue(new Error('offline'))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    await expect(imageUrlToDataUrl('user/u1/concepts/c1/gone.jpg')).rejects.toThrow('Could not read the design image.')
   })
 })

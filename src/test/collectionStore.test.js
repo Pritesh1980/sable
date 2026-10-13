@@ -94,7 +94,7 @@ describe('creating a store', () => {
       key: KEY,
       defaultValue: [],
       backend: be,
-      codec: { toCanonical: (v) => v, toDisplay, ensureUploaded: async () => 0 },
+      codec: { toCanonical: (v) => v, toDisplay, ensureUploaded: async (v) => ({ value: v, moved: 0 }) },
     })
     expect(store.getSnapshot()).toEqual([{ id: 'a', title: 'cached', updatedAt: OLD }])
     expect(setItem).not.toHaveBeenCalled()
@@ -141,7 +141,7 @@ describe('an edit', () => {
       codec: {
         toCanonical: (rows) => rows.map(({ url, ...r }) => ({ ...r, key: `k:${url}` })),
         toDisplay: async (v) => v,
-        ensureUploaded: async () => 0,
+        ensureUploaded: async (v) => ({ value: v, moved: 0 }),
       },
     })
     store.set([{ id: 'a', url: 'blob:1' }])
@@ -342,12 +342,12 @@ describe('a flush', () => {
       codec: {
         toCanonical: (v) => v,
         toDisplay: async (v) => v,
-        ensureUploaded: async () => {
+        ensureUploaded: async (v) => {
           if (armed) {
             armed = false
             await upload.wait()
           }
-          return 0
+          return { value: v, moved: 0 }
         },
       },
     })
@@ -453,7 +453,7 @@ describe('the first pull', () => {
       key: KEY,
       defaultValue: [],
       backend: be,
-      codec: { toCanonical: (v) => v, toDisplay: async (v) => v, ensureUploaded: async () => moved-- },
+      codec: { toCanonical: (v) => v, toDisplay: async (v) => v, ensureUploaded: async (v) => ({ value: v, moved: moved-- }) },
     })
 
     await store.start(USER)
@@ -598,7 +598,7 @@ describe('start and stop', () => {
         if (Array.isArray(v) && v.some((r) => r.id === 'r')) await slow.wait()
         return v
       },
-      ensureUploaded: async () => 0,
+      ensureUploaded: async (v) => ({ value: v, moved: 0 }),
     }
     const store = makeStore({ key: KEY, defaultValue: [], backend: be, codec })
 
@@ -631,7 +631,7 @@ describe('start and stop', () => {
         }
         return v
       },
-      ensureUploaded: async () => 0,
+      ensureUploaded: async (v) => ({ value: v, moved: 0 }),
     }
     const store = makeStore({ key: KEY, defaultValue: [], backend: be, codec })
 
@@ -661,7 +661,7 @@ describe('start and stop', () => {
           await gates[n].wait()
           return v.map((r) => ({ ...r, shown: n === 0 ? 'stale' : 'fresh' }))
         },
-        ensureUploaded: async () => 0,
+        ensureUploaded: async (v) => ({ value: v, moved: 0 }),
       },
     })
 
@@ -691,7 +691,7 @@ describe('start and stop', () => {
       codec: {
         toCanonical: (v) => v,
         toDisplay: async (v) => v.map((r) => ({ ...r, shown: true })),
-        ensureUploaded: async () => 0,
+        ensureUploaded: async (v) => ({ value: v, moved: 0 }),
       },
     })
     const changed = new Promise((r) => store.subscribe(r))
@@ -710,7 +710,7 @@ describe('start and stop', () => {
       key: KEY,
       defaultValue: [],
       backend: fakeBackend(),
-      codec: { toCanonical: (v) => v, toDisplay, ensureUploaded: async () => 0 },
+      codec: { toCanonical: (v) => v, toDisplay, ensureUploaded: async (v) => ({ value: v, moved: 0 }) },
     })
     await store.start(null)
     store.stop()
@@ -731,7 +731,7 @@ describe('start and stop', () => {
           await hydrating.wait()
           return v.map((r) => ({ ...r, shown: true }))
         },
-        ensureUploaded: async () => 0,
+        ensureUploaded: async (v) => ({ value: v, moved: 0 }),
       },
     })
 
@@ -766,7 +766,7 @@ describe('start and stop', () => {
           if (calls === 1) await hydrating.wait() // mount-time hydration; the pull's is quick
           return v
         },
-        ensureUploaded: async () => 0,
+        ensureUploaded: async (v) => ({ value: v, moved: 0 }),
       },
     })
 
@@ -860,12 +860,12 @@ describe('start and stop', () => {
       codec: {
         toCanonical: (v) => v,
         toDisplay: async (v) => v,
-        ensureUploaded: async () => {
+        ensureUploaded: async (v) => {
           if (armed) {
             armed = false
             await upload.wait()
           }
-          return 0
+          return { value: v, moved: 0 }
         },
       },
     })

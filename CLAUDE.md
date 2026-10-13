@@ -56,10 +56,14 @@ This is a personal app for one user (the owner). (A read-only share link for the
   synced data with bytes in blob storage (`src/data/blobUrls.js`, `uploadImages`);
   legacy IndexedDB/inline images migrate to blobs on first authed load. Idea and
   concept images use the same key-based blob storage via per-collection codecs
-  (`src/data/imageCodec.js`) wired into `useStorage` — the in-memory value stays a
-  displayable URL (so consumers like STL export are unchanged) while only `{ key }`
-  is persisted/synced. **A ref that can't be resolved (offline) is kept, not dropped**
-  (#101): concepts do it via `unresolvedImageKey` in `imageCodec.js`; **artists hold the
+  (`src/data/imageCodec.js`) wired into `useStorage`. **Idea, concept and variant state
+  holds the stored ref** (#117) — `{ key, note }` for an idea photo, a bare key string for
+  a concept's or variant's `imageUrl` — and resolves where it renders (`RefImage`,
+  `useImageSrc`, `useImageStatuses`); the codecs only warm the URL cache and move inline
+  photos stored before staging existed (`ensureUploaded` returns `{ value, moved }`). Put
+  the staged **key** into state, never a display URL, and give test fixtures `user/…` keys
+  (anything else is not a key to `refKey`). **A ref that can't be resolved (offline) is
+  kept, not dropped** (#101): "offline" is a render status, not a field; **artists hold the
   stored refs themselves** (#116): `artist.images` is static paths, `{ key }` and
   `{ url, addedAt }`, nothing is held aside, so there is no side list to reinsert and
   `canonicalizeArtist` only strips inline data URLs. `initial()` paints the stored rows

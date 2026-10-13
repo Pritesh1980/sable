@@ -13,7 +13,7 @@ vi.mock('../backend', () => ({
 }))
 
 const { backend } = await import('../backend')
-const { resolveBlobKey, getCachedBlobUrl, keyForUrl, registerBlobUrl, clearBlobUrls, refreshedBlobUrl } =
+const { resolveBlobKey, getCachedBlobUrl, keyForUrl, registerBlobUrl, clearBlobUrls, refreshBlobKey } =
   await import('../data/blobUrls')
 
 beforeEach(() => {
@@ -125,20 +125,16 @@ describe('review follow-ups (#29)', () => {
   })
 })
 
-// #82. Resolving a key into a display URL happens once, at hydration — the
-// result is baked into long-lived React state (imageCodec.js for
-// ideas/concepts; artists hold refs since #116). #29 keeps the *cache*
-// honest about TTL, but nothing re-derives a value already sitting in state
-// from it, so an hour-plus-idle session can end up rendering an <img> whose
-// src is a genuinely expired signed URL. refreshedBlobUrl is the recovery
-// path an <img>'s onError calls into: given the URL that just failed, hand
-// back a fresh one if the underlying key can actually produce a different
-// one, or null if there's nothing more to try (so the caller falls through
-// to its normal broken-image handling instead of retrying forever). Since
-// #110 a superseded url keeps its reverse mapping, so this also recovers a
-// url whose key has already been refreshed by someone else.
-describe('refreshedBlobUrl (#82)', () => {
-  it('returns a fresh url when the failed url maps to a key whose cache entry has expired', async () => {
+// #82. An <img> can sit on screen past its signed url's TTL: #29 keeps the
+// *cache* honest, but nothing re-renders an image that is already showing.
+// refreshBlobKey is the recovery path an <img>'s onError calls into. State
+// holds the key (#116, #117), so the caller passes it along with the url that
+// just failed, and gets back a fresh url if the key can produce a different
+// one, or null if there's nothing more to try (so the caller falls through to
+// its normal broken-image handling instead of retrying forever). No reverse
+// lookup from url to key is involved.
+describe('refreshBlobKey (#82)', () => {
+  it('returns a fresh url when the key\'s cache entry has expired', async () => {
     backend.blobs.urlTtlMs = 3600_000
     vi.useFakeTimers()
     getUrl.mockResolvedValueOnce('https://signed.example/first')
@@ -147,13 +143,10 @@ describe('refreshedBlobUrl (#82)', () => {
     vi.setSystemTime(Date.now() + 3600_000 - 30_000)
     getUrl.mockResolvedValueOnce('https://signed.example/second')
 
-    const refreshed = await refreshedBlobUrl(first)
+    const refreshed = await refreshBlobKey('k1', first)
     expect(refreshed).toBe('https://signed.example/second')
   })
 
-  // Until #110 a superseded url lost its reverse mapping, so this returned
-  // null — an accepted gap then, and the same dropped mapping that let an
-  // expired url be saved in place of its key. The mapping is now kept.
   it('recovers a url that was superseded before it failed to load', async () => {
     backend.blobs.urlTtlMs = 3600_000
     vi.useFakeTimers()
@@ -164,16 +157,22 @@ describe('refreshedBlobUrl (#82)', () => {
     getUrl.mockResolvedValueOnce('https://signed.example/second')
     await resolveBlobKey('k1')
 
-    // A stale <img> still showing `first` finally errors; `first` still maps
-    // to k1, whose cache already holds `second`.
-    const refreshed = await refreshedBlobUrl(first)
+    // A stale <img> still showing `first` finally errors; k1's cache already
+    // holds `second`.
+    const refreshed = await refreshBlobKey('k1', first)
     expect(refreshed).toBe('https://signed.example/second')
   })
 
-  it('returns null for a url with no known key (a static path, or never uploaded)', async () => {
-    const refreshed = await refreshedBlobUrl('/images/artists/zoia.ink/1.jpg')
+  it('returns null when there is no key (a static path, or never uploaded)', async () => {
+    const refreshed = await refreshBlobKey('', '/images/artists/zoia.ink/1.jpg')
     expect(refreshed).toBeNull()
     expect(getUrl).not.toHaveBeenCalled()
+  })
+
+  it('needs no reverse mapping: it works for a url that was never registered', async () => {
+    getUrl.mockResolvedValueOnce('https://signed.example/fresh')
+    const refreshed = await refreshBlobKey('k9', 'https://signed.example/never-registered')
+    expect(refreshed).toBe('https://signed.example/fresh')
   })
 
   it('returns null when the cache still considers the url fresh (a genuinely broken image, not an expiry)', async () => {
@@ -182,7 +181,7 @@ describe('refreshedBlobUrl (#82)', () => {
     const first = await resolveBlobKey('k1')
 
     // No time has passed — the cache has no reason to think this is stale.
-    const refreshed = await refreshedBlobUrl(first)
+    const refreshed = await refreshBlobKey('k1', first)
     expect(refreshed).toBeNull()
     expect(getUrl).toHaveBeenCalledTimes(1)
   })

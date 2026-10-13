@@ -49,6 +49,17 @@ describe('createBackupWithImages', () => {
     expect(backup.data.artists[0].images).toEqual([{ url: dataUrlOf('AAAA'), addedAt: '2026-01-01T00:00:00Z' }])
   })
 
+  it('embeds a concept image and a variant image held as bare keys', async () => {
+    registerBlobUrl('user/u1/concepts/c/main.jpg', 'https://signed.example/a?t=1')
+    registerBlobUrl('user/u1/concepts/c/v.jpg', 'blob:http://localhost/b')
+    const { backup, skipped } = await createBackupWithImages({
+      concepts: [{ id: 'c', imageUrl: 'user/u1/concepts/c/main.jpg', variants: [{ id: 'v', imageUrl: 'user/u1/concepts/c/v.jpg' }] }],
+    })
+    expect(skipped).toBe(0)
+    expect(backup.data.concepts[0].imageUrl).toBe(dataUrlOf('AAAA'))
+    expect(backup.data.concepts[0].variants[0].imageUrl).toBe(dataUrlOf('BBBB'))
+  })
+
   it('embeds a resolved display url of a registered photo, keeping its note', async () => {
     registerBlobUrl('user/u1/ideas/i/1.jpg', 'https://signed.example/a?t=1')
     const { backup } = await createBackupWithImages({
@@ -124,7 +135,7 @@ describe('restoreBackupImages', () => {
     stageImage.mockResolvedValue({ key: 'user/u2/new.jpg', url: 'staged' })
   })
 
-  it('stages each embedded photo under the right scope and swaps in the returned display url', async () => {
+  it('stages each embedded photo under the right scope: keys for ideas and concepts, the display url for artists', async () => {
     const data = {
       artists: [{ id: 'a', images: [PNG, { url: PNG, note: 'n' }, 'images/a.jpg'] }],
       ideas: [{ id: 'i', images: [{ url: PNG, note: 'x' }] }],
@@ -135,13 +146,26 @@ describe('restoreBackupImages', () => {
     const { data: out, failed } = await restoreBackupImages(data, ctx)
     expect(failed).toBe(0)
     expect(out.artists[0].images).toEqual(['staged', { url: 'staged', note: 'n' }, 'images/a.jpg'])
-    expect(out.ideas[0].images).toEqual([{ url: 'staged', note: 'x' }])
-    expect(out.concepts[0].imageUrl).toBe('staged')
-    expect(out.concepts[0].variants[0].imageUrl).toBe('staged')
+    expect(out.ideas[0].images).toEqual([{ key: 'user/u2/new.jpg', note: 'x' }])
+    expect(out.concepts[0].imageUrl).toBe('user/u2/new.jpg')
+    expect(out.concepts[0].variants[0].imageUrl).toBe('user/u2/new.jpg')
     expect(stageImage).toHaveBeenCalledWith(PNG, { userId: 'u2', scope: 'artists', id: 'a' })
     expect(stageImage).toHaveBeenCalledWith(PNG, { userId: 'u2', scope: 'ideas', id: 'i' })
     expect(stageImage).toHaveBeenCalledWith(PNG, { userId: 'u2', scope: 'concepts', id: 'c' })
     expect(stageImage).toHaveBeenCalledTimes(5)
+  })
+
+  it('gives ideas and concepts the key of a photo this session already knows, never its base64', async () => {
+    registerBlobUrl('user/u2/known.jpg', PNG)
+    const { data: out } = await restoreBackupImages({
+      artists: [], boards: [], conventionOverrides: {},
+      ideas: [{ id: 'i', images: [{ url: PNG, note: 'x' }] }],
+      concepts: [{ id: 'c', imageUrl: PNG, variants: [{ id: 'v', imageUrl: PNG }] }],
+    }, ctx)
+    expect(out.ideas[0].images).toEqual([{ key: 'user/u2/known.jpg', note: 'x' }])
+    expect(out.concepts[0].imageUrl).toBe('user/u2/known.jpg')
+    expect(out.concepts[0].variants[0].imageUrl).toBe('user/u2/known.jpg')
+    expect(stageImage).not.toHaveBeenCalled()
   })
 
   it('leaves the data untouched when nobody is signed in (nowhere to upload)', async () => {

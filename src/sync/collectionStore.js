@@ -81,11 +81,12 @@ export const PUSH_DEBOUNCE_MS = 500
 // the remote get canonical { key } refs (src/data/imageCodec.js):
 //   toCanonical(value)            display → canonical, for storage
 //   toDisplay(value) → Promise    canonical → display
-//   ensureUploaded(value, ctx)    upload inline data-URLs, resolve to the count moved
+//   ensureUploaded(value, ctx)    upload inline data-URLs → { value, moved }: the
+//                                 value with each one replaced by its key
 const ID_CODEC = {
   toCanonical: (v) => v,
   toDisplay: async (v) => v,
-  ensureUploaded: async () => 0,
+  ensureUploaded: async (v) => ({ value: v, moved: 0 }),
 }
 
 const noop = () => {}
@@ -134,8 +135,8 @@ export function createCollectionStore({
   let stopped = false
   let parked = [] // edits made while stopped: replayed by the next start, else dropped
   // Set once a hydration or a pull has put display values in memory, so
-  // mount-time hydration runs at most once: it expects canonical input, and on a
-  // display value toDisplay can lose a concept's unresolvedImageKey.
+  // mount-time hydration runs at most once: toDisplay expects canonical input
+  // (it matters for the artists codec, whose display value carries an overlay).
   let hydrated = !codecArg
   let synced = null // the rows last known to match the remote
   let pushTimer = null
@@ -269,8 +270,16 @@ export function createCollectionStore({
     // flush, and tombstones and the cache were made durable at edit time.
     let next = value
     for (let round = 0; ; round += 1) {
-      await codec.ensureUploaded(next, { userId: flushUser.id })
-      if (value === next) break
+      const uploaded = await codec.ensureUploaded(next, { userId: flushUser.id })
+      if (value === next) {
+        // Nothing moved on while it uploaded, so the keys can replace the
+        // inline photos they were minted for.
+        if (uploaded.moved > 0 && uploaded.value !== next) {
+          replace(uploaded.value)
+          next = uploaded.value
+        }
+        break
+      }
       if (round >= 2) return
       next = value
     }
@@ -417,7 +426,11 @@ export function createCollectionStore({
             .then(() => clearPendingDeletes(key, pendingDeletes))
             .catch((e) => console.error(`[tattoo] retry delete failed for ${collection}:`, e))
         : null
-      const moved = await codec.ensureUploaded(display, { userId: pullUser.id })
+      const uploaded = await codec.ensureUploaded(display, { userId: pullUser.id })
+      // An edit made while it uploaded wins; the next flush uploads again and
+      // gets the same keys back.
+      if (live() && uploaded.moved > 0 && value === display) replace(uploaded.value)
+      const moved = uploaded.moved
       // A dirty flag or row means an edit never fully reached the remote (failed
       // push, killed tab) — push the reconciled state now. Singletons use the
       // per-key flag; list collections the per-row generations (#84).
