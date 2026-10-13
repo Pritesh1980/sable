@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import Gallery from '../pages/Gallery'
 import { AuthProvider } from '../context/AuthContext'
@@ -46,6 +46,10 @@ function deleteDb(name) {
 
 async function quickAdd(handleValue) {
   const file = new File(['x'], 'shot.png', { type: 'image/png' })
+  // A Gallery rendered after auth resolves commits its heading before its
+  // effects run, and the page-wide paste listener is one of them: flush them,
+  // or a paste fired straight after findByRole('heading') can land first.
+  await act(async () => {})
   fireEvent.paste(document.body, { clipboardData: { files: [file], types: ['Files'] } })
   const handle = await screen.findByPlaceholderText('@handle or Instagram URL')
   const submit = screen.getByRole('button', { name: 'Save' })

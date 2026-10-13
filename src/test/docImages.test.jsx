@@ -62,7 +62,8 @@ describe('idea/concept image migration to blobs', () => {
     })
     const rows = await backend.store.list('ideas')
     const key = rows[0].images[0].key
-    expect(await backend.blobs.getUrl(key)).toBe('data:image/jpeg;base64,IDEA')
+    // The row carries its key before the bytes land (#115), so wait for them.
+    await waitFor(async () => expect(await backend.blobs.getUrl(key)).toBe('data:image/jpeg;base64,IDEA'))
 
     // State holds the same stored ref, not the bytes.
     await waitFor(() => expect(result.current.store[0][0].images[0]).toEqual({ key, note: 'n' }))

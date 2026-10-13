@@ -50,7 +50,7 @@ describe('WallPiece drop-zone', () => {
   it('does not intercept the click that opens the piece', () => {
     const onOpen = vi.fn()
     render(<WallPiece item={item} onOpen={onOpen} onDropImage={vi.fn()} />)
-    fireEvent.click(screen.getByRole('img').closest('figure'))
+    fireEvent.click(screen.getByRole('button', { name: 'Open zoia.ink' }))
     expect(onOpen).toHaveBeenCalledWith(item)
   })
 
@@ -58,5 +58,22 @@ describe('WallPiece drop-zone', () => {
     render(<WallPiece item={item} onOpen={vi.fn()} />)
     const figure = screen.getByRole('img').closest('figure')
     expect(() => fireEvent.drop(figure, makeDropEvent(new File(['x'], 'a.jpg', { type: 'image/jpeg' })))).not.toThrow()
+  })
+})
+
+describe('WallPiece keyboard access', () => {
+  it('opens from a native button named for its artist, so Tab + Enter/Space work', () => {
+    const onOpen = vi.fn()
+    render(<WallPiece item={item} onOpen={onOpen} />)
+    const piece = screen.getByRole('button', { name: 'Open zoia.ink' })
+    expect(piece.tagName).toBe('BUTTON')
+    expect(piece).toHaveAttribute('type', 'button')
+    fireEvent.click(piece)
+    expect(onOpen).toHaveBeenCalledWith(item)
+  })
+
+  it('keeps the figure for its caption and drop target', () => {
+    render(<WallPiece item={item} onOpen={vi.fn()} />)
+    expect(screen.getByRole('button', { name: 'Open zoia.ink' }).closest('figure')).not.toBeNull()
   })
 })

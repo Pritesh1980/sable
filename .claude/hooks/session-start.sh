@@ -45,10 +45,15 @@ fi
 # npm ci, never npm install: it never rewrites package-lock.json (a different
 # npm can, and an agent could commit the churn). Skipped when node_modules was
 # already built from this exact lockfile and Node.
+# ONNXRUNTIME_NODE_INSTALL=skip: onnxruntime-node (pulled in by
+# @huggingface/transformers) downloads its optional GPU binaries from nuget.org
+# in a postinstall, and the container's proxy drops that connection often enough
+# to fail the whole install. The CPU binary ships inside the package; nothing
+# here uses the GPU ones.
 stamp=node_modules/.session-start-stamp
 current="$(node -v) $(sha256sum package-lock.json | cut -d' ' -f1)"
 if [ ! -f "$stamp" ] || [ "$(cat "$stamp")" != "$current" ]; then
-  npm ci --no-audit --no-fund
+  ONNXRUNTIME_NODE_INSTALL=skip npm ci --no-audit --no-fund
   echo "$current" > "$stamp"
 fi
 echo "session-start: Node $(node -v), dependencies ready" >&2
