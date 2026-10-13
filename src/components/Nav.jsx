@@ -25,7 +25,7 @@ function MoreMenu({ onClose }) {
   const ref = useEscapeToClose(onClose)
 
   function go(to) {
-    navigate(to)
+    void navigate(to)
     onClose()
   }
 

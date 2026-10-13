@@ -87,7 +87,7 @@ describe('Wall page', () => {
   it('calls onOpen with the right item when a piece is clicked', () => {
     const onOpenArtist = vi.fn()
     renderWall({ onOpenArtist })
-    fireEvent.click(main().getByText('Carlos Valera').closest('figure'))
+    fireEvent.click(main().getByRole('button', { name: 'Open Carlos Valera' }))
     expect(onOpenArtist).toHaveBeenCalledTimes(1)
     expect(onOpenArtist.mock.calls[0][0]).toMatchObject({ artistId: 'carlosvalera' })
   })

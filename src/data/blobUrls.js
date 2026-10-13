@@ -49,7 +49,7 @@ export function getCachedBlobUrl(key) {
   const cached = keyToEntry.get(key)
   if (!cached) return ''
   if (isFresh(cached)) return cached.url
-  resolveBlobKey(key)
+  void resolveBlobKey(key)
   return ''
 }
 
