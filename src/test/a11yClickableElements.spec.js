@@ -9,9 +9,6 @@ import { join } from 'node:path'
 // new click target written without a role anywhere in the UI.
 
 const ROOTS = ['src/components', 'src/pages']
-// Remove once #146 merges: it rewrites ConceptPiece's <figure>, so keyboard
-// access is added on top of that rather than in a conflicting parallel edit.
-const PENDING = new Set(['src/components/ConceptPiece.jsx'])
 const NON_INTERACTIVE = new Set(['div', 'span', 'li', 'figure', 'section', 'article', 'img', 'p', 'ul'])
 
 function jsxFiles(dir) {
@@ -65,7 +62,7 @@ describe('clickable non-interactive elements carry a role', () => {
   })
 
   it('holds across src/components and src/pages', () => {
-    const offenders = ROOTS.flatMap(jsxFiles).filter((file) => !PENDING.has(file)).flatMap((file) =>
+    const offenders = ROOTS.flatMap(jsxFiles).flatMap((file) =>
       unlabelledClickTargets(readFileSync(file, 'utf8')).map((where) => `${file} ${where}`))
     expect(offenders).toEqual([])
   })

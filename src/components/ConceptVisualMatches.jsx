@@ -16,7 +16,8 @@ export default function ConceptVisualMatches({ artists, concept }) {
   useEffect(() => {
     if (!src) return
     let alive = true
-    ;(async () => {
+    // The body catches everything itself; void marks it fire-and-forget.
+    void (async () => {
       try {
         const vectors = await loadVectors(artists)
         if (vectors.size === 0) {
