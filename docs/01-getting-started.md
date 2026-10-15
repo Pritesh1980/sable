@@ -76,7 +76,7 @@ The keyboard does the driving:
 
 Outside the viewer, **Esc** closes whatever is on top (the add-artist sheet, the More
 menu, a full-screen photo on an artist's page, the status picker), one layer per press.
-Wall photos, artist cards, thumbnails, Style Wall tiles and ideas open with **Tab** then **Enter**.
+Wall photos, concepts, artist cards, thumbnails, Style Wall tiles and ideas open with **Tab** then **Enter**.
 
 **On a phone** the photo opens clean, with just **× Close** and the photo count along the
 top and a small **Details** handle at the bottom. Swipe instead of using the arrow keys:

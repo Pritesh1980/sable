@@ -64,6 +64,22 @@ describe('concept images resolve at the leaf', () => {
     expect(onOpen).not.toHaveBeenCalled()
   })
 
+  it('ConceptPiece opens from a native button named for the concept, so Tab + Enter/Space work', async () => {
+    const onOpen = vi.fn()
+    render(<ConceptPiece item={item(HERE)} onOpen={onOpen} />)
+    const piece = await screen.findByRole('button', { name: 'Open Moth' })
+    expect(piece.tagName).toBe('BUTTON')
+    expect(piece).toHaveAttribute('type', 'button')
+    fireEvent.click(piece)
+    expect(onOpen).toHaveBeenCalledTimes(1)
+  })
+
+  it('ConceptPiece offers no button while its image cannot be shown', async () => {
+    render(<ConceptPiece item={item(GONE)} onOpen={vi.fn()} />)
+    expect(await screen.findByRole('img', { name: 'Photo available when online' })).toBeInTheDocument()
+    expect(screen.queryByRole('button')).toBeNull()
+  })
+
   it('ConceptPiece applies the deploy base to a static path exactly once', async () => {
     vi.stubEnv('BASE_URL', '/sable/')
     render(<ConceptPiece item={item('images/demo/moth.jpg')} onOpen={vi.fn()} />)
