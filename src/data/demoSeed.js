@@ -105,8 +105,6 @@ export function seedDemoData(storage = localStorage) {
   write(storage, 'tattoo_remote_artistsMeta', DEMO_ARTISTS.map((a) => ({ ...a, updatedAt: at })))
   write(storage, 'tattoo_ideas', DEMO_IDEAS.map((i) => ({ ...i, updatedAt: at })))
   write(storage, 'tattoo_remote_ideas', DEMO_IDEAS.map((i) => ({ ...i, updatedAt: at })))
-  // Demo images are static paths — nothing to migrate to blob storage.
-  storage.setItem('tattoo_img_migrated_v1', '1')
   storage.setItem('tattoo_demo_seed_version', String(DEMO_SEED_VERSION))
 }
 
