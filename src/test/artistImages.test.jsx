@@ -77,7 +77,7 @@ describe('artist image blob pipeline', () => {
     expect(await resolveImage(result.current.store[0][0].images[0])).toBe('data:image/jpeg;base64,REMOTE')
   })
 
-  it('migrates a legacy IndexedDB data-URL to a blob key in the remote metadata', async () => {
+  it('sweeps a legacy IndexedDB data-URL to a blob key in the remote metadata (#118)', async () => {
     const artistId = DEFAULT_ARTISTS[0].id
     await idbPut('tattoo-images-v1', 'artist-images', artistId, ['data:image/jpeg;base64,LEGACY'])
     seedSession('owner@example.com')
@@ -85,7 +85,7 @@ describe('artist image blob pipeline', () => {
     const { result } = renderSynced()
     await waitFor(() => expect(result.current.auth.user).toBeTruthy())
 
-    await waitFor(() => expect(localStorage.getItem('tattoo_img_migrated_v1')).toBe('1'))
+    await waitFor(() => expect(localStorage.getItem('tattoo_legacy_sweep_v1')).toContain(`user/`))
 
     await waitFor(async () => {
       const rows = await backend.store.list('artistsMeta')

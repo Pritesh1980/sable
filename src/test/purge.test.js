@@ -31,12 +31,15 @@ describe('purgeLocalUserData', () => {
     localStorage.setItem('tattoo_ideas', '[{"id":"1"}]')
     localStorage.setItem('tattoo_artists_meta', '[{"id":"a"}]')
     localStorage.setItem('tattoo_img_migrated_v1', '1')
+    localStorage.setItem('tattoo_legacy_sweep_v1', '{"a":{"x.1":0}}')
 
     await purgeLocalUserData()
 
     expect(localStorage.getItem('tattoo_ideas')).toBeNull()
     expect(localStorage.getItem('tattoo_artists_meta')).toBeNull()
     expect(localStorage.getItem('tattoo_img_migrated_v1')).toBeNull()
+    // #118: the legacy photo sweep's ledger is about this user's photos.
+    expect(localStorage.getItem('tattoo_legacy_sweep_v1')).toBeNull()
   })
 
   // #115: a photo still waiting to upload is the signed-out user's content.

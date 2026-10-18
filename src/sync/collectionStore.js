@@ -30,8 +30,9 @@
 //                                      or null. ctx.user is `initialUser`
 //   onMount(ctx) → Promise             work that runs once, signed in or not,
 //                                      before the first hydration
-//   beforeFirstPull(ctx) → Promise<prep>   runs before the list; `prep` is
-//                                      handed to merge
+//   beforeFirstPull(ctx, local) → Promise<prep>   runs before the list, with
+//                                      the current value; `prep` is handed to
+//                                      merge
 //   merge({ local, remote, prep, ctx }) → { value, push?, pushDisplay? }
 //                                      replaces the generic reconcile and
 //                                      stamping. `push` rows are upserted before
@@ -357,7 +358,7 @@ export function createCollectionStore({
   async function pull(pullUser, live, ctx) {
     try {
       // Before the list; whatever it returns is merge's `prep`.
-      const prep = policy.beforeFirstPull ? await policy.beforeFirstPull(ctx) : undefined
+      const prep = policy.beforeFirstPull ? await policy.beforeFirstPull(ctx, value) : undefined
       if (!live()) return
       const remoteRows = await backend.store.list(collection)
       if (!live()) return

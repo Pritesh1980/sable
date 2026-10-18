@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { createArtistsPolicy, applyDefaults, canonicalizeArtist } from '../data/artistsPolicy'
 import { dbGetAll } from '../data/legacyArtistImages'
+import { ledgerEntry, readLedger } from '../data/legacyPhotoSweep'
 import { DEFAULT_ARTISTS } from '../data/artists'
 
 // The artist-specific hooks the collection engine calls (#112), pinned one at a
@@ -124,8 +125,8 @@ describe('merge', () => {
     })
   })
 
-  describe('after the legacy image migration', () => {
-    const prep = { didMigrate: true, migratedRefs: [{ artistId: 'a', key: 'user/u/artists/a/1.jpg' }] }
+  describe('after the legacy photo sweep (#118)', () => {
+    const prep = { sweptRefs: [{ artistId: 'a', key: 'user/u/artists/a/1.jpg' }] }
 
     it('puts the uploaded photo ahead of the artist’s other photos', () => {
       const { value } = policy.merge({
@@ -149,6 +150,7 @@ describe('merge', () => {
     })
 
     it('asks for a second push that restamps only artists whose canonical images changed', () => {
+      // a gained the swept photo; b and z did not.
       const merged = policy.merge({
         local: [
           { id: 'a', images: [], updatedAt: OLD },
@@ -158,19 +160,17 @@ describe('merge', () => {
         prep,
         ctx: ctxOther,
       })
-      // The built display differs from the merged value for artist a only.
-      const display = merged.value.map((a) => (a.id === 'a' ? { ...a, images: ['images/new.jpg'] } : a))
-      const rows = merged.pushDisplay(display)
+      const rows = merged.pushDisplay(merged.value)
       expect(rows.find((r) => r.id === 'a').updatedAt).not.toBe(OLD)
       expect(rows.find((r) => r.id === 'b').updatedAt).toBe(OLD)
       expect(rows.find((r) => r.id === 'z').updatedAt).toBe(OLD)
     })
 
-    it('asks for no second push when nothing was migrated', () => {
+    it('asks for no second push when nothing was swept', () => {
       const merged = policy.merge({
         local: [{ id: 'a', updatedAt: OLD }],
         remote: [{ id: 'z', updatedAt: OLD }],
-        prep: { didMigrate: false, migratedRefs: [] },
+        prep: { sweptRefs: [] },
         ctx: ctxOther,
       })
       expect(merged.pushDisplay).toBeUndefined()
@@ -199,12 +199,18 @@ describe('applyDefaults', () => {
   })
 })
 
-describe('onEdit display cache', () => {
-  it('writes a changed image array to the IndexedDB display cache', async () => {
+describe('onEdit and the legacy cache (#118)', () => {
+  it('never writes the legacy IndexedDB cache', async () => {
     const prev = [{ id: 'cache-me', images: [], updatedAt: OLD }]
     policy.onEdit(prev, [{ ...prev[0], images: ['images/q.jpg'] }], LATER)
-    await vi.waitFor(async () => {
-      expect((await dbGetAll())['cache-me']).toEqual(['images/q.jpg'])
-    })
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect((await dbGetAll())['cache-me']).toBeUndefined()
+  })
+
+  it('records an inline legacy photo the user deleted, so it is not shown or swept again', () => {
+    const legacy = 'data:image/png;base64,TEVHQUNZ'
+    const prev = [{ id: 'a', images: [legacy, 'images/q.jpg'], updatedAt: OLD }]
+    policy.onEdit(prev, [{ ...prev[0], images: ['images/q.jpg'] }], LATER)
+    expect(ledgerEntry(readLedger(), 'a', legacy)).toEqual({ removed: true })
   })
 })

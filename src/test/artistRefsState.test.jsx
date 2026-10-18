@@ -9,6 +9,8 @@ import { clearBlobUrls, registerBlobUrl } from '../data/blobUrls'
 import { dbPut } from '../data/legacyArtistImages'
 import { createArtistsPolicy } from '../data/artistsPolicy'
 import { backend } from '../backend'
+import { resolveImage } from '../data/imageResolver'
+import { fingerprint } from '../data/legacyPhotoSweep'
 
 // #116: artist state holds the stored refs themselves. Display resolution is
 // per tile (useImageSrc); the only display-only addition left is the legacy-cache
@@ -108,16 +110,21 @@ describe('artist state holds refs (#116)', () => {
     expect(localStorage.getItem('tattoo_artists_meta')).not.toContain('INLINE')
   })
 
-  it('shows a legacy IndexedDB-only photo (the legacy overlay) and keeps it when another photo is added', async () => {
+  it('sweeps a legacy IndexedDB-only photo into a key at the front, and keeps it when another photo is added (#118)', async () => {
     seedReturningUser({ ownPhoto: false })
     await dbPut(firstId, ['data:image/png;base64,LEGACY'])
     const result = await mount()
-    await waitFor(() => expect(stateRow(result, firstId).images[0]).toBe('data:image/png;base64,LEGACY'))
+    await waitFor(() => expect(stateRow(result, firstId).images[0]?.key).toMatch(/^user\/u1\/artists\//))
+    const swept = stateRow(result, firstId).images[0]
+    expect(await resolveImage(swept)).toBe('data:image/png;base64,LEGACY')
+    expect(stateRow(result, firstId).images).not.toContain('data:image/png;base64,LEGACY')
 
     edit(result, (a) => ({ ...a, images: [...a.images, 'images/artists/extra.jpg'] }))
-    expect(stateRow(result, firstId).images[0]).toBe('data:image/png;base64,LEGACY')
+    expect(stateRow(result, firstId).images[0]).toEqual(swept)
+    expect(localStorage.getItem('tattoo_artists_meta')).toContain(swept.key)
     expect(localStorage.getItem('tattoo_artists_meta')).not.toContain('LEGACY')
   })
+
 })
 
 // Policy-level: the legacy overlay is idempotent and a deleted legacy photo stays deleted.
@@ -162,6 +169,23 @@ describe('legacy overlay', () => {
     const shown = await codec.toDisplay([{ id: 'a', images: [{ key }] }])
     expect(shown[0].images).toEqual(['data:image/png;base64,TRUELEGACY', { key }])
     expect((await codec.toDisplay(shown))[0].images).toEqual(['data:image/png;base64,TRUELEGACY', { key }])
+  })
+
+  // #118: after a reload nothing maps the cached data url to the key it was
+  // swept under; the ledger is what says it is handled.
+  it('hides a cached photo the sweep has recorded, without resolving anything', async () => {
+    const key = 'user/u1/artists/a/swept.jpg'
+    const legacy = 'data:image/png;base64,TEVHQUNZ'
+    localStorage.setItem('tattoo_legacy_sweep_v1', JSON.stringify({ a: { [fingerprint(legacy)]: key } }))
+    await dbPut('a', [legacy])
+    clearBlobUrls()
+    const { policy, codec } = createArtistsPolicy()
+    await policy.onMount()
+    const getUrl = vi.spyOn(backend.blobs, 'getUrl')
+
+    const shown = await codec.toDisplay([{ id: 'a', images: [{ key }] }])
+    expect(shown[0].images).toEqual([{ key }])
+    expect(getUrl).not.toHaveBeenCalled()
   })
 
   it('resolves nothing for an artist whose cache holds no unrecognised data url', async () => {

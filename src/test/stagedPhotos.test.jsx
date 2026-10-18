@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { createElement } from 'react'
 import { useArtistStorage } from '../hooks/useArtistStorage'
-import { displayCacheImages } from '../data/legacyArtistImages'
 import { resolveImage } from '../data/imageResolver'
 import { useStorage } from '../hooks/useStorage'
 import { ideasCodec } from '../data/imageCodec'
@@ -10,7 +9,7 @@ import { AuthProvider } from '../context/AuthContext'
 import { useAuth } from '../context/useAuth'
 import { stageImage, watchUploadOutbox } from '../data/imageStaging'
 import { STAGED_IMAGES_DB, readOutbox } from '../data/stagedImageStore'
-import { clearBlobUrls, keyForUrl, registerBlobUrl } from '../data/blobUrls'
+import { clearBlobUrls, keyForUrl } from '../data/blobUrls'
 import { stampAddedAt } from '../data/wall'
 import { backend } from '../backend'
 
@@ -200,24 +199,6 @@ describe('after the upload lands on a signed-URL backend', () => {
     })
   }
 
-  it('the display cache keeps a keyed photo as its ref, and only an unkeyed one as a data URL', () => {
-    registerBlobUrl('user/u1/artists/a1/k.jpg', PHOTO)
-    const legacy = 'data:image/jpeg;base64,bGVnYWN5'
-    expect(displayCacheImages([
-      PHOTO,
-      { url: PHOTO, addedAt: STAMP },
-      legacy,
-      'images/demo/a1/1.webp',
-      { key: 'user/u1/artists/a1/other.jpg' },
-    ])).toEqual([
-      { key: 'user/u1/artists/a1/k.jpg' },
-      { key: 'user/u1/artists/a1/k.jpg', addedAt: STAMP },
-      legacy,
-      'images/demo/a1/1.webp',
-      { key: 'user/u1/artists/a1/other.jpg' },
-    ])
-  })
-
   it.each([
     ['a bare URL (quick-add, artist detail)', (url) => url],
     ['a { url, addedAt } ref (Wall drop, add-artist modal)', stampAddedAt],
@@ -227,7 +208,9 @@ describe('after the upload lands on a signed-URL backend', () => {
     const first = await mount()
     const key = await addPhoto(first, shape)
     await waitFor(() => expect(readOutbox()).toEqual([])) // uploaded; the device copy stays for offline display
-    await waitFor(async () => expect(await displayCache('a1')).toHaveLength(1))
+    // The legacy display cache is never written (#118); the device copy is
+    // what shows the photo offline.
+    expect(await displayCache('a1')).toBeUndefined()
     first.unmount()
 
     clearBlobUrls()

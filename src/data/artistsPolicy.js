@@ -4,9 +4,9 @@
 // is the engine's; this file holds only the artist rules, moved from the old
 // useArtistStorage hook without rewriting:
 //   - first paint and owner seeding (#25),
-//   - the legacy IndexedDB photo cache and its one-time migration (#115),
+//   - the legacy IndexedDB photo cache: shown until swept, never written (#118),
 //   - image tombstones (#55),
-//   - the empty-remote seed push and the post-migration restamp.
+//   - the empty-remote seed push and the post-sweep restamp.
 // State holds the stored refs themselves (#116): each tile resolves its own
 // photo (useImageSrc), so an offline start keeps every ref in place (#101,
 // #102). The codec is the identity apart from the legacy-cache overlay.
@@ -15,15 +15,8 @@ import { DEFAULT_ARTISTS } from './artists'
 import { refIdentity, refKey } from './imageRef'
 import { reconcileRecords, nowStamp } from '../backend/sync'
 import { keyForUrl, resolveBlobKey } from './blobUrls'
-import {
-  dbPut,
-  dbGetAll,
-  displayCacheImages,
-  importOldArtistsKey,
-  migrateLegacyImages,
-  MIGRATED_FLAG,
-  withLegacyLocalPhotos,
-} from './legacyArtistImages'
+import { dbGetAll, importOldArtistsKey, withLegacyLocalPhotos } from './legacyArtistImages'
+import { readLedger, recordRemovedInline, sweepLegacyPhotos, undecidedPhotos } from './legacyPhotoSweep'
 
 export const META_KEY = 'tattoo_artists_meta'
 
@@ -77,7 +70,7 @@ export function applyDefaults(artists) {
 // Turn images into canonical, syncable refs: blob-backed display URLs (what
 // the producers still emit, normalised here) → { key }, static paths / external URLs →
 // string — carrying `addedAt` through wherever it's present. Un-keyed data URLs
-// (legacy IndexedDB photos the migration has not uploaded, or a failed stage)
+// (legacy IndexedDB photos the sweep has not staged, or a failed stage)
 // are dropped from the persisted form so base64 never lands in localStorage or
 // the remote store; `keepInline` keeps them for in-memory state (legacy overlay; never persisted).
 export function canonicalizeImages(images = [], { keepInline = false } = {}) {
@@ -113,7 +106,7 @@ const sameList = (a, b) => Array.isArray(b) && a.length === b.length && a.every(
 
 // This is the persisted form of an artist: images canonicalised, inline data URLs
 // stripped. Artist state already is this form apart from the legacy-cache overlay
-// (never-migrated IndexedDB photos shown inline), which persisting strips so base64
+// (unswept IndexedDB photos shown inline), which persisting strips so base64
 // never reaches localStorage or the remote store.
 export function canonicalizeArtist(a) {
   return { ...a, images: canonicalizeImages(a.images) }
@@ -175,17 +168,22 @@ function saveMeta(artists) {
 // ── The policy ───────────────────────────────────────────────────────────────
 
 // One per store: it owns the IndexedDB image map that toDisplay reads, filled by
-// onMount and refreshed before each first pull.
+// onMount and refreshed before each first pull. The map is only ever read: the
+// legacy cache is not written any more (#118).
 export function createArtistsPolicy() {
   let imageMap = {}
 
   const codec = {
     toCanonical: (v) => v.map(canonicalizeArtist),
-    // Legacy-cache overlay: the only display-only addition until #118 retires the legacy cache.
-    toDisplay: (v) => Promise.all(v.map(async (a) => {
-      await registerOwnPhotos(a, imageMap[a.id])
-      return withLegacyLocalPhotos(a, imageMap[a.id])
-    })),
+    // Legacy-cache overlay: the only display-only addition, for cached photos
+    // the sweep has not decided on yet (#118).
+    toDisplay: (v) => {
+      const ledger = readLedger()
+      return Promise.all(v.map(async (a) => {
+        await registerOwnPhotos(a, imageMap[a.id], ledger)
+        return withLegacyLocalPhotos(a, imageMap[a.id], ledger)
+      }))
+    },
     // Artist photos upload at add time (src/data/imageStaging.js); nothing is
     // left to move at flush.
     ensureUploaded: async (v) => ({ value: v, moved: 0 }),
@@ -213,25 +211,23 @@ export function createArtistsPolicy() {
       imageMap = await dbGetAll()
     },
 
-    // One-time migration of legacy IndexedDB data-URLs → blob storage so they
-    // gain keys and can sync across devices.
-    async beforeFirstPull(ctx) {
+    // The legacy photo sweep (#118): any photo still only in the legacy cache is
+    // staged into blob storage, so it gains a key and syncs. Tracked, so it runs
+    // every launch and never uploads a photo twice (src/data/legacyPhotoSweep.js).
+    // An artist the cache has no row for yet is left for a later launch, except
+    // the owner's defaults, which merge folds in anyway.
+    async beforeFirstPull(ctx, local = []) {
       imageMap = await dbGetAll()
-      let migratedRefs = []
-      let didMigrate = false
-      if (!localStorage.getItem(MIGRATED_FLAG)) {
-        migratedRefs = await migrateLegacyImages(ctx.user.id, imageMap)
-        localStorage.setItem(MIGRATED_FLAG, '1')
-        didMigrate = true
-      }
-      return { migratedRefs, didMigrate }
+      const artists = ctx.owner ? applyDefaults(local) : local
+      const { refs } = await sweepLegacyPhotos({ userId: ctx.user?.id, artists, imageMap })
+      return { sweptRefs: refs }
     },
 
     // Owner-only seeding: the owner keeps the curated DEFAULT_ARTISTS
     // (migrating any local edits up); everyone else starts from whatever is in
     // their own remote collection (empty for a fresh account).
     merge({ local, remote, prep, ctx }) {
-      const { migratedRefs = [], didMigrate = false } = prep || {}
+      const { sweptRefs = [] } = prep || {}
       const localMeta = local.map(canonicalizeArtist)
       let nextMeta
       if (remote.length > 0) {
@@ -254,16 +250,21 @@ export function createArtistsPolicy() {
       // genuine cross-device edits.
       const seedAt = nowStamp()
       nextMeta = nextMeta.map((a) => (a.updatedAt ? a : { ...a, updatedAt: seedAt }))
-      // Fold in refs migrateLegacyImages just uploaded — otherwise they're
-      // registered (have a key), so the legacy overlay no longer shows them,
-      // but not yet in any artist's images, and would be dropped.
+      // Taken before the swept refs are folded in, so an artist that gains one
+      // counts as changed and is restamped below.
+      const beforeImages = sweptRefs.length
+        ? new Map(nextMeta.map((a) => [a.id, JSON.stringify(canonicalizeImages(a.images || []))]))
+        : null
+      // Fold in the refs the sweep just staged — otherwise they're registered
+      // (have a key), so the legacy overlay no longer shows them, but not yet in
+      // any artist's images, and would be dropped.
       // Prepended, not appended: for an owner-seeded artist, `a.images` may
       // already hold DEFAULT_ARTISTS' own static paths (applyDefaults spreads
-      // them straight in) — the migrated upload is the artist's own photo and
-      // belongs ahead of the curated starter set.
-      if (migratedRefs.length) {
+      // them straight in) — the swept photo is the artist's own and belongs
+      // ahead of the curated starter set.
+      if (sweptRefs.length) {
         const byArtist = new Map()
-        for (const { artistId, key } of migratedRefs) {
+        for (const { artistId, key } of sweptRefs) {
           if (!byArtist.has(artistId)) byArtist.set(artistId, [])
           byArtist.get(artistId).push({ key })
         }
@@ -273,15 +274,11 @@ export function createArtistsPolicy() {
       }
       const result = { value: nextMeta }
       if (remote.length === 0 && nextMeta.length) result.push = nextMeta
-      // After migrating legacy images, push the now-keyed metadata so the keys
-      // reach the remote store (and other devices can resolve them). Only
-      // artists whose canonical image refs actually changed get a fresh stamp —
-      // restamping the rest would outrank cross-device edits made between our
-      // pull and this push.
-      if (didMigrate) {
-        const beforeImages = new Map(
-          nextMeta.map((a) => [a.id, JSON.stringify(canonicalizeImages(a.images || []))])
-        )
+      // After a sweep, push the now-keyed metadata so the keys reach the remote
+      // store (and other devices can resolve them). Only artists whose canonical
+      // image refs actually changed get a fresh stamp — restamping the rest
+      // would outrank cross-device edits made between our pull and this push.
+      if (beforeImages) {
         result.pushDisplay = (display) => {
           const at = nowStamp()
           return display.map(canonicalizeArtist).map((a) => {
@@ -299,7 +296,8 @@ export function createArtistsPolicy() {
     // the new images also has its tombstone cleared — without this, a
     // deliberate re-add of the exact same photo would be silently stripped
     // right back out the next time reconciliation ran (#55 review, codex +
-    // agy). Changed image arrays also go to the IndexedDB display cache.
+    // agy). An inline legacy photo the user deleted is recorded in the sweep's
+    // ledger, which is what keeps it from coming back (the cache is not written).
     onEdit(prev, stamped, at) {
       const prevById = new Map((prev || []).map((p) => [p?.id, p]))
       return stamped.map((row) => {
@@ -308,11 +306,8 @@ export function createArtistsPolicy() {
         // Whatever the producer emitted becomes refs here, once, at the edit boundary.
         const images = normalizeArtistImages(row.images)
         const a = sameList(images, row.images) ? row : { ...row, images }
-        cacheImages(a)
-        // Keep the in-memory legacy cache in step with what was just written, so a
-        // legacy photo the user deleted is not re-shown by a later toDisplay.
-        imageMap[a.id] = displayCacheImages(a.images || [])
         if (!prevA) return a
+        recordRemovedInline(a.id, prevA.images, a.images)
         const liveIds = new Set(a.images.map(refIdentity).filter(Boolean))
         const survivors = (a.removedImages || []).filter((t) => !liveIds.has(refIdentity(t.ref)))
         const fresh = removedImageTombstones(prevA.images, a.images, at)
@@ -333,16 +328,8 @@ export function createArtistsPolicy() {
 // by resolving every ref first. Only an artist whose cache holds a data url
 // nothing recognises pays for it; resolveBlobKey never rejects, so offline the
 // overlay simply behaves as before.
-async function registerOwnPhotos(a, idbImages) {
-  const unknown = Array.isArray(idbImages) &&
-    idbImages.some((s) => typeof s === 'string' && s.startsWith('data:') && !keyForUrl(s))
-  if (!unknown) return
+async function registerOwnPhotos(a, idbImages, ledger) {
+  if (!undecidedPhotos(a.id, idbImages, ledger).length) return
   const keys = (a.images || []).map(refKey).filter(Boolean)
   await Promise.all(keys.map((key) => resolveBlobKey(key)))
-}
-
-function cacheImages(a) {
-  dbPut(a.id, displayCacheImages(a.images || [])).catch((e) =>
-    console.error(`[tattoo] Failed to save images for ${a.id}:`, e)
-  )
 }
