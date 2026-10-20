@@ -305,7 +305,10 @@ them. Keep messages terse and conventional (e.g. `feat(home): …`, `docs: …`)
   `useArtistStorage`, then green), all passing isolated. Treat any single-file
   failure in a full run as suspect, not just the two named. Protocol: rerun the
   failing spec isolated; if green there and CI is green, it's environment, not
-  your change. CI is the arbiter. **But "environment" often means a test race that
+  your change. CI is the arbiter. `quickAddUpload.test.jsx` (Oct 2026) could not be
+  reproduced even with every core saturated, so its `findBy*`/`waitFor` calls got an
+  explicit 5s budget (`1f39b91`) instead of a root-cause fix; don't spend another
+  session trying to repro it. **But "environment" often means a test race that
   load exposes.** Two were root-caused in Sept 2026: `useArtistStorage` read images
   straight after mount, but artists painted with `images: []` and hydrated from
   IndexedDB afterwards, so assert on images inside `waitFor` (since #116 artists paint
