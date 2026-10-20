@@ -169,11 +169,6 @@ describe('seedDemoData', () => {
     for (const row of remote) expect(row.updatedAt).toBeTruthy()
     expect(JSON.parse(localStorage.getItem('tattoo_remote_ideas')).length).toBe(DEMO_IDEAS.length)
   })
-
-  it('marks the image migration as done so no migration runs on demo data', () => {
-    seedDemoData()
-    expect(localStorage.getItem('tattoo_img_migrated_v1')).toBe('1')
-  })
 })
 
 describe('maybeSeedDemo', () => {

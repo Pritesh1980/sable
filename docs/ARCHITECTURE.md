@@ -300,11 +300,12 @@ ideas, concepts, boards, attendance and the device-only stores. `useArtistStorag
 the same wrapper plus a **policy** (#112, `src/data/artistsPolicy.js`): optional hooks
 the engine calls for what is specific to a collection. `initial` shapes the first paint
 (owner seeding, #25), `onMount` runs once before hydration (the legacy `tattoo_artists`
-import and the IndexedDB photo cache, `src/data/legacyArtistImages.js`),
-`beforeFirstPull` runs before the list (the one-time legacy photo migration) and hands
-its result to `merge`, which replaces the generic reconcile (LWW, image tombstones #55,
-owner defaults, the empty-remote seed push, the post-migration restamp), and `onEdit`
-runs on the stamped rows (normalising to refs, tombstones, display cache). Artist state
+import, and reading the retired IndexedDB photo cache, `src/data/legacyArtistImages.js`),
+`beforeFirstPull` runs before the list with the current value (the legacy photo sweep,
+§3) and hands its result to `merge`, which replaces the generic reconcile (LWW, image
+tombstones #55, owner defaults, the empty-remote seed push, the post-sweep restamp), and
+`onEdit` runs on the stamped rows (normalising to refs, tombstones, recording a deleted
+inline legacy photo in the sweep's ledger). Artist state
 holds the stored refs themselves (#116), so the codec is thin: `toCanonical` is
 `canonicalizeArtist` and `toDisplay` only adds the legacy overlay (§3). `src/test/collectionStore.test.js`
 and `collectionStorePolicy.test.js` pin the engine without React;
@@ -388,7 +389,7 @@ Per-collection codecs (`src/data/imageCodec.js`) sit at the persistence boundary
 warm the URL cache on load and, through `ensureUploaded` (which hands back the value it
 changed), swap an inline photo stored before staging existed for its key. The rule that makes it hold is enforced rather than trusted: base64 data
 never reaches `localStorage` or the remote store, and there is a test asserting it.
-Legacy inline images migrate to blobs on first authenticated load.
+Legacy inline images are swept into blobs at every signed-in launch (below).
 
 Documents stay small enough to sync cheaply; bytes move once.
 
@@ -405,10 +406,11 @@ ref is simply still in the list and `canonicalizeArtist` has nothing to reinsert
 only strips inline data URLs). `initial()` paints those rows directly; for the owner
 `applyDefaults` unions the starter photos in, tombstone-aware and de-duplicated by
 identity. `codec.toDisplay` is async and does one display-only thing, the legacy-cache
-overlay: never-migrated IndexedDB data URLs are prepended (idempotent; for an artist
-whose cache holds data URLs not yet recognised it first resolves that artist's own blob
-keys, so a keyed photo is not shown twice), and `onEdit` refreshes the in-memory legacy
-cache. `onEdit` also normalises whatever a producer emitted into refs
+overlay: IndexedDB data URLs the sweep has not decided on yet are prepended (idempotent;
+one the sweep's ledger records is skipped; for an artist whose cache still holds
+undecided data URLs it first resolves that artist's own blob keys, so a keyed photo is
+not shown twice). `onEdit` records an inline legacy photo the user deleted in that
+ledger, so it stays deleted. `onEdit` also normalises whatever a producer emitted into refs
 (`normalizeArtistImages`, `dedupeRefs`) and writes the tombstones. Idea state holds the
 stored `{ key, note }` / `{ url, note }` form too: `ideasCodec` only warms the URL cache
 and, through `ensureUploaded` (which hands back the value it changed), swaps an inline
@@ -431,7 +433,7 @@ the URL→key map in `src/data/blobUrls.js`. A superseded URL keeps its mapping 
 session (#110): dropping it, as the map once did to stay small, meant the next save
 stored an expiring URL in place of the key, and last-write-wins spread that to every
 device. State now holds refs everywhere (#116, #117), and what still uses the map is
-what remains to go with #118: the artist add paths (`uploadImages` returns display URLs
+the artist add paths (`uploadImages` returns display URLs
 that `onEdit` normalises), the legacy-cache overlay, and the "already staged this
 session" check in staging and backup (`needsStaging`, `isEmbeddable`), which hand back
 the known key rather than a second copy. Recovering an expired image no
@@ -445,9 +447,26 @@ the bytes to IndexedDB (`tattoo-staged-images-v1`) and an entry to the
 reaches localStorage or the remote and a photo added offline survives a reload.
 `resolveBlobKey` consults staged bytes before the backend, so a staged photo displays
 immediately. `drainOutbox` uploads on launch, on the `online` event and at the start of
-every flush, and drops an entry from the outbox only after the upload is confirmed. The device copy of the bytes is kept after that, because the display cache holds only `{ key }` and the copy is what keeps the photo visible on an offline reload. The IndexedDB
-display cache stores keyed photos as `{ key }`, not a data URL, so a reload cannot show
-the same photo twice. Both stores are device-local and purged on sign-out.
+every flush, and drops an entry from the outbox only after the upload is confirmed. The device copy of the bytes is kept after that, because it is what keeps the photo visible on an offline reload. Both stores are device-local and purged on sign-out.
+
+### The legacy photo cache is swept, not written
+
+Before photos were blobs, IndexedDB `tattoo-images-v1` was the artists' display cache,
+and its one-time migration (#110) marked itself done even when an upload failed. Since
+#118 nothing writes the cache. What is left in it is either a copy of a photo that
+already has a key, or a photo that exists nowhere else. `src/data/legacyPhotoSweep.js`
+runs at every signed-in launch, before the first pull, and stages the second kind
+through the normal staging path, so a failed upload stays on the device and the outbox
+retries it like any new photo. The swept keys are folded into the artists and pushed,
+with a fresh stamp only on the artists that gained one.
+
+After a reload nothing maps a cached data URL to its key, so every decision is recorded
+against the photo's bytes in a device-local ledger (`tattoo_legacy_sweep_v1`, purged on
+sign-out): the key it was swept under, the key of a photo the artist already held with
+the same bytes (a migration that predates the ledger), or "removed" when the user deleted
+it while it was still inline. A photo whose artist's own photos cannot be read (offline)
+stays undecided until a later launch rather than risk a second upload. The cache and the
+sweep go once every device has run it (#149).
 
 ### The same split, without the sync half
 
@@ -893,6 +912,11 @@ root-caused and fixed (§9), but a loaded machine can still surface a different 
 protocol is written down: re-run isolated, CI is the arbiter, and time it before
 blaming the environment.
 
+**The legacy photo cache is swept, not deleted.** Deleting `tattoo-images-v1` outright
+would lose any photo whose migration upload failed, which exists nowhere else. The owner
+chose a tracked sweep instead (§3), so the cache is read at every launch until every
+device has run it, and the ledger costs a little localStorage per legacy photo.
+
 **Offline placeholders appear only where the photo set is the point.** The artist
 detail carousel, the Concepts wall and variant cards show "Available when online" tiles
 (§3). Card and wall views that show a single cover fall back to the next loaded photo or
@@ -908,7 +932,7 @@ sequence (`fromSlots`), so an offline photo keeps its place relative to its neig
 | `src/backend/` | The vendor boundary: `index.js` factory, `sync.js`, `dirty.js`, `owner.js`, `purge.js`, `local/`, `supabase/` |
 | `src/sync/` | `collectionStore.js` — the local-first sync engine (edit-time stamping, tombstones and generations, first pull, chained pushes, start/stop epochs); `useCollection.js` — its React binding |
 | `src/hooks/` | `useStorage.js` — thin wrapper over the engine; `useArtistStorage.js` — artists, the same wrapper plus `data/artistsPolicy.js` (#112) |
-| `src/data/` | Domain logic: planning, embeddings, taste, staged screenshot intake, convention ingestion and Top picks, demo seed |
+| `src/data/` | Domain logic: planning, embeddings, taste, staged screenshot intake, convention ingestion and Top picks, demo seed; image staging (`imageStaging.js`) and the retired legacy photo cache with its tracked sweep (`legacyArtistImages.js`, `legacyPhotoSweep.js`) |
 | `src/data/lineups/` | Shipped roster and curated picks; floorplan coordinates are data-only, not a runtime map |
 | `src/context/UndoContext.jsx` | Shared, time-bounded undo offer and restoration feedback |
 | `src/sw/` | Pure service-worker logic, contract-tested against `public/sw.js` |

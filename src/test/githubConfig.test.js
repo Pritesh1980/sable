@@ -133,6 +133,8 @@ describe('GitHub repository configuration', () => {
     expect(sonar).toContain('sonar.javascript.lcov.reportPaths=coverage/lcov.info')
     // The shipped line-up seed is data held as text, not code to grade.
     expect(sonar).toContain('src/data/lineups/**')
+    // Help's prose arrays look duplicated to CPD; issues are still analysed there.
+    expect(sonar).toMatch(/^sonar\.cpd\.exclusions=src\/pages\/Help\.jsx$/m)
   })
   it('takes the Node version from .nvmrc everywhere', () => {
     const want = readRepoFile('.nvmrc').trim()

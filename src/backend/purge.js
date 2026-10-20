@@ -1,5 +1,6 @@
 import { clearBlobUrls } from '../data/blobUrls'
 import { DEVICE_COPIES_KEY, STAGED_IMAGES_DB, UPLOAD_OUTBOX_KEY } from '../data/stagedImageStore'
+import { SWEEP_LEDGER_KEY } from '../data/legacyPhotoSweep'
 import { purgeDirtySidecars } from './dirty'
 import { SHARE_CACHE } from '../sw/shareTarget'
 
@@ -19,7 +20,10 @@ const PURGE_KEYS = [
   // board carries photos the user took of the winning pieces, so it leaves with
   // them.
   'tattoo_convention_winners',
+  // The retired one-time migration flag, still cleared on devices that set it,
+  // and the legacy photo sweep's ledger that replaced it (#118).
   'tattoo_img_migrated_v1',
+  SWEEP_LEDGER_KEY,
   // Photos still waiting to upload (#115): the queue here, the bytes in
   // STAGED_IMAGES_DB below. Unsynced, like the dirty sidecars, so they go too.
   UPLOAD_OUTBOX_KEY,
