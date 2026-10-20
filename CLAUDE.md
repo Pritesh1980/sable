@@ -287,6 +287,14 @@ them. Keep messages terse and conventional (e.g. `feat(home): …`, `docs: …`)
 
 ---
 
+## Commands
+
+`npm run dev` (vite) · `npm run build` · `npm run preview` · `npm run lint` ·
+`npm test` · `npm run test:e2e` · `npm run docs:check` (mermaid validity) ·
+`npm run audit:targets` (touch-target audit). Node version: `.nvmrc`.
+
+---
+
 ## Testing
 
 **Use a TDD approach for all new code.** Write tests before writing the implementation.
