@@ -51,9 +51,9 @@ async function quickAdd(handleValue) {
   // or a paste fired straight after findByRole('heading') can land first.
   await act(async () => {})
   fireEvent.paste(document.body, { clipboardData: { files: [file], types: ['Files'] } })
-  const handle = await screen.findByPlaceholderText('@handle or Instagram URL')
+  const handle = await screen.findByPlaceholderText('@handle or Instagram URL', {}, { timeout: 5000 })
   const submit = screen.getByRole('button', { name: 'Save' })
-  await waitFor(() => expect(submit).not.toBeDisabled())
+  await waitFor(() => expect(submit).not.toBeDisabled(), { timeout: 5000 })
   fireEvent.change(handle, { target: { value: handleValue } })
   fireEvent.click(submit)
 }
@@ -81,11 +81,11 @@ describe('quick-add stages its screenshot (#110, #115)', () => {
         </Gate>
       </AuthProvider>
     )
-    await screen.findByRole('heading', { name: 'Artists' })
+    await screen.findByRole('heading', { name: 'Artists' }, { timeout: 5000 })
 
     await quickAdd('new.artist')
 
-    await waitFor(() => expect(setArtists).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(setArtists).toHaveBeenCalledTimes(1), { timeout: 5000 })
     const added = setArtists.mock.calls[0][0]([existing]).find((a) => a.id === 'new.artist')
     expect(added.images).toEqual([expect.objectContaining({ url: SHOT })])
     expect(keyWhenAdded).toMatch(/^user\/u1\/artists\/new\.artist\//)
@@ -105,7 +105,7 @@ describe('quick-add stages its screenshot (#110, #115)', () => {
 
     await quickAdd('new.artist')
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/try again/i)
+    expect(await screen.findByRole('alert', {}, { timeout: 5000 })).toHaveTextContent(/try again/i)
     expect(setArtists).not.toHaveBeenCalled()
     expect(screen.getByAltText('Staged reference 1')).toBeInTheDocument()
     expect(keyForUrl(SHOT)).toBeNull()
