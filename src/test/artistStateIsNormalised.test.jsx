@@ -38,24 +38,15 @@ async function mount() {
   return result
 }
 
-async function clearLegacyCache() {
-  await new Promise((resolve) => {
-    const req = indexedDB.deleteDatabase('tattoo-images-v1')
-    req.onsuccess = req.onerror = req.onblocked = () => resolve()
-  })
-}
-
-beforeEach(async () => {
+beforeEach(() => {
   localStorage.clear()
   clearBlobUrls()
-  await clearLegacyCache()
   vi.spyOn(console, 'error').mockImplementation(() => {})
 })
 afterEach(() => vi.restoreAllMocks())
 
 // State is its own normalised form: normalising again changes nothing. (Inline
-// data urls are kept by normalisation, so the legacy-cache overlay satisfies this too;
-// only *persisting* strips them.)
+// data urls are kept by normalisation; only *persisting* strips them.)
 const expectNormalised = (rows) =>
   rows.forEach((a) => expect(normalizeArtistImages(a.images)).toEqual(a.images))
 

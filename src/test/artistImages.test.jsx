@@ -3,7 +3,6 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { AuthProvider } from '../context/AuthContext'
 import { useAuth } from '../context/useAuth'
 import { useArtistStorage } from '../hooks/useArtistStorage'
-import { DEFAULT_ARTISTS } from '../data/artists'
 import { backend } from '../backend'
 import { clearBlobUrls } from '../data/blobUrls'
 import { resolveImage } from '../data/imageResolver'
@@ -34,20 +33,6 @@ function clearStore(name, store) {
   })
 }
 
-function idbPut(name, store, key, value) {
-  return new Promise((res, rej) => {
-    const req = indexedDB.open(name, 1)
-    req.onupgradeneeded = (e) => e.target.result.createObjectStore(store)
-    req.onsuccess = (e) => {
-      const tx = e.target.result.transaction(store, 'readwrite')
-      tx.objectStore(store).put(value, key)
-      tx.oncomplete = () => res()
-      tx.onerror = () => rej(tx.error)
-    }
-    req.onerror = () => rej(req.error)
-  })
-}
-
 const renderSynced = () =>
   renderHook(() => ({ auth: useAuth(), store: useArtistStorage() }), { wrapper })
 
@@ -55,7 +40,6 @@ describe('artist image blob pipeline', () => {
   beforeEach(async () => {
     localStorage.clear()
     clearBlobUrls()
-    await clearStore('tattoo-images-v1', 'artist-images')
     await clearStore('tattoo-blobs-v1', 'blobs')
   })
 
@@ -77,20 +61,4 @@ describe('artist image blob pipeline', () => {
     expect(await resolveImage(result.current.store[0][0].images[0])).toBe('data:image/jpeg;base64,REMOTE')
   })
 
-  it('sweeps a legacy IndexedDB data-URL to a blob key in the remote metadata (#118)', async () => {
-    const artistId = DEFAULT_ARTISTS[0].id
-    await idbPut('tattoo-images-v1', 'artist-images', artistId, ['data:image/jpeg;base64,LEGACY'])
-    seedSession('owner@example.com')
-
-    const { result } = renderSynced()
-    await waitFor(() => expect(result.current.auth.user).toBeTruthy())
-
-    await waitFor(() => expect(localStorage.getItem('tattoo_legacy_sweep_v1')).toContain(`user/`))
-
-    await waitFor(async () => {
-      const rows = await backend.store.list('artistsMeta')
-      const migrated = rows.find((r) => r.id === artistId)
-      expect(migrated?.images?.some((img) => img && img.key)).toBe(true)
-    })
-  })
 })

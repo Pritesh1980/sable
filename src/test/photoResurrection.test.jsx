@@ -4,9 +4,8 @@ import { AuthProvider } from '../context/AuthContext'
 import { useAuth } from '../context/useAuth'
 import { useArtistStorage } from '../hooks/useArtistStorage'
 import { applyDefaults, applyImageTombstones, removedImageTombstones } from '../data/artistsPolicy'
-import { withLegacyLocalPhotos } from '../data/legacyArtistImages'
 import { backend } from '../backend'
-import { clearBlobUrls, registerBlobUrl } from '../data/blobUrls'
+import { clearBlobUrls } from '../data/blobUrls'
 import { DEFAULT_ARTISTS } from '../data/artists'
 
 const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>
@@ -38,31 +37,6 @@ function clearStore(name, store) {
 const renderSynced = () =>
   renderHook(() => ({ auth: useAuth(), store: useArtistStorage() }), { wrapper })
 
-// #55 part 1: buildArtists's idbImages branch ignored the reconciled canonical
-// a.images entirely whenever any IndexedDB cache existed, so a stale local
-// cache could keep showing a photo another device had already removed. Since
-// #116 the only reader of that cache is the legacy-cache overlay.
-describe('the legacy IndexedDB overlay (pure)', () => {
-  beforeEach(() => clearBlobUrls())
-
-  it('a stale IndexedDB cache does not resurrect a photo removed from canonical images', () => {
-    // X was migrated at some point (registered), same as any real image the
-    // app has ever displayed — a plain "starts with data:" check can't tell
-    // this apart from a genuinely un-migrated upload under the local backend,
-    // which resolves every blob (migrated or not) to a data-URL.
-    registerBlobUrl('user/u1/k-x', 'data:image/jpeg;base64,X_STALE')
-    const artist = { id: 'x', handle: 'x', images: [{ key: 'user/u1/k-y' }] } // canonical: only Y now
-    const shown = withLegacyLocalPhotos(artist, ['data:image/jpeg;base64,X_STALE'])
-    expect(shown.images).toEqual([{ key: 'user/u1/k-y' }])
-  })
-
-  it('still shows a legacy un-migrated local upload with no canonical ref yet', () => {
-    const artist = { id: 'x', handle: 'x', images: [] }
-    const shown = withLegacyLocalPhotos(artist, ['data:image/jpeg;base64,UNMIGRATED'])
-    expect(shown.images).toEqual(['data:image/jpeg;base64,UNMIGRATED'])
-  })
-})
-
 // #55 review (codex + agy): a removed DEFAULT_ARTISTS curated static image was
 // re-added on every load regardless of canonical removal or a tombstone.
 // Removing a curated seed image was completely ineffective. Since #116 the
@@ -83,52 +57,6 @@ describe('curated starter photos and their tombstones', () => {
   it('still shows curated DEFAULT_ARTISTS images that were never removed', () => {
     const [out] = applyDefaults([{ ...DEFAULT_ARTISTS[0], images: [] }])
     expect(out.images).toEqual(DEFAULT_ARTISTS[0].images)
-  })
-})
-
-// #55 part 1, hook-level reproduction of the issue's exact scenario: device A
-// caches [X, Y] locally; device B removes X and syncs [Y]; A reloads.
-describe('a stale local image cache does not resurrect a remotely-removed photo', () => {
-  beforeEach(async () => {
-    localStorage.clear()
-    clearBlobUrls()
-    await clearStore('tattoo-images-v1', 'artist-images')
-    await clearStore('tattoo-blobs-v1', 'blobs')
-  })
-
-  it('renders only the remote (post-removal) image set, not the stale local cache', async () => {
-    seedSession('artist@studio.com')
-    const key = 'user/local-artist@studio.com/artists/c1/y.jpg'
-    await backend.blobs.upload('u', key, 'data:image/jpeg;base64,Y', 'image/jpeg')
-    // Remote (device B's view, post-removal): only Y remains.
-    await backend.store.upsert('artistsMeta', [
-      { id: 'c1', handle: 'x', rank: 1, tags: [], images: [{ key }], updatedAt: '2026-06-01T00:00:00Z' },
-    ])
-    // X was migrated at some point (registered locally, same as any image
-    // this device has ever actually displayed) — otherwise a plain "starts
-    // with data:" check can't tell a stale-but-migrated image apart from a
-    // genuinely un-migrated one, since the local backend resolves every blob
-    // (migrated or not) to a data-URL.
-    registerBlobUrl('user/local-artist@studio.com/artists/c1/x.jpg', 'data:image/jpeg;base64,X_STALE')
-    // Local IndexedDB cache (device A's stale view): still has X too.
-    const req = indexedDB.open('tattoo-images-v1', 1)
-    await new Promise((resolve, reject) => {
-      req.onupgradeneeded = (e) => e.target.result.createObjectStore('artist-images')
-      req.onsuccess = (e) => {
-        const tx = e.target.result.transaction('artist-images', 'readwrite')
-        tx.objectStore('artist-images').put(['data:image/jpeg;base64,X_STALE', 'data:image/jpeg;base64,Y'], 'c1')
-        tx.oncomplete = resolve
-        tx.onerror = () => reject(tx.error)
-      }
-      req.onerror = () => reject(req.error)
-    })
-
-    const { result } = renderSynced()
-    await waitFor(() => expect(result.current.store[0]).toHaveLength(1))
-    // Y is shown as its ref (#116); X is not brought back from the stale cache.
-    await waitFor(() => expect(result.current.store[0][0].images).toContainEqual({ key }))
-    expect(result.current.store[0][0].images).not.toContain('data:image/jpeg;base64,X_STALE')
-    expect(result.current.store[0][0].images).toHaveLength(1)
   })
 })
 
@@ -208,7 +136,6 @@ describe('end-to-end: a removed photo survives a stale whole-record write from a
   beforeEach(async () => {
     localStorage.clear()
     clearBlobUrls()
-    await clearStore('tattoo-images-v1', 'artist-images')
     await clearStore('tattoo-blobs-v1', 'blobs')
   })
 
@@ -273,7 +200,6 @@ describe('re-adding a tombstoned photo clears its tombstone (#55)', () => {
   beforeEach(async () => {
     localStorage.clear()
     clearBlobUrls()
-    await clearStore('tattoo-images-v1', 'artist-images')
     await clearStore('tattoo-blobs-v1', 'blobs')
   })
 

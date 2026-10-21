@@ -24,7 +24,9 @@
 // tombstones and generations are only cleared once its writes land.
 //
 // Policy hooks (#112) carry what is specific to one collection — only artists
-// use them today (src/data/artistsPolicy.js). All are optional, and hooks that
+// use them today (src/data/artistsPolicy.js: initial, merge, onEdit; onMount,
+// beforeFirstPull and pushDisplay served the legacy photo sweep until #149).
+// All are optional, and hooks that
 // produce a value return it, so the engine stays the only writer of state:
 //   initial(rawCache, ctx) → value     first paint; rawCache is the parsed cache
 //                                      or null. ctx.user is `initialUser`
@@ -40,7 +42,7 @@
 //                                      seed); `pushDisplay(display)` → rows are
 //                                      upserted after it
 //   onEdit(prev, next, at) → next      after stamping, before anything is
-//                                      durable (tombstones, display cache)
+//                                      durable (tombstones)
 // The codec's toDisplay also receives ctx = { user, owner }.
 //
 // A collection with no backend collection (collectionFor(key) === null) is
@@ -136,8 +138,7 @@ export function createCollectionStore({
   let stopped = false
   let parked = [] // edits made while stopped: replayed by the next start, else dropped
   // Set once a hydration or a pull has put display values in memory, so
-  // mount-time hydration runs at most once: toDisplay expects canonical input
-  // (it matters for the artists codec, whose display value carries an overlay).
+  // mount-time hydration runs at most once: toDisplay expects canonical input.
   let hydrated = !codecArg
   let synced = null // the rows last known to match the remote
   let pushTimer = null
@@ -460,8 +461,7 @@ export function createCollectionStore({
     return Promise.resolve().then(() => {
       if (!live()) return undefined
       // onMount runs once for the store's life and gates both hydration and
-      // the pull (the legacy import it does feeds both); it never waits on the
-      // network.
+      // the pull; it never waits on the network.
       if (policy.onMount && !mounted) {
         mounted = Promise.resolve(policy.onMount(ctx)).catch((e) =>
           console.error(`[tattoo] onMount failed for ${key}:`, e)
