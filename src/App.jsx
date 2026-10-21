@@ -1,15 +1,16 @@
-import { lazy, Suspense, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router'
 import { UndoProvider } from './context/UndoContext'
+import { watchUploadOutbox } from './data/imageStaging'
 import Nav from './components/Nav'
 import Drawer from './components/Drawer'
 import Wall from './pages/Wall'
 import ProtectedRoute from './components/ProtectedRoute'
+import { useAuth } from './context/useAuth'
 import { useStorage } from './hooks/useStorage'
 import { useArtistStorage } from './hooks/useArtistStorage'
 import { ideasCodec, conceptsCodec } from './data/imageCodec'
 import { mergeConventionOverrides } from './data/conventions'
-import { useAuth } from './context/useAuth'
 import { backend } from './backend'
 import { requestPortableExport } from './data/portableBackup'
 import { createRelayClient } from './data/imageJobs/relayClient'
@@ -27,12 +28,15 @@ const Concepts = lazy(() => import('./pages/Concepts'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Help = lazy(() => import('./pages/Help'))
 
-// Gate first so the data hooks (which sync per-user once wired) only mount for a
-// signed-in user.
+// Gate first so the data hooks only mount for a signed-in user. Keyed by that
+// user: every collection store under the shell belongs to one identity, so a
+// sign-in as someone else remounts the shell instead of handing the previous
+// user's in-memory data to the new one (#111).
 export default function App() {
+  const { user } = useAuth()
   return (
     <ProtectedRoute>
-      <AppShell />
+      <AppShell key={user?.id} />
     </ProtectedRoute>
   )
 }
@@ -68,6 +72,10 @@ function AppShell() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [backupRevision, setBackupRevision] = useState(0)
   const navigate = useNavigate()
+  // Photos staged while uploads were failing upload on launch and whenever
+  // the browser comes back online, not only at the next edit (#115).
+  const userId = useAuth()?.user?.id
+  useEffect(() => watchUploadOutbox(userId), [userId])
 
   async function exportFullLibrary() {
     const ownerId = auth?.user?.id
@@ -110,7 +118,7 @@ function AppShell() {
               path="/settings"
               element={(
                 <Settings
-                  onExportBackup={exportFullLibrary}
+                  onExportBackup={backend.capabilities.realAuth ? exportFullLibrary : undefined}
                   artists={artists}
                   setArtists={setArtists}
                   ideas={ideas}

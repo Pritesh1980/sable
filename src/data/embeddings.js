@@ -1,11 +1,11 @@
 // Taste Engine — pure vector math over per-image style embeddings (issue #19).
 // Vectors come from an on-device CLIP-class model (see embedder.js / styleIndex.js);
-// this module is storage- and model-agnostic: callers inject `getVec(src) → vector|null`.
+// this module is storage- and model-agnostic: callers inject `getVec(image) → vector|null`.
 // Spike evidence (issue #19 comment, 2026-07-13): single curated images retrieve
 // their own artist at ~28% top-1 vs 2.7% chance, so centroid-level artist
 // similarity has real signal.
 
-import { getImageUrl } from './planning'
+import { refIdentity } from './imageRef'
 
 export function cosineSimilarity(a, b) {
   if (!a || !b || a.length !== b.length) return 0
@@ -33,9 +33,10 @@ export function meanVector(vectors) {
 }
 
 const artistVectors = (artist, getVec) =>
-  (artist.images || [])
-    .map((image) => getVec(getImageUrl(image)))
-    .filter(Boolean)
+  (artist.images || []).map((image) => getVec(image)).filter(Boolean)
+
+// A getVec over a loadVectors() map: the vector for a photo, by identity.
+export const vectorLookup = (vectors) => (image) => vectors.get(refIdentity(image)) || null
 
 // One style centroid per artist that has at least one embedded image.
 export function artistCentroids(artists, getVec) {
@@ -72,7 +73,7 @@ export function indexCoverage(artists, getVec) {
   for (const artist of artists) {
     for (const image of artist.images || []) {
       total++
-      if (getVec(getImageUrl(image))) embedded++
+      if (getVec(image)) embedded++
     }
   }
   return { embedded, total }

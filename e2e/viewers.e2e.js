@@ -15,7 +15,7 @@ const imageLabel = /^(.+) — image (\d+) of (\d+)$/
 test.describe('wall viewer', () => {
   test('swipes through images and artists, taps for controls, swipes down to close', async ({ page }) => {
     await openDemo(page, '/')
-    await page.getByRole('figure', { name: 'Mora Vane' }).first().click()
+    await page.getByRole('button', { name: 'Open Mora Vane' }).first().click()
     const viewer = page.getByRole('dialog', { name: imageLabel })
     await expect(viewer).toBeVisible()
     const start = (await viewer.getAttribute('aria-label')).match(imageLabel)
@@ -41,7 +41,7 @@ test.describe('wall viewer', () => {
 
   test('the Close button is on top and closes it', async ({ page }) => {
     await openDemo(page, '/')
-    await page.getByRole('figure', { name: 'Vesper Ash' }).first().click()
+    await page.getByRole('button', { name: 'Open Vesper Ash' }).first().click()
     const close = page.getByRole('button', { name: 'Close viewer' })
     expect(await isOnTop(close)).toBe(true)
     await close.tap()

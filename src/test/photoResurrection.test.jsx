@@ -1,17 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { AuthProvider } from '../context/AuthContext'
 import { useAuth } from '../context/useAuth'
-import {
-  useArtistStorage,
-  buildArtists,
-  applyImageTombstones,
-  removedImageTombstones,
-  cacheArtistImages,
-} from '../hooks/useArtistStorage'
+import { useArtistStorage } from '../hooks/useArtistStorage'
+import { applyDefaults, applyImageTombstones, removedImageTombstones } from '../data/artistsPolicy'
 import { backend } from '../backend'
-import { uploadDataUrl } from '../hooks/useImageUpload'
-import { clearBlobUrls, registerBlobUrl, keyForUrl } from '../data/blobUrls'
+import { clearBlobUrls } from '../data/blobUrls'
 import { DEFAULT_ARTISTS } from '../data/artists'
 
 const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>
@@ -28,11 +22,11 @@ function clearStore(name, store) {
     const req = indexedDB.open(name)
     req.onsuccess = (e) => {
       const db = e.target.result
-      if (!db.objectStoreNames.contains(store)) { db.close(); return res() }
+      if (!db.objectStoreNames.contains(store)) return res()
       const tx = db.transaction(store, 'readwrite')
       tx.objectStore(store).clear()
-      tx.oncomplete = () => { db.close(); res() }
-      tx.onerror = () => { db.close(); res() }
+      tx.oncomplete = () => res()
+      tx.onerror = () => res()
       return undefined
     }
     req.onerror = () => res()
@@ -43,274 +37,45 @@ function clearStore(name, store) {
 const renderSynced = () =>
   renderHook(() => ({ auth: useAuth(), store: useArtistStorage() }), { wrapper })
 
-afterEach(() => vi.restoreAllMocks())
-
-async function readCachedImages(id) {
-  const req = indexedDB.open('tattoo-images-v1', 1)
-  return new Promise((resolve, reject) => {
-    req.onsuccess = () => {
-      const db = req.result
-      const read = db.transaction('artist-images').objectStore('artist-images').get(id)
-      read.onsuccess = () => { db.close(); resolve(read.result) }
-      read.onerror = () => { db.close(); reject(read.error) }
-    }
-    req.onerror = () => reject(req.error)
-  })
-}
-
-// #55 part 1: buildArtists's idbImages branch ignored the reconciled canonical
-// a.images entirely whenever any IndexedDB cache existed, so a stale local
-// cache could keep showing a photo another device had already removed.
-describe('buildArtists (pure)', () => {
-  beforeEach(() => clearBlobUrls())
-
-  it('a stale IndexedDB cache does not resurrect a photo removed from canonical images', async () => {
-    // X was migrated at some point (registered), same as any real image the
-    // app has ever displayed — a plain "starts with data:" check can't tell
-    // this apart from a genuinely un-migrated upload under the local backend,
-    // which resolves every blob (migrated or not) to a data-URL.
-    registerBlobUrl('k-x', 'data:image/jpeg;base64,X_STALE')
-    const meta = [{ id: 'x', handle: 'x', images: [{ key: 'k-y' }] }] // canonical: only Y now
-    const imageMap = { x: ['data:image/jpeg;base64,X_STALE', 'data:image/jpeg;base64,Y_CACHED'] }
-    const built = await buildArtists(meta, imageMap, false)
-    // Y's key won't resolve without a real blob store, so it may come back
-    // empty — the point is X must be gone, not resurrected from the cache.
-    expect(built[0].images).not.toContain('data:image/jpeg;base64,X_STALE')
-  })
-
-  it('still shows a legacy un-migrated local upload with no canonical ref yet', async () => {
-    const meta = [{ id: 'x', handle: 'x', images: [] }]
-    const imageMap = { x: ['data:image/jpeg;base64,UNMIGRATED'] }
-    const built = await buildArtists(meta, imageMap, false)
-    expect(built[0].images).toContain('data:image/jpeg;base64,UNMIGRATED')
-  })
-
-  // #55 review (codex + agy): a removed DEFAULT_ARTISTS curated static image
-  // was re-added on every buildArtists call regardless of canonical removal
-  // or a tombstone — mergeStaticImages doesn't know about either. Removing a
-  // curated seed image was completely ineffective.
-  it('does not re-add a curated DEFAULT_ARTISTS image that has a tombstone', async () => {
+// #55 review (codex + agy): a removed DEFAULT_ARTISTS curated static image was
+// re-added on every load regardless of canonical removal or a tombstone.
+// Removing a curated seed image was completely ineffective. Since #116 the
+// starter photos join the stored rows through applyDefaults.
+describe('curated starter photos and their tombstones', () => {
+  it('does not re-add a curated DEFAULT_ARTISTS image that has a tombstone', () => {
     const staticPath = DEFAULT_ARTISTS[0].images[0]
-    const meta = [{
-      id: DEFAULT_ARTISTS[0].id,
-      handle: DEFAULT_ARTISTS[0].handle,
+    const stored = [{
+      ...DEFAULT_ARTISTS[0],
       images: [],
       removedImages: [{ ref: staticPath, removedAt: '2026-07-01T00:00:00Z' }],
     }]
-    const built = await buildArtists(meta, {}, true)
-    expect(built[0].images).not.toContain(staticPath)
+    const [out] = applyDefaults(stored)
+    expect(out.images).not.toContain(staticPath)
+    expect(out.images).toEqual(DEFAULT_ARTISTS[0].images.slice(1))
   })
 
-  it('still shows curated DEFAULT_ARTISTS images that were never removed', async () => {
-    const meta = [{ id: DEFAULT_ARTISTS[0].id, handle: DEFAULT_ARTISTS[0].handle, images: [] }]
-    const built = await buildArtists(meta, {}, true)
-    expect(built[0].images).toEqual(expect.arrayContaining(DEFAULT_ARTISTS[0].images))
-  })
-})
-
-// #55 part 1, hook-level reproduction of the issue's exact scenario: device A
-// caches [X, Y] locally; device B removes X and syncs [Y]; A reloads.
-describe('a stale local image cache does not resurrect a remotely-removed photo', () => {
-  beforeEach(async () => {
-    localStorage.clear()
-    clearBlobUrls()
-    await clearStore('tattoo-images-v1', 'artist-images')
-    await clearStore('tattoo-blobs-v1', 'blobs')
-  })
-
-  it('renders only the remote (post-removal) image set, not the stale local cache', async () => {
-    seedSession('artist@studio.com')
-    const key = 'user/local-artist@studio.com/artists/c1/y.jpg'
-    await backend.blobs.upload('u', key, 'data:image/jpeg;base64,Y', 'image/jpeg')
-    // Remote (device B's view, post-removal): only Y remains.
-    await backend.store.upsert('artistsMeta', [
-      { id: 'c1', handle: 'x', rank: 1, tags: [], images: [{ key }], updatedAt: '2026-06-01T00:00:00Z' },
-    ])
-    // X was migrated at some point (registered locally, same as any image
-    // this device has ever actually displayed) — otherwise a plain "starts
-    // with data:" check can't tell a stale-but-migrated image apart from a
-    // genuinely un-migrated one, since the local backend resolves every blob
-    // (migrated or not) to a data-URL.
-    registerBlobUrl('user/local-artist@studio.com/artists/c1/x.jpg', 'data:image/jpeg;base64,X_STALE')
-    // Exercise the actual durable cache path, not a hand-written old schema.
-    // AuthProvider clears all volatile URL mappings at initial sign-in.
-    registerBlobUrl(key, 'data:image/jpeg;base64,Y')
-    await cacheArtistImages('c1', ['data:image/jpeg;base64,X_STALE', 'data:image/jpeg;base64,Y'])
-
-    const { result } = renderSynced()
-    await waitFor(() => expect(result.current.store[0]).toHaveLength(1))
-    await waitFor(() => expect(result.current.store[0][0].images).toContain('data:image/jpeg;base64,Y'))
-    expect(result.current.store[0][0].images).not.toContain('data:image/jpeg;base64,X_STALE')
-  })
-
-  it('retains mixed genuine legacy bytes but never reuploads migrated entries after clear/reload', async () => {
-    seedSession('artist@studio.com')
-    const ownerId = 'local-artist@studio.com'
-    const key = `user/${ownerId}/artists/c1/y.jpg`
-    await backend.blobs.upload(ownerId, key, 'data:image/jpeg;base64,Y', 'image/jpeg')
-    await backend.store.upsert('artistsMeta', [{ id: 'c1', handle: 'x', images: [{ key }], updatedAt: '2026-06-01T00:00:00Z' }])
-    registerBlobUrl(`user/${ownerId}/artists/c1/x.jpg`, 'data:image/jpeg;base64,X_STALE')
-    registerBlobUrl(key, 'data:image/jpeg;base64,Y')
-    await cacheArtistImages('c1', ['data:image/jpeg;base64,X_STALE', 'data:image/jpeg;base64,Y', 'data:image/jpeg;base64,LEGACY'])
-    clearBlobUrls()
-    const upload = vi.spyOn(backend.blobs, 'upload')
-    const h = renderSynced()
-    await waitFor(() => expect(h.result.current.store[0].find((r) => r.id === 'c1')?.images).toContain('data:image/jpeg;base64,LEGACY'))
-    await waitFor(async () => expect((await backend.store.list('artistsMeta'))[0].images).toHaveLength(2))
-    await waitFor(() => expect(localStorage.getItem('tattoo_img_migrated_v1')).toBe('1'))
-    expect(h.result.current.store[0][0].images).not.toContain('data:image/jpeg;base64,X_STALE')
-    expect(upload.mock.calls.map((args) => args[2])).toEqual(['data:image/jpeg;base64,LEGACY'])
-    expect((await readCachedImages('c1')).every((image) => image.key)).toBe(true)
-    h.unmount()
-    clearBlobUrls()
-    const second = renderSynced()
-    await waitFor(() => expect(second.result.current.store[0].find((r) => r.id === 'c1')?.images).toContain('data:image/jpeg;base64,Y'))
-    expect(second.result.current.store[0][0].images).not.toContain('data:image/jpeg;base64,X_STALE')
-    expect(upload).toHaveBeenCalledTimes(1)
-  })
-
-  it('never restores another owner cache refs as new uploads or reverse URL mappings', async () => {
-    registerBlobUrl('user/A/artists/shared-id/x.jpg', 'data:image/jpeg;base64,A_PRIVATE')
-    await cacheArtistImages('shared-id', ['data:image/jpeg;base64,A_PRIVATE'])
-    clearBlobUrls()
-    seedSession('B')
-    const built = await buildArtists([{ id: 'shared-id', images: [] }], { 'shared-id': await readCachedImages('shared-id') }, false)
-    expect(built[0].images).toEqual([])
-    expect(keyForUrl('data:image/jpeg;base64,A_PRIVATE')).toBeNull()
-  })
-
-  it('keeps a new failed-upload photo visible and retryable after completed migration and reload', async () => {
-    seedSession('artist@studio.com')
-    const historical = 'data:image/jpeg;base64,HISTORICAL'
-    await cacheArtistImages('c1', [historical])
-    localStorage.setItem('tattoo_img_migrated_v1', '1')
-    await backend.store.upsert('artistsMeta', [{ id: 'c1', images: [], updatedAt: '2026-06-01T00:00:00Z' }])
-    const realUpload = backend.blobs.upload.bind(backend.blobs)
-    const upload = vi.spyOn(backend.blobs, 'upload').mockRejectedValue(new Error('offline'))
-    vi.spyOn(console, 'error').mockImplementation(() => {})
-    const h = renderSynced()
-    await waitFor(() => expect(h.result.current.store[0]).toHaveLength(1))
-    const fresh = 'data:image/jpeg;base64,TkVXX1BFTkRJTkc='
-    // The upload fallback hands the unchanged bytes to the ordinary setter.
-    expect(await uploadDataUrl(fresh, { userId: 'local-artist@studio.com', scope: 'artists', id: 'c1' })).toBeNull()
-    act(() => h.result.current.store[1]((rows) => rows.map((row) => ({ ...row, images: [fresh] }))))
-    await waitFor(async () => expect(await readCachedImages('c1')).toHaveLength(2))
-    h.unmount()
-    clearBlobUrls()
-    const second = renderSynced()
-    await waitFor(() => expect(second.result.current.store[0][0]?.images).toContain(fresh))
-    await waitFor(() => expect(upload).toHaveBeenCalledTimes(2))
-    expect(second.result.current.store[0][0].images).not.toContain(historical)
-    second.unmount()
-    clearBlobUrls()
-    upload.mockImplementation(realUpload)
-    const third = renderSynced()
-    await waitFor(async () => expect((await readCachedImages('c1'))[0]).toHaveProperty('key'))
-    await waitFor(() => expect(third.result.current.store[0][0]?.images).toContain(fresh))
-    expect(third.result.current.store[0][0].images).not.toContain(historical)
-    expect(await readCachedImages('c1')).toContain(historical)
-    expect(upload).toHaveBeenCalledTimes(3)
-    expect((await backend.store.list('artistsMeta'))[0].images).toHaveLength(1)
-  })
-
-  it('classifies the current cache without overwriting a new photo added during canonical upsert', async () => {
-    seedSession('artist@studio.com')
-    await backend.store.upsert('artistsMeta', [{ id: 'c1', images: [], updatedAt: '2026-06-01T00:00:00Z' }])
-    await cacheArtistImages('c1', ['data:image/jpeg;base64,LEGACY'])
-    const original = backend.store.upsert.bind(backend.store)
-    let release
-    const gate = new Promise((resolve) => { release = resolve })
-    const upsert = vi.spyOn(backend.store, 'upsert').mockImplementationOnce(async (...args) => { await gate; return original(...args) })
-    const h = renderSynced()
-    await waitFor(() => expect(upsert).toHaveBeenCalled())
-    const fresh = 'data:image/jpeg;base64,NEW_DURING_AWAIT'
-    act(() => h.result.current.store[1]((rows) => rows.map((row) => ({ ...row, images: [...row.images, fresh] }))))
-    await waitFor(async () => expect(await readCachedImages('c1')).toHaveLength(2))
-    release()
-    await waitFor(() => expect(localStorage.getItem('tattoo_img_migrated_v1')).toBe('1'))
-    const cached = await readCachedImages('c1')
-    expect(cached).toHaveLength(2)
-    clearBlobUrls()
-    const built = await buildArtists([{ id: 'c1', images: [] }], { c1: cached }, false)
-    expect(built[0].images).toContain(fresh)
-  })
-
-  it('fences migration cache writes and completion when the owner changes between row writes', async () => {
-    seedSession('artist@studio.com')
-    await backend.store.upsert('artistsMeta', [{ id: 'c1', images: [] }, { id: 'c2', images: [] }])
-    await cacheArtistImages('c1', ['data:image/jpeg;base64,ONE'])
-    await cacheArtistImages('c2', ['data:image/jpeg;base64,TWO'])
-    const originalPut = IDBObjectStore.prototype.put
-    let transitioned = false
-    let secondWrites = 0
-    let signOut
-    vi.spyOn(console, 'error').mockImplementation(() => {})
-    vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function (...args) {
-      if (this.transaction.db.name === 'tattoo-images-v1') {
-        if (transitioned) secondWrites += 1
-        if (!transitioned) this.transaction.addEventListener('complete', () => {
-          transitioned = true
-          act(() => { signOut = h.result.current.auth.signOut() })
-        })
-      }
-      return originalPut.apply(this, args)
-    })
-    const h = renderSynced()
-    await waitFor(() => expect(transitioned).toBe(true))
-    await act(async () => { await signOut })
-    expect(secondWrites).toBe(0)
-    expect(localStorage.getItem('tattoo_img_migrated_v1')).toBeNull()
-    expect((await indexedDB.databases()).some((db) => db.name === 'tattoo-images-v1')).toBe(false)
-  })
-
-  it('keeps failed classification writes recoverable without marking migration complete', async () => {
-    seedSession('artist@studio.com')
-    localStorage.setItem('tattoo_artists_meta', JSON.stringify([{ id: 'c1', handle: 'x', images: [] }]))
-    await cacheArtistImages('c1', ['data:image/jpeg;base64,LEGACY'])
-    const originalPut = IDBObjectStore.prototype.put
-    vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function (...args) {
-      if (this.transaction.db.name === 'tattoo-images-v1') throw new Error('quota')
-      return originalPut.apply(this, args)
-    })
-    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const h = renderSynced()
-    await waitFor(() => expect(error).toHaveBeenCalled())
-    expect(localStorage.getItem('tattoo_img_migrated_v1')).toBeNull()
-    expect(await readCachedImages('c1')).toEqual(['data:image/jpeg;base64,LEGACY'])
-    await waitFor(() => expect(h.result.current.store[0].find((r) => r.id === 'c1')?.images).toContain('data:image/jpeg;base64,LEGACY'))
-  })
-
-  it('retains historical ambiguous bytes but never displays or reuploads them after completed migration', async () => {
-    seedSession('artist@studio.com')
-    await cacheArtistImages('c1', ['data:image/jpeg;base64,X_STALE'])
-    localStorage.setItem('tattoo_img_migrated_v1', '1')
-    await backend.store.upsert('artistsMeta', [{ id: 'c1', handle: 'x', images: [], updatedAt: '2026-06-01T00:00:00Z' }])
-    clearBlobUrls()
-    const upload = vi.spyOn(backend.blobs, 'upload')
-    const h = renderSynced()
-    await waitFor(() => expect(h.result.current.store[0]).toHaveLength(1))
-    expect(h.result.current.store[0][0].images).toEqual([])
-    expect(upload).not.toHaveBeenCalled()
-    expect(await readCachedImages('c1')).toEqual(['data:image/jpeg;base64,X_STALE'])
-    expect((await backend.store.list('artistsMeta'))[0].images).toEqual([])
-    // Adding a new photo must not silently erase the quarantined old bytes.
-    await cacheArtistImages('c1', ['https://example.test/new.jpg'])
-    expect(await readCachedImages('c1')).toContain('data:image/jpeg;base64,X_STALE')
+  it('still shows curated DEFAULT_ARTISTS images that were never removed', () => {
+    const [out] = applyDefaults([{ ...DEFAULT_ARTISTS[0], images: [] }])
+    expect(out.images).toEqual(DEFAULT_ARTISTS[0].images)
   })
 })
+
+// Relay cache-safety cases now exercise the real staging/collection engine in
+// relayPhotoStorage.test.jsx: mixed/foreign-owner bytes, offline reload, concurrent
+// adds, owner transitions, failed persistence and ambiguous old cache entries.
 
 // #55 part 2 (tombstones): a stale whole-record write with a newer unrelated
 // field must not resurrect a photo that has a tombstone.
 describe('removedImageTombstones (pure)', () => {
   it('records a tombstone for each canonical ref present before but not after', () => {
-    const prev = ['data:should-not-appear', { key: 'k1' }, { key: 'k2' }]
-    const next = [{ key: 'k1' }]
+    const prev = ['data:should-not-appear', { key: 'user/u1/k1' }, { key: 'user/u1/k2' }]
+    const next = [{ key: 'user/u1/k1' }]
     const tombstones = removedImageTombstones(prev, next, '2026-07-01T00:00:00Z')
-    expect(tombstones).toEqual([{ ref: { key: 'k2' }, removedAt: '2026-07-01T00:00:00Z' }])
+    expect(tombstones).toEqual([{ ref: { key: 'user/u1/k2' }, removedAt: '2026-07-01T00:00:00Z' }])
   })
 
   it('produces nothing when nothing was removed', () => {
-    expect(removedImageTombstones([{ key: 'k1' }], [{ key: 'k1' }], '2026-07-01T00:00:00Z')).toEqual([])
+    expect(removedImageTombstones([{ key: 'user/u1/k1' }], [{ key: 'user/u1/k1' }], '2026-07-01T00:00:00Z')).toEqual([])
   })
 })
 
@@ -318,42 +83,49 @@ describe('applyImageTombstones (pure, reconcile layer)', () => {
   it('keeps a photo removed on one device out of the winning record, even though the other device\'s newer unrelated edit would otherwise resurrect it', () => {
     // Device A: removed photo X, tombstoned it.
     const local = [{
-      id: 'c1', notes: 'old note', images: [{ key: 'k-y' }],
-      removedImages: [{ ref: { key: 'k-x' }, removedAt: '2026-07-01T00:00:00Z' }],
+      id: 'c1', notes: 'old note', images: [{ key: 'user/u1/k-y' }],
+      removedImages: [{ ref: { key: 'user/u1/k-x' }, removedAt: '2026-07-01T00:00:00Z' }],
       updatedAt: '2026-07-01T00:00:00Z',
     }]
     // Device B: stale copy still has X, edited only notes — later timestamp,
     // legitimately wins the whole-record merge.
     const remote = [{
-      id: 'c1', notes: 'new note', images: [{ key: 'k-x' }, { key: 'k-y' }],
+      id: 'c1', notes: 'new note', images: [{ key: 'user/u1/k-x' }, { key: 'user/u1/k-y' }],
       updatedAt: '2026-08-01T00:00:00Z',
     }]
     const merged = [remote[0]] // reconcileRecords would pick remote here (newer)
 
     const result = applyImageTombstones(merged, local, remote)
     expect(result[0].notes).toBe('new note') // the newer content still wins
-    expect(result[0].images).toEqual([{ key: 'k-y' }]) // X stays removed
+    expect(result[0].images).toEqual([{ key: 'user/u1/k-y' }]) // X stays removed
   })
 
   it('unions tombstones from both sides, keeping the later removedAt for the same ref', () => {
+    // k-x is tombstoned on both sides (local later); k-z only on the remote.
     const local = [{
       id: 'c1', images: [],
-      removedImages: [{ ref: { key: 'k-x' }, removedAt: '2026-07-01T00:00:00Z' }],
+      removedImages: [{ ref: { key: 'user/u1/k-x' }, removedAt: '2026-07-15T00:00:00Z' }],
       updatedAt: '2026-07-01T00:00:00Z',
     }]
     const remote = [{
       id: 'c1', images: [],
-      removedImages: [{ ref: { key: 'k-x' }, removedAt: '2026-07-15T00:00:00Z' }],
+      removedImages: [
+        { ref: { key: 'user/u1/k-x' }, removedAt: '2026-07-01T00:00:00Z' },
+        { ref: { key: 'user/u1/k-z' }, removedAt: '2026-07-02T00:00:00Z' },
+      ],
       updatedAt: '2026-08-01T00:00:00Z',
     }]
     const merged = [remote[0]]
 
     const result = applyImageTombstones(merged, local, remote)
-    expect(result[0].removedImages).toEqual([{ ref: { key: 'k-x' }, removedAt: '2026-07-15T00:00:00Z' }])
+    expect(result[0].removedImages).toEqual([
+      { ref: { key: 'user/u1/k-x' }, removedAt: '2026-07-15T00:00:00Z' },
+      { ref: { key: 'user/u1/k-z' }, removedAt: '2026-07-02T00:00:00Z' },
+    ])
   })
 
   it('leaves a record with no tombstones on either side untouched', () => {
-    const record = { id: 'c1', images: [{ key: 'k-y' }], updatedAt: '2026-08-01T00:00:00Z' }
+    const record = { id: 'c1', images: [{ key: 'user/u1/k-y' }], updatedAt: '2026-08-01T00:00:00Z' }
     const result = applyImageTombstones([record], [], [record])
     expect(result[0]).toBe(record)
   })
@@ -368,7 +140,6 @@ describe('end-to-end: a removed photo survives a stale whole-record write from a
   beforeEach(async () => {
     localStorage.clear()
     clearBlobUrls()
-    await clearStore('tattoo-images-v1', 'artist-images')
     await clearStore('tattoo-blobs-v1', 'blobs')
   })
 
@@ -391,7 +162,7 @@ describe('end-to-end: a removed photo survives a stale whole-record write from a
       first.result.current.store[1]((prev) =>
         prev.map((a) =>
           a.id === 'c1'
-            ? { ...a, images: a.images.filter((img) => img !== 'data:image/jpeg;base64,X') }
+            ? { ...a, images: a.images.filter((img) => img?.key !== keyX) }
             : a
         )
       )
@@ -421,8 +192,8 @@ describe('end-to-end: a removed photo survives a stale whole-record write from a
     const second = renderSynced()
     await waitFor(() => expect(second.result.current.store[0]).toHaveLength(1))
     await waitFor(() => expect(second.result.current.store[0][0].notes).toBe('from device B'))
-    expect(second.result.current.store[0][0].images).not.toContain('data:image/jpeg;base64,X')
-    expect(second.result.current.store[0][0].images).toContain('data:image/jpeg;base64,Y')
+    expect(second.result.current.store[0][0].images).not.toContainEqual({ key: keyX })
+    expect(second.result.current.store[0][0].images).toContainEqual({ key: keyY })
   })
 })
 
@@ -433,7 +204,6 @@ describe('re-adding a tombstoned photo clears its tombstone (#55)', () => {
   beforeEach(async () => {
     localStorage.clear()
     clearBlobUrls()
-    await clearStore('tattoo-images-v1', 'artist-images')
     await clearStore('tattoo-blobs-v1', 'blobs')
   })
 
@@ -447,7 +217,7 @@ describe('re-adding a tombstoned photo clears its tombstone (#55)', () => {
 
     const first = renderSynced()
     await waitFor(() => expect(first.result.current.store[0]).toHaveLength(1))
-    await waitFor(() => expect(first.result.current.store[0][0].images).toContain('data:image/jpeg;base64,X'))
+    await waitFor(() => expect(first.result.current.store[0][0].images).toContainEqual({ key }))
 
     // Remove it — a tombstone is recorded.
     act(() => {
@@ -460,17 +230,18 @@ describe('re-adding a tombstoned photo clears its tombstone (#55)', () => {
       expect(meta[0].removedImages).toHaveLength(1)
     })
 
-    // The user changes their mind and adds the exact same photo back.
+    // The user changes their mind and adds the exact same photo back (as undo
+    // does: the ref itself).
     act(() => {
       first.result.current.store[1]((prev) =>
-        prev.map((a) => (a.id === 'c1' ? { ...a, images: ['data:image/jpeg;base64,X'] } : a))
+        prev.map((a) => (a.id === 'c1' ? { ...a, images: [{ key }] } : a))
       )
     })
     await waitFor(() => {
       const meta = JSON.parse(localStorage.getItem('tattoo_artists_meta'))
       expect(meta[0].removedImages).toEqual([])
     })
-    expect(first.result.current.store[0][0].images).toContain('data:image/jpeg;base64,X')
+    expect(first.result.current.store[0][0].images).toContainEqual({ key })
 
     // Reload — reconciliation must not strip the re-added photo back out.
     // The seed row already had { key } from the start, so checking for its
@@ -485,12 +256,17 @@ describe('re-adding a tombstoned photo clears its tombstone (#55)', () => {
     }, { timeout: 3000 })
     first.unmount()
 
-    // The initial-paint state (before the async pull/reconcile effect
-    // resolves) has this artist's images as [] by design — wait for the
-    // real resolved content, not just the record's presence.
+    // The cached row already holds the photo from the first paint (#116), so
+    // wait for the pull's reconciliation to have run before asserting.
+    const list = vi.spyOn(backend.store, 'list')
     const second = renderSynced()
     await waitFor(() => expect(second.result.current.store[0]).toHaveLength(1))
-    await waitFor(() => expect(second.result.current.store[0][0].images.length).toBeGreaterThan(0))
-    expect(second.result.current.store[0][0].images).toContain('data:image/jpeg;base64,X')
+    await waitFor(() => expect(list).toHaveBeenCalled())
+    await act(async () => {
+      await list.mock.results[0].value
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    })
+    expect(second.result.current.store[0][0].images).toContainEqual({ key })
+    list.mockRestore()
   })
 })

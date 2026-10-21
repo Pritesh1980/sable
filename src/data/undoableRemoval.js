@@ -7,12 +7,17 @@
 // shifts, and restoring blind duplicates an item that has already come back.
 
 /** Stable-ish identity for the shapes images take here: plain URL strings, Brief's
- *  `{ url, note }` entries, and the canonical `{ key }` blob refs. */
+ *  `{ url, note }` entries, and the canonical `{ key }` blob refs.
+ *
+ *  Key first (#114): a blob-backed photo whose url has not resolved yet is
+ *  `{ url: '', key }`, so reading `.url` first gave every such photo the identity
+ *  '' — one removal, undo or note edit hit them all. The key is also what stays
+ *  the same when a signed url is refreshed. An empty url is no identity at all. */
 export function itemIdentity(item) {
   if (item == null) return item
   if (typeof item !== 'object') return item
-  if (typeof item.url === 'string') return item.url
-  if (typeof item.key === 'string') return item.key
+  if (typeof item.key === 'string' && item.key) return item.key
+  if (typeof item.url === 'string' && item.url) return item.url
   return JSON.stringify(item)
 }
 

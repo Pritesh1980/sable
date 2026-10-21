@@ -57,7 +57,7 @@ flowchart TB
   CAPTURE{"What do you have?"}
   SHOT["Share to installed PWA,<br/>paste, drop, or choose screenshot"]
   HANDLE["Paste handle or profile URL"]
-  KEY{"Gemini key available?"}
+  KEY{"Use Auto-fill?<br/>Gemini key required"}
   ANALYSE["Extract handle and name<br/>suggest tags, style note and artwork crop"]
   CROP["Review cropped artwork<br/>or restore whole screenshot"]
   MANUAL["Enter details manually<br/>screenshot still attaches"]
@@ -80,8 +80,8 @@ flowchart TB
   RADARIN -- "who the judges picked" --> WINNERS --> VERIFY
   CAPTURE -- "screenshot" --> SHOT --> KEY
   CAPTURE -- "handle or URL" --> HANDLE --> VERIFY
-  KEY -- yes --> ANALYSE --> CROP --> VERIFY
-  KEY -- no --> MANUAL --> VERIFY
+  KEY -- "explicit tap" --> ANALYSE --> CROP --> VERIFY
+  KEY -- "skip or no key" --> MANUAL --> VERIFY
   VERIFY --> DUP
   DUP -- yes --> APPEND --> WALL
   DUP -- no --> ADD --> WALL
@@ -106,7 +106,10 @@ OS sharing requires an installed PWA with share-target support and an active ser
 worker. **On iPhone, use the Shortcut/paste path:** iOS Safari does not support Web
 Share Target ([WebKit tracking issue](https://bugs.webkit.org/show_bug.cgi?id=194593)).
 The Shortcut opens the same intake route ready for a paste; see the
-[setup guide](02-managing-artists.md#share-a-screenshot-straight-from-instagram).
+[setup guide](02-managing-artists.md#share-from-instagram). Real-iPhone acceptance,
+including Safari versus installed-app session sharing, remains pending. Only the
+handle is required; optional Details starts collapsed. AI requests never run merely
+because a screenshot was attached. Local-save confirmations do not promise cloud sync.
 If an artwork crop is unavailable or restored to the original screenshot, any taste
 score is labelled rough. Removing a staged screenshot discards its AI suggestions
 without erasing fields you edited yourself.
@@ -379,9 +382,10 @@ or moving to another route. Consecutive removals from the same source can be res
 as a batch. This is a short, in-memory recovery window, not a backup or an undo history
 that survives reloads.
 
-There is no `online` event listener today: connectivity returning by itself does not
-start a retry. Reopening Sable runs reconciliation, while another edit schedules a new
-flush.
+Photos you add while offline, or whose upload fails, are staged on the device and
+queued in an upload outbox. Sable retries the queue when it launches, when connectivity
+returns (the `online` event) and on every flush; an entry leaves the queue only after the
+upload is confirmed, and the photo stays viewable offline from its copy on this device.
 
 Backup export serialises the values currently in memory. Inline `data:` images remain
 embedded, but backend-resolved or signed image URLs are not fetched and materialised

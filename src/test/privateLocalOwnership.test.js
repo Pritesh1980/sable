@@ -149,14 +149,16 @@ describe('private local ownership', () => {
 describe.each(['supabase', 'local'])('auth display invalidation with %s auth', (authKind) => {
   const key = 'user/A/concepts/auth-delayed/image.png'
   const cachedKey = 'user/A/concepts/auth-cached/image.png'
-  let previousCapabilities, previousOwner, emit
+  let previousCapabilities, previousOwner, previousScope, emit
 
   beforeEach(() => {
     const b = createBackend('local', { authKind, ownerId: 'A' })
     previousCapabilities = backend.capabilities
     previousOwner = backend.privateOwnerId
+    previousScope = backend.ownerScope
     backend.capabilities = b.capabilities
     backend.privateOwnerId = b.privateOwnerId
+    backend.ownerScope = b.ownerScope
     vi.spyOn(backend, 'setIdentity').mockImplementation(b.setIdentity)
     vi.spyOn(backend.auth, 'onAuthStateChange').mockImplementation((cb) => { emit = cb; return () => {} })
     vi.spyOn(backend.auth, 'getSession').mockResolvedValue({ user: { id: 'A' } })
@@ -164,6 +166,7 @@ describe.each(['supabase', 'local'])('auth display invalidation with %s auth', (
   afterEach(() => {
     backend.capabilities = previousCapabilities
     backend.privateOwnerId = previousOwner
+    backend.ownerScope = previousScope
   })
 
   async function mountAuth() {
@@ -179,6 +182,7 @@ describe.each(['supabase', 'local'])('auth display invalidation with %s auth', (
       vi.spyOn(backend.blobs, 'getUrl').mockReturnValueOnce(old.promise).mockReturnValueOnce(fresh.promise)
       registerBlobUrl(cachedKey, 'cached-before-logout')
       const pending = resolveBlobKey(key)
+      await waitFor(() => expect(backend.blobs.getUrl).toHaveBeenCalledTimes(1))
       // Both events arrive before the serialized queue runs. The final owner
       // equals prevUserId, so the queue does not call purgeLocalUserData.
       act(() => { emit(null); emit({ user: { id: 'A' } }) })
@@ -207,6 +211,7 @@ describe.each(['supabase', 'local'])('auth display invalidation with %s auth', (
     vi.spyOn(backend.blobs, 'getUrl').mockReturnValueOnce(old.promise)
     registerBlobUrl(cachedKey, 'cached-before-unmount')
     const pending = resolveBlobKey(key)
+    await vi.waitFor(() => expect(backend.blobs.getUrl).toHaveBeenCalledTimes(1))
     view.unmount()
     old.resolve('late-after-unmount')
     expect(await pending).toBe('')
@@ -222,6 +227,7 @@ describe.each(['supabase', 'local'])('auth display invalidation with %s auth', (
       const getUrl = vi.spyOn(backend.blobs, 'getUrl').mockReturnValue(current.promise)
       registerBlobUrl(cachedKey, 'still-valid')
       const pending = resolveBlobKey(key)
+      await waitFor(() => expect(backend.blobs.getUrl).toHaveBeenCalledTimes(1))
       await act(async () => { emit({ user: { id: 'A' } }) })
       const shared = resolveBlobKey(key)
       current.resolve('current-session-url')
@@ -314,6 +320,7 @@ describe('display resolution invalidation', () => {
     const delayed = deferred()
     vi.spyOn(backend.blobs, 'getUrl').mockReturnValueOnce(delayed.promise)
     const pending = resolveBlobKey(key)
+    await vi.waitFor(() => expect(backend.blobs.getUrl).toHaveBeenCalledTimes(1))
     clearBlobUrls()
     delayed.resolve('data:image/png;base64,YQ==')
     expect(await pending).toBe('')
@@ -330,6 +337,7 @@ describe('display resolution invalidation', () => {
     vi.spyOn(backend.blobs, 'getUrl').mockReturnValueOnce(delayed.promise)
     vi.spyOn(console, 'error').mockImplementation(() => {})
     const pending = resolveBlobKey(key)
+    await vi.waitFor(() => expect(backend.blobs.getUrl).toHaveBeenCalledTimes(1))
     clearBlobUrls()
     delayed.reject(new Error('expired session'))
     expect(await pending).toBe('')
@@ -343,6 +351,7 @@ describe('display resolution invalidation', () => {
       .mockResolvedValue('unexpected third lookup')
     vi.spyOn(console, 'error').mockImplementation(() => {})
     const beforeLogout = resolveBlobKey(key)
+    await waitFor(() => expect(getUrl).toHaveBeenCalledTimes(1))
     clearBlobUrls()
     const afterLogin = resolveBlobKey(key)
     if (result === 'success') old.resolve('old-private-url')

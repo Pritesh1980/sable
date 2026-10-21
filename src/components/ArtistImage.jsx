@@ -1,6 +1,7 @@
 import { useState, useRef, useLayoutEffect } from 'react'
-import { imageSrc } from '../data/wall'
-import { refreshedBlobUrl } from '../data/blobUrls'
+import useImageSrc from '../hooks/useImageSrc'
+import { refreshBlobKey } from '../data/blobUrls'
+import { refKey } from '../data/imageRef'
 import { demoResponsiveProps } from '../data/demoArtwork'
 
 // A single artist/reference image that degrades gracefully: if the file is
@@ -13,12 +14,15 @@ export default function ArtistImage({
   className = '',
   fallbackClassName = '',
   monogramClassName = 'text-4xl',
+  fallback = null,
   sizes = '100vw',
   ...imgProps
 }) {
-  // Accept both image shapes (plain string, or { url, addedAt } refs) and
-  // apply the deploy base — callers pass raw refs straight from artist data.
-  const resolved = imageSrc(src)
+  // The render boundary (#113): `src` is a stored image ref — a plain string,
+  // a { url, addedAt } or { key } object — and is resolved here, so callers pass
+  // raw refs straight from their data. A blob key not cached yet shows an
+  // empty box until it resolves.
+  const { src: resolved, status } = useImageSrc(src)
   const trimmed = label.startsWith('@') ? label.slice(1) : label
   const initial = (trimmed.trim()[0] || '?').toUpperCase()
 
@@ -64,13 +68,12 @@ export default function ArtistImage({
     latestResolvedRef.current = resolved
   }, [resolved])
 
-  // A resolved blob URL already baked into state can go stale once its
-  // backend's TTL passes with nothing re-deriving it (#82) — try exactly
-  // once to recover a fresh URL for the same key before giving up to the
-  // monogram fallback, which is for genuinely missing images, not expired
-  // ones. refreshedBlobUrl itself returns null for anything that isn't a
-  // stale blob URL (a static path, or one the cache still considers fresh),
-  // so this is a no-op fallthrough for every non-blob image.
+  // A signed URL can expire while its image sits on screen (#82) — try
+  // exactly once to recover a fresh URL for the same key before giving up to
+  // the monogram fallback, which is for genuinely missing images, not expired
+  // ones. The key comes from the ref the caller passed; refreshBlobKey returns
+  // null without one (a static path, an external URL) or for a URL the cache
+  // still considers fresh, so this is a no-op fallthrough for those.
   async function handleError() {
     // A missing thumbnail must not hide a still-available full-size image.
     if (responsive.srcSet) {
@@ -87,7 +90,7 @@ export default function ArtistImage({
         // defensive catch here costs nothing and means a future change to
         // that contract can't silently deadlock this component instead of
         // degrading to the monogram (review).
-        fresh = await refreshedBlobUrl(displaySrc)
+        fresh = await refreshBlobKey(refKey(src), displaySrc)
       } catch {
         fresh = null
       }
@@ -123,14 +126,22 @@ export default function ArtistImage({
   }
 
   if (!displaySrc || failed) {
+    // A caller's own empty state (e.g. Top5Hero's rank glyph) replaces the monogram.
+    if (fallback) return fallback
+    // Still resolving: a neutral empty box, so the letter doesn't flash and
+    // then vanish when the photo arrives. An unavailable photo keeps the letter.
+    const loading = status === 'loading' && !failed
     return (
       <div
         className={`w-full h-full flex items-center justify-center bg-ink-muted ${className} ${fallbackClassName}`}
         aria-label={label || 'No image'}
+        aria-busy={loading ? 'true' : undefined}
       >
-        <span className={`text-cream-muted/10 font-display ${monogramClassName}`} aria-hidden="true">
-          {initial}
-        </span>
+        {!loading && (
+          <span className={`text-cream-muted/10 font-display ${monogramClassName}`} aria-hidden="true">
+            {initial}
+          </span>
+        )}
       </div>
     )
   }

@@ -72,6 +72,14 @@ can use Supabase auth while keeping documents and blobs device-local:
 not email. Private libraries do not seed artists through an email match. Ownership
 epochs fence awaited work and display caches even across A -> signed out -> A.
 
+The integration with the current collection engine was checked on 21 October 2026.
+`useStorage` exposes its checked concept writer as a third return value. The engine
+owns lifecycle and write serialization; `src/sync/privateConceptPersistence.js`
+rebases private local concept field edits under the backend's Web Lock. Receipt
+checks compare the saved variant's canonical image key, never its display URL.
+Staging, cached-byte reads and delayed uploads also enforce the real-auth owner
+epoch. The retired artist-photo cache is not restored by the relay integration.
+
 ```mermaid
 flowchart LR
   DEMO["Public demo / offline<br/>local auth, empty relay URL"] --> MANUAL["Copy prompt / export selected source<br/>explicit attributed raster import"]
@@ -194,7 +202,9 @@ libraries start empty and cannot inherit legacy unclassified image caches.
 `AppShell` is the composition root for user data. It mounts only after
 `ProtectedRoute` has resolved an authenticated user, owns five synced collections and
 two device-only convention collections,
-and passes them down to route-level pages. The Wall is eager for first paint; every
+and passes them down to route-level pages. It is keyed by the user's id, so signing in
+as someone else remounts it, and every collection store with it, rather than handing
+one user's in-memory data to the next (§10). The Wall is eager for first paint; every
 other page is lazy-loaded on first navigation and cached by the service worker after
 delivery.
 
@@ -204,7 +214,7 @@ flowchart TB
   PROVIDERS["AuthProvider → ThemeProvider<br/>BrowserRouter with deploy basename"]
   GATE{"ProtectedRoute"}
   LOGIN["Login"]
-  SHELL["AppShell<br/>shared data and navigation"]
+  SHELL["AppShell, keyed by user id<br/>shared data and navigation"]
   STATE["useArtistStorage<br/>useStorage: ideas · concepts · boards · convention overrides"]
   LOCALSTATE["Device-only useStorage<br/>convention lineups · winners"]
   UNDO["UndoProvider<br/>one shared offer above routes"]
@@ -282,8 +292,8 @@ the device immediately; reconciliation is a background concern. The engineering 
 what happens when the network is absent, then the app mounts or the user edits after
 connectivity returns.
 
-1. **The edit applies locally first.** State updates, metadata cache is written. No
-   spinner, no network in the path.
+1. **The edit applies locally first.** State updates and the metadata cache is written
+   in the same call, before React re-renders. No spinner, no network in the path.
 2. **Changed rows are stamped, once.** Only genuinely-edited records get a fresh
    `updatedAt` (`stampChangedRows`, `src/backend/dirty.js`). Over-stamping would let
    untouched rows outrank real edits made on another device.
@@ -332,9 +342,10 @@ sequenceDiagram
   end
 
   Note over Hook,Remote: Later mount or edit after reconnect
-  Hook->>Sidecar: Read dirty state and pending deletes
   Hook->>Remote: List remote collection
   Remote-->>Hook: Return persisted rows
+  Note over Hook,Sidecar: Sidecars are read after the await, not before it
+  Hook->>Sidecar: Read dirty state and pending deletes
   Hook->>Hook: Filter tombstones and reconcile by updatedAt
   Hook->>Cache: Persist reconciled canonical value
   Hook-->>UI: Hydrate reconciled display value
@@ -348,6 +359,57 @@ delete survive closing the tab inside the debounce window. A successful push cle
 only the generation it actually sent: another tab's newer row remains pending. The
 row's own `editGen` is the proof, not a snapshot of the shared sidecar at flush start.
 This is acknowledgement safety, not live cross-tab state broadcasting.
+
+**The first pull reads the sidecars after the list call returns, not before it.** The
+remote list is an `await`, and the user can edit or delete a row while it is in flight.
+Reading dirty state and pending deletes first meant a mid-pull edit was overwritten by
+the older remote row, and an artist deleted mid-pull was resurrected by it. Ideas and
+concepts already read late; artists now do too (#101). The diagram above shows the
+corrected order.
+
+### One engine, and its lifecycle
+
+The protocol above lives in one place, `src/sync/collectionStore.js` (#111): a
+framework-free store per collection, bound to React by `useCollection`
+(`useSyncExternalStore`, with a setter that never changes). `useStorage` is a thin
+wrapper that creates one per component and starts it with the signed-in user; it backs
+ideas, concepts, boards, attendance and the device-only stores. `useArtistStorage` is
+the same wrapper plus a **policy** (#112, `src/data/artistsPolicy.js`): optional hooks
+the engine calls for what is specific to a collection. `initial` shapes the first paint
+(owner seeding, #25), `merge` replaces the generic reconcile (LWW, image tombstones
+#55, owner defaults, the empty-remote seed push), and `onEdit` runs on the stamped rows
+(normalising to refs, tombstones). The engine also offers `onMount`, `beforeFirstPull`
+and a post-publish `pushDisplay`; the legacy photo sweep used them until #149 and no
+policy does now. Artist state holds the stored refs themselves (#116), so the codec is
+thin: `toCanonical` is `canonicalizeArtist` and `toDisplay` is the identity. `src/test/collectionStore.test.js`
+and `collectionStorePolicy.test.js` pin the engine without React;
+`artistsPolicy.test.js` pins each artist rule.
+
+`set(updater)` does the stamping, tombstones and generations outside any React updater
+and writes the offline cache before it returns. Previously the cache was written in an
+effect after the render, so this is strictly more durable. A store with no backend
+collection only persists.
+
+The lifecycle is written down because React runs it twice in development:
+
+- **Creating a store has no side effects.** It only reads the offline cache, because
+  StrictMode calls lazy initialisers twice.
+- **`start(user)` and `stop()` are re-entrant.** Each start opens an epoch, and a
+  hydration or pull result from an older epoch is discarded, as the hook's per-effect
+  `cancelled` flags used to do. A start's work begins a microtask later, so StrictMode's
+  start → stop → start in development lists the remote once, not twice.
+- **Hydration is independent of the first pull.** It runs even while `list()` hangs
+  offline. Every collection paints stored refs, so there is little to do: the idea and
+  concept codecs warm the URL cache, and the artists' `toDisplay` does nothing. A hydration that loses the race to an edit or to
+  the pull is dropped rather than applied over them, so a late one can never undo an
+  edit or hide rows the pull brought in.
+- **`stop()` cancels the pending push but not a flush in flight.** That flush still lands
+  and clears its own tombstones and generations. Anything still unconfirmed is pushed
+  by the next start's pull, from the durable sidecars. An edit made while stopped is
+  parked, as React treats a state update: applied if the store starts again
+  (StrictMode's dev remount re-runs child effects before the shell's), dropped if its
+  owner has really unmounted. So a slow callback finishing after sign-out cannot write
+  into the cache the next account reads.
 
 ### First paint must agree with the reconcile
 
@@ -365,40 +427,106 @@ owner-seed flag.
 This is safe because `App.jsx` mounts `AppShell` inside `ProtectedRoute`, which holds
 a spinner until the session resolves — so `user` is known before the hook's first
 render. An explicit sign-out nulls the user and purges local caches, so signing in
-again remounts and re-runs the initializer. A direct signed-in identity swap is a
-different path; its remaining limitation is recorded in §10.
+again remounts and re-runs the initializer. A direct signed-in identity swap remounts
+it too, because the shell is keyed by the user's id (§10).
 
 The guarantee is **membership parity with the cache**, not with the final state: a
-later pull can still add remote rows the cache never had, and images hydrate
-separately. Those are hydration, not a flash of the wrong identities.
+later pull can still add remote rows the cache never had. That is a pull, not a flash
+of the wrong identities. (Artist photos no longer hydrate separately: the rows paint
+with their refs, #116.)
 
 ---
 
 ## 3. Images never travel inside documents
 
 A synced record carries a small canonical reference — a storage key — while the bytes
-live in blob storage. In memory the same field is a displayable URL, so components
-(and features like STL export) are unaware of the split.
+live in blob storage. State holds that stored ref too — artists since #116, ideas,
+concepts and variants since #117 — and each screen resolves it to a displayable URL where
+it renders (`useImageSrc`, `useImageStatuses`, `resolveImage*`).
 
 ```mermaid
 flowchart LR
-  MEM["In memory<br/>displayable URL"]
+  MEM["In memory<br/>stored ref"]
   CODEC{{"per-collection codec"}}
   DOC["Synced document<br/>{ key } only"]
   BLOB[("Blob storage<br/>bytes")]
+  VIEW["Rendered image<br/>short-lived URL"]
   MEM --> CODEC
-  CODEC -- "canonical ref" --> DOC
-  CODEC -- "bytes uploaded once" --> BLOB
-  DOC -. "resolve on read" .-> MEM
-  BLOB -. "resolve on read" .-> MEM
+  CODEC -- "same ref" --> DOC
+  CODEC -- "inline bytes uploaded once" --> BLOB
+  MEM -. "resolve at render" .-> VIEW
+  BLOB -. "bytes" .-> VIEW
 ```
 
-Per-collection codecs (`src/data/imageCodec.js`) translate at the persistence
-boundary. The rule that makes it hold is enforced rather than trusted: base64 data
+Per-collection codecs (`src/data/imageCodec.js`) sit at the persistence boundary: they
+warm the URL cache on load and, through `ensureUploaded` (which hands back the value it
+changed), swap an inline photo stored before staging existed for its key. The rule that makes it hold is enforced rather than trusted: base64 data
 never reaches `localStorage` or the remote store, and there is a test asserting it.
-Legacy inline images migrate to blobs on first authenticated load.
+The pre-blob IndexedDB photo cache was swept into blobs and then retired (below).
 
 Documents stay small enough to sync cheaply; bytes move once.
+
+### A ref that cannot be resolved is not a ref that is gone
+
+Turning a `{ key }` into a displayable URL needs the bytes, and offline the bytes may
+not be reachable. Before #101 an unresolved ref simply vanished from the in-memory
+list, and the next save wrote that shortened list back — a device that merely
+*started* offline would then have removed its own photos from the server.
+
+Now nothing is held aside. Artist state holds the stored refs (#116): `artist.images`
+is static paths, `{ key }` and `{ url, addedAt }`, one entry per photo, so an unresolved
+ref is simply still in the list and `canonicalizeArtist` has nothing to reinsert (it
+only strips inline data URLs). `initial()` paints those rows directly; for the owner
+`applyDefaults` unions the starter photos in, tombstone-aware and de-duplicated by
+identity, and nothing is added for display. `onEdit` normalises whatever a producer emitted into refs
+(`normalizeArtistImages`, `dedupeRefs`) and writes the tombstones. Idea state holds the
+stored `{ key, note }` / `{ url, note }` form too: `ideasCodec` only warms the URL cache
+and, through `ensureUploaded` (which hands back the value it changed), swaps an inline
+photo stored before staging existed for its key. A concept's and a variant's `imageUrl`
+is the stored string as well — a blob key, an external URL or `''` — so there is no
+`unresolvedImageKey` any more. What the user sees is
+unchanged: `ArtistDetail` renders one `PhotoTile` per ref (`src/components/PhotoTile.jsx`).
+A ready photo is interactive; a key still resolving is an empty `aria-busy` box, so a
+normal online start shows no placeholder flash; an unavailable one is the `OfflinePhoto`
+"Available when online" tile at its original position (#102). Remove and Set-cover act
+on the latest list, and a photo that is not ready cannot be opened or edited. A concept
+whose key can't be fetched stays on the wall as an offline piece rather than dropping
+into Drafts (`isDraftConcept` is just "has no image"), and the viewer holds only the
+pieces `useImageStatuses` reports ready. Photo counts ("N with photos", the ranking queue) include offline photos.
+
+### An old URL must still lead back to its key
+
+Where a producer still hands back a display URL, saving turns it into a ref through
+the URL→key map in `src/data/blobUrls.js`. A superseded URL keeps its mapping for the
+session (#110): dropping it, as the map once did to stay small, meant the next save
+stored an expiring URL in place of the key, and last-write-wins spread that to every
+device. State now holds refs everywhere (#116, #117), and what still uses the map is
+the artist add paths (`uploadImages` returns display URLs
+that `onEdit` normalises) and the "already staged this
+session" check in staging and backup (`needsStaging`, `isEmbeddable`), which hand back
+the known key rather than a second copy. Recovering an expired image no
+longer needs it: an `<img>` error re-resolves by the key in the ref (`refreshBlobKey`).
+
+### Bytes are staged before the key exists
+
+Every add path (`withStagedImages` / `stageImages` / `stageImageRefs` in `src/data/imageStaging.js`) writes
+the bytes to IndexedDB (`tattoo-staged-images-v1`) and an entry to the
+`tattoo_upload_outbox` list before the `{ key }` ref reaches state, so base64 never
+reaches localStorage or the remote and a photo added offline survives a reload.
+`resolveBlobKey` consults staged bytes before the backend, so a staged photo displays
+immediately. `drainOutbox` uploads on launch, on the `online` event and at the start of
+every flush, and drops an entry from the outbox only after the upload is confirmed. The device copy of the bytes is kept after that, because it is what keeps the photo visible on an offline reload. Both stores are device-local and purged on sign-out.
+
+### The legacy photo cache is gone
+
+Before photos were blobs, IndexedDB `tattoo-images-v1` was the artists' display cache.
+#118 stopped writing it and swept anything left in it into blob storage at every
+signed-in launch, tracked by a ledger keyed by each photo's bytes so nothing went up
+twice. Once every device had run the sweep with nothing undecided (checked on the Mac
+and the iPhone, October 2026), #149 deleted the cache reader, the sweep and the pre-split
+`tattoo_artists` import. Sign-out still deletes `tattoo-images-v1`, the sweep's ledger
+(`tattoo_legacy_sweep_v1`) and the old migration flag, so a device that never launched
+since is cleaned up.
 
 ### The same split, without the sync half
 
@@ -459,7 +587,7 @@ the library is only ever reached through a **dynamic** `import()` inside one emb
 module — a guarantee a code comment cannot make.
 
 The index is treated as a cache, not as data: it lives in IndexedDB
-(`tattoo-style-index-v1`), keyed by model id, excluded from sync, and rebuilt per
+(`tattoo-style-index-v2`), keyed by model id and photo identity (`refIdentity`, stable across sessions), excluded from sync, and rebuilt per
 device — because it is fully derivable from images the device already has. Losing it
 costs time, never data.
 
@@ -495,7 +623,8 @@ On supported installed PWAs, the service worker handles the share POST itself;
 GitHub Pages cannot serve that POST. **iOS Safari does not support Web Share Target**
 ([WebKit tracking issue](https://bugs.webkit.org/show_bug.cgi?id=194593), checked
 17 September 2026). On iPhone, use the Shortcut/paste route: it reaches the same
-intake screen without this POST path. See the [setup guide](02-managing-artists.md#share-a-screenshot-straight-from-instagram).
+intake screen without this POST path. Its real-device session/context remains unverified.
+See the [setup guide](02-managing-artists.md#share-from-instagram).
 
 ```mermaid
 flowchart TB
@@ -517,16 +646,21 @@ flowchart TB
   SW --> LAND --> TAKE
   STASH --> TAKE --> STAGE
   PASTE --> STAGE
-  STAGE -- "key available" --> AI --> CROP --> TASTE
-  STAGE -- "no key: whole image, rough score" --> TASTE
+  STAGE -- "explicit Auto-fill tap; key required" --> AI --> CROP --> TASTE
+  STAGE -- "explicit Taste fit tap; no key, rough score" --> TASTE
+  STAGE -- "manual capture; no AI required" --> VERIFY
   TASTE --> VERIFY --> SAVE
 ```
 
 Async results belong to one staged file and analysis generation. Removing that file
-invalidates its pending results, clears only AI-owned prefills, and starts analysis of
-the next file. Taste scoring has an additional revision guard so restoring the whole
+invalidates its pending results and clears only unchanged AI-owned prefills. A new
+analysis requires another explicit tap. Taste scoring has an additional revision guard so restoring the whole
 screenshot cannot be overwritten by a late crop score. Saving a new artist is blocked
-while intake processing is busy. See `AddArtistModal.jsx`, `screenshotCrop.js`, and
+while share hydration or intake processing is busy. Capture's strict upload option
+requires stored image bytes before mutating the library; failures retain the draft.
+The user-keyed app lifecycle and artist generations fence the final append. The receipt observes the
+committed local update using stable photo identities, not object equality or cloud sync.
+See `AddArtistModal.jsx`, `screenshotCrop.js`, and
 `src/sw/shareTarget.js`.
 
 Saved-image removal uses a separate recovery path: the removal persists immediately,
@@ -585,10 +719,16 @@ localStorage, IndexedDB and the remote store — so a build-time base written in
 record outlives the build that made it, and a later move to a different base would
 strand every stored path on every device. Seed data is therefore base-relative
 (`images/artists/…`), and `resolveAssetPath` (`src/data/assetPath.js`) applies the base
-at display time, inside the two accessors everything renders through: `imageSrc`
-(artists) and `getImageUrl` (ideas/concepts). It passes protocol URLs (`blob:`,
-`data:`, `http(s):`) through untouched and rebases legacy root-absolute or
-already-based paths, so stored records heal on read rather than needing a migration.
+at display time. Artist photos render through one boundary: `ArtistImage` takes the
+stored ref and resolves it with `useImageSrc` (`src/hooks/useImageSrc.js`, backed by
+`src/data/imageResolver.js`), so selectors such as `buildWallItems` carry refs, never
+resolved strings. A ref is a static path, a display URL, `{ url, addedAt }` or a blob
+key (`src/data/imageRef.js`: `isBlobKey` is `startsWith('user/')`, `refIdentity` is
+key-first and base-independent); a cached key is `ready` on the first render, an
+uncached one is `loading` until it resolves. Ideas and concepts still go through
+`getImageUrl`. `resolveAssetPath` passes protocol URLs (`blob:`, `data:`, `http(s):`)
+through untouched and rebases legacy root-absolute or already-based paths, so stored
+records heal on read rather than needing a migration.
 
 ### Build and delivery pipeline
 
@@ -755,6 +895,33 @@ applies to `src/data/lineup.js`, whose fixtures come from real pasted line-ups.
 When a parser's input is something a third party publishes, an invented fixture
 is a guess wearing a test's clothing.
 
+### What jsdom cannot see
+
+Vitest runs in jsdom, which has no layout, no real touch, no stacking order, no camera,
+no WebGL and no service worker. A separate Playwright suite (`e2e/`, `npm run test:e2e`)
+drives the *built* demo on an emulated iPhone, plus a desktop project and a second build
+under `/sable/`. It is its own CI job. It guards page width at 320–390px, swipes and
+pinches, which overlay is on top, the fake-camera try-on, the STL download parsed byte by
+byte, hover controls on touch, and starting offline. How to run it and what each file
+guards is in [MAINTAINING.md](MAINTAINING.md#browser-tests-e2e).
+
+It earns its keep: the Escape-stacking bug (one key press closed a drawer *and* the
+viewer beneath it) was invisible to Vitest, because real key presses let React flush
+between listeners and `fireEvent` does not.
+
+### A flake is a finding until proven otherwise
+
+Two specs failed intermittently under full-suite load and were long written off as a
+fake-IndexedDB artefact (#23). Both had real causes. `useArtistStorage` read an artist's
+images straight after mount, but artists then painted with `images: []` and hydrated
+from IndexedDB afterwards, so the assertions wait for them (since #116 artists paint
+their refs at once). `a11yAffordances` scanned each
+file for the tag around every expression, which is quadratic in file length; it hit the
+5 s timeout under load, and now runs in milliseconds with identical results. Looking for
+the second cause also exposed the offline data-loss bug described in §3. The protocol
+stays — re-run isolated, CI is the arbiter — with one addition: time a recurring flake
+(`npx vitest run --reporter=json`) before calling it environment.
+
 > **Running the suite with worktrees present.** Agent worktrees live inside the repo
 > (`.worktrees/`, `.claude/worktrees/`) and Vitest globs their copies from the repo
 > root, roughly doubling the reported totals. Use
@@ -780,11 +947,14 @@ unconfirmed edit. Singleton generations protect the attendance map similarly. Ta
 can still hold different in-memory collections; these guards do not provide a shared
 live view or conflict-free merging.
 
-**Identity changes purge caches, but the shell is not keyed by identity.**
-`AuthProvider` now tracks the last user across reloads and purges before publishing a
-different identity, including passive transitions. `ProtectedRoute` still returns the
-same unkeyed shell on a direct signed-in A-to-B transition; do not equate cache purge
-with a guaranteed fresh mount of every in-memory state owner.
+**Identity changes purge caches and remount the shell.** `AuthProvider` tracks the last
+user across reloads and purges before publishing a different identity, including
+passive transitions. `App.jsx` keys `AppShell` by the user's id (#111), so a direct
+signed-in A-to-B transition also remounts every in-memory state owner: B's collection
+stores start from the purged cache, and stopping A's discards their in-flight pulls.
+One narrow gap remains. A push A's store had already started, for instance parked in an
+image upload, is not cancelled, and both adapters attribute a write to whoever is signed
+in when it lands.
 
 **Winner-photo cleanup is incomplete.** Sign-out removes winners metadata but the
 current purge path leaves the separate photo database untouched (§3).
@@ -797,9 +967,16 @@ is reliably offline from the second visit; a true cold-start guarantee is larger
 retire them on their own schedule. Documented as a known maintenance task with the
 deprecation page to check, rather than pretending the pin is permanent.
 
-**Two specs are flaky under parallel load.** Two suites fail intermittently on a
-loaded machine and always pass in isolation and on CI — a fake-IndexedDB timing
-artefact (#23). The protocol is written down: re-run isolated, and CI is the arbiter.
+**Load can still expose timing-sensitive specs.** The two long-standing flakes were
+root-caused and fixed (§9), but a loaded machine can still surface a different one. The
+protocol is written down: re-run isolated, CI is the arbiter, and time it before
+blaming the environment.
+
+**Offline placeholders appear only where the photo set is the point.** The artist
+detail carousel, the Concepts wall and variant cards show "Available when online" tiles
+(§3). Card and wall views that show a single cover fall back to the next loaded photo or
+the monogram instead. In the carousel, remove and set cover act on the whole slot
+sequence (`fromSlots`), so an offline photo keeps its place relative to its neighbours.
 
 ---
 
@@ -808,11 +985,13 @@ artefact (#23). The protocol is written down: re-run isolated, and CI is the arb
 | Path | Role |
 |---|---|
 | `src/backend/` | The vendor boundary: `index.js` factory, `sync.js`, `dirty.js`, `owner.js`, `purge.js`, `local/`, `supabase/` |
-| `src/hooks/` | `useStorage.js`, `useArtistStorage.js` — local-first read/write and reconcile |
-| `src/data/` | Domain logic: planning, embeddings, taste, staged screenshot intake, convention ingestion and Top picks, demo seed |
+| `src/sync/` | `collectionStore.js` — the local-first sync engine (edit-time stamping, tombstones and generations, first pull, chained pushes, start/stop epochs); `useCollection.js` — its React binding |
+| `src/hooks/` | `useStorage.js` — thin wrapper over the engine; `useArtistStorage.js` — artists, the same wrapper plus `data/artistsPolicy.js` (#112) |
+| `src/data/` | Domain logic: planning, embeddings, taste, staged screenshot intake, convention ingestion and Top picks, demo seed; image staging (`imageStaging.js`) |
 | `src/data/lineups/` | Shipped roster and curated picks; floorplan coordinates are data-only, not a runtime map |
 | `src/context/UndoContext.jsx` | Shared, time-bounded undo offer and restoration feedback |
 | `src/sw/` | Pure service-worker logic, contract-tested against `public/sw.js` |
 | `src/pages/`, `src/components/` | UI, 9 feature routes plus 2 legacy redirects and the share landing redirect |
 | `src/test/` | The suite, including the contract tests |
+| `e2e/`, `playwright.config.js` | Browser suite: emulated iPhone, desktop and `/sable/` sub-path projects; `smoke.live.js` targets the deployed demo |
 | `CLAUDE.md` | Agent-facing operations doc: conventions, review protocol, flake protocol |

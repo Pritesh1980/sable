@@ -19,7 +19,25 @@ const ROUTES = [
   '/help',
 ]
 
-const WIDTHS = [320, 375, 390]
+const WIDTHS = [320, 375, 390, 414]
+
+test('a returning demo resets to six favourites without resurrecting extra entries', async ({ page }) => {
+  await openDemo(page, '/')
+  await page.evaluate(() => {
+    const userId = JSON.parse(localStorage.getItem('tattoo_local_session')).user.id
+    const rows = [...JSON.parse(localStorage.getItem('tattoo_artists_meta')),
+      { id: 'extra-demo-artist', handle: 'extra-demo-artist', rank: 7, images: [] }]
+    for (const key of ['tattoo_artists_meta', `tattoo_remote_${userId}_artistsMeta`]) localStorage.setItem(key, JSON.stringify(rows))
+    localStorage.setItem('tattoo_demo_seed_version', '4')
+  })
+  for (let pass = 0; pass < 2; pass += 1) {
+    await page.reload()
+    await expect(page.getByRole('main').getByRole('button', { name: 'Open Vesper Ash' }).first()).toBeVisible()
+    await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('tattoo_artists_meta')).map((artist) => artist.id))).toEqual([
+      'vesper_noctis', 'ashgrove.tattoo', 'hexen_atlas', 'lekhani.ink', 'mora.blackfern', 'ferrum_line',
+    ])
+  }
+})
 
 // Wider than the viewport, reported with the elements that poke out so a
 // failure names its culprit instead of just a number.
@@ -48,6 +66,51 @@ async function settle(page) {
 for (const width of WIDTHS) {
   test.describe(`at ${width}px`, () => {
     test.use({ viewport: { width, height: 800 } })
+
+    test('wall controls fit without colliding', async ({ page }) => {
+      await openDemo(page, '/')
+      await settle(page)
+      const header = page.locator('header').first()
+      const tabs = header.locator('nav button')
+      const add = header.getByRole('button', { name: /add artist/i })
+      const menu = header.getByRole('button', { name: /everything else/i })
+      const controls = [tabs.nth(0), tabs.nth(1), add, menu]
+      const bounds = await Promise.all(controls.map((control) => control.boundingBox()))
+      for (const box of bounds) {
+        expect(box.x).toBeGreaterThanOrEqual(0)
+        expect(box.x + box.width).toBeLessThanOrEqual(width)
+        expect(box.height).toBeGreaterThanOrEqual(44)
+      }
+      for (let i = 0; i < bounds.length; i += 1) {
+        for (let j = i + 1; j < bounds.length; j += 1) {
+          const a = bounds[i], b = bounds[j]
+          expect(a.x + a.width <= b.x || b.x + b.width <= a.x ||
+            a.y + a.height <= b.y || b.y + b.height <= a.y).toBe(true)
+        }
+      }
+      await add.click()
+      await expect(page.getByRole('dialog', { name: 'Add an artist' })).toBeVisible()
+    })
+
+    test('gallery labels fit in one continuous two-column phone grid', async ({ page }) => {
+      await openDemo(page, '/gallery')
+      await page.getByRole('button', { name: 'Grid view', exact: true }).click()
+      await settle(page)
+      const cards = page.getByRole('button', { name: 'Vesper Ash', exact: true }).locator('..')
+      const first = await cards.boundingBox()
+      expect(first.width).toBeGreaterThan(width * 0.4)
+      const third = await page.getByRole('button', { name: '@hexen_atlas', exact: true }).locator('..').boundingBox()
+      const fourth = await page.getByRole('button', { name: 'Asha Lekhani', exact: true }).locator('..').boundingBox()
+      expect(Math.abs(third.y - fourth.y)).toBeLessThan(2)
+      await cards.locator('p').nth(0).evaluate((label) => { label.textContent = 'An Exceptionally Long Artist Name' })
+      await cards.locator('p').nth(1).evaluate((label) => { label.textContent = '@an.exceptionally.long.handle' })
+      expect(await cards.locator('p').evaluateAll((labels) => labels.every((label) => {
+        const box = label.getBoundingClientRect()
+        const card = label.closest('[role="presentation"]').getBoundingClientRect()
+        return label.scrollWidth <= label.clientWidth + 1 && box.left >= card.left && box.right <= card.right
+          && box.top >= card.top && box.bottom <= card.bottom
+      }))).toBe(true)
+    })
 
     test('no route is wider than the screen', async ({ page }) => {
       await openDemo(page, '/', { concepts: [DEMO_CONCEPT] })

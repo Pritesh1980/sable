@@ -90,6 +90,9 @@ The public demo and offline builds use the manual path: **Copy refinement prompt
 **Export source image**, attach that image separately in your chosen AI, then select
 its provider and **Import variation**. Copying text does not attach the image. Imported
 results carry your provider attribution, not relay-verified provenance.
+Imported images are stored on this device before they join the library, so a
+failed upload does not discard them. A saved source can be prepared from its
+device copy while offline; an image not stored here still needs a connection.
 
 In an activated private-owner build, **Generate one variation** names the OpenAI model
 and fixed image profile. It creates one paid image. Consent sends only the selected
@@ -143,7 +146,10 @@ the result.
 When a result has an image, choose **Make STL**. You can also start from a reference image
 in an idea (its **3D print** button), or pick any photo on your device with **Use another
 image…** inside the drawer. (Images pasted as a link from another website may be blocked
-by the browser; upload them instead.)
+by the browser; upload them instead.) Your saved photos are read from a copy the browser
+can always use, so they work however they're stored. If a photo can't be read right now —
+for example, it isn't downloaded to this device and you're offline — the drawer says it is
+**available when online** and keeps **Download STL** disabled until you reconnect.
 
 Pick a **Style**:
 

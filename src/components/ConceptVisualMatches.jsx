@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
-import { rankArtistsByVector, cosineSimilarity } from '../data/embeddings'
+import { rankArtistsByVector, cosineSimilarity, vectorLookup } from '../data/embeddings'
 import { buildTasteVector } from '../data/taste'
 import { loadVectors, vectorFor } from '../data/styleIndex'
+import { resolveImage } from '../data/imageResolver'
 
 // Taste Engine phase 2 (issue #19): rank the collection against the concept
 // *image* — who could actually execute this piece, judged on their work, not
 // their tags. Requires the style index built from any artist detail; the
 // concept image itself is embedded once on first view (cached by concept id,
-// since its display URL may be a session-scoped object URL).
+// since its resolved URL may be a session-scoped object URL).
 export default function ConceptVisualMatches({ artists, concept }) {
   const [state, setState] = useState({ status: 'loading' })
   const src = concept?.imageUrl
@@ -15,20 +16,28 @@ export default function ConceptVisualMatches({ artists, concept }) {
   useEffect(() => {
     if (!src) return
     let alive = true
-    ;(async () => {
+    // The body catches everything itself; void marks it fire-and-forget.
+    void (async () => {
       try {
         const vectors = await loadVectors(artists)
         if (vectors.size === 0) {
           if (alive) setState({ status: 'no-index' })
           return
         }
-        const vec = await vectorFor(src, `concept:${concept.id}`)
+        // `src` is the stored ref; the embedder needs something it can fetch.
+        const url = await resolveImage(src)
+        if (!alive) return
+        if (!url) {
+          setState({ status: 'failed' })
+          return
+        }
+        const vec = await vectorFor(url, `concept:${concept.id}`)
         if (!alive) return
         if (!vec) {
           setState({ status: 'failed' })
           return
         }
-        const getVec = (s) => vectors.get(s) || null
+        const getVec = vectorLookup(vectors)
         const matches = rankArtistsByVector(artists, vec, getVec)
         const taste = buildTasteVector(artists, getVec)
         const tasteFit = taste ? cosineSimilarity(taste, vec) : null

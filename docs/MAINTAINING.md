@@ -14,6 +14,17 @@ When you change UI under `src/pages/` or `src/components/`, update the matching 
 
 ## Regenerating screenshots
 
+For phone header and Grid updates, run `node scripts/captureLayoutGuide.mjs`
+against the isolated server below. It refreshes `wall-mobile.png`,
+`gallery-filmstrip.png`, `gallery-grid.png` and `help-overview.png` at 430 × 920,
+plus `wall.png` and `gallery-grid-desktop.png` at 1280 × 900.
+
+For capture-only updates, run `node scripts/captureIntakeGuide.mjs`
+against the isolated server below. This refreshes `artist-capture.png` (430 × 920),
+`settings.png` with the iPhone-only Shortcut setup copy, and `help-overview.png`.
+Wall and Gallery now both use `AddArtistModal`; screenshot analysis must be started
+explicitly, never by silently adding a key or sending a paid request during capture.
+
 Screenshots are captured against the dev server with Playwright at a phone viewport
 (`430 × 920`), plus a couple at desktop width (`1280 × 900`). Capture **viewport** shots,
 not `fullPage` — the fixed bottom nav floats to the middle on full-page captures.
@@ -54,7 +65,7 @@ with Reorder **off** — that is the view people arrive in.
 
    | Route | Files |
    |---|---|
-   | `/` | `wall.png` (desktop), `wall-viewer.png` (desktop, viewer open with HUD visible), `drawer.png` (desktop, ⋯ open) |
+   | `/` | `wall.png` (desktop), `wall-mobile.png` (phone), `wall-viewer.png` (desktop, viewer open with HUD visible), `drawer.png` (desktop, ⋯ open) |
    | `/pipeline` | `dashboard.png`, `dashboard-desktop.png` |
    | `/gallery` | `gallery-filmstrip.png`, `gallery-grid.png`, `gallery-grid-desktop.png`, `gallery-compare.png`, `gallery-stylewall.png`, `artist-detail.png`, `ranking-swipe.png` |
    | `/gallery?mode=manage` | `manage-list.png`, `manage-artist-expanded.png` |
@@ -145,19 +156,27 @@ Every test starts from the fictional `?demo=1` data (`openDemo` in `e2e/fixtures
 fails on any uncaught page error, and never touches a real key or Google: the one
 Gemini call is intercepted with `page.route`.
 
+Storage fixtures must select the active user's remote key from
+`tattoo_local_session.user.id`, for example
+`tattoo_remote_<user-id>_artistsMeta`. The demo reset also keeps the legacy
+`tattoo_remote_artistsMeta` seed snapshot; it is not the active store. Do not
+select the first matching key or patch every matching namespace. Persistence
+checks must read the active remote store and still verify the saved photo after reload.
+
 Three projects: **iphone** (390×844, `isMobile`, touch; runs almost everything),
 **desktop** (`*.desktop.e2e.js`: hover and keyboard) and **iphone-subpath**
 (`*.subpath.e2e.js`). What each file guards:
 
 | File | Guards |
 |---|---|
-| `layout` | No route or gallery view wider than the screen at 320/375/390px (#96) |
+| `layout` | No route or gallery view wider than the screen at 320/375/390/414px; Wall controls do not collide and phone Grid labels wrap within two columns |
 | `viewers` | Swipe/tap/close in both viewers; delete + undo; drawers paint above the viewer; Escape peels **one** layer |
 | `stl` | Real canvas → mesh → download for relief, line art (+ mask pixels) and lithophane; WebGL preview |
 | `tryon` | Gemini request shape (key in header, three parts); fake-camera drag + pinch; refused-camera photo fallback |
 | `tastemap` | Map from a seeded style index (no 90MB model in CI); tap through to the artist |
 | `hover` / `hover.desktop` | `can-hover` controls visible on a phone and hover-revealed on desktop (#49) |
 | `offline` | Once installed, the app opens every main route with the network off, images included |
+| `offlinePlaceholders` | A photo that can't load keeps its place as an "Available when online" tile; an offline concept stays on the wall and doesn't open the viewer |
 | `routes.subpath` | Deep links, redirects, image paths, the manifest and offline start under `/sable/` |
 
 ### Refinement Proofs And Screenshots
@@ -214,6 +233,11 @@ Things this suite taught that are easy to get wrong:
   removed the closed drawer before the viewer's `window` listener ran. Layers now
   `preventDefault()` the Escape they handle, and lower layers skip handled events
   (`isTopmostDialog` in `useDialogFocus.js` covers the reverse order).
+- **Seed stored data from a page where the app isn't running.** The local backend's
+  remote copy is namespaced per user id (`tattoo_remote_<userId>_<collection>`; local sign-in uses `local-<email>` as the id), so match
+  the key rather than hard-coding it, and fail if nothing matched. Edit from a
+  same-origin static page (`/manifest.json`): an edit made inside the running demo
+  can be overwritten by the page's own sync, and only on a slower machine (CI).
 - **Check a new guard can fail.** Each one here was mutation-checked: revert the fix,
   rebuild, watch it go red.
 

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { getImageUrl } from '../data/planning'
+import RefImage from './RefImage'
 import GeneratedArtworkNotice from './GeneratedArtworkNotice'
 import {
   BLANK_BOARD,
@@ -10,6 +10,7 @@ import {
   getBoardCover,
 } from '../data/boards'
 import { buildBoardBrief } from '../data/export'
+import { useFocusOnOpen } from '../hooks/useDialogFocus'
 
 function BoardCard({ board, ideas, onOpen }) {
   const cover = getBoardCover(board, ideas)
@@ -22,9 +23,8 @@ function BoardCard({ board, ideas, onOpen }) {
     >
       <div className="aspect-[4/3] bg-ink-muted relative overflow-hidden">
         {cover ? (
-          <img
+          <RefImage
             src={cover}
-            alt=""
             className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
             onError={(e) => { e.currentTarget.style.display = 'none' }}
           />
@@ -50,6 +50,7 @@ function BoardModal({ board, onClose, onSave, onDelete, ideas, artists }) {
   const [draft, setDraft] = useState({ ...BLANK_BOARD, ...board })
   const [copied, setCopied] = useState(false)
   const isNew = !board.id
+  const nameRef = useFocusOnOpen(isNew)
 
   const boardIdeas = getBoardIdeas(draft, ideas)
   const availableIdeas = ideas.filter((i) => !draft.ideaIds.includes(i.id))
@@ -116,7 +117,7 @@ function BoardModal({ board, onClose, onSave, onDelete, ideas, artists }) {
 
       <div className="flex-1 px-5 py-6 max-w-2xl mx-auto w-full space-y-6">
         <input
-          autoFocus
+          ref={nameRef}
           className="bg-transparent border-b border-ink-border text-cream font-display text-2xl w-full outline-hidden focus-visible:ring-2 focus-visible:ring-accent pb-1 placeholder-cream-muted/60"
           placeholder="Board name…"
           value={draft.name}
@@ -161,7 +162,7 @@ function BoardModal({ board, onClose, onSave, onDelete, ideas, artists }) {
                     >▼</button>
                   </div>
                   {idea.images?.[0] && (
-                    <img src={getImageUrl(idea.images[0])} alt="" className="w-10 h-10 object-cover rounded-xs" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                    <RefImage src={idea.images[0]} className="w-10 h-10 object-cover rounded-xs" onError={(e) => { e.currentTarget.style.display = 'none' }} />
                   )}
                   <span className="flex-1 text-cream text-sm font-body truncate">{idea.title}</span>
                   <button
@@ -187,7 +188,7 @@ function BoardModal({ board, onClose, onSave, onDelete, ideas, artists }) {
                   className="w-full flex items-center gap-2 text-left px-3 py-2 rounded-xs text-sm font-body transition-colors border border-ink-border text-cream-muted hover:border-cream-muted/50"
                 >
                   {idea.images?.[0] && (
-                    <img src={getImageUrl(idea.images[0])} alt="" className="w-8 h-8 object-cover rounded-xs" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+                    <RefImage src={idea.images[0]} className="w-8 h-8 object-cover rounded-xs" onError={(e) => { e.currentTarget.style.display = 'none' }} />
                   )}
                   <span className="flex-1 truncate">{idea.title}</span>
                 </button>
@@ -228,6 +229,7 @@ export default function BoardsSection({ boards, setBoards, ideas, artists, onGoT
           disabled={ideas.length === 0}
           className="w-10 h-10 rounded-full border border-ink-border text-cream-muted hover:text-cream hover:border-cream-muted/50 transition-colors flex items-center justify-center text-xl disabled:opacity-30 disabled:cursor-not-allowed"
           title={ideas.length === 0 ? 'Add ideas first' : 'New board'}
+          aria-label={ideas.length === 0 ? 'New board (add ideas first)' : 'New board'}
         >
           +
         </button>

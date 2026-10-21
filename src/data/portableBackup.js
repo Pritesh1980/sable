@@ -1,5 +1,6 @@
 import { createBackup, requestBackupDownload } from './export'
 import { knownKeyForUrl } from './blobUrls'
+import { readStagedImage } from './stagedImageStore'
 import { paidVariantIds, recordExportRequested } from './backupStatus'
 
 function isImageDataUrl(url) {
@@ -65,7 +66,9 @@ export async function createPortableBackup(data, { ownerId, blobs, fetchImpl = g
       validateKey(source, ownerId)
       if (!materialized.has(source)) {
         let resolved
-        try { resolved = await blobs.getUrl(source) } catch { throw new Error('A local image could not be read for backup.') }
+        try {
+          resolved = await readStagedImage(source) || await blobs.getUrl(source)
+        } catch { throw new Error('A local image could not be read for backup.') }
         if (!resolved) throw new Error('A local image is missing; backup was not downloaded.')
         let embedded
         if (resolved.startsWith('data:')) embedded = resolved

@@ -1,10 +1,13 @@
 import { backend } from '../backend'
+import { readStagedImage } from './stagedImageStore'
 
 // Resolved-URL cache for blob-backed images. Image *keys* are the canonical,
 // synced reference (small, vendor-neutral); a displayable URL is short-lived and
 // derived at runtime via backend.blobs.getUrl. The storage hooks resolve keys to
 // URL strings on load so the rest of the app keeps rendering plain string srcs,
-// and map URL strings back to keys on persist via the reverse map.
+// and map URL strings back to keys on persist via the reverse map. A photo
+// still waiting to upload resolves from the bytes staged on this device first
+// (src/data/imageStaging.js, #115), so it shows offline and after a reload.
 
 // How much earlier than the backend's own TTL to treat a cached URL as due
 // for a refresh (#29) — small compared to real TTLs (Supabase signed URLs are
@@ -13,11 +16,6 @@ const REFRESH_MARGIN_MS = 60_000
 
 const keyToEntry = new Map() // key -> { url, cachedAt }
 const urlToKey = new Map()
-// A mounted image can keep an earlier signed URL after the key is refreshed.
-// Keep a bounded, session-only reverse history for portable export. The active
-// map's existing semantics stay unchanged; owner transitions clear both maps.
-const staleUrlToKey = new Map()
-const MAX_STALE_URLS = 512
 const inflight = new Map()
 let cacheEpoch = 0
 
@@ -34,22 +32,14 @@ function isFresh(entry) {
   return Date.now() - entry.cachedAt < ttlMs - margin
 }
 
+// A superseded url keeps its reverse mapping (#110): state resolved at
+// hydration can still hold it hours later, and canonicalizing an unmapped url
+// stores the raw expiring url in place of the key, on every device. One entry
+// per key per refresh, cleared with the rest at sign-out.
 export function registerBlobUrl(key, url) {
   if (!key) return
-  // Drop the old url's reverse mapping first — a key that gets re-resolved
-  // over a long session (every TTL refresh) would otherwise pile up entries
-  // for urls nothing points to any more.
-  const previous = keyToEntry.get(key)
-  if (previous?.url && previous.url !== url) {
-    urlToKey.delete(previous.url)
-    staleUrlToKey.set(previous.url, key)
-    if (staleUrlToKey.size > MAX_STALE_URLS) staleUrlToKey.delete(staleUrlToKey.keys().next().value)
-  }
   keyToEntry.set(key, { url, cachedAt: Date.now() })
-  if (url) {
-    staleUrlToKey.delete(url)
-    urlToKey.set(url, key)
-  }
+  if (url) urlToKey.set(url, key)
 }
 
 // Synchronous cache peek for render paths that can't await resolveBlobKey. A
@@ -60,7 +50,7 @@ export function getCachedBlobUrl(key) {
   const cached = keyToEntry.get(key)
   if (!cached) return ''
   if (isFresh(cached)) return cached.url
-  resolveBlobKey(key)
+  void resolveBlobKey(key)
   return ''
 }
 
@@ -73,21 +63,31 @@ export function keyForUrl(url) {
 // Export-only lookup for a URL retained in long-lived React state. Do not use
 // for normal hydration: stale signed URLs must still refresh before display.
 export function knownKeyForUrl(url) {
-  return keyForUrl(url) || staleUrlToKey.get(url) || null
+  return keyForUrl(url)
 }
 
 // Resolve a key to a displayable URL, caching the result and de-duping in-flight
 // requests for the same key. A cache hit past the backend's TTL is treated as a
 // miss so a long-running session refreshes an expiring signed URL rather than
-// holding a broken one indefinitely (#29).
+// holding a broken one indefinitely (#29). Staged bytes come first: the backend
+// may not have the photo yet, and offline it can't be asked.
 export async function resolveBlobKey(key) {
   if (!key) return ''
+  if (backend.capabilities?.realAuth) {
+    try {
+      const snapshot = backend.ownerScope.capture()
+      if (!key.startsWith(`user/${snapshot.ownerId}/`)) return ''
+    } catch { return '' }
+  }
   const cached = keyToEntry.get(key)
   if (cached && isFresh(cached)) return cached.url
   if (inflight.has(key)) return inflight.get(key)
   const epoch = cacheEpoch
-  const p = backend.blobs
-    .getUrl(key)
+  const p = readStagedImage(key)
+    .then((staged) => {
+      if (epoch !== cacheEpoch) return ''
+      return staged || backend.blobs.getUrl(key)
+    })
     .then((url) => {
       if (epoch !== cacheEpoch) return ''
       registerBlobUrl(key, url)
@@ -109,19 +109,14 @@ export async function resolveBlobKey(key) {
   return p
 }
 
-// A resolved URL already baked into long-lived React state (#82) can go
-// stale even though the cache above stays TTL-honest (#29) — nothing
-// re-derives a value already sitting in state, so an hour-plus-idle session
-// can end up rendering an <img> whose src is a genuinely expired signed URL.
-// Call this from that <img>'s onError: given the URL that just failed, hand
-// back a fresh one if the underlying key can actually produce a different
-// one (whether that's an already-refreshed cache entry or a real refetch),
-// or null if there's nothing more to try — a url with no known key, or one
-// the cache still considers fresh, is a genuinely broken image, not an
-// expiry, and the caller should fall through to its normal broken-image
-// handling rather than retry forever.
-export async function refreshedBlobUrl(failedUrl) {
-  const key = keyForUrl(failedUrl)
+// An <img> showing `failedUrl` for `key` has just errored. State holds the key,
+// not the url, so the usual cause is a signed url that expired while the image
+// sat on screen (#82). Hands back a different url if the key can produce one
+// (an already-refreshed cache entry, or a real refetch), or null when there is
+// nothing more to try: no key, or a url the cache still considers fresh — that
+// is a genuinely broken image, not an expiry, and the caller should fall
+// through to its normal broken-image handling rather than retry forever.
+export async function refreshBlobKey(key, failedUrl) {
   if (!key) return null
   const fresh = await resolveBlobKey(key)
   return fresh && fresh !== failedUrl ? fresh : null
@@ -131,6 +126,5 @@ export function clearBlobUrls() {
   cacheEpoch += 1
   keyToEntry.clear()
   urlToKey.clear()
-  staleUrlToKey.clear()
   inflight.clear()
 }

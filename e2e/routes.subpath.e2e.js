@@ -52,6 +52,21 @@ test('in-app navigation keeps the base', async ({ page }) => {
   await expect(page).toHaveURL(/\/sable\/gallery$/)
 })
 
+test('shared capture saves and removes only its consumed query parameter', async ({ page }) => {
+  await page.goto('share')
+  await expect(page).toHaveURL(/\/sable\/gallery\?shared=1/)
+  const dialog = page.getByRole('dialog', { name: 'Add an artist' })
+  await expect(dialog).toBeVisible()
+  await page.goto('gallery?shared=1&mode=manage&keep=fixture')
+  await page.getByLabel('Instagram *').fill('fixture.subpath')
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(dialog).not.toBeVisible()
+  await expect(page).toHaveURL(/\/sable\/gallery\?mode=manage&keep=fixture$/)
+  await page.reload()
+  await expect(dialog).not.toBeVisible()
+  await expect(page.getByText('@fixture.subpath', { exact: true })).toBeVisible()
+})
+
 test('the manifest starts the installed app inside the base', async ({ page, request }) => {
   await page.goto('')
   const href = await page.locator('link[rel="manifest"]').getAttribute('href')

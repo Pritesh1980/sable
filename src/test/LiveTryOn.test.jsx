@@ -29,6 +29,28 @@ const props = { designUrl: 'data:image/png;base64,DESIGN', label: 'Moth' }
 const overlay = () => screen.getByAltText('Moth design overlay')
 
 describe('LiveTryOn', () => {
+  it('does not hand inline data that is not an image to the overlay', () => {
+    render(<LiveTryOn designUrl="data:text/html,<b>x</b>" label="Moth" onSave={vi.fn()} onClose={vi.fn()} />)
+    expect(overlay().getAttribute('src') || '').toBe('')
+  })
+
+  it('still shows an external design whose bytes cannot be read (no CORS)', async () => {
+    h.toData.mockRejectedValue(new Error('Could not read the design image.'))
+    render(<LiveTryOn designUrl="https://example.com/design.png" label="Moth" onSave={vi.fn()} onClose={vi.fn()} />)
+    await waitFor(() => expect(overlay()).toHaveAttribute('src', 'https://example.com/design.png'))
+  })
+
+  it('never shows a stored key as the overlay src: it waits for the bytes', async () => {
+    let deliver
+    h.toData.mockImplementation(() => new Promise((resolve) => { deliver = resolve }))
+    render(<LiveTryOn designUrl="user/u1/concepts/c1/design.jpg" label="Moth" onSave={vi.fn()} onClose={vi.fn()} />)
+    await waitFor(() => expect(h.toData).toHaveBeenCalledWith('user/u1/concepts/c1/design.jpg'))
+    expect(overlay().getAttribute('src') || '').toBe('')
+
+    await act(async () => { deliver('data:image/png;base64,DESIGN') })
+    expect(overlay()).toHaveAttribute('src', 'data:image/png;base64,DESIGN')
+  })
+
   it('opens the back camera and releases it on close', async () => {
     const onClose = vi.fn()
     const { unmount } = render(<LiveTryOn {...props} onSave={vi.fn()} onClose={onClose} />)
@@ -159,5 +181,22 @@ describe('LiveTryOn', () => {
       imageUrl: 'small:data:image/jpeg;base64,SNAP',
     }))
     expect(onClose).toHaveBeenCalled()
+  })
+
+  // #114: the composite is drawn onto a canvas, so the design must be readable
+  // bytes. A design that cannot be read used to be swallowed silently, leaving
+  // the raw (possibly cross-origin) url in place and a snapshot that then failed.
+  it('says the design is available when online, and blocks saving, when it cannot be read', async () => {
+    h.toData.mockRejectedValue(new Error('offline'))
+    render(<LiveTryOn designUrl="https://signed.example/design.png" label="Moth" onSave={vi.fn()} onClose={vi.fn()} />)
+    expect(await screen.findByText(/available when online/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save snapshot' })).toBeDisabled()
+  })
+
+  it('swaps in the readable copy of a cross-origin design', async () => {
+    h.toData.mockResolvedValue('data:image/png;base64,COPY')
+    render(<LiveTryOn designUrl="https://signed.example/design.png" label="Moth" onSave={vi.fn()} onClose={vi.fn()} />)
+    await waitFor(() => expect(overlay()).toHaveAttribute('src', 'data:image/png;base64,COPY'))
+    expect(screen.queryByText(/available when online/i)).not.toBeInTheDocument()
   })
 })

@@ -1,6 +1,23 @@
-import { expect, it, vi } from 'vitest'
+import { expect, it, vi, afterEach } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import RefinementCompare from '../components/RefinementCompare'
+import { registerBlobUrl, clearBlobUrls } from '../data/blobUrls'
+
+afterEach(() => clearBlobUrls())
+
+it('resolves stored source and variation keys without changing the saved references', () => {
+  const source = 'user/A/concepts/c/source.png'
+  const child = 'user/A/concepts/c/child.png'
+  registerBlobUrl(source, '/source-preview.png')
+  registerBlobUrl(child, '/child-preview.png')
+  const tryOn = vi.fn()
+  render(<RefinementCompare original={{ imageUrl: source }} parentAvailable
+    variant={{ id: 'child', imageUrl: child, title: 'Saved child' }} onTryOn={tryOn} />)
+  expect(screen.getByRole('img', { name: 'Original source' })).toHaveAttribute('src', '/source-preview.png')
+  expect(screen.getByRole('img', { name: 'Saved child' })).toHaveAttribute('src', '/child-preview.png')
+  fireEvent.click(screen.getByRole('button', { name: 'Try variation on skin' }))
+  expect(tryOn).toHaveBeenCalledWith(expect.objectContaining({ imageUrl: child }))
+})
 
 it('labels a missing source without hiding its saved variation', () => {
   render(<RefinementCompare original={null} parentAvailable={false}

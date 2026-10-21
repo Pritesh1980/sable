@@ -2,27 +2,46 @@
 // (v2 tokens, hover caption, full-bleed image). Adds a variants-count badge
 // in the top-left corner when the concept has saved results.
 import GeneratedArtworkNotice from './GeneratedArtworkNotice'
+import OfflinePhoto from './OfflinePhoto'
+import useImageSrc from '../hooks/useImageSrc'
 
 export default function ConceptPiece({ item, onOpen }) {
+  // item.imageUrl is the stored ref; a piece can be opened once it resolves,
+  // so the button only exists in the ready state.
+  const { src, status } = useImageSrc(item.imageUrl)
+  const ready = status === 'ready'
   return (
-    <figure
-      className="relative mb-[6px] break-inside-avoid overflow-hidden cursor-zoom-in group"
-      onClick={() => onOpen(item)}
-    >
-      <img
-        src={item.imageUrl}
-        alt={item.title}
-        loading="lazy"
-        className="w-full block grayscale-[0.15] group-hover:grayscale-0 transition-[filter] duration-300"
-      />
+    <figure className="relative mb-[6px] break-inside-avoid overflow-hidden group">
+      {status === 'loading' ? (
+        <div className="w-full aspect-square bg-ink-muted" aria-busy="true" />
+      ) : !ready ? (
+        <OfflinePhoto className="w-full aspect-square" />
+      ) : (
+        <>
+          {/* A real button, so Tab + Enter/Space open the piece with no key wiring. */}
+          <button
+            type="button"
+            aria-label={`Open ${item.title}`}
+            onClick={() => onOpen(item)}
+            className="block w-full p-0 cursor-zoom-in outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-v2-accent"
+          >
+            <img
+              src={src}
+              alt={item.title}
+              loading="lazy"
+              className="w-full block grayscale-[0.15] group-hover:grayscale-0 transition-[filter] duration-300"
+            />
+          </button>
 
-      <GeneratedArtworkNotice
-        images={[item.imageUrl]}
-        className="absolute top-2 right-2 max-w-[65%] rounded-xs bg-v2-ink/85 px-2 py-1"
-      />
+          <GeneratedArtworkNotice
+            images={[item.imageUrl]}
+            className="absolute top-2 right-2 max-w-[65%] rounded-xs bg-v2-ink/85 px-2 py-1"
+          />
+        </>
+      )}
 
       {item.variantsCount > 0 && (
-        <span className="absolute top-2.5 left-2.5 font-v2-ui text-[0.62rem] tracking-[0.08em] text-v2-cream bg-v2-ink/70 border border-v2-hairline rounded-full px-2.5 py-0.5">
+        <span className="pointer-events-none absolute top-2.5 left-2.5 font-v2-ui text-[0.62rem] tracking-[0.08em] text-v2-cream bg-v2-ink/70 border border-v2-hairline rounded-full px-2.5 py-0.5">
           {item.variantsCount} {item.variantsCount === 1 ? 'variant' : 'variants'}
         </span>
       )}

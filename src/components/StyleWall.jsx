@@ -1,3 +1,4 @@
+import { activateOnKey } from '../a11y/activate'
 import ArtistImage from './ArtistImage'
 
 export default function StyleWall({ artists, onOpenArtist }) {
@@ -18,8 +19,12 @@ export default function StyleWall({ artists, onOpenArtist }) {
       {allImages.map(({ src, artist }, i) => (
         <div
           key={i}
+          role="button"
+          tabIndex={0}
+          aria-label={`Open ${artist.name || `@${artist.handle}`}`}
           className="relative mb-2 break-inside-avoid rounded-xs overflow-hidden cursor-pointer group"
           onClick={() => onOpenArtist(artist)}
+          onKeyDown={activateOnKey(() => onOpenArtist(artist))}
         >
           <ArtistImage
             sizes="(max-width: 640px) 50vw, 33vw"

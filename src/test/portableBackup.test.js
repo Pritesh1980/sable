@@ -3,8 +3,20 @@ import { createPortableBackup, requestPortableExport } from '../data/portableBac
 import { parseBackup } from '../data/export'
 import { readBackupStatus } from '../data/backupStatus'
 import { clearBlobUrls, registerBlobUrl } from '../data/blobUrls'
+import { putStagedBytes, markDeviceCopy } from '../data/stagedImageStore'
 
-afterEach(() => clearBlobUrls())
+afterEach(() => { clearBlobUrls(); localStorage.clear() })
+
+it('exports complete staged device copies without requiring their failed upload to finish', async () => {
+  const key = 'user/A/concepts/c/staged.png'
+  const bytes = 'data:image/png;base64,c3RhZ2Vk'
+  await putStagedBytes(key, bytes)
+  markDeviceCopy(key)
+  const blobs = { getUrl: vi.fn().mockRejectedValue(new Error('offline')) }
+  const backup = await createPortableBackup({ concepts: [{ id: 'c', imageUrl: key }] }, { ownerId: 'A', blobs })
+  expect(parseBackup(backup).concepts[0].imageUrl).toBe(bytes)
+  expect(blobs.getUrl).not.toHaveBeenCalled()
+})
 
 it('materializes canonical local images and keeps lineage on fresh restore', async () => {
   const dataUrl = 'data:image/png;base64,aW1hZ2U='

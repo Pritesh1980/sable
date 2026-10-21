@@ -1,20 +1,37 @@
 import { useState, useRef } from 'react'
-import { parseBackup } from '../data/export'
+import { createBackupWithImages, parseBackup, restoreBackupImages, requestBackupDownload } from '../data/export'
+import { useAuth } from '../context/useAuth'
 
-export default function BackupPanel({ setArtists, setIdeas, setBoards, setConcepts, setConventionOverrides, onExport }) {
+// Compact: a v2 backup carries every photo as base64, so indentation would only
+// add weight to a file that is already large.
+export default function BackupPanel({ artists, setArtists, ideas, setIdeas, boards, setBoards, concepts, setConcepts, conventionOverrides, setConventionOverrides, onExport }) {
   const fileRef = useRef()
+  const userId = useAuth()?.user?.id || null
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+
+  const photos = (n) => `${n} photo${n === 1 ? '' : 's'}`
 
   async function exportBackup() {
     if (busy) return
     setBusy(true)
-    setMessage('Preparing portable backup…')
+    if (onExport) setMessage('Preparing portable backup…')
     try {
-      await onExport()
-      setMessage('Download requested—check the file was saved.')
+      if (onExport) {
+        await onExport()
+        setMessage('Download requested—check the file was saved.')
+        return
+      }
+      const { backup, skipped } = await createBackupWithImages(
+        { artists, ideas, boards, concepts, conventionOverrides },
+        { onProgress: (done, total) => setMessage(`Exporting photos… ${done} of ${total}`) },
+      )
+      requestBackupDownload(backup)
+      setMessage(skipped
+        ? `Backup exported. ${photos(skipped)} couldn't be read right now (offline?) and ${skipped === 1 ? 'is' : 'are'} not included.`
+        : 'Backup exported.')
     } catch (error) {
-      setMessage(error?.message || 'Could not prepare a complete backup. Nothing was downloaded.')
+      setMessage(error.message || 'Could not export backup.')
     } finally {
       setBusy(false)
     }
@@ -24,17 +41,24 @@ export default function BackupPanel({ setArtists, setIdeas, setBoards, setConcep
     const file = e.target.files?.[0]
     if (!file) return
 
+    setBusy(true)
     try {
-      const data = parseBackup(await file.text())
+      const parsed = parseBackup(await file.text())
+      // Photos embedded in the backup go through the normal staging/upload path
+      // first, so the state set below already carries the new account's keys.
+      const { data, failed } = await restoreBackupImages(parsed, { userId })
       setArtists(data.artists)
       setIdeas(data.ideas)
       setBoards(data.boards)
       setConcepts(data.concepts)
       setConventionOverrides(data.conventionOverrides)
-      setMessage('Backup imported.')
+      setMessage(failed
+        ? `Backup imported. ${photos(failed)} couldn't be saved and ${failed === 1 ? 'was' : 'were'} left out.`
+        : 'Backup imported.')
     } catch (error) {
       setMessage(error.message || 'Could not import backup.')
     } finally {
+      setBusy(false)
       e.target.value = ''
     }
   }
@@ -60,6 +84,7 @@ export default function BackupPanel({ setArtists, setIdeas, setBoards, setConcep
         <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={importBackup} />
         <button
           onClick={() => fileRef.current.click()}
+          disabled={busy}
           className="px-4 min-h-11 border border-ink-border hover:border-cream-muted/50 text-cream-muted hover:text-cream text-sm font-body rounded-xs transition-colors"
         >
           Import Backup

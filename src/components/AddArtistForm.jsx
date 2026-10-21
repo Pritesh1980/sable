@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { parseInstagramHandle } from '../data/artists'
 
 export default function AddArtistForm({ onAdd }) {
+  const handleId = useId()
+  const nameId = useId()
   const [handle, setHandle] = useState('')
   const [name, setName] = useState('')
   const [error, setError] = useState('')
@@ -21,8 +23,9 @@ export default function AddArtistForm({ onAdd }) {
       <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-4">Add New Artist</p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
         <div>
-          <label className="text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase block mb-1">Instagram Handle *</label>
+          <label htmlFor={handleId} className="text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase block mb-1">Instagram Handle *</label>
           <input
+            id={handleId}
             className="w-full bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/40 font-mono placeholder-cream-muted/60"
             placeholder="@handle"
             value={handle}
@@ -30,8 +33,9 @@ export default function AddArtistForm({ onAdd }) {
           />
         </div>
         <div>
-          <label className="text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase block mb-1">Display Name</label>
+          <label htmlFor={nameId} className="text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase block mb-1">Display Name</label>
           <input
+            id={nameId}
             className="w-full bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/40 font-body placeholder-cream-muted/60"
             placeholder="Full name (optional)"
             value={name}

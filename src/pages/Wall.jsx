@@ -4,6 +4,7 @@ import { buildWallItems, stampAddedAt } from '../data/wall'
 import WallPiece from '../components/WallPiece'
 import WallViewer from '../components/WallViewer'
 import AddArtistModal from '../components/AddArtistModal'
+import { Plus, X } from 'lucide-react'
 import ConsiderShelf from '../components/ConsiderShelf'
 import DiscoverMore from '../components/DiscoverMore'
 import RankRail from '../components/RankRail'
@@ -25,12 +26,12 @@ import GeneratedArtworkNotice from '../components/GeneratedArtworkNotice'
 // add-artist and drawer affordances are emitted as callbacks for a later task.
 function Bar({ activeView, onSwitchView, onAddArtist, onOpenDrawer }) {
   return (
-    <header className="sticky top-0 z-10 flex items-center gap-3 sm:gap-8 px-3 sm:px-8 py-3.5 bg-v2-ink/[.88] backdrop-blur-md border-b border-v2-hairline">
-      <div className="font-v2-display text-[1.35rem] tracking-[0.28em] uppercase text-v2-cream">
+    <header className="sticky top-0 z-10 grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-1 px-3 py-2 md:grid-cols-[auto_minmax(0,1fr)_auto_auto] md:gap-x-6 xl:gap-x-8 md:px-8 md:py-3.5 bg-v2-ink/[.88] backdrop-blur-md border-b border-v2-hairline">
+      <div className="col-start-1 row-start-1 font-v2-display text-[1.35rem] tracking-[0.28em] uppercase text-v2-cream">
         Sable<span className="text-v2-accent">.</span>
       </div>
 
-      <nav className="flex items-center gap-4 sm:gap-6 flex-1 min-w-0">
+      <nav className="col-span-3 col-start-1 row-start-2 flex min-w-0 items-center gap-6 md:col-span-1 md:col-start-2 md:row-start-1">
         {[
           { id: 'artists', label: 'Artists' },
           { id: 'concepts', label: 'Concepts' },
@@ -51,16 +52,19 @@ function Bar({ activeView, onSwitchView, onAddArtist, onOpenDrawer }) {
 
       <button
         onClick={onAddArtist}
-        className="font-v2-ui text-sm text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-xs px-3 sm:px-4 min-h-11 shrink-0 whitespace-nowrap transition-colors"
+        aria-label="+ Add artist"
+        title="Add artist"
+        className="col-start-2 row-start-1 flex h-11 w-11 items-center justify-center gap-2 font-v2-ui text-sm text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-xs md:col-start-3 md:w-auto md:px-4 shrink-0 whitespace-nowrap transition-colors"
       >
-        + Add artist
+        <Plus size={18} aria-hidden="true" />
+        <span className="hidden md:inline">Add artist</span>
       </button>
 
       <button
         onClick={onOpenDrawer}
         title="Everything else — ideas, ranking, conventions, studios, settings"
         aria-label="Everything else — ideas, ranking, conventions, studios, settings"
-        className="font-v2-ui text-lg text-v2-muted hover:text-v2-cream w-11 h-11 flex items-center justify-center shrink-0"
+        className="col-start-3 row-start-1 md:col-start-4 font-v2-ui text-lg text-v2-muted hover:text-v2-cream w-11 h-11 flex items-center justify-center shrink-0"
       >
         ⋯
       </button>
@@ -72,6 +76,7 @@ export default function Wall({ artists = [], ideas = [], setArtists = () => {}, 
   const items = buildWallItems(artists)
   const [viewerIndex, setViewerIndex] = useState(null)
   const [addArtistOpen, setAddArtistOpen] = useState(false)
+  const [captureReceipt, setCaptureReceipt] = useState(null)
   const [addArtistInitial, setAddArtistInitial] = useState(null)
   const [rankBoardOpen, setRankBoardOpen] = useState(false)
   const [dismissedSuggestions, setDismissedSuggestions] = useStorage('tattoo_dismissed_suggestions', [])
@@ -132,7 +137,7 @@ export default function Wall({ artists = [], ideas = [], setArtists = () => {}, 
     // to the viewer.
     setViewerIndex(null)
     // t7: Concepts composer reads `steer` to pre-select this artist's style.
-    navigate(`/concepts?steer=${item.artistId}`)
+    void navigate(`/concepts?steer=${item.artistId}`)
   }
 
   // Shared by both drop targets — the wall-piece drop zone (#1) and the
@@ -270,10 +275,16 @@ export default function Wall({ artists = [], ideas = [], setArtists = () => {}, 
           setArtists={setArtists}
           userId={user?.id}
           initial={addArtistInitial || undefined}
+          onSaved={setCaptureReceipt}
           onClose={() => { setAddArtistOpen(false); setAddArtistInitial(null) }}
           onManage={() => { setAddArtistOpen(false); setAddArtistInitial(null) }}
         />
       )}
+
+      {captureReceipt && <p role="status" className="fixed bottom-24 left-4 right-4 sm:left-auto sm:max-w-md z-40 bg-v2-surface border border-v2-hairline px-3 flex items-center gap-3 font-v2-ui text-sm text-v2-cream">
+        <span className="min-w-0 break-words">{captureReceipt.kind === 'created' ? 'Artist saved' : `${captureReceipt.imageCount} ${captureReceipt.imageCount === 1 ? 'photo' : 'photos'} added to @${artists.find((a) => a.id === captureReceipt.artistId)?.handle || captureReceipt.artistId}`}</span>
+        <button type="button" aria-label="Dismiss save confirmation" title="Dismiss confirmation" className="shrink-0 w-11 h-11 flex items-center justify-center text-v2-muted" onClick={() => setCaptureReceipt(null)}><X size={18} /></button>
+      </p>}
 
       {rankBoardOpen && (
         <RankBoard

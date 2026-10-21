@@ -95,6 +95,8 @@ describe('Settings page: iOS share-to-Sable (#45)', () => {
     renderSettings()
     const link = screen.getByRole('link', { name: /install/i })
     expect(link).toHaveAttribute('href', 'https://www.icloud.com/shortcuts/fake-id')
+    expect(screen.getByText(/paste.*screenshot or profile link/i)).toBeInTheDocument()
+    expect(screen.queryByText(/drops a screenshot straight/i)).not.toBeInTheDocument()
   })
 
   it('falls back to the manual setup guide on iOS when no link is configured', () => {
@@ -103,6 +105,6 @@ describe('Settings page: iOS share-to-Sable (#45)', () => {
     renderSettings()
     expect(screen.getByText(/share to sable/i)).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /install/i })).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /setup guide/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /setup guide/i })).toHaveAttribute('href', expect.stringContaining('#share-from-instagram'))
   })
 })

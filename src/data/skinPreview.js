@@ -3,6 +3,8 @@
 // helpers are unit-tested; generateSkinPreviewWithGemini is a thin network
 // wrapper. Uses the same pinned image model as concept generation.
 import { GEMINI_IMAGE_MODEL, parseGeminiImage } from './geminiImage'
+import { resolveImageBlob } from './imageResolver'
+import { blobToDataUrl } from './imageStaging'
 
 export function buildSkinPreviewPrompt({ placement = '' } = {}) {
   const where = String(placement).trim() || 'this part of the body'
@@ -24,18 +26,14 @@ export function dataUrlToInlineData(dataUrl) {
   return { mimeType: match[1], data: match[2] }
 }
 
-// Concept images may be data URLs, blob: URLs from blob storage, or remote
-// URLs; Gemini needs the bytes inline.
-export async function imageUrlToDataUrl(url) {
-  if (String(url).startsWith('data:')) return url
-  const res = await fetch(url)
-  if (!res.ok) throw new Error('Could not read the design image.')
-  const blob = await res.blob()
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result))
-    reader.onerror = () => reject(new Error('Could not read the design image.'))
-    reader.readAsDataURL(blob)
+// A concept image is a data URL, a stored blob key or a remote URL; Gemini and
+// the camera overlay need the bytes inline.
+export async function imageUrlToDataUrl(ref) {
+  if (typeof ref === 'string' && ref.startsWith('data:')) return ref
+  const blob = await resolveImageBlob(ref)
+  if (!blob) throw new Error('Could not read the design image.')
+  return blobToDataUrl(blob).catch(() => {
+    throw new Error('Could not read the design image.')
   })
 }
 

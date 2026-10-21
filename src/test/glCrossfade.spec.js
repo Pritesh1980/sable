@@ -164,4 +164,20 @@ describe('createGlEngine', () => {
     handler({ preventDefault: vi.fn() })
     expect(onContextLost).toHaveBeenCalledTimes(1)
   })
+
+  it('logs, rather than leaks, a draw that throws after an image loads', async () => {
+    const { THREE } = makeThree()
+    const engine = createGlEngine(THREE, makeMount())
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    // setImage draws at once: a lost context throws from render().
+    THREE.WebGLRenderer.prototype.render = () => { throw new Error('context lost') }
+    engine.setImage('/a.jpg')
+    await flush()
+    expect(error).toHaveBeenCalledTimes(1)
+    // transitionTo starts an animation frame: make that throw instead.
+    vi.stubGlobal('requestAnimationFrame', () => { throw new Error('no frames') })
+    engine.transitionTo('/b.jpg')
+    await flush()
+    expect(error).toHaveBeenCalledTimes(2)
+  })
 })

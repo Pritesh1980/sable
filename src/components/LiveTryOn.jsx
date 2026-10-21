@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { loadPhotoForRelief } from '../data/reliefImage'
+import { refKey } from '../data/imageRef'
+import { resolveImageRef } from '../data/imageResolver'
 import { imageUrlToDataUrl, shrinkImageDataUrl } from '../data/skinPreview'
 import {
   CARD_HEIGHT_MM,
@@ -50,7 +52,9 @@ export default function LiveTryOn({ designUrl, label = 'Design', onSave, onClose
   const { w: stageW, h: stageH } = stage
   // A design linked from another site would taint the snapshot canvas; draw
   // from local bytes instead. Falls back to the URL (display still works).
-  const [designSrc, setDesignSrc] = useState(designUrl)
+  // designUrl is a stored ref (a blob key, a url or inline bytes); only inline
+  // image bytes are shown as they are, the rest arrive from the effect below.
+  const [designSrc, setDesignSrc] = useState(() => (String(designUrl).startsWith('data:') ? resolveImageRef(designUrl).src : ''))
   const baseWidth = Math.min(stageW, stageH) * 0.45
   const [transform, setTransform] = useState(() => ({ x: stageW / 2, y: stageH * 0.42, scale: 1, rotation: 0 }))
   const [ink, setInk] = useState(0.88)
@@ -63,6 +67,10 @@ export default function LiveTryOn({ designUrl, label = 'Design', onSave, onClose
   const [pxPerMm, setPxPerMm] = useState(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  // The design url whose bytes could not be read. Keyed by url, so showing a
+  // different design clears it without a reset.
+  const [unreadableDesign, setUnreadableDesign] = useState('')
+  const designUnavailable = unreadableDesign === designUrl
 
   useEffect(() => { onCloseRef.current = onClose }, [onClose])
   useEffect(() => { transformRef.current = transform }, [transform])
@@ -72,7 +80,12 @@ export default function LiveTryOn({ designUrl, label = 'Design', onSave, onClose
     let cancelled = false
     imageUrlToDataUrl(designUrl)
       .then((url) => { if (!cancelled) setDesignSrc(url) })
-      .catch(() => {})
+      .catch(() => {
+        if (cancelled) return
+        setUnreadableDesign(designUrl)
+        // A web url whose bytes can't be read (no CORS) can still be shown.
+        if (!refKey(designUrl)) setDesignSrc(resolveImageRef(designUrl).src)
+      })
     return () => { cancelled = true }
   }, [designUrl])
 
@@ -260,7 +273,7 @@ export default function LiveTryOn({ designUrl, label = 'Design', onSave, onClose
 
         <img
           ref={designRef}
-          src={designSrc}
+          src={designSrc || undefined}
           alt={`${label} design overlay`}
           draggable={false}
           className="pointer-events-none absolute max-w-none select-none mix-blend-multiply"
@@ -380,12 +393,15 @@ export default function LiveTryOn({ designUrl, label = 'Design', onSave, onClose
               <button
                 type="button"
                 onClick={handleSnapshot}
-                disabled={saving || (!streaming && !photo)}
+                disabled={saving || designUnavailable || (!streaming && !photo)}
                 className="ml-auto rounded-xs bg-accent px-4 py-2 font-body text-sm text-cream disabled:opacity-40"
               >
                 Save snapshot
               </button>
             </div>
+            {designUnavailable && (
+              <p className="text-sm text-accent">This design is available when online — it cannot be read right now, so a snapshot cannot be saved.</p>
+            )}
             {saveError && <p className="text-sm text-accent">{saveError}</p>}
             <p className="text-xs text-cream-muted">Drag to move · pinch to size and turn</p>
           </>

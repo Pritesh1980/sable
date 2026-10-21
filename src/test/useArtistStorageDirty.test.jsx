@@ -223,24 +223,6 @@ describe('useArtistStorage dirty-state handling', () => {
     expect(readRowGenerations('tattoo_artists_meta').y).toBe('g-tabB')
   })
 
-  it('the one-time migration push preserves stamps of unchanged artists', async () => {
-    seedSession()
-    // No MIGRATED_FLAG → the sync effect runs the migration and pushes after.
-    await backend.store.upsert('artistsMeta', [
-      remoteArtist('x', { updatedAt: '2026-06-05T00:00:00Z' }),
-    ])
-    const { result } = renderSynced()
-    await waitFor(() => expect(result.current.store[0]).toHaveLength(1))
-    await waitFor(() => expect(localStorage.getItem('tattoo_img_migrated_v1')).toBe('1'))
-
-    // Nothing about x changed on this device, so its stamp must survive the
-    // migration push — restamping would outrank genuine cross-device edits.
-    await waitFor(async () => {
-      const rows = await backend.store.list('artistsMeta')
-      expect(rows.find((r) => r.id === 'x')?.updatedAt).toBe('2026-06-05T00:00:00Z')
-    }, { timeout: 3000 })
-  })
-
   it('owner seeding persists the stamps it pushes to the remote', async () => {
     localStorage.setItem(
       'tattoo_local_session',

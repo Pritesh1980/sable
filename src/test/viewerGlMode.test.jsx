@@ -8,7 +8,7 @@ import { resolveTransitionMode } from '../lib/gl'
 // viewer renders. The mode gate itself (resolveTransitionMode) is unit-tested
 // in gl.spec.js; here we only assert the wiring picks the right stage.
 vi.mock('../components/GlCrossfade', () => ({
-  default: ({ src }) => <div data-testid="gl-crossfade" data-src={src} />,
+  default: ({ src }) => <div data-testid="gl-crossfade" data-src={typeof src === 'string' ? src : JSON.stringify(src)} />,
 }))
 
 vi.mock('../lib/gl', async (importOriginal) => {
@@ -50,6 +50,25 @@ describe('WallViewer transition-mode wiring', () => {
     expect(screen.queryByTestId('gl-crossfade')).not.toBeInTheDocument()
     // css path renders the ArtistImage <img> with the artist label as alt text.
     expect(screen.getByAltText(/Victor Portugal — blackwork/)).toBeInTheDocument()
+  })
+})
+
+// Wall items carry the stored ref (#113) and the GL stage resolves it itself
+// (#114, GlCrossfade.test.jsx) — the viewer hands it over unresolved.
+describe('WallViewer hands the stored ref to the GL stage', () => {
+  const item = (image) => [{ ...wallItems[0], image }]
+  const glSrc = () => screen.getByTestId('gl-crossfade').getAttribute('data-src')
+
+  beforeEach(() => resolveTransitionMode.mockReturnValue('webgl'))
+
+  it('passes a base-relative static path through as stored', () => {
+    render(<WallViewer items={item('images/victorportugal/1.jpg')} onClose={vi.fn()} onGenerate={vi.fn()} />)
+    expect(glSrc()).toBe('images/victorportugal/1.jpg')
+  })
+
+  it('passes a { key } ref through as stored', () => {
+    render(<WallViewer items={item({ key: 'user/u1/a.jpg' })} onClose={vi.fn()} onGenerate={vi.fn()} />)
+    expect(glSrc()).toBe(JSON.stringify({ key: 'user/u1/a.jpg' }))
   })
 })
 

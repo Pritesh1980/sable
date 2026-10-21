@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { LogoMark, Wordmark } from '../components/Logo'
 import { useAuth } from '../context/useAuth'
 import { backend } from '../backend'
@@ -7,6 +7,8 @@ import { backend } from '../backend'
 // admin-side). The password field reuses the masked-input pattern from the
 // Concepts KeyField.
 export default function Login() {
+  const emailId = useId()
+  const passwordId = useId()
   const { signIn } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -49,10 +51,11 @@ export default function Login() {
 
         <form onSubmit={onSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-mono text-cream-muted tracking-widest uppercase mb-1">
+            <label htmlFor={emailId} className="block text-xs font-mono text-cream-muted tracking-widest uppercase mb-1">
               Email
             </label>
             <input
+              id={emailId}
               type="email"
               autoComplete="username"
               required
@@ -64,10 +67,11 @@ export default function Login() {
           </div>
 
           <div>
-            <label className="block text-xs font-mono text-cream-muted tracking-widest uppercase mb-1">
+            <label htmlFor={passwordId} className="block text-xs font-mono text-cream-muted tracking-widest uppercase mb-1">
               Password
             </label>
             <input
+              id={passwordId}
               type="password"
               autoComplete="current-password"
               required

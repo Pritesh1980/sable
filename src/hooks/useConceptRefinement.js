@@ -3,6 +3,7 @@ import { canonicalRequest, compileRefinementPrompt, createRequestId, imageJobErr
   validateRefinementRequest, variantIdForJob } from '../../shared/imageJobs'
 import { importCheckedConceptResult } from '../data/checkedConceptImport'
 import { getCachedBlobUrl, keyForUrl } from '../data/blobUrls'
+import { refKey } from '../data/imageRef'
 import { getStoragePersistence } from '../data/storagePersistence'
 import { prepareRefinementSource } from '../data/imageJobs/prepareSource'
 
@@ -200,7 +201,7 @@ export function useConceptRefinement({ ownerId, ownerScope, concepts, commitConc
       if (!job.request) {
         // An ack response may be lost after the service has already scrubbed its
         // output. Verify the previously saved canonical variant, never invent metadata.
-        const imageKey = keyForUrl(existing?.imageUrl) || existing?.image?.key
+        const imageKey = refKey(existing?.imageUrl) || keyForUrl(existing?.imageUrl) || existing?.image?.key
         if (!imageKey || existing?.generation?.jobId !== jobId) throw fail('result_expired')
         commit = () => latest.current.commitConcepts(rows => rows, {
           ownerId: snapshot.ownerId, conceptId, variantId: variantIdForJob(jobId), imageKey })

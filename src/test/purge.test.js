@@ -9,6 +9,8 @@ import { getCachedBlobUrl, keyForUrl, registerBlobUrl, resolveBlobKey } from '..
 import { pendingImageJobs } from '../data/imageJobs/pendingJobs'
 import { compileRefinementPrompt } from '../../shared/imageJobs'
 import { Blob } from 'node:buffer'
+import { stageImage } from '../data/imageStaging'
+import { STAGED_IMAGES_DB, UPLOAD_OUTBOX_KEY, DEVICE_COPIES_KEY, readOutbox } from '../data/stagedImageStore'
 
 describe('purgeLocalUserData', () => {
   beforeEach(() => localStorage.clear())
@@ -75,12 +77,40 @@ describe('purgeLocalUserData', () => {
     localStorage.setItem('tattoo_ideas', '[{"id":"1"}]')
     localStorage.setItem('tattoo_artists_meta', '[{"id":"a"}]')
     localStorage.setItem('tattoo_img_migrated_v1', '1')
+    localStorage.setItem('tattoo_legacy_sweep_v1', '{"a":{"x.1":0}}')
 
     await purgeLocalUserData()
 
     expect(localStorage.getItem('tattoo_ideas')).toBeNull()
     expect(localStorage.getItem('tattoo_artists_meta')).toBeNull()
     expect(localStorage.getItem('tattoo_img_migrated_v1')).toBeNull()
+    // #118: the legacy photo sweep's ledger is about this user's photos.
+    expect(localStorage.getItem('tattoo_legacy_sweep_v1')).toBeNull()
+  })
+
+  // #115: a photo still waiting to upload is the signed-out user's content.
+  it('clears photos still waiting to upload: the staged bytes and the outbox', async () => {
+    vi.spyOn(backend.blobs, 'upload').mockRejectedValue(new Error('offline'))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    await stageImage('data:image/jpeg;base64,cGVuZGluZw==', { userId: 'u1', scope: 'artists', id: 'a1' })
+    expect(readOutbox()).toHaveLength(1)
+
+    await purgeLocalUserData()
+
+    expect(readOutbox()).toEqual([])
+    expect(localStorage.getItem(UPLOAD_OUTBOX_KEY)).toBeNull()
+    expect(localStorage.getItem(DEVICE_COPIES_KEY)).toBeNull()
+    const reopen = indexedDB.open(STAGED_IMAGES_DB)
+    let upgraded = false
+    reopen.onupgradeneeded = () => { upgraded = true }
+    const db = await new Promise((resolve, reject) => {
+      reopen.onsuccess = () => resolve(reopen.result)
+      reopen.onerror = () => reject(reopen.error)
+    })
+    // A fresh upgrade proves the staged bytes went with the database.
+    expect(upgraded).toBe(true)
+    db.close()
+    vi.restoreAllMocks()
   })
 
   it('preserves device prefs, API keys, and the local simulated remote', async () => {

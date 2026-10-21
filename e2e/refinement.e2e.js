@@ -1,6 +1,32 @@
 import { test, expect } from '@playwright/test'
 import { openRefinementFixture, submitVariation, canonicalRows, openComposer, orientationJpeg, ROW_KEY, fixtureConcept } from './refinementFixtures.js'
 
+test('a staged-only source opens for refinement without needing a backend image copy', async ({ page }) => {
+  await openRefinementFixture(page)
+  await page.evaluate(async ({ row, remoteKey }) => {
+    const key = 'user/fixture-owner/concepts/temple/staged-only.png'
+    await new Promise((resolve, reject) => {
+      const request = indexedDB.open('tattoo-staged-images-v1', 1)
+      request.onupgradeneeded = () => request.result.createObjectStore('images')
+      request.onerror = () => reject(request.error)
+      request.onsuccess = () => {
+        const db = request.result
+        const tx = db.transaction('images', 'readwrite')
+        tx.objectStore('images').put(row.imageUrl, key)
+        tx.oncomplete = () => { db.close(); resolve() }
+        tx.onerror = () => { db.close(); reject(tx.error) }
+      }
+    })
+    localStorage.setItem('tattoo_device_copies', JSON.stringify([key]))
+    const rows = [{ ...row, imageUrl: key }]
+    localStorage.setItem(remoteKey, JSON.stringify(rows))
+    localStorage.setItem('tattoo_concepts', JSON.stringify(rows))
+  }, { row: fixtureConcept, remoteKey: ROW_KEY })
+  await page.reload()
+  await expect(page.getByRole('img', { name: 'Temple study', exact: true })).toBeVisible()
+  await openComposer(page)
+})
+
 test('reload recovery imports once and acknowledges only after canonical save', async ({ page }) => {
   const relay = await openRefinementFixture(page)
   await submitVariation(page)

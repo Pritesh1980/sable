@@ -1,6 +1,19 @@
 import { useEffect, useRef } from 'react'
 
-const FOCUSABLE = 'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+const FOCUSABLE = 'a[href], button, textarea, input, select, summary, [tabindex]:not([tabindex="-1"])'
+
+function available(node) {
+  if (node.matches(':disabled, input[type="hidden"]') || node.closest('[hidden], [inert]')) return false
+  for (let parent = node; parent; parent = parent.parentElement) {
+    const style = getComputedStyle(parent)
+    if (style.display === 'none' || style.visibility === 'hidden') return false
+    if (parent.tagName === 'DETAILS' && !parent.open) {
+      const summary = [...parent.children].find((child) => child.tagName === 'SUMMARY')
+      if (!summary?.contains(node)) return false
+    }
+  }
+  return true
+}
 
 /** Controls the undo toast may own while a dialog is open. The toast paints above
  *  modals but lives outside them, so a trap that ignored it would make Undo
@@ -53,11 +66,11 @@ export default function useDialogFocus(open) {
 
     function handleKeyDown(e) {
       if (e.key !== 'Tab' || !containerRef.current) return
-      if (!ownsFocus(containerRef.current)) return
+      if (!ownsFocus(containerRef.current) || !isTopmostDialog(containerRef.current)) return
       const focusable = [
         ...containerRef.current.querySelectorAll(FOCUSABLE),
         ...undoToastFocusables(),
-      ]
+      ].filter(available)
       if (focusable.length === 0) {
         e.preventDefault()
         return
@@ -85,4 +98,49 @@ export default function useDialogFocus(open) {
   }, [open])
 
   return containerRef
+}
+
+/**
+ * Escape closes this layer (#104). Put the returned ref on the overlay: on an
+ * `aria-modal` dialog it closes only when that dialog is the topmost one; on
+ * anything else (a popover) it closes only while no modal sits above the page.
+ * The Escape is marked handled, and one another layer already handled is left
+ * alone, so a stack peels one layer per press (see isTopmostDialog).
+ */
+export function useEscapeToClose(onClose, enabled = true) {
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!enabled) return undefined
+    function handleKeyDown(e) {
+      if (e.key !== 'Escape' || e.defaultPrevented) return
+      const node = ref.current
+      if (node?.getAttribute('aria-modal') === 'true') {
+        if (!isTopmostDialog(node)) return
+      } else if (document.querySelector('[aria-modal="true"]')) {
+        return
+      }
+      e.preventDefault()
+      onClose()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [onClose, enabled])
+
+  return ref
+}
+
+/**
+ * Focus the returned ref's element when `open` turns true (#104). Stands in
+ * for the autoFocus attribute: focus moves because the user just opened a
+ * dialog or an inline editor (the WAI-ARIA dialog pattern), not on page load.
+ * Callers pass false where typing isn't the next step, e.g. opening an
+ * existing idea to read it, which on iPhone would pop the keyboard over it.
+ */
+export function useFocusOnOpen(open = true) {
+  const ref = useRef(null)
+  useEffect(() => {
+    if (open) ref.current?.focus()
+  }, [open])
+  return ref
 }

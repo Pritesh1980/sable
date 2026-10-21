@@ -49,6 +49,7 @@ export default function Drawer({ onClose }) {
   return (
     <div
       data-testid="drawer-backdrop"
+      role="presentation"
       className="fixed inset-0 z-50 bg-black/60"
       onClick={onClose}
     >

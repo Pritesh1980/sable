@@ -19,10 +19,13 @@ import {
   createConceptVariant,
   upsertRefinementVariant,
 } from '../data/conceptVariants'
-import { buildConceptWallItems } from '../data/concepts'
+import { buildConceptWallItems, isDraftConcept } from '../data/concepts'
 import { clearComposerDraft, loadComposerDraft, saveComposerDraft } from '../data/composerDraft'
 import { generateImageWithGemini } from '../data/geminiImage'
 import { buildImagePrompt, buildTextPrompt } from '../data/conceptPrompts'
+import { stageImage, withStagedImages } from '../data/imageStaging'
+import useImageStatuses from '../hooks/useImageStatuses'
+import { useAuth } from '../context/useAuth'
 import { useUndoableRemoval } from '../hooks/useUndoableRemoval'
 import { useConceptRefinement } from '../hooks/useConceptRefinement'
 import { backend } from '../backend'
@@ -30,6 +33,8 @@ import { createRelayClient } from '../data/imageJobs/relayClient'
 import { pendingImageJobs } from '../data/imageJobs/pendingJobs'
 import { prepareRefinementSource } from '../data/imageJobs/prepareSource'
 import { knownKeyForUrl } from '../data/blobUrls'
+import { refKey } from '../data/imageRef'
+import { readStagedImage } from '../data/stagedImageStore'
 import { resolveAssetPath } from '../data/assetPath'
 import { LIMITS } from '../../shared/imageJobs'
 import { RefreshCw } from 'lucide-react'
@@ -58,15 +63,6 @@ async function selectedImageBytes(url) {
     } finally { reader.releaseLock() }
     return new Blob(chunks, { type: response.headers.get('Content-Type').split(';')[0] })
   } finally { clearTimeout(timer) }
-}
-
-function imageDataUrl(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result)
-    reader.onerror = () => reject(new Error('source_unreadable'))
-    reader.readAsDataURL(blob)
-  })
 }
 
 function conceptActionLabel(concept) {
@@ -147,6 +143,10 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
   })
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  // Every image saved here is staged under its concept first (#115), so the
+  // concept stores a key, never base64, and survives a failed upload.
+  const userId = useAuth()?.user?.id
+  const stagingFor = (conceptId) => ({ userId, scope: 'concepts', id: conceptId })
 
   const initialDraft = useMemo(() => loadComposerDraft(), [])
   // t7: a steer=<artistId> query param (from the Wall viewer's "G" flow) opens
@@ -228,10 +228,13 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
             tags: steerArtist?.tags || [],
             placement,
           }))
+      const id = Date.now().toString()
+      // State holds the stored key; signed out there is none and the url stays.
+      const { key, url } = await stageImage(dataUrl, stagingFor(id))
       const concept = {
-        id: Date.now().toString(),
+        id,
         prompt: idea,
-        imageUrl: dataUrl,
+        imageUrl: key || url,
         response: '',
         tags: steerArtist?.tags || [],
         steerArtistId: steerArtistId || undefined,
@@ -279,26 +282,30 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
   // identically to a generated result — either attached to a pending
   // prompt-pack concept, or as a brand new concept from the current idea.
   function handleComposerPaste(dataUrlOrUrl) {
-    if (pendingPasteConceptId) {
-      setConcepts((prev) => prev.map((c) => (
-        c.id === pendingPasteConceptId ? { ...c, imageUrl: dataUrlOrUrl } : c
-      )))
-    } else {
-      const steerArtist = artists.find((a) => a.id === steerArtistId)
-      const concept = {
-        id: Date.now().toString(),
-        prompt: idea,
-        imageUrl: dataUrlOrUrl,
-        response: '',
-        tags: steerArtist?.tags || [],
-        steerArtistId: steerArtistId || undefined,
-        placement: placement || undefined,
-        provider: 'pasted',
-        createdAt: new Date().toISOString(),
+    const id = pendingPasteConceptId || Date.now().toString()
+    void withStagedImages([dataUrlOrUrl], stagingFor(id), ([key]) => {
+      const imageUrl = key || dataUrlOrUrl
+      if (pendingPasteConceptId) {
+        setConcepts((prev) => prev.map((c) => (
+          c.id === pendingPasteConceptId ? { ...c, imageUrl } : c
+        )))
+      } else {
+        const steerArtist = artists.find((a) => a.id === steerArtistId)
+        const concept = {
+          id,
+          prompt: idea,
+          imageUrl,
+          response: '',
+          tags: steerArtist?.tags || [],
+          steerArtistId: steerArtistId || undefined,
+          placement: placement || undefined,
+          provider: 'pasted',
+          createdAt: new Date().toISOString(),
+        }
+        setConcepts((prev) => [concept, ...prev])
       }
-      setConcepts((prev) => [concept, ...prev])
-    }
-    finishComposer()
+      finishComposer()
+    })
   }
 
   function saveTags(id, tags) {
@@ -310,10 +317,15 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
     if (index !== -1) removeConcept(index)
   }
 
+  // Every variant arrives here: the result form, the on-skin preview and the
+  // live camera snapshot alike.
   function addVariant(conceptId, input) {
-    setConcepts((prev) => prev.map((c) => (
-      c.id === conceptId ? addConceptVariant(c, input) : c
-    )))
+    void withStagedImages([input.imageUrl], stagingFor(conceptId), ([key]) => {
+      const staged = key ? { ...input, imageUrl: key } : input
+      setConcepts((prev) => prev.map((c) => (
+        c.id === conceptId ? addConceptVariant(c, staged) : c
+      )))
+    })
   }
 
   function markBest(conceptId, variantId) {
@@ -357,13 +369,15 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
     setManualComparison(null)
     let blob = null
     try {
-      const key = knownKeyForUrl(imageUrl)
+      const key = refKey(imageUrl) || knownKeyForUrl(imageUrl)
       let url
       if (key) {
         if (!key.startsWith(`user/${snapshot.ownerId}/concepts/`) || key.split('/').some(part => !part || part === '.' || part === '..')) {
           throw new Error('owner_changed')
         }
-        url = await blobs.getUrl(key)
+        url = await readStagedImage(key)
+        ownerScope.assertCurrent(snapshot)
+        if (!url) url = await blobs.getUrl(key)
         ownerScope.assertCurrent(snapshot)
       } else if (imageUrl.startsWith('data:image/')) url = imageUrl
       else {
@@ -426,9 +440,10 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
     const prepared = await prepareRefinementSource(file)
     try {
       ownerScope.assertCurrent(snapshot)
-      const imageUrl = await imageDataUrl(prepared.blob)
+      const staged = await stageImage(prepared.blob, { userId: snapshot.ownerId, scope: 'concepts', id: destination.conceptId })
       ownerScope.assertCurrent(snapshot)
-      const variant = createConceptVariant({ provider, title: 'Imported variation', imageUrl, operation: 'refine',
+      if (staged.failed || !staged.key) throw new Error('storage_full')
+      const variant = createConceptVariant({ provider, title: 'Imported variation', imageUrl: staged.key, operation: 'refine',
         sourceConceptId: destination.conceptId, parentVariantId: destination.parentVariantId,
         sourceImageDigest: refinement.state.source?.digest,
         refinement: { version: 1, ...draft },
@@ -460,13 +475,22 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
     onTryOn={input => { refinement.close(); tryOnSkin({ ...input, conceptId: comparison.conceptId, conceptLabel: comparisonConcept.prompt }) }} />
 
   const wallItems = useMemo(() => buildConceptWallItems(concepts, artists), [concepts, artists])
-  // Concepts without a saved image can't live on an image wall — a pasted-back
+  const statuses = useImageStatuses(wallItems.map((item) => item.imageUrl))
+  const statusKey = statuses.join()
+  // The viewer only swipes through pieces it can show; a piece whose image is
+  // not available holds its place on the wall but can't be opened (#102).
+  const viewerItems = useMemo(
+    () => wallItems.filter((_, i) => statusKey.split(',')[i] === 'ready'),
+    [wallItems, statusKey],
+  )
+  // Concepts that never had an image can't live on an image wall — a pasted-back
   // result (or a prompt pack awaiting one) stays here until it has one.
-  const draftConcepts = useMemo(() => concepts.filter((c) => !c.imageUrl), [concepts])
+  const draftConcepts = useMemo(() => concepts.filter(isDraftConcept), [concepts])
   const viewerOpen = viewerIndex !== null
 
   function openViewer(item) {
-    setViewerIndex(wallItems.indexOf(item))
+    const index = viewerItems.indexOf(item)
+    if (index !== -1) setViewerIndex(index)
   }
 
   function handleDeleteFromViewer(id) {
@@ -629,7 +653,7 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
       {viewerOpen && (
         <ConceptViewer
           key={viewerIndex}
-          items={wallItems}
+          items={viewerItems}
           initialIndex={viewerIndex}
           artists={artists}
           concepts={concepts}

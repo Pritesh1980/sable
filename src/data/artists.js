@@ -63,12 +63,24 @@ export const PLACEMENTS = [
 // Accepts '@handle', a bare handle, or a pasted Instagram URL; returns the bare
 // handle ('' when nothing usable is found).
 export function parseInstagramHandle(input = '') {
-  const trimmed = input.trim().replace(/^@/, '')
+  const trimmed = input.trim()
   if (!trimmed) return ''
-  const urlMatch = trimmed.match(/instagram\.com\/([^/?#\s]+)/i)
-  if (urlMatch) return urlMatch[1]
-  if (/^https?:\/\//i.test(trimmed)) return ''
-  return trimmed
+  let handle = trimmed.replace(/^@/, '')
+  if (/[:/]/.test(trimmed)) {
+    try {
+      const url = new URL(/^[a-z][a-z\d+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`)
+      if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.port ||
+          !['instagram.com', 'www.instagram.com', 'm.instagram.com'].includes(url.hostname)) return ''
+      const segments = url.pathname.split('/').filter(Boolean)
+      if (segments.length !== 1) return ''
+      handle = decodeURIComponent(segments[0])
+    } catch {
+      return ''
+    }
+  }
+  if (!/^[a-z\d._]{1,30}$/i.test(handle) ||
+      /^(p|reel|reels|stories|explore|accounts|direct|tv|share)$/i.test(handle)) return ''
+  return handle
 }
 
 // Build a new user-added artist record, or null if the handle is already taken

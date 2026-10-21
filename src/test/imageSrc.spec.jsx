@@ -35,14 +35,16 @@ describe('imageSrc', () => {
 })
 
 describe('buildWallItems image normalisation', () => {
-  it('always exposes item.image as a string src, with addedAt lifted alongside', () => {
+  it('carries each stored ref as-is (resolved at the render boundary), with addedAt lifted alongside', () => {
     const now = new Date('2026-07-04T12:00:00.000Z')
+    const fresh = stampAddedAt('/fresh.jpg', now)
     const artists = [{
       id: 'a1', name: 'A1', handle: 'a1', tags: [],
-      images: ['/plain.jpg', stampAddedAt('/fresh.jpg', now)],
+      images: ['/plain.jpg', fresh],
     }]
     const items = buildWallItems(artists, { now })
-    expect(items.map((i) => i.image)).toEqual(['/plain.jpg', '/fresh.jpg'])
+    expect(items.map((i) => i.image)).toEqual(['/plain.jpg', fresh])
+    expect(items[1].addedAt).toBe(now.toISOString())
     expect(items[1].isRecent).toBe(true)
   })
 })

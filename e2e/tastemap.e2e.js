@@ -22,7 +22,7 @@ async function seedStyleIndex(page) {
       return v.map((x) => x / length)
     }
     const db = await new Promise((resolve, reject) => {
-      const request = indexedDB.open('tattoo-style-index-v1', 1)
+      const request = indexedDB.open('tattoo-style-index-v2', 1)
       request.onupgradeneeded = () => request.result.createObjectStore('vectors')
       request.onsuccess = () => resolve(request.result)
       request.onerror = () => reject(request.error)
@@ -35,7 +35,7 @@ async function seedStyleIndex(page) {
         const images = imagesById.get(id)
         if (images?.length !== 3) throw new Error(`Expected three demo images for ${id}`)
         images.forEach((src, image) => tx.objectStore('vectors')
-          .put(vector(artist, image), `${model}:${new URL(src, location.origin).pathname}`))
+          .put(vector(artist, image), `${model}:path:/${String(src).replace(/^\//, '')}`))
       })
       tx.oncomplete = resolve
       tx.onerror = () => reject(tx.error)

@@ -14,6 +14,15 @@ library; signing back in as the same owner on the same device restores it. That 
 
 ![The Settings page with the backup panel](../public/guide/settings.png)
 
+## Share to Sable on iPhone
+
+Settings offers **Install Share to Sable** only when a real iCloud Shortcut link is
+configured. Otherwise it links to the [manual setup guide](02-managing-artists.md#share-from-instagram).
+The Shortcut copies a selected screenshot or profile link and opens Sable; you
+still paste in capture. Real-phone acceptance and Safari versus installed-app
+session behaviour remain pending. Photo selection and manual profile-link paste
+are available when clipboard reading is denied or unsupported.
+
 ## Export a backup
 
 Tap **Export Backup**. A JSON download is requested — named with the date, e.g.
@@ -24,7 +33,7 @@ Tap **Export Backup**. A JSON download is requested — named with the date, e.g
 - ideas, boards and AI concepts
 - any convention attendance you've recorded
 
-Sable reports **“Download requested—check the file was saved”** only after it has
+In private builds, Sable reports **“Download requested—check the file was saved”** only after it has
 read every required local image and initiated the download. A browser click cannot
 verify that a file actually landed or was copied off this device. If an image is
 missing or unreadable, the export stops rather than offering a partial file.
@@ -32,6 +41,15 @@ External portfolio links and bundled artwork remain references in the JSON; Sabl
 does not fetch those third-party images. Historical unclassified artist-cache bytes
 that are not part of the canonical library are not included. Keep any such photos
 separately until recovered into the library.
+
+In the public demo and ordinary offline builds, Settings keeps the standard v2
+export: embedded photos restore on another account or device, while unreadable
+photos are counted in the export message. Reconnect and export again to include
+them. This partial-export path does not mark a private paid-result backup complete.
+Both paths request a download; check that the file was actually saved.
+Images already kept on this device are included even when their upload is still
+pending. A private export still stops if neither a device copy nor the backend
+can supply every required image.
 
 On **Concepts**, the paid-image backup indicator says **“No export requested”** or
 shows the last download request and **“Paid results saved since last export request.”**
@@ -48,7 +66,9 @@ as proof that a backup contains the bytes. Relay results are only recoverable fo
 
 Tap **Import Backup** and choose a previously exported file. This **replaces** the current
 data with the backup's contents — useful for recovering an earlier snapshot, or for pulling
-your data into an account that doesn't have it yet.
+your data into an account that doesn't have it yet. Embedded photos are saved to the
+account you're signed in to as they come back in. Backups made by earlier versions of Sable
+still import; a backup from a *newer* version is refused with a message to update first.
 
 ## When to back up
 

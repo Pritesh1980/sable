@@ -12,11 +12,6 @@ import useViewportZoomed from '../hooks/useViewportZoomed'
 import { resolveTransitionMode } from '../lib/gl'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
 
-function getItemSrc(item) {
-  if (!item) return ''
-  return typeof item.image === 'string' ? item.image : item.image?.url || ''
-}
-
 function pad2(n) {
   return String(n).padStart(2, '0')
 }
@@ -203,7 +198,7 @@ export default function WallViewer({
   const thumbnails = artistItems.map((item) => (
     <ArtistImage
       key={item.imageIndex}
-      src={getItemSrc(item)}
+      src={item.image}
       label={`${item.artistName} thumbnail ${item.imageIndex + 1}`}
       sizes="42px"
       onClick={() => setIndex(items.indexOf(item))}
@@ -235,7 +230,7 @@ export default function WallViewer({
         {transitionMode === 'webgl' ? (
           <div className="absolute inset-0">
             <GlCrossfade
-              src={getItemSrc(current)}
+              src={current.image}
               label={`${current.artistName} — ${current.styles.join(', ')}`}
               className="w-full h-full block"
               fallbackImageClassName="max-w-[100vw] max-h-[100vh] object-contain animate-fade-in"
@@ -248,7 +243,7 @@ export default function WallViewer({
               key={`${current.artistId}-${current.imageIndex}`}
               loading="eager"
               sizes="100vw"
-              src={getItemSrc(current)}
+              src={current.image}
               label={`${current.artistName} — ${current.styles.join(', ')}`}
               className="max-w-[100vw] max-h-[100vh] object-contain animate-fade-in"
               monogramClassName="text-8xl"
@@ -258,7 +253,7 @@ export default function WallViewer({
       </div>
 
       <GeneratedArtworkNotice
-        images={[getItemSrc(current)]}
+        images={[current.image]}
         className="absolute left-[max(1rem,env(safe-area-inset-left))] top-[calc(max(1rem,env(safe-area-inset-top))+3.5rem)] bg-v2-ink/90 rounded-xs px-2 py-1 pointer-events-none"
       />
 

@@ -31,6 +31,10 @@ dist-ssr
 # Claude Code: ignore everything personal, but share the project settings (hooks etc.)
 .claude/*
 !.claude/settings.json
+# The web-session setup hook is shared; any other local hooks stay private.
+!.claude/hooks/
+.claude/hooks/*
+!.claude/hooks/session-start.sh
 
 # Instagram session (contains auth cookies — never commit)
 .ig-session.json

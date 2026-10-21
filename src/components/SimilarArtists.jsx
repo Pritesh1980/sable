@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import ArtistImage from './ArtistImage'
-import { similarArtists, indexCoverage, artistCentroids, cosineSimilarity } from '../data/embeddings'
+import { similarArtists, indexCoverage, artistCentroids, cosineSimilarity, vectorLookup } from '../data/embeddings'
 import { buildTasteVector, predictedRank } from '../data/taste'
 import { loadVectors, buildStyleIndex } from '../data/styleIndex'
 
@@ -39,7 +39,7 @@ export default function SimilarArtists({ artists, artist, onSelectArtist }) {
 
   if (vectors === null) return null
 
-  const getVec = (src) => vectors.get(src) || null
+  const getVec = vectorLookup(vectors)
   const coverage = indexCoverage(artists, getVec)
   const matches = similarArtists(artists, artist.id, getVec)
 

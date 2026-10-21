@@ -11,9 +11,15 @@ function conceptTitle(concept) {
 // Only concepts with a saved image render on the wall — text-only responses
 // and empty paste-pending concepts stay in the composer's paste zone until an
 // image lands.
+// A stored key counts whether or not its bytes can be fetched right now: that is
+// a render status, not a draft (#102).
+export function isDraftConcept(concept) {
+  return !concept.imageUrl
+}
+
 export function buildConceptWallItems(concepts = [], artists = []) {
   return concepts
-    .filter((c) => c.imageUrl)
+    .filter((c) => !isDraftConcept(c))
     .map((concept) => {
       const steerArtist = artists.find((a) => a.id === concept.steerArtistId)
       return {

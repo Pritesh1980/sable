@@ -61,6 +61,7 @@ it.each([undefined, { sourceConceptId: 'original', parentVariantId: 'parent' }])
   const commitConcepts = async (updater, expected) => { rows = updater(rows); return { ...expected, committed: true } }
   const receipt = await importCheckedConceptResult({ blob: new NodeBlob(['png'], { type: 'image/png' }), job, destination: { ...destination, conceptId: 'new-target' }, sourceLineage, ownerScope, blobs, commitConcepts })
   expect(receipt.committed).toBe(true)
+  expect(rows[0].variants[0].imageUrl).toBe(receipt.imageKey)
   expect(rows[0].variants[0].sourceConceptId).toBe(sourceLineage?.sourceConceptId)
   expect(rows[0].variants[0].parentVariantId).toBe(sourceLineage?.parentVariantId)
   expect(rows[0].variants[0].generation.provenance).toBe('relay')

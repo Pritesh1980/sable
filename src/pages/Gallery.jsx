@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
+import { X } from 'lucide-react'
 import { takeSharedImage } from '../sw/shareTarget'
 import {
   DndContext,
@@ -29,8 +30,10 @@ import CompareView from '../components/CompareView'
 import TagPill from '../components/TagPill'
 import AddArtistForm from '../components/AddArtistForm'
 import ArtistTable from '../components/ArtistTable'
-import QuickAddArtist from '../components/QuickAddArtist'
+import AddArtistModal from '../components/AddArtistModal'
+import { useAuth } from '../context/useAuth'
 import { STYLE_TAGS, createArtist } from '../data/artists'
+import { withStagedImages } from '../data/imageStaging'
 
 function ArtistGrid({ items, sensors, onDragStart, onDragEnd, onDragCancel, onOpen, onSaveImages, editing, onLongPress }) {
   return (
@@ -42,47 +45,51 @@ function ArtistGrid({ items, sensors, onDragStart, onDragEnd, onDragCancel, onOp
       onDragCancel={onDragCancel}
     >
       <SortableContext items={items.map((a) => a.id)} strategy={rectSortingStrategy}>
-        {/* Top 3 — featured trio */}
-        {items.filter((a) => a.rank <= 3).length > 0 && (
-          <div className="grid grid-cols-3 gap-2 mb-2">
-            {items.filter((a) => a.rank <= 3).map((artist, i) => (
-              <SortableArtistCard
-                key={artist.id}
-                artist={artist}
-                onOpen={onOpen}
-                onSaveImages={onSaveImages}
-                featured={true}
-                index={i}
-                editing={editing}
-                onLongPress={onLongPress}
-              />
-            ))}
-          </div>
-        )}
-        {/* Remaining — responsive grid: 2 on mobile, up to 5 on a wide desktop */}
-        {items.filter((a) => a.rank > 3).length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
-            {items.filter((a) => a.rank > 3).map((artist, i) => (
-              <SortableArtistCard
-                key={artist.id}
-                artist={artist}
-                onOpen={onOpen}
-                onSaveImages={onSaveImages}
-                featured={false}
-                index={3 + i}
-                editing={editing}
-                onLongPress={onLongPress}
-              />
-            ))}
-          </div>
-        )}
+        <div className="grid grid-cols-2 gap-2 sm:block">
+          {/* Top 3 — featured trio */}
+          {items.filter((a) => a.rank <= 3).length > 0 && (
+            <div className="contents sm:grid sm:grid-cols-3 sm:gap-2 sm:mb-2">
+              {items.filter((a) => a.rank <= 3).map((artist, i) => (
+                <SortableArtistCard
+                  key={artist.id}
+                  artist={artist}
+                  onOpen={onOpen}
+                  onSaveImages={onSaveImages}
+                  featured={true}
+                  index={i}
+                  editing={editing}
+                  onLongPress={onLongPress}
+                />
+              ))}
+            </div>
+          )}
+          {/* Remaining — responsive grid: 2 on mobile, up to 5 on a wide desktop */}
+          {items.filter((a) => a.rank > 3).length > 0 && (
+            <div className="contents sm:grid sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 sm:gap-2">
+              {items.filter((a) => a.rank > 3).map((artist, i) => (
+                <SortableArtistCard
+                  key={artist.id}
+                  artist={artist}
+                  onOpen={onOpen}
+                  onSaveImages={onSaveImages}
+                  featured={false}
+                  index={3 + i}
+                  editing={editing}
+                  onLongPress={onLongPress}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </SortableContext>
     </DndContext>
   )
 }
 
 export default function Gallery({ artists, setArtists, mergedConventions = [] }) {
-  const [searchParams] = useSearchParams()
+  const { user } = useAuth() || {}
+  const [searchParams, setSearchParams] = useSearchParams()
+  const userId = user?.id
   const [activeTag, setActiveTag] = useState(null)
   const [selected, setSelected] = useState(null)
   const [viewMode, setViewMode] = useState('filmstrip')
@@ -111,6 +118,18 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
   // there is no file to collect, so it opens empty and ready for a paste.
   const [quickAdding, setQuickAdding] = useState(() => searchParams.get('shared') === '1')
   const [sharedFile, setSharedFile] = useState(null)
+  const [sharedFilePending, setSharedFilePending] = useState(() => searchParams.get('shared') === '1')
+  const [captureReceipt, setCaptureReceipt] = useState(null)
+  function closeCapture() {
+    setQuickAdding(false)
+    setSharedFile(null)
+    setSharedFilePending(false)
+    if (searchParams.has('shared')) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('shared')
+      setSearchParams(next, { replace: true })
+    }
+  }
 
   // Collecting the stash is destructive, and StrictMode runs this twice: the
   // first pass would delete the image, then its cleanup would discard the
@@ -123,7 +142,9 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
     let cancelled = false
     if (!consumeRef.current) consumeRef.current = takeSharedImage(import.meta.env.BASE_URL)
     consumeRef.current.then((file) => {
-      if (!cancelled && file) setSharedFile(file)
+      if (cancelled) return
+      if (file) setSharedFile(file)
+      setSharedFilePending(false)
     })
     return () => { cancelled = true }
   }, [searchParams])
@@ -242,7 +263,14 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
   function addArtist(draft) {
     const artist = createArtist(draft, artists)
     if (!artist) return
-    setArtists((prev) => [...prev, artist])
+    // Quick-add and the share target hand over the screenshot as an inline
+    // data URL, which the sync layer can't store. Stage it first (#115): by
+    // the time the artist is added the photo has a key and a copy on this
+    // device, so the first save stores { key } and a failed upload can't lose
+    // it. With no screenshot, or signed out, this adds at once, as before.
+    void withStagedImages(artist.images, { userId: user?.id, scope: 'artists', id: artist.id }, () => {
+      setArtists((prev) => (prev.some((a) => a.id === artist.id) ? prev : [...prev, artist]))
+    })
   }
 
   function updateArtist(id, patch) {
@@ -499,13 +527,22 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
       )}
 
       {quickAdding && (
-        <QuickAddArtist
+        <AddArtistModal
           artists={artists}
-          onAdd={addArtist}
-          onClose={() => { setQuickAdding(false); setSharedFile(null) }}
+          setArtists={setArtists}
+          userId={userId}
+          onClose={closeCapture}
+          onManage={() => changeManage(true)}
+          onSaved={setCaptureReceipt}
           initialFile={sharedFile}
+          initialFilePending={sharedFilePending}
         />
       )}
+
+      {captureReceipt && <p role="status" className="fixed bottom-24 left-4 right-4 sm:left-auto sm:max-w-md z-40 bg-v2-surface border border-v2-hairline px-3 flex items-center gap-3 font-v2-ui text-sm text-v2-cream">
+        <span className="min-w-0 break-words">{captureReceipt.kind === 'created' ? 'Artist saved' : `${captureReceipt.imageCount} ${captureReceipt.imageCount === 1 ? 'photo' : 'photos'} added to @${artists.find((a) => a.id === captureReceipt.artistId)?.handle || captureReceipt.artistId}`}</span>
+        <button type="button" aria-label="Dismiss save confirmation" title="Dismiss confirmation" className="shrink-0 w-11 h-11 flex items-center justify-center text-v2-muted" onClick={() => setCaptureReceipt(null)}><X size={18} /></button>
+      </p>}
 
       {ranking && (
         <RankingMode

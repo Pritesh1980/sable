@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import SimilarArtists from '../components/SimilarArtists'
 import { loadVectors, buildStyleIndex } from '../data/styleIndex'
+import { refIdentity } from '../data/imageRef'
 
 vi.mock('../data/styleIndex', () => ({
   loadVectors: vi.fn(async () => new Map()),
@@ -15,9 +16,9 @@ const artists = [
 ]
 
 const builtVectors = new Map([
-  ['/z1.jpg', [1, 0]],
-  ['/k1.jpg', [0.9, 0.1]],
-  ['/v1.jpg', [0, 1]],
+  [refIdentity('/z1.jpg'), [1, 0]],
+  [refIdentity('/k1.jpg'), [0.9, 0.1]],
+  [refIdentity('/v1.jpg'), [0, 1]],
 ])
 
 beforeEach(() => {

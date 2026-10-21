@@ -9,7 +9,7 @@
 
 Sable gathers the artists you've collected — off Instagram, out of the camera roll — into a gallery built for browsing, then learns your taste by *looking* at their work instead of making you label it. It installs to your phone, works offline, and your reference images never leave the device.
 
-![The Wall — Sable's home screen with the Top-5 dock and artist masonry](docs/images/wall.png)
+![The Wall — Sable's home screen with the Top-5 dock and artist masonry](docs/images/wall.jpg)
 
 - **One place, organised by artist.** Not two hundred saved posts — each artist's work, handle, styles and your own notes together on one card.
 - **Built for looking.** Four ways through the collection (filmstrip, compare, grid, style wall) plus the Wall home. Their work at full size, on black.
@@ -116,9 +116,9 @@ restore.
 
 ## Testing philosophy
 
-The project is built TDD-first: behaviour is specified in a failing test before implementation, and any change to seed data must keep the data-integrity tests green. The suite is 1964 Vitest tests across 188 files (`src/test/`), covering pure data modules directly and hooks/components via Testing Library. A contract test (`src/test/readmeClaims.test.js`) asserts the file count exactly and bounds the claimed test total against the statically visible case declarations, with headroom for generated `it.each` cases. Non-bundled files that Vitest can't import — like the hand-rolled service worker — follow a pure-module + contract-test pattern: the logic lives in importable modules (`src/sw/precache.js`, `src/sw/swStrategy.js`) with unit tests, plus contract tests (`src/test/precache.test.js`, `src/test/swStrategy.test.js`) that read `public/sw.js` as text and assert its key invariants. The local adapter and an in-memory mock share a contract test (`src/test/backendContract.test.js`), proving the seam without provider credentials; the suite is pinned to the offline local backend so it runs without secrets or network — in CI too.
+The project is built TDD-first: behaviour is specified in a failing test before implementation, and any change to seed data must keep the data-integrity tests green. The suite is 2367 Vitest tests across 233 files (`src/`), covering pure data modules directly and hooks/components via Testing Library. A contract test (`src/test/readmeClaims.test.js`) asserts the file count exactly and bounds the claimed test total against the statically visible case declarations, with headroom for generated `it.each` cases. Non-bundled files that Vitest can't import — like the hand-rolled service worker — follow a pure-module + contract-test pattern: the logic lives in importable modules (`src/sw/precache.js`, `src/sw/swStrategy.js`) with unit tests, plus contract tests (`src/test/precache.test.js`, `src/test/swStrategy.test.js`) that read `public/sw.js` as text and assert its key invariants. The local adapter and an in-memory mock share a contract test (`src/test/backendContract.test.js`), proving the seam without provider credentials; the suite is pinned to the offline local backend so it runs without secrets or network — in CI too.
 
-Alongside it, a Playwright suite (`e2e/`, `npm run test:e2e`) drives the built demo on an emulated iPhone. It covers what jsdom has no way to see: page width at 320–390px, real touch swipes and pinches, which overlay is actually on top, a fake camera, canvas and WebGL, and the downloaded STL parsed byte by byte. It also runs a second build under the `/sable/` sub-path the public demo is served from. It runs as its own CI job; see [docs/MAINTAINING.md](docs/MAINTAINING.md#browser-tests-e2e).
+Alongside it, a Playwright suite (`e2e/`, `npm run test:e2e`) drives the built demo on an emulated iPhone. It covers what jsdom has no way to see: page width at 320–414px, real touch swipes and pinches, which overlay is actually on top, a fake camera, canvas and WebGL, and the downloaded STL parsed byte by byte. It also runs a second build under the `/sable/` sub-path the public demo is served from. It runs as its own CI job; see [docs/MAINTAINING.md](docs/MAINTAINING.md#browser-tests-e2e).
 
 ## Useful Commands
 

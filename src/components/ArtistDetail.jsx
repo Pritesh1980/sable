@@ -1,13 +1,15 @@
 import { useState, useRef, useEffect } from 'react'
 import TagPill from './TagPill'
 import ArtistImage from './ArtistImage'
+import PhotoTile from './PhotoTile'
 import GeneratedArtworkNotice from './GeneratedArtworkNotice'
 import SimilarArtists from './SimilarArtists'
 import { STYLE_TAGS, DEFAULT_STUDIOS } from '../data/artists'
 import { uploadImages } from '../hooks/useImageUpload'
 import { useAuth } from '../context/useAuth'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
-import { imageSrc } from '../data/wall'
+import { refIdentity } from '../data/imageRef'
+import { useEscapeToClose } from '../hooks/useDialogFocus'
 
 export default function ArtistDetail({ artist, onClose, onSave, attendingConventions = [], allArtists = [], onSelectArtist }) {
   const [images, setImages] = useState(artist.images || [])
@@ -32,6 +34,8 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
   const identityRef = useRef({ id: artist.id, generation: artist.generation })
   const [uploading, setUploading] = useState(false)
   const [lightbox, setLightbox] = useState(null)
+  const closeLightbox = () => setLightbox(null)
+  const lightboxRef = useEscapeToClose(closeLightbox, lightbox !== null)
   const [currentIdx, setCurrentIdx] = useState(0)
   const fileRef = useRef()
   // The list as it stands right now, not as it was when a render began. An
@@ -81,15 +85,17 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
     }
   }
 
-  function removeImage(idx) {
+  // Positions are in the one list, offline photos included, so they keep their
+  // place relative to their neighbours.
+  function removeImage(pos) {
     if (!window.confirm('Remove this photo?')) return
-    saveImages(images.filter((_, i) => i !== idx))
+    saveImages(imagesRef.current.filter((_, i) => i !== pos))
   }
 
-  function setCover(idx) {
-    if (idx === 0) return
-    const reordered = [images[idx], ...images.filter((_, i) => i !== idx)]
-    saveImages(reordered)
+  function setCover(pos) {
+    if (pos === 0) return
+    const list = imagesRef.current
+    saveImages([list[pos], ...list.filter((_, i) => i !== pos)])
   }
 
   function toggleTag(tag) {
@@ -221,7 +227,7 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
                 Photos
                 {images.length > 0 && (
                   <span className="text-cream-muted/90 ml-2">
-                    {currentIdx + 1} / {images.length}
+                    {Math.min(currentIdx, images.length - 1) + 1} / {images.length}
                   </span>
                 )}
               </p>
@@ -260,47 +266,28 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
               ref={carouselRef}
               className="flex gap-3 overflow-x-auto snap-x snap-mandatory px-5 pb-3"
             >
-              {images.map((src, idx) => (
-                <div
-                  key={idx}
-                  className={`relative snap-center shrink-0 w-[88%] sm:w-[520px] aspect-[4/5] bg-ink-muted rounded-xs overflow-hidden cursor-pointer ${idx === 0 ? 'ring-1 ring-accent' : ''}`}
-                  onClick={() => setLightbox(idx)}
-                >
-                  <ArtistImage src={src} label={artist.name || `@${artist.handle}`} className="w-full h-full object-cover" monogramClassName="text-6xl" loading="lazy" />
-
-                  {idx === 0 && (
-                    <div className="absolute top-3 left-3 bg-accent/80 text-cream text-[0.6875rem] font-mono tracking-widest px-2 py-1 rounded-xs uppercase">
-                      Cover
-                    </div>
-                  )}
-
-                  <div className="absolute top-3 right-3 flex gap-1.5">
-                    {idx !== 0 && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setCover(idx) }}
-                        className="text-[0.6875rem] font-mono text-cream tracking-widest uppercase bg-ink-black/70 hover:bg-ink-black px-2.5 py-1 rounded-xs transition-colors backdrop-blur-xs"
-                      >
-                        Set cover
-                      </button>
-                    )}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); removeImage(idx) }}
-                      className="w-7 h-7 flex items-center justify-center text-accent text-xl leading-none bg-ink-black/70 hover:bg-ink-black rounded-xs transition-colors backdrop-blur-xs"
-                      title="Remove photo"
-                    >×</button>
-                  </div>
-                </div>
+              {images.map((image, pos) => (
+                <PhotoTile
+                  key={`${refIdentity(image) ?? 'photo'}:${pos}`}
+                  image={image}
+                  label={artist.name || `@${artist.handle}`}
+                  position={pos}
+                  isCover={pos === 0}
+                  onOpen={() => setLightbox(pos)}
+                  onSetCover={() => setCover(pos)}
+                  onRemove={() => removeImage(pos)}
+                />
               ))}
             </div>
 
             {/* Dot indicator */}
             {images.length > 1 && (
               <div className="flex justify-center gap-1.5 mt-2">
-                {images.map((_, idx) => (
+                {images.map((_, pos) => (
                   <span
-                    key={idx}
+                    key={pos}
                     className={`h-1 rounded-full transition-all ${
-                      idx === currentIdx ? 'w-4 bg-accent' : 'w-1 bg-cream-muted/30'
+                      pos === currentIdx ? 'w-4 bg-accent' : 'w-1 bg-cream-muted/30'
                     }`}
                   />
                 ))}
@@ -417,27 +404,33 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
       {/* Lightbox */}
       {lightbox !== null && (
         <div
+          ref={lightboxRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Image viewer"
           className="fixed inset-0 z-60 bg-ink-black flex items-center justify-center"
-          onClick={() => setLightbox(null)}
+          onClick={closeLightbox}
         >
           <ArtistImage
-            src={imageSrc(images[lightbox])}
+            src={images[lightbox]}
             loading="eager"
             sizes="100vw"
             label={artist.name || `@${artist.handle}`}
             className="max-w-full max-h-full object-contain"
             monogramClassName="text-8xl"
           />
-          <button className="absolute top-5 right-5 text-cream-muted text-2xl">×</button>
+          <button type="button" aria-label="Close" onClick={closeLightbox} className="absolute top-5 right-5 text-cream-muted text-2xl">×</button>
           <GeneratedArtworkNotice images={[images[lightbox]]} className="absolute top-5 left-4 bg-v2-ink/90 px-2 py-1" />
           {lightbox > 0 && (
             <button
+              aria-label="Previous image"
               onClick={(e) => { e.stopPropagation(); setLightbox(lightbox - 1) }}
               className="absolute left-4 top-1/2 -translate-y-1/2 text-cream-muted text-3xl px-2"
             >‹</button>
           )}
           {lightbox < images.length - 1 && (
             <button
+              aria-label="Next image"
               onClick={(e) => { e.stopPropagation(); setLightbox(lightbox + 1) }}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-cream-muted text-3xl px-2"
             >›</button>

@@ -46,6 +46,33 @@ it('returns a receipt only after the canonical record contains the requested key
   expect((await backend.store.list('concepts'))[0].variants[1].imageUrl).toBe(expected.imageKey)
 })
 
+it('rejects private checked work stopped during upload and recovers ordinary edits on remount', async () => {
+  const gate = deferred()
+  let block = false
+  let entered = false
+  const codec = {
+    toCanonical: (rows) => rows, toDisplay: async (rows) => rows,
+    ensureUploaded: async (rows) => {
+      if (block) { entered = true; await gate.promise }
+      return { value: rows, moved: 0 }
+    },
+  }
+  const h = renderHook(() => useStorage('tattoo_concepts', [], codec))
+  await waitFor(() => expect(h.result.current[0]).toHaveLength(1))
+  act(() => h.result.current[1]((rows) => rows.map((row) => ({ ...row, notes: 'Before unmount' }))))
+  block = true
+  let pending
+  act(() => { pending = h.result.current[2](add, expected).catch((error) => error) })
+  await waitFor(() => expect(entered).toBe(true))
+  h.unmount()
+  await act(async () => { gate.resolve(); expect(await pending).toMatchObject({ code: 'commit_conflict' }) })
+  expect((await backend.store.list('concepts'))[0].variants).toHaveLength(1)
+  block = false
+  const restored = renderHook(() => useStorage('tattoo_concepts', [], codec))
+  await waitFor(() => expect(restored.result.current[0][0].notes).toBe('Before unmount'))
+  await waitFor(async () => expect((await backend.store.list('concepts'))[0].notes).toBe('Before unmount'))
+})
+
 it('a stale ordinary flush preserves another tab paid variant and untouched notes/Best', async () => {
   const a = await mount(); const b = await mount()
   await commit(b)

@@ -65,7 +65,10 @@ describe('real-auth artist seed isolation', () => {
       const upsert = vi.spyOn(backend.store, 'upsert')
       const { result } = renderHook(() => useArtistStorage(), { wrapper })
       expect(result.current[0].map((a) => a.id)).toEqual(['zoia.ink'])
-      await waitFor(() => expect(upsert).toHaveBeenCalled())
+      // Current collection reconciliation does not rewrite an unchanged
+      // populated remote. A stamped snapshot proves the pull completed.
+      await waitFor(() => expect(result.current[0][0].updatedAt).toBeTruthy())
+      if (remote.length === 0) expect(upsert).toHaveBeenCalled()
       expect(result.current[0].map((a) => a.id)).toEqual(['zoia.ink'])
       expect(result.current[0][0].images).toEqual([])
       expect(JSON.parse(localStorage.getItem('tattoo_artists_meta'))).toHaveLength(1)

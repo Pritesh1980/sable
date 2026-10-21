@@ -9,6 +9,7 @@ vi.mock('../data/embedder', () => ({
 
 import { buildStyleIndex, loadVectors, vectorFor, clearStyleIndex } from '../data/styleIndex'
 import { getEmbedder } from '../data/embedder'
+import { refIdentity } from '../data/imageRef'
 
 const artists = [
   { id: 'a', images: ['/img/a1.jpg', '/img/a2.jpg'] },
@@ -26,8 +27,8 @@ describe('styleIndex', () => {
     await buildStyleIndex(artists, { onProgress: progress })
     const vectors = await loadVectors(artists)
     expect(vectors.size).toBe(3)
-    expect(vectors.get('/img/a1.jpg')).toEqual([1, 0])
-    expect(vectors.get('/img/b1.jpg')).toEqual([0, 1])
+    expect(vectors.get(refIdentity('/img/a1.jpg'))).toEqual([1, 0])
+    expect(vectors.get(refIdentity('/img/b1.jpg'))).toEqual([0, 1])
     expect(progress).toHaveBeenLastCalledWith({ done: 3, total: 3 })
   })
 
@@ -50,7 +51,7 @@ describe('styleIndex', () => {
     await buildStyleIndex(artists)
     const vectors = await loadVectors(artists)
     expect(vectors.size).toBe(2)
-    expect(vectors.has('/img/a2.jpg')).toBe(false)
+    expect(vectors.has(refIdentity('/img/a2.jpg'))).toBe(false)
   })
 })
 

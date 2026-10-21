@@ -36,6 +36,7 @@ test('public demo copies actual text, exports separate PNG bytes and imports an 
   await page.getByRole('button', { name: 'Import variation' }).click()
   await expect(page.getByText(/Variation imported with your provider attribution/)).toBeVisible()
   const rows = await page.evaluate(() => JSON.parse(localStorage.getItem('tattoo_concepts')))
+  expect(rows[0].variants[0].imageUrl).toMatch(/^user\/local-demo@example.com\/concepts\//)
   expect(rows[0].imageUrl).toBe(originalKey)
   expect(rows[0].variants[0].generation).toMatchObject({ provenance: 'user-import', provider: 'chatgpt' })
   expect(rows[0].variants[0].generation.jobId).toBeUndefined()

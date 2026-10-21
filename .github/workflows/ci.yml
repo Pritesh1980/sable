@@ -28,9 +28,9 @@ jobs:
           # SonarQube Cloud's new-code detection and blame need full history.
           fetch-depth: 0
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
-          node-version: 26
+          node-version-file: .nvmrc
           cache: npm
       - name: Install dependencies
         run: npm ci
@@ -73,9 +73,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v7
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
-          node-version: 26
+          node-version-file: .nvmrc
           cache: npm
       - name: Install dependencies
         run: npm ci
@@ -100,9 +100,9 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
-          node-version: 26
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium

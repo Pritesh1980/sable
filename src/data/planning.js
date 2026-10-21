@@ -1,5 +1,6 @@
 import { getCachedBlobUrl } from './blobUrls'
 import { resolveAssetPath } from './assetPath'
+import { itemIdentity } from './undoableRemoval'
 
 export const ARTIST_STATUSES = [
   { value: 'researching', label: 'Researching', tone: 'text-cream-muted' },
@@ -34,13 +35,19 @@ export function normalizeReferenceImages(images = []) {
   return images
     .map((image) => {
       if (typeof image === 'string') return { url: image, note: '' }
-      // Preserve a key alongside url/note so blob-backed entries survive a
-      // normalize round-trip.
-      const out = { url: image?.url || '', note: image?.note || '' }
-      if (image?.key) out.key = image.key
-      return out
+      if (image?.key) return { key: image.key, note: image.note || '' }
+      return { url: image?.url || '', note: image?.note || '' }
     })
-    .filter((image) => image.url || image.key)
+    .filter((image) => image.key || image.url)
+}
+
+// Sets the note on one reference photo, matched by identity (key first, #114) —
+// matching on `url` hit every photo whose url had not resolved yet.
+export function setImageNote(images, target, note) {
+  const id = itemIdentity(target)
+  return normalizeReferenceImages(images).map((image) => (
+    itemIdentity(image) === id ? { ...image, note } : image
+  ))
 }
 
 export function scoreArtistForIdea(artist, idea) {

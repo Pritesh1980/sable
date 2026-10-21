@@ -56,15 +56,15 @@ describe('getImageUrl with keys', () => {
   })
 })
 
-describe('normalizeReferenceImages preserves keys', () => {
-  it('keeps key alongside url/note and keeps key-only entries', () => {
+describe('normalizeReferenceImages keeps the stored shape', () => {
+  it('keeps a keyed photo as { key, note }, dropping any display url beside it', () => {
     const out = normalizeReferenceImages([
       'data:image/jpeg;base64,AAA',
       { url: 'data:x', note: 'a', key: 'k1' },
       { key: 'k2', note: 'b' },
     ])
     expect(out[0]).toEqual({ url: 'data:image/jpeg;base64,AAA', note: '' })
-    expect(out[1]).toEqual({ url: 'data:x', note: 'a', key: 'k1' })
-    expect(out[2]).toEqual({ url: '', note: 'b', key: 'k2' })
+    expect(out[1]).toEqual({ key: 'k1', note: 'a' })
+    expect(out[2]).toEqual({ key: 'k2', note: 'b' })
   })
 })

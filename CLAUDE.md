@@ -40,16 +40,46 @@ This is a personal app for one user (the owner). (A read-only share link for the
   `DEFAULT_ARTISTS`; other accounts start empty.
 - **Storage**: local-first-with-sync. localStorage (`tattoo_*` keys) + IndexedDB stay
   as an offline cache; changes mirror to the backend document store and reconcile by
-  last-write-wins on `updatedAt` (`src/backend/sync.js`, wired into `useStorage` /
-  `useArtistStorage`). Images are referenced by small canonical `{ key }` refs in
-  synced data with bytes in blob storage (`src/data/blobUrls.js`, `uploadImages`);
-  legacy IndexedDB/inline images migrate to blobs on first authed load. Idea and
+  last-write-wins on `updatedAt` (`src/backend/sync.js`). The protocol runs in one
+  framework-free engine, `src/sync/collectionStore.js` (#111), bound to React by
+  `useCollection` (`useSyncExternalStore`, stable setter); `useStorage` is a thin
+  wrapper over it, and so is `useArtistStorage` (#112): everything artist-specific
+  (owner seeding, tombstones) is the policy in `src/data/artistsPolicy.js`, passed to the
+  engine as hooks (`initial`, `merge`, `onEdit`). Its lifecycle
+  is load-bearing: creating a store only reads the cache (StrictMode runs lazy
+  initialisers twice), each `start(user)` opens an epoch so a stopped start's pull or
+  hydration is discarded, an edit writes the cache before `set` returns, a late
+  hydration never overwrites an edit or the pull, and an edit made while stopped is
+  parked (replayed on restart, dropped on a real unmount). Stores are per user: `AppShell` is
+  keyed by `user.id`, so never hand a running store a different user. Images are referenced by small canonical `{ key }` refs in
+  synced data with bytes in blob storage (`src/data/blobUrls.js`, `uploadImages`). The
+  old IndexedDB photo cache (`tattoo-images-v1`) and its #118 sweep are gone (#149, once
+  every device had run the sweep); only sign-out still deletes the cache and its ledger. Idea and
   concept images use the same key-based blob storage via per-collection codecs
-  (`src/data/imageCodec.js`) wired into `useStorage` — the in-memory value stays a
-  displayable URL (so consumers like STL export are unchanged) while only `{ key }`
-  is persisted/synced. Device-local and NOT synced: `tattoo_theme`, `tattoo_font`,
+  (`src/data/imageCodec.js`) wired into `useStorage`. **Idea, concept and variant state
+  holds the stored ref** (#117) — `{ key, note }` for an idea photo, a bare key string for
+  a concept's or variant's `imageUrl` — and resolves where it renders (`RefImage`,
+  `useImageSrc`, `useImageStatuses`); the codecs only warm the URL cache and move inline
+  photos stored before staging existed (`ensureUploaded` returns `{ value, moved }`). Put
+  the staged **key** into state, never a display URL, and give test fixtures `user/…` keys
+  (anything else is not a key to `refKey`). **A ref that can't be resolved (offline) is
+  kept, not dropped** (#101): "offline" is a render status, not a field; **artists hold the
+  stored refs themselves** (#116): `artist.images` is static paths, `{ key }` and
+  `{ url, addedAt }`, nothing is held aside, so there is no side list to reinsert and
+  `canonicalizeArtist` only strips inline data URLs. `initial()` paints the stored rows
+  directly (the owner's starter photos are unioned in by `applyDefaults`, tombstone-aware,
+  de-duplicated by identity); the artists' `codec.toDisplay` is the identity. `onEdit` normalises whatever a producer emitted into refs
+  (`normalizeArtistImages`). Never write a save path that persists only a resolved list
+  — a device that starts offline would delete its own photos from the server. The UI
+  renders one `PhotoTile` per ref (`src/components/PhotoTile.jsx`): ready is interactive,
+  `loading` is an empty `aria-busy` box (never the "Available when online" tile),
+  `unavailable` is the `OfflinePhoto` tile; a photo that is not ready cannot be opened or
+  edited. Never drop a superseded URL's reverse mapping in
+  `blobUrls.js` (#110): state can still hold it, and canonicalizing an unmapped URL
+  stores the expiring URL in place of its key. Every add path **stages** its image first (#115, `src/data/imageStaging.js`): bytes go to IndexedDB `tattoo-staged-images-v1` and an entry to the `tattoo_upload_outbox` + `tattoo_device_copies` localStorage lists *before* the key reaches state, so an offline or failed upload survives a reload and is retried on launch, on the `online` event and on every flush; `resolveBlobKey` reads the device copy first (kept after upload too, so an offline reload still shows the photo). Both stores are device-local and purged on sign-out. The first pull also reads dirty state / pending deletes
+  *after* `await store.list(...)`, not before. Device-local and NOT synced: `tattoo_theme`, `tattoo_font`,
   `openai_api_key`, `gemini_api_key`, the Taste Engine's embedding index
-  (IndexedDB `tattoo-style-index-v1` — derivable from images, keyed by model id,
+  (IndexedDB `tattoo-style-index-v2` — derivable from images, keyed by model id and photo identity,
   rebuilt per device), `tattoo_convention_lineups`, `tattoo_convention_winners`,
   and the winner-photo bytes (IndexedDB `tattoo-winner-photos-v1`). The two
   convention stores differ on sign-out: line-ups stay (a show's published
@@ -271,6 +301,14 @@ them. Keep messages terse and conventional (e.g. `feat(home): …`, `docs: …`)
 
 ---
 
+## Commands
+
+`npm run dev` (vite) · `npm run build` · `npm run preview` · `npm run lint` ·
+`npm test` · `npm run test:e2e` · `npm run docs:check` (mermaid validity) ·
+`npm run audit:targets` (touch-target audit). Node version: `.nvmrc`.
+
+---
+
 ## Testing
 
 **Use a TDD approach for all new code.** Write tests before writing the implementation.
@@ -289,10 +327,14 @@ them. Keep messages terse and conventional (e.g. `feat(home): …`, `docs: …`)
   `useArtistStorage`, then green), all passing isolated. Treat any single-file
   failure in a full run as suspect, not just the two named. Protocol: rerun the
   failing spec isolated; if green there and CI is green, it's environment, not
-  your change. CI is the arbiter. **But "environment" often means a test race that
+  your change. CI is the arbiter. `quickAddUpload.test.jsx` (Oct 2026) could not be
+  reproduced even with every core saturated, so its `findBy*`/`waitFor` calls got an
+  explicit 5s budget (`1f39b91`) instead of a root-cause fix; don't spend another
+  session trying to repro it. **But "environment" often means a test race that
   load exposes.** Two were root-caused in Sept 2026: `useArtistStorage` read images
-  straight after mount, but artists paint with `images: []` and hydrate from
-  IndexedDB afterwards, so assert on images inside `waitFor`. `a11yAffordances` hit
+  straight after mount, but artists painted with `images: []` and hydrated from
+  IndexedDB afterwards, so assert on images inside `waitFor` (since #116 artists paint
+  their stored refs at once). `a11yAffordances` hit
   the 5s timeout because its tag lookup was quadratic in file length. A recurring
   "flake" is worth a timing run (`npx vitest run --reporter=json`) before the next
   shrug.
@@ -307,6 +349,11 @@ them. Keep messages terse and conventional (e.g. `feat(home): …`, `docs: …`)
   overlay is on top, canvas/WebGL/camera, downloads, offline start, `basename`. Every run
   rebuilds. `E2E_REUSE=1` reuses whatever answers on :4179/:4180 instead, so rebuild
   first when you use it. How-to and gotchas: `docs/MAINTAINING.md#browser-tests-e2e`.
+- **Stacked overlays and Escape**: a layer that handles Escape calls `preventDefault()`
+  before closing, and any lower layer's key handler returns if `e.defaultPrevented ||
+  !isTopmostDialog(ref)` (`src/hooks/useDialogFocus.js`). jsdom's `fireEvent` doesn't let
+  React flush between listeners, so Vitest can't see this bug; `e2e/viewers.e2e.js` and
+  `src/test/escapeStacking.test.jsx` guard it.
 - **Live smoke test**: `e2e/smoke.live.js` + `playwright.live.config.js` hit the *deployed*
   Pages demo after each deploy and weekly (`live-smoke.yml`). This container's network
   policy may block `github.io`; point `LIVE_URL` at a local `/sable/` preview instead.
@@ -329,7 +376,16 @@ them. Keep messages terse and conventional (e.g. `feat(home): …`, `docs: …`)
   scanner can't see the cap. IDs come from `randomId()` (`src/data/randomId.js`), never a
   `Math.random` fallback. The bookmarklet's `javascript:`/eval finding is accepted on the
   dashboard, not fixed.
-- `.claude/` is gitignored in this repo: rules/settings placed there load locally but aren't version-controlled — put anything you want shared/checked-in into `CLAUDE.md` itself.
+- `.claude/` is gitignored in this repo except `.claude/settings.json` and
+  `.claude/hooks/session-start.sh`: other rules/settings placed there load locally but aren't
+  version-controlled — put anything else you want shared into `CLAUDE.md` itself.
+- **Node version**: `.nvmrc` is the single source (CI, Pages and live-smoke read it via
+  `node-version-file`). **Claude Code web sessions** run `.claude/hooks/session-start.sh`
+  first: it provisions that Node major if the container's is older (cached under
+  `~/.cache/sable-node`) and runs `npm ci` when `node_modules` doesn't match the lockfile.
+  Before it, web sessions ran Node 22 and `shareTarget.test.js` failed there only. The
+  Playwright browser still doesn't match the pinned `@playwright/test`; point a scratch config
+  at `/opt/pw-browsers/chromium-*/chrome-linux/chrome` via `launchOptions.executablePath`.
 
 ### What to test
 - **Pure functions** (data transforms, rank logic, defaults merging) — test these directly

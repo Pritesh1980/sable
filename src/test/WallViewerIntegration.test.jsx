@@ -50,8 +50,8 @@ function renderApp(props = {}) {
 
 function clickPiece(artistName) {
   // Scope to the masonry <main> so the RankRail dock (which also renders artist
-  // names) can't shadow the wall-piece <figure> we mean to click.
-  fireEvent.click(within(screen.getByRole('main')).getAllByText(artistName)[0].closest('figure'))
+  // names) can't shadow the wall piece we mean to click.
+  fireEvent.click(within(screen.getByRole('main')).getAllByRole('button', { name: `Open ${artistName}` })[0])
 }
 
 describe('Wall → WallViewer integration', () => {

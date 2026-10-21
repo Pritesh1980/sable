@@ -1,60 +1,13 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { createElement } from 'react'
-import { applyDefaults, mergeStaticImages, stripImages, useArtistStorage } from '../hooks/useArtistStorage'
+import { useArtistStorage } from '../hooks/useArtistStorage'
+import { applyDefaults } from '../data/artistsPolicy'
 import { AuthProvider } from '../context/AuthContext'
 import { useAuth } from '../context/useAuth'
 import { DEFAULT_ARTISTS } from '../data/artists'
 
 // ── Pure function tests ───────────────────────────────────────────────────────
-
-// Review finding (codex): seed paths went base-relative while legacy IndexedDB
-// caches still hold the root-absolute form. Comparing the raw strings treats
-// them as different images, so every curated image appears twice — and the
-// duplicate is then persisted.
-describe('mergeStaticImages', () => {
-  it('treats a legacy root-absolute path and its base-relative twin as one image', () => {
-    const merged = mergeStaticImages(
-      ['/images/artists/zoia.ink/1.jpg'],
-      ['images/artists/zoia.ink/1.jpg']
-    )
-    expect(merged).toEqual(['/images/artists/zoia.ink/1.jpg'])
-  })
-
-  it('still appends static images the cache does not have', () => {
-    const merged = mergeStaticImages(
-      ['/images/artists/zoia.ink/1.jpg'],
-      ['images/artists/zoia.ink/1.jpg', 'images/artists/zoia.ink/2.jpg']
-    )
-    expect(merged).toEqual([
-      '/images/artists/zoia.ink/1.jpg',
-      'images/artists/zoia.ink/2.jpg',
-    ])
-  })
-
-  it('leaves uploaded data-URLs in place', () => {
-    const merged = mergeStaticImages(['data:image/png;base64,AAA'], ['images/artists/a/1.jpg'])
-    expect(merged).toEqual(['data:image/png;base64,AAA', 'images/artists/a/1.jpg'])
-  })
-})
-
-describe('stripImages', () => {
-  it('removes images from every artist', () => {
-    const input = [
-      { id: 'a', handle: 'a', images: ['data:image/jpeg;base64,abc'], rank: 1 },
-      { id: 'b', handle: 'b', images: [], rank: 2 },
-    ]
-    const result = stripImages(input)
-    expect(result[0]).not.toHaveProperty('images')
-    expect(result[1]).not.toHaveProperty('images')
-  })
-
-  it('preserves all other fields', () => {
-    const input = [{ id: 'a', handle: 'foo', name: 'Foo', tags: ['blackwork'], images: [], rank: 1, studio: 'x' }]
-    const [out] = stripImages(input)
-    expect(out).toMatchObject({ id: 'a', handle: 'foo', name: 'Foo', tags: ['blackwork'], rank: 1, studio: 'x' })
-  })
-})
 
 describe('applyDefaults', () => {
   it('adds missing fields from DEFAULT_ARTISTS', () => {
@@ -132,10 +85,7 @@ describe('useArtistStorage', () => {
   const wrapper = ({ children }) =>
     createElement(AuthProvider, null, createElement(Gate, null, children))
 
-  // Resolves once the session is up and the hook has mounted — NOT once images
-  // have hydrated: every artist paints with `images: []` and the photos arrive
-  // from IndexedDB afterwards. Assert on images inside a waitFor; reading them
-  // straight after this was the spec's long-standing flake under load.
+  // Resolves once the session is up and the hook has mounted.
   async function renderOwned() {
     const { result } = renderHook(() => useArtistStorage(), { wrapper })
     await waitFor(() => expect(result.current).toBeTruthy())
@@ -157,7 +107,6 @@ describe('useArtistStorage', () => {
     const result = await renderOwned()
     expect(result.current[0].length).toBeGreaterThan(0)
 
-    // Wait for IndexedDB init
     await act(async () => {})
 
     await act(async () => {
@@ -167,34 +116,11 @@ describe('useArtistStorage', () => {
     })
 
     // Metadata may carry small canonical refs ({ key } / static paths) but never
-    // inline base64 data-URLs (those stay in IndexedDB until migrated to blobs).
+    // inline base64 data-URLs.
     const raw = localStorage.getItem('tattoo_artists_meta')
     expect(raw).not.toBeNull()
     expect(raw).not.toContain('data:image')
     expect(raw).not.toContain('base64')
-  })
-
-  // #28: dbPut/dbGetAll opened a fresh IndexedDB connection per call and never
-  // closed it, which can block a later `indexedDB.deleteDatabase` (purge) from
-  // ever completing.
-  it('closes its IndexedDB connections after a write (does not block deletion)', async () => {
-    const result = await renderOwned()
-    await act(async () => {})
-
-    await act(async () => {
-      result.current[1]((prev) =>
-        prev.map((a) => (a.id === DEFAULT_ARTISTS[0].id ? { ...a, images: ['data:image/jpeg;base64,closetest'] } : a))
-      )
-    })
-    await act(async () => {})
-
-    const req = indexedDB.deleteDatabase('tattoo-images-v1')
-    const blocked = await new Promise((resolve) => {
-      req.onsuccess = () => resolve(false)
-      req.onerror = () => resolve(false)
-      req.onblocked = () => resolve(true)
-    })
-    expect(blocked).toBe(false)
   })
 
   it('setArtists with a plain array works as well as a function', async () => {
@@ -211,96 +137,5 @@ describe('useArtistStorage', () => {
 
     const found = result.current[0].find((a) => a.id === DEFAULT_ARTISTS[0].id)
     expect(found.notes).toBe('test note')
-  })
-
-  it('migrates images from old tattoo_artists key to IndexedDB', async () => {
-    const oldData = DEFAULT_ARTISTS.map((a, i) =>
-      i === 0 ? { ...a, images: ['data:image/jpeg;base64,migratedimg'] } : { ...a, images: [] }
-    )
-    localStorage.setItem('tattoo_artists', JSON.stringify(oldData))
-
-    const result = await renderOwned()
-
-    // The old key goes first; the images hydrate after (see renderOwned).
-    await waitFor(() => {
-      expect(localStorage.getItem('tattoo_artists')).toBeNull()
-    })
-
-    // Migrated data-URL should appear first, followed by any static defaults
-    await waitFor(() => {
-      const hydrated = result.current[0].find((a) => a.id === DEFAULT_ARTISTS[0].id)
-      expect(hydrated.images[0]).toBe('data:image/jpeg;base64,migratedimg')
-    })
-    const migrated = result.current[0].find((a) => a.id === DEFAULT_ARTISTS[0].id)
-    // Static paths from DEFAULT_ARTISTS are merged in after the upload
-    const def = DEFAULT_ARTISTS.find((a) => a.id === DEFAULT_ARTISTS[0].id)
-    def.images.forEach((p) => expect(migrated.images).toContain(p))
-  })
-
-  // #55 review (agy): a migrated legacy image's { key } ref must actually be
-  // persisted to the offline cache (tattoo_artists_meta), not just held in
-  // React state for this one session — otherwise a reload after migration,
-  // with no other edit in between, could lose it.
-  it('a migrated legacy image survives a reload with no further edits', async () => {
-    // A data-URL unique to this test — reusing another test's fixture string
-    // would collide with blobUrls.js's registration map, which this describe
-    // block's beforeEach doesn't reset, making a stale registration from an
-    // earlier test look like "already migrated" here.
-    const dataUrl = 'data:image/jpeg;base64,migratedimgpersist'
-    const oldData = DEFAULT_ARTISTS.map((a, i) =>
-      i === 0 ? { ...a, images: [dataUrl] } : { ...a, images: [] }
-    )
-    localStorage.setItem('tattoo_artists', JSON.stringify(oldData))
-
-    await renderOwned()
-    await waitFor(() => expect(localStorage.getItem('tattoo_artists')).toBeNull())
-    await waitFor(() => {
-      const meta = JSON.parse(localStorage.getItem('tattoo_artists_meta'))
-      const migrated = meta.find((a) => a.id === DEFAULT_ARTISTS[0].id)
-      expect(migrated.images.some((img) => img && img.key)).toBe(true)
-    })
-
-    // A fresh mount ("reload") — no further edits happened in between.
-    const second = await renderOwned()
-    await waitFor(() => {
-      const migratedAgain = second.current[0].find((a) => a.id === DEFAULT_ARTISTS[0].id)
-      expect(migratedAgain.images[0]).toBe(dataUrl)
-    })
-  })
-
-  // #32 (react-hooks/exhaustive-deps flags the missing `user` on this effect's
-  // `[]` deps). Deliberately mount-once: it does legacy-key migration and an
-  // initial IndexedDB image load, and is safe to read `user` from because
-  // ProtectedRoute holds a spinner until the session resolves (see the comment
-  // above `useState(() => ...)` for `artists` in the hook). Naively satisfying
-  // the lint suggestion by adding `user` would re-run migration/load on every
-  // identity change — pinning the current, intended behaviour so a future
-  // "fix" of the warning doesn't silently do that.
-  //
-  // The direct-A-to-B-swap gap this still doesn't cover (no committed null
-  // in between, so the effect never even sees a fresh mount) is real and
-  // already tracked separately in #28 — not something this test asserts.
-  it('does not re-run the initial image-load effect on a user identity change with no intervening sign-out', async () => {
-    const getItemSpy = vi.spyOn(localStorage, 'getItem')
-
-    const { result } = renderHook(
-      () => ({ storage: useArtistStorage(), auth: useAuth() }),
-      { wrapper }
-    )
-    await waitFor(() => expect(result.current.storage).toBeTruthy())
-    await act(async () => {})
-
-    const callsBefore = getItemSpy.mock.calls.filter(([k]) => k === 'tattoo_artists').length
-    expect(callsBefore).toBe(1)
-
-    // A direct A -> B swap, same shape as backend.auth.signIn while already
-    // signed in: the local adapter sets a new session and emits, with no
-    // intervening null.
-    await act(async () => {
-      await result.current.auth.signIn({ email: 'a-different-user@example.com' })
-    })
-
-    const callsAfter = getItemSpy.mock.calls.filter(([k]) => k === 'tattoo_artists').length
-    expect(callsAfter).toBe(1)
   })
 })
