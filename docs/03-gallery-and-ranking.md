@@ -25,7 +25,8 @@ on the right.
 ![Filmstrip view](../public/guide/gallery-filmstrip.png)
 
 ### ⊞ Grid
-A visual grid with your top three featured large. Tapping anywhere on a card opens that
+A continuous two-column grid on phones, with names and handles wrapping inside
+each card. Wider screens retain a featured top-three row. Tapping anywhere on a card opens that
 artist — the whole tile is the target, with nothing else competing for it.
 
 To reorder or add photos, turn on **⇅ Reorder** (next to the view toggle). Each card

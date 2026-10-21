@@ -13,8 +13,16 @@ import {
   watchForDemoReseed,
 } from '../data/demoSeed'
 import { DEFAULT_ARTISTS, STYLE_TAGS } from '../data/artists'
+import { createLocalStore } from '../backend/local/localStore'
 
 describe('DEMO_ARTISTS data integrity', () => {
+  it('starts with the approved favourites in rank order', () => {
+    expect(DEMO_ARTISTS.map((artist) => artist.id)).toEqual([
+      'vesper_noctis', 'ashgrove.tattoo', 'hexen_atlas', 'lekhani.ink', 'mora.blackfern', 'ferrum_line',
+    ])
+    expect(DEMO_ARTISTS.map((artist) => artist.rank)).toEqual([1, 2, 3, 4, 5, 6])
+    expect(DEMO_SEED_VERSION).toBeGreaterThan(4)
+  })
   it('provides eighteen distinct photographic pieces across six coherent portfolios', () => {
     expect(DEMO_ARTISTS).toHaveLength(6)
     const images = DEMO_ARTISTS.flatMap((a) => a.images)
@@ -173,6 +181,21 @@ describe('seedDemoData', () => {
 
 describe('maybeSeedDemo', () => {
   beforeEach(() => localStorage.clear())
+
+  it('resets a returning demo including its namespaced remote without touching another account', async () => {
+    seedDemoData()
+    const store = createLocalStore()
+    await store.upsert('artistsMeta', [{ id: 'extra-demo-artist', rank: 7 }])
+    await store.upsert('ideas', [{ id: 'extra-demo-idea' }])
+    const otherKey = 'tattoo_remote_other-account_artistsMeta'
+    const otherData = JSON.stringify([{ id: 'keep-this-real-artist' }])
+    localStorage.setItem(otherKey, otherData)
+    localStorage.setItem('tattoo_demo_seed_version', '4')
+    expect(maybeSeedDemo({ search: '?demo=1' }, 'local')).toBe(true)
+    expect((await store.list('artistsMeta')).map((artist) => artist.id)).toEqual(DEMO_ARTISTS.map((artist) => artist.id))
+    expect((await store.list('ideas')).map((idea) => idea.id)).toEqual(DEMO_IDEAS.map((idea) => idea.id))
+    expect(localStorage.getItem(otherKey)).toBe(otherData)
+  })
 
   it('seeds when ?demo=1 and no session exists', () => {
     expect(maybeSeedDemo({ search: '?demo=1' }, 'local')).toBe(true)

@@ -38,7 +38,8 @@ export const DEMO_INTRO_KEY = 'tattoo_demo_intro_dismissed'
 // paths which resolveAssetPath still renders correctly, so this bump is about
 // converging stored data on the canonical form rather than fixing a break.
 // v4: realistic synthetic portfolios, new immutable image URLs and matching ideas.
-export const DEMO_SEED_VERSION = 4
+// v5: favourites-first order; reset the sample collections on returning demos.
+export const DEMO_SEED_VERSION = 5
 
 // Base-relative, deliberately. seedDemoData writes these straight into
 // localStorage, so prefixing BASE_URL here would freeze the build's base into
@@ -51,12 +52,12 @@ const demoImages = (id) => DEMO_ARTWORK.filter((piece) => piece.artistId === id)
 // Fictional artists only — invented names and handles, no resemblance to the
 // real artists in src/data/artists.js. Tags come from the canonical STYLE_TAGS.
 export const DEMO_ARTISTS = [
-  { id: 'mora.blackfern', handle: 'mora.blackfern', name: 'Mora Vane', tags: ['dark-illustrative', 'fine-line'], styleNote: 'Botanical fine-line — fern fronds, magnolia petals and meadow grasses with delicate black-and-grey shading.', images: demoImages('mora.blackfern'), rank: 1, status: 'shortlisted', notes: '', studio: null },
-  { id: 'vesper_noctis', handle: 'vesper_noctis', name: 'Vesper Ash', tags: ['surrealism', 'realism'], styleNote: 'Surreal black-and-grey — an ocean inside an hourglass, fractured marble and stairways into impossible spaces.', images: demoImages('vesper_noctis'), rank: 2, status: 'contact-next', notes: '', studio: null },
+  { id: 'vesper_noctis', handle: 'vesper_noctis', name: 'Vesper Ash', tags: ['surrealism', 'realism'], styleNote: 'Surreal black-and-grey — an ocean inside an hourglass, fractured marble and stairways into impossible spaces.', images: demoImages('vesper_noctis'), rank: 1, status: 'contact-next', notes: '', studio: null },
+  { id: 'ashgrove.tattoo', handle: 'ashgrove.tattoo', name: '', tags: ['realism'], styleNote: 'Colour photorealism — a vivid kingfisher, a tiger portrait and a luminous teal gemstone with convincing depth.', images: demoImages('ashgrove.tattoo'), rank: 2, status: 'researching', notes: '', studio: null },
   { id: 'hexen_atlas', handle: 'hexen_atlas', name: '', tags: ['dark-illustrative', 'realism'], styleNote: 'Japanese-inspired storytelling — samurai armour, koi and temple landscapes shaped around the body.', images: demoImages('hexen_atlas'), rank: 3, status: 'shortlisted', notes: '', studio: null },
-  { id: 'ferrum_line', handle: 'ferrum_line', name: '', tags: ['blackwork'], styleNote: 'Contemporary tribal-inspired blackwork — bold interlocking shapes and clean negative space following the calf, shoulder and forearm.', images: demoImages('ferrum_line'), rank: 4, status: 'researching', notes: '', studio: null },
-  { id: 'ashgrove.tattoo', handle: 'ashgrove.tattoo', name: '', tags: ['realism'], styleNote: 'Colour photorealism — a vivid kingfisher, a tiger portrait and a luminous teal gemstone with convincing depth.', images: demoImages('ashgrove.tattoo'), rank: 5, status: 'researching', notes: '', studio: null },
-  { id: 'lekhani.ink', handle: 'lekhani.ink', name: 'Asha Lekhani', tags: ['fine-line', 'blackwork'], styleNote: 'Sumi-e-inspired brushwork — Gujarati, Japanese and Latin lettering concepts alongside abstract ink. Generated lettering is not a language-verified tattoo stencil.', images: demoImages('lekhani.ink'), rank: 6, status: 'shortlisted', notes: '', studio: null },
+  { id: 'lekhani.ink', handle: 'lekhani.ink', name: 'Asha Lekhani', tags: ['fine-line', 'blackwork'], styleNote: 'Sumi-e-inspired brushwork — Gujarati, Japanese and Latin lettering concepts alongside abstract ink. Generated lettering is not a language-verified tattoo stencil.', images: demoImages('lekhani.ink'), rank: 4, status: 'shortlisted', notes: '', studio: null },
+  { id: 'mora.blackfern', handle: 'mora.blackfern', name: 'Mora Vane', tags: ['dark-illustrative', 'fine-line'], styleNote: 'Botanical fine-line — fern fronds, magnolia petals and meadow grasses with delicate black-and-grey shading.', images: demoImages('mora.blackfern'), rank: 5, status: 'shortlisted', notes: '', studio: null },
+  { id: 'ferrum_line', handle: 'ferrum_line', name: '', tags: ['blackwork'], styleNote: 'Contemporary tribal-inspired blackwork — bold interlocking shapes and clean negative space following the calf, shoulder and forearm.', images: demoImages('ferrum_line'), rank: 6, status: 'researching', notes: '', studio: null },
 ]
 
 export const DEMO_IDEAS = [
@@ -100,11 +101,17 @@ function write(storage, key, value) {
 // session + offline caches + the local backend's simulated remote rows.
 export function seedDemoData(storage = localStorage) {
   const at = nowStamp()
+  const artists = DEMO_ARTISTS.map((a) => ({ ...a, updatedAt: at }))
+  const ideas = DEMO_IDEAS.map((i) => ({ ...i, updatedAt: at }))
   write(storage, 'tattoo_local_session', DEMO_SESSION)
-  write(storage, 'tattoo_artists_meta', DEMO_ARTISTS.map((a) => ({ ...a, updatedAt: at })))
-  write(storage, 'tattoo_remote_artistsMeta', DEMO_ARTISTS.map((a) => ({ ...a, updatedAt: at })))
-  write(storage, 'tattoo_ideas', DEMO_IDEAS.map((i) => ({ ...i, updatedAt: at })))
-  write(storage, 'tattoo_remote_ideas', DEMO_IDEAS.map((i) => ({ ...i, updatedAt: at })))
+  write(storage, 'tattoo_artists_meta', artists)
+  write(storage, 'tattoo_remote_artistsMeta', artists)
+  write(storage, 'tattoo_ideas', ideas)
+  write(storage, 'tattoo_remote_ideas', ideas)
+  // Returning demos already have namespaced remote rows; reset those too so
+  // sync cannot resurrect an extra artist or a discarded demo edit.
+  write(storage, `tattoo_remote_${DEMO_SESSION.user.id}_artistsMeta`, artists)
+  write(storage, `tattoo_remote_${DEMO_SESSION.user.id}_ideas`, ideas)
   storage.setItem('tattoo_demo_seed_version', String(DEMO_SEED_VERSION))
 }
 

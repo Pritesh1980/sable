@@ -14,6 +14,11 @@ When you change UI under `src/pages/` or `src/components/`, update the matching 
 
 ## Regenerating screenshots
 
+For phone header and Grid updates, run `node scripts/captureLayoutGuide.mjs`
+against the isolated server below. It refreshes `wall-mobile.png`,
+`gallery-filmstrip.png`, `gallery-grid.png` and `help-overview.png` at 430 × 920,
+plus `wall.png` and `gallery-grid-desktop.png` at 1280 × 900.
+
 For capture-only updates, run `node scripts/captureIntakeGuide.mjs`
 against the isolated server below. This refreshes `artist-capture.png` (430 × 920),
 `settings.png` with the iPhone-only Shortcut setup copy, and `help-overview.png`.
@@ -60,7 +65,7 @@ with Reorder **off** — that is the view people arrive in.
 
    | Route | Files |
    |---|---|
-   | `/` | `wall.png` (desktop), `wall-viewer.png` (desktop, viewer open with HUD visible), `drawer.png` (desktop, ⋯ open) |
+   | `/` | `wall.png` (desktop), `wall-mobile.png` (phone), `wall-viewer.png` (desktop, viewer open with HUD visible), `drawer.png` (desktop, ⋯ open) |
    | `/pipeline` | `dashboard.png`, `dashboard-desktop.png` |
    | `/gallery` | `gallery-filmstrip.png`, `gallery-grid.png`, `gallery-grid-desktop.png`, `gallery-compare.png`, `gallery-stylewall.png`, `artist-detail.png`, `ranking-swipe.png` |
    | `/gallery?mode=manage` | `manage-list.png`, `manage-artist-expanded.png` |
@@ -157,7 +162,7 @@ Three projects: **iphone** (390×844, `isMobile`, touch; runs almost everything)
 
 | File | Guards |
 |---|---|
-| `layout` | No route or gallery view wider than the screen at 320/375/390px (#96) |
+| `layout` | No route or gallery view wider than the screen at 320/375/390/414px; Wall controls do not collide and phone Grid labels wrap within two columns |
 | `viewers` | Swipe/tap/close in both viewers; delete + undo; drawers paint above the viewer; Escape peels **one** layer |
 | `stl` | Real canvas → mesh → download for relief, line art (+ mask pixels) and lithophane; WebGL preview |
 | `tryon` | Gemini request shape (key in header, three parts); fake-camera drag + pinch; refused-camera photo fallback |

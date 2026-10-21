@@ -101,12 +101,12 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
         onClick={(e) => { e.stopPropagation(); onOpen(artist) }}
         className="absolute inset-0 z-0 w-full h-full appearance-none bg-transparent border-0 p-0 m-0 text-left rounded-xs focus:outline-hidden"
       />
-      <div className={`${featured ? 'aspect-[3/4]' : 'aspect-[4/5]'} bg-ink-muted relative overflow-hidden`}>
+      <div className={`${featured ? 'aspect-[4/5] sm:aspect-[3/4]' : 'aspect-[4/5]'} bg-ink-muted relative overflow-hidden`}>
         {hasImages ? (
           <ArtistImage
             src={artist.images[0]}
             label={displayName}
-            sizes={featured ? '(max-width: 640px) 50vw, 25vw' : '(max-width: 640px) 50vw, 33vw'}
+            sizes={featured ? '(max-width: 639px) 50vw, 33vw' : '(max-width: 639px) 50vw, (max-width: 1023px) 33vw, (max-width: 1279px) 25vw, 20vw'}
             draggable={false}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
           />
@@ -177,11 +177,11 @@ export default function ArtistCard({ artist, onOpen, onSaveImages, dragHandlePro
 
         {/* Gradient + name overlay */}
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink-black via-ink-black/60 to-transparent pt-10 pb-2.5 px-2.5">
-          <p className={`font-display text-cream leading-tight ${featured ? 'text-base' : 'text-sm'}`}>
+          <p className={`font-display text-cream leading-tight [overflow-wrap:anywhere] tracking-normal ${featured ? 'text-base' : 'text-sm'}`}>
             {artist.name || `@${artist.handle}`}
           </p>
           {artist.name && (
-            <p className="font-mono text-cream-muted/90 text-[0.8125rem] tracking-widest mt-0.5">
+            <p className="font-mono text-cream-muted/90 text-[0.8125rem] tracking-normal [overflow-wrap:anywhere] mt-0.5">
               @{artist.handle}
             </p>
           )}

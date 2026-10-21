@@ -45,40 +45,42 @@ function ArtistGrid({ items, sensors, onDragStart, onDragEnd, onDragCancel, onOp
       onDragCancel={onDragCancel}
     >
       <SortableContext items={items.map((a) => a.id)} strategy={rectSortingStrategy}>
-        {/* Top 3 — featured trio */}
-        {items.filter((a) => a.rank <= 3).length > 0 && (
-          <div className="grid grid-cols-3 gap-2 mb-2">
-            {items.filter((a) => a.rank <= 3).map((artist, i) => (
-              <SortableArtistCard
-                key={artist.id}
-                artist={artist}
-                onOpen={onOpen}
-                onSaveImages={onSaveImages}
-                featured={true}
-                index={i}
-                editing={editing}
-                onLongPress={onLongPress}
-              />
-            ))}
-          </div>
-        )}
-        {/* Remaining — responsive grid: 2 on mobile, up to 5 on a wide desktop */}
-        {items.filter((a) => a.rank > 3).length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
-            {items.filter((a) => a.rank > 3).map((artist, i) => (
-              <SortableArtistCard
-                key={artist.id}
-                artist={artist}
-                onOpen={onOpen}
-                onSaveImages={onSaveImages}
-                featured={false}
-                index={3 + i}
-                editing={editing}
-                onLongPress={onLongPress}
-              />
-            ))}
-          </div>
-        )}
+        <div className="grid grid-cols-2 gap-2 sm:block">
+          {/* Top 3 — featured trio */}
+          {items.filter((a) => a.rank <= 3).length > 0 && (
+            <div className="contents sm:grid sm:grid-cols-3 sm:gap-2 sm:mb-2">
+              {items.filter((a) => a.rank <= 3).map((artist, i) => (
+                <SortableArtistCard
+                  key={artist.id}
+                  artist={artist}
+                  onOpen={onOpen}
+                  onSaveImages={onSaveImages}
+                  featured={true}
+                  index={i}
+                  editing={editing}
+                  onLongPress={onLongPress}
+                />
+              ))}
+            </div>
+          )}
+          {/* Remaining — responsive grid: 2 on mobile, up to 5 on a wide desktop */}
+          {items.filter((a) => a.rank > 3).length > 0 && (
+            <div className="contents sm:grid sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 sm:gap-2">
+              {items.filter((a) => a.rank > 3).map((artist, i) => (
+                <SortableArtistCard
+                  key={artist.id}
+                  artist={artist}
+                  onOpen={onOpen}
+                  onSaveImages={onSaveImages}
+                  featured={false}
+                  index={3 + i}
+                  editing={editing}
+                  onLongPress={onLongPress}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </SortableContext>
     </DndContext>
   )

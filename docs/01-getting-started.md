@@ -21,6 +21,10 @@ Demo updates replace the sample artists and ideas, including edits made to those
 samples. They do not replace a real account's collection. Export anything you want
 to keep before relying on the demo for your own planning.
 
+The demo starts with Vesper, Ashgrove, Hexen, Asha, Mora, then Ferrum.
+The favourites-first update resets older demo artists and ideas to those samples,
+including removing extra demo artists. Real accounts are unchanged.
+
 The artwork is synthetic, not a real tattoo artist's portfolio. An **AI-generated
 imagery** label remains on the Wall, gallery, image viewer, ranking and image-bearing
 editors even after you dismiss the introduction. Lettering examples are concepts,
@@ -47,8 +51,9 @@ tiled edge to edge. No panels, no stats — the work itself is the interface.
   as a slim strip. **Drag the rank number** on any tile to reorder the five, or tap
   **Rank ⤢** to open the full ranking board (see
   [Gallery & ranking](03-gallery-and-ranking.md)).
-- The thin bar at the top holds everything else: the **Artists / Concepts** switch,
-  **+ Add artist**, and the **⋯** menu (the Drawer).
+- On phones, the header puts **Sable**, the **+** add-artist button and the **⋯**
+  Drawer menu on the first row, with **Artists / Concepts** on a second row.
+  Wider screens keep these controls in one row.
 - At the very bottom of the Wall, a quiet **Consider** shelf suggests artists matched
   to the styles you already collect. Open the Instagram profile to judge for yourself,
   then **+ Add** (the form comes pre-filled) or **Not for me** (never suggested again).
@@ -56,6 +61,8 @@ tiled edge to edge. No panels, no stats — the work itself is the interface.
   until you've looked at the profile. With a Gemini key saved, a **↻ Refresh** control
   in the shelf header re-runs AI discovery in one tap, skipping everyone you already
   have or have dismissed.
+
+![The Wall on a phone](../public/guide/wall-mobile.png)
 
 ## The full-screen viewer — one click in
 

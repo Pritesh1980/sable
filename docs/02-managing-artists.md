@@ -8,7 +8,7 @@
 
 ## Add an artist — the quick way
 
-Tap **+ Add artist** on the Wall or **+ Add** on the Artists page. Both open the
+Tap **+** in the phone Wall header (**+ Add artist** on wider screens), or **+ Add** on the Artists page. Both open the
 same capture form.
 
 ![The compact artist capture form](../public/guide/artist-capture.png)
