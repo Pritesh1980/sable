@@ -10,7 +10,8 @@ async function capture(page) {
 }
 async function savedRow(page, handle) {
   return page.evaluate((handle) => {
-    const key = Object.keys(localStorage).find((key) => key.startsWith('tattoo_remote_') && key.endsWith('_artistsMeta'))
+    const session = JSON.parse(localStorage.getItem('tattoo_local_session'))
+    const key = `tattoo_remote_${session.user.id}_artistsMeta`
     return JSON.parse(localStorage.getItem(key) || '[]').find((a) => a.handle === handle)
   }, handle)
 }

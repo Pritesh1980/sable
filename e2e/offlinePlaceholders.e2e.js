@@ -11,12 +11,14 @@ test('an artist photo that cannot load keeps its place as a tile', async ({ page
   await expect.poll(() => page.evaluate(() => localStorage.getItem('tattoo_local_session'))).not.toBeNull()
   // Edit the stored artists from a same-origin page with no app running, so
   // the demo page's own sync can't write over the edit. Both the offline cache
-  // and the local backend's remote copy get the photo; the remote key is
-  // namespaced per user, so match it rather than hard-coding it.
+  // and the signed-in user's active remote copy get the photo. Ignore the
+  // legacy seed snapshot and any other user's namespace.
   await page.goto('/manifest.json')
   const patched = await page.evaluate((key) => {
     localStorage.setItem('tattoo_demo_intro_dismissed', '1')
-    const stores = Object.keys(localStorage).filter((k) => k === 'tattoo_artists_meta' || /^tattoo_remote_.*artistsMeta$/.test(k))
+    const session = JSON.parse(localStorage.getItem('tattoo_local_session'))
+    const stores = ['tattoo_artists_meta', `tattoo_remote_${session.user.id}_artistsMeta`]
+      .filter((store) => localStorage.getItem(store) !== null)
     for (const store of stores) {
       const rows = JSON.parse(localStorage.getItem(store))
       const vesper = rows.find((a) => a.id === 'vesper_noctis')

@@ -156,6 +156,13 @@ Every test starts from the fictional `?demo=1` data (`openDemo` in `e2e/fixtures
 fails on any uncaught page error, and never touches a real key or Google: the one
 Gemini call is intercepted with `page.route`.
 
+Storage fixtures must select the active user's remote key from
+`tattoo_local_session.user.id`, for example
+`tattoo_remote_<user-id>_artistsMeta`. The demo reset also keeps the legacy
+`tattoo_remote_artistsMeta` seed snapshot; it is not the active store. Do not
+select the first matching key or patch every matching namespace. Persistence
+checks must read the active remote store and still verify the saved photo after reload.
+
 Three projects: **iphone** (390×844, `isMobile`, touch; runs almost everything),
 **desktop** (`*.desktop.e2e.js`: hover and keyboard) and **iphone-subpath**
 (`*.subpath.e2e.js`). What each file guards:
