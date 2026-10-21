@@ -10,7 +10,8 @@ import { DEFAULT_ARTISTS } from '../data/artists'
 import { clearBlobUrls, keyForUrl, registerBlobUrl, resolveBlobKey } from '../data/blobUrls'
 import { backend } from '../backend'
 
-// #110. Four ways real photo data could be damaged on the Supabase backend.
+// #110. Ways real photo data could be damaged on the Supabase backend. Bug 4 (the
+// legacy migration uploading data-URL text) went with the migration itself (#149).
 
 const KEY = 'user/u1/artists/zoia/own-photo.jpg'
 const STAMP = '2026-09-01T10:00:00.000Z'
@@ -25,13 +26,12 @@ const wrapper = ({ children }) => createElement(AuthProvider, null, createElemen
 const cachedRow = (id) => JSON.parse(localStorage.getItem('tattoo_artists_meta')).find((a) => a.id === id)
 const stateRow = (result, id) => result.current[0].find((a) => a.id === id)
 
-function seedReturningUser({ migrated = true } = {}) {
+function seedReturningUser() {
   const rows = DEFAULT_ARTISTS.map((a) => ({ ...a, images: [], notes: '', updatedAt: STAMP }))
   rows[0].images = [{ key: KEY }]
   localStorage.setItem('tattoo_local_session', JSON.stringify({ user: { id: 'u1', email: 'owner@example.com' } }))
   localStorage.setItem('tattoo_artists_meta', JSON.stringify(rows))
   localStorage.setItem('tattoo_remote_artistsMeta', JSON.stringify(rows))
-  if (migrated) localStorage.setItem('tattoo_img_migrated_v1', '1')
 }
 
 function deleteDb(name) {
@@ -41,25 +41,9 @@ function deleteDb(name) {
   })
 }
 
-function idbPut(name, store, key, value) {
-  return new Promise((res, rej) => {
-    const req = indexedDB.open(name, 1)
-    req.onupgradeneeded = (e) => e.target.result.createObjectStore(store)
-    req.onsuccess = (e) => {
-      const db = e.target.result
-      const tx = db.transaction(store, 'readwrite')
-      tx.objectStore(store).put(value, key)
-      tx.oncomplete = () => { db.close(); res() }
-      tx.onerror = () => rej(tx.error)
-    }
-    req.onerror = () => rej(req.error)
-  })
-}
-
 beforeEach(async () => {
   localStorage.clear()
   clearBlobUrls()
-  await deleteDb('tattoo-images-v1')
   await deleteDb('tattoo-blobs-v1')
   vi.spyOn(console, 'error').mockImplementation(() => {})
 })
@@ -149,20 +133,5 @@ describe('inline screenshots get a key (#110, bug 2)', () => {
       const remote = (await backend.store.list('artistsMeta')).find((r) => r.id === 'new.artist')
       expect(remote?.images).toEqual([{ key: expect.stringMatching(/^user\/u1\/artists\/new\.artist\//) }])
     }, { timeout: 3000 })
-  })
-})
-
-describe('the legacy image migration uploads image bytes (#110, bug 4)', () => {
-  it('sends a JPEG Blob, not the data-URL text', async () => {
-    seedReturningUser({ migrated: false })
-    await idbPut('tattoo-images-v1', 'artist-images', secondId, ['data:image/jpeg;base64,bGVnYWN5'])
-    const upload = vi.spyOn(backend.blobs, 'upload')
-
-    renderHook(() => useArtistStorage(), { wrapper })
-
-    await waitFor(() => expect(upload).toHaveBeenCalled())
-    const body = upload.mock.calls[0][2]
-    expect(body).toBeInstanceOf(Blob)
-    expect(body.type).toBe('image/jpeg')
   })
 })

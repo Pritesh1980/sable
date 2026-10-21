@@ -56,18 +56,6 @@ function deleteDb(name) {
   })
 }
 
-function displayCache(id) {
-  return new Promise((resolve) => {
-    const req = indexedDB.open('tattoo-images-v1', 1)
-    req.onupgradeneeded = (e) => e.target.result.createObjectStore('artist-images')
-    req.onsuccess = (e) => {
-      const db = e.target.result
-      const get = db.transaction('artist-images', 'readonly').objectStore('artist-images').get(id)
-      get.onsuccess = () => { db.close(); resolve(get.result) }
-    }
-  })
-}
-
 async function mount() {
   const view = renderHook(() => useArtistStorage(), { wrapper })
   await waitFor(() => expect(view.result.current?.[0]).toHaveLength(1))
@@ -88,7 +76,6 @@ beforeEach(async () => {
   clearBlobUrls()
   await deleteDb(STAGED_IMAGES_DB)
   await deleteDb('tattoo-blobs-v1')
-  await deleteDb('tattoo-images-v1')
   vi.spyOn(console, 'error').mockImplementation(() => {})
 })
 afterEach(() => vi.restoreAllMocks())
@@ -208,17 +195,14 @@ describe('after the upload lands on a signed-URL backend', () => {
     const first = await mount()
     const key = await addPhoto(first, shape)
     await waitFor(() => expect(readOutbox()).toEqual([])) // uploaded; the device copy stays for offline display
-    // The legacy display cache is never written (#118); the device copy is
-    // what shows the photo offline.
-    expect(await displayCache('a1')).toBeUndefined()
     first.unmount()
 
     clearBlobUrls()
     const second = await mount()
 
     // Shown once, from the key's device copy (offline-safe) rather than the
-    // signed URL, and never also as a legacy data-URL entry beside it.
-    await new Promise((resolve) => setTimeout(resolve, 50)) // past the legacy overlay's hydration
+    // signed URL, and never also as a data-URL entry beside it.
+    await new Promise((resolve) => setTimeout(resolve, 50)) // past hydration and the first pull
     expect(stateRow(second).images).toHaveLength(1)
     expect(stateRow(second).images[0].key).toBe(key)
     expect(await resolveImage(stateRow(second).images[0])).toBe(PHOTO)

@@ -4,7 +4,6 @@ import { AuthProvider } from '../context/AuthContext'
 import { useAuth } from '../context/useAuth'
 import { useArtistStorage } from '../hooks/useArtistStorage'
 import { backend } from '../backend'
-import { dbPut } from '../data/legacyArtistImages'
 import { writeRowGenerations, hasDirtyRows, readRowGenerations } from '../backend/dirty'
 
 const wrapper = ({ children }) => <AuthProvider>{children}</AuthProvider>
@@ -222,33 +221,6 @@ describe('useArtistStorage dirty-state handling', () => {
 
     // The other tab's tracked generation for 'y' must survive untouched.
     expect(readRowGenerations('tattoo_artists_meta').y).toBe('g-tabB')
-  })
-
-  it('the legacy sweep push restamps the artist it gave a photo, and only that one (#118)', async () => {
-    seedSession()
-    const rows = [
-      remoteArtist('x', { updatedAt: '2026-06-05T00:00:00Z' }),
-      remoteArtist('y', { updatedAt: '2026-06-05T00:00:00Z' }),
-    ]
-    await backend.store.upsert('artistsMeta', rows)
-    localStorage.setItem('tattoo_artists_meta', JSON.stringify(rows))
-    await dbPut('y', ['data:image/png;base64,TEVHQUNZ'])
-    const { result } = renderSynced()
-    await waitFor(() => expect(result.current.store[0]).toHaveLength(2))
-
-    await waitFor(async () => {
-      const remote = await backend.store.list('artistsMeta')
-      const y = remote.find((r) => r.id === 'y')
-      expect(y?.images?.some((img) => img?.key)).toBe(true)
-      expect(y.updatedAt).not.toBe('2026-06-05T00:00:00Z')
-      // Nothing about x changed on this device, so its stamp must survive the
-      // push — restamping would outrank genuine cross-device edits.
-      expect(remote.find((r) => r.id === 'x')?.updatedAt).toBe('2026-06-05T00:00:00Z')
-    }, { timeout: 3000 })
-    await new Promise((resolve) => {
-      const req = indexedDB.deleteDatabase('tattoo-images-v1')
-      req.onsuccess = req.onerror = req.onblocked = () => resolve()
-    })
   })
 
   it('owner seeding persists the stamps it pushes to the remote', async () => {

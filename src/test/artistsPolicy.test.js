@@ -1,13 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createArtistsPolicy, applyDefaults, canonicalizeArtist } from '../data/artistsPolicy'
-import { dbGetAll } from '../data/legacyArtistImages'
-import { ledgerEntry, readLedger } from '../data/legacyPhotoSweep'
 import { DEFAULT_ARTISTS } from '../data/artists'
 
 // The artist-specific hooks the collection engine calls (#112), pinned one at a
 // time so a regression names the rule it broke: owner seeding (#25), image
-// tombstones (#55), the empty-remote seed push, and the selectively stamped
-// push after the legacy image migration.
+// tombstones (#55) and the empty-remote seed push.
 
 const OWNER = { id: 'o', email: 'owner@example.com' }
 const OLD = '2020-01-01T00:00:00.000Z'
@@ -125,56 +122,14 @@ describe('merge', () => {
     })
   })
 
-  describe('after the legacy photo sweep (#118)', () => {
-    const prep = { sweptRefs: [{ artistId: 'a', key: 'user/u/artists/a/1.jpg' }] }
-
-    it('puts the uploaded photo ahead of the artist’s other photos', () => {
-      const { value } = policy.merge({
-        local: [{ id: 'a', images: ['images/x.jpg'], updatedAt: OLD }],
-        remote: [],
-        prep,
-        ctx: ctxOther,
-      })
-      expect(value[0].images).toEqual([{ key: 'user/u/artists/a/1.jpg' }, 'images/x.jpg'])
+  // The legacy photo sweep's second, restamping push went with the sweep (#149).
+  it('never asks for a push after the value is published', () => {
+    const merged = policy.merge({
+      local: [{ id: 'a', images: [], updatedAt: OLD }],
+      remote: [{ id: 'z', updatedAt: OLD }],
+      ctx: ctxOther,
     })
-
-    it('keeps one copy of an uploaded photo the artist already holds, in the uploaded position', () => {
-      const key = 'user/u/artists/a/1.jpg'
-      const { value } = policy.merge({
-        local: [{ id: 'a', images: ['images/x.jpg', { key }], updatedAt: OLD }],
-        remote: [],
-        prep,
-        ctx: ctxOther,
-      })
-      expect(value[0].images).toEqual([{ key }, 'images/x.jpg'])
-    })
-
-    it('asks for a second push that restamps only artists whose canonical images changed', () => {
-      // a gained the swept photo; b and z did not.
-      const merged = policy.merge({
-        local: [
-          { id: 'a', images: [], updatedAt: OLD },
-          { id: 'b', images: [], updatedAt: OLD },
-        ],
-        remote: [{ id: 'z', updatedAt: OLD }],
-        prep,
-        ctx: ctxOther,
-      })
-      const rows = merged.pushDisplay(merged.value)
-      expect(rows.find((r) => r.id === 'a').updatedAt).not.toBe(OLD)
-      expect(rows.find((r) => r.id === 'b').updatedAt).toBe(OLD)
-      expect(rows.find((r) => r.id === 'z').updatedAt).toBe(OLD)
-    })
-
-    it('asks for no second push when nothing was swept', () => {
-      const merged = policy.merge({
-        local: [{ id: 'a', updatedAt: OLD }],
-        remote: [{ id: 'z', updatedAt: OLD }],
-        prep: { sweptRefs: [] },
-        ctx: ctxOther,
-      })
-      expect(merged.pushDisplay).toBeUndefined()
-    })
+    expect(merged.pushDisplay).toBeUndefined()
   })
 })
 
@@ -196,21 +151,5 @@ describe('applyDefaults', () => {
     const out = applyDefaults([{ id: 'mine', rank: 99 }])
     expect(out[0].id).toBe('mine')
     expect(out[1].rank).toBe(100)
-  })
-})
-
-describe('onEdit and the legacy cache (#118)', () => {
-  it('never writes the legacy IndexedDB cache', async () => {
-    const prev = [{ id: 'cache-me', images: [], updatedAt: OLD }]
-    policy.onEdit(prev, [{ ...prev[0], images: ['images/q.jpg'] }], LATER)
-    await new Promise((resolve) => setTimeout(resolve, 20))
-    expect((await dbGetAll())['cache-me']).toBeUndefined()
-  })
-
-  it('records an inline legacy photo the user deleted, so it is not shown or swept again', () => {
-    const legacy = 'data:image/png;base64,TEVHQUNZ'
-    const prev = [{ id: 'a', images: [legacy, 'images/q.jpg'], updatedAt: OLD }]
-    policy.onEdit(prev, [{ ...prev[0], images: ['images/q.jpg'] }], LATER)
-    expect(ledgerEntry(readLedger(), 'a', legacy)).toEqual({ removed: true })
   })
 })

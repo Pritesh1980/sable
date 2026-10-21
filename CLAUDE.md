@@ -44,21 +44,17 @@ This is a personal app for one user (the owner). (A read-only share link for the
   framework-free engine, `src/sync/collectionStore.js` (#111), bound to React by
   `useCollection` (`useSyncExternalStore`, stable setter); `useStorage` is a thin
   wrapper over it, and so is `useArtistStorage` (#112): everything artist-specific
-  (owner seeding, tombstones, the legacy photo cache and its migration) is the policy in
-  `src/data/artistsPolicy.js` / `legacyArtistImages.js`, passed to the engine as hooks
-  (`initial`, `onMount`, `beforeFirstPull`, `merge`, `onEdit`). Its lifecycle
+  (owner seeding, tombstones) is the policy in `src/data/artistsPolicy.js`, passed to the
+  engine as hooks (`initial`, `merge`, `onEdit`). Its lifecycle
   is load-bearing: creating a store only reads the cache (StrictMode runs lazy
   initialisers twice), each `start(user)` opens an epoch so a stopped start's pull or
   hydration is discarded, an edit writes the cache before `set` returns, a late
   hydration never overwrites an edit or the pull, and an edit made while stopped is
   parked (replayed on restart, dropped on a real unmount). Stores are per user: `AppShell` is
   keyed by `user.id`, so never hand a running store a different user. Images are referenced by small canonical `{ key }` refs in
-  synced data with bytes in blob storage (`src/data/blobUrls.js`, `uploadImages`);
-  legacy IndexedDB/inline images are swept into blobs at every signed-in launch (#118):
-  nothing writes the old `tattoo-images-v1` cache any more, and `src/data/legacyPhotoSweep.js`
-  stages what is left in it, tracked by a device-local ledger (`tattoo_legacy_sweep_v1`,
-  purged on sign-out) keyed by the photo's bytes, so it never uploads a photo twice and a
-  deleted one stays deleted. Idea and
+  synced data with bytes in blob storage (`src/data/blobUrls.js`, `uploadImages`). The
+  old IndexedDB photo cache (`tattoo-images-v1`) and its #118 sweep are gone (#149, once
+  every device had run the sweep); only sign-out still deletes the cache and its ledger. Idea and
   concept images use the same key-based blob storage via per-collection codecs
   (`src/data/imageCodec.js`) wired into `useStorage`. **Idea, concept and variant state
   holds the stored ref** (#117) — `{ key, note }` for an idea photo, a bare key string for
@@ -72,9 +68,7 @@ This is a personal app for one user (the owner). (A read-only share link for the
   `{ url, addedAt }`, nothing is held aside, so there is no side list to reinsert and
   `canonicalizeArtist` only strips inline data URLs. `initial()` paints the stored rows
   directly (the owner's starter photos are unioned in by `applyDefaults`, tombstone-aware,
-  de-duplicated by identity). `codec.toDisplay` does one display-only thing: the
-  legacy-cache overlay of IndexedDB data URLs the sweep has not decided on yet
-  (`withLegacyLocalPhotos`). `onEdit` normalises whatever a producer emitted into refs
+  de-duplicated by identity); the artists' `codec.toDisplay` is the identity. `onEdit` normalises whatever a producer emitted into refs
   (`normalizeArtistImages`). Never write a save path that persists only a resolved list
   — a device that starts offline would delete its own photos from the server. The UI
   renders one `PhotoTile` per ref (`src/components/PhotoTile.jsx`): ready is interactive,
@@ -320,8 +314,7 @@ them. Keep messages terse and conventional (e.g. `feat(home): …`, `docs: …`)
   load exposes.** Two were root-caused in Sept 2026: `useArtistStorage` read images
   straight after mount, but artists painted with `images: []` and hydrated from
   IndexedDB afterwards, so assert on images inside `waitFor` (since #116 artists paint
-  their stored refs at once, but the legacy-cache overlay still lands asynchronously, so the
-  `waitFor` stays). `a11yAffordances` hit
+  their stored refs at once). `a11yAffordances` hit
   the 5s timeout because its tag lookup was quadratic in file length. A recurring
   "flake" is worth a timing run (`npx vitest run --reporter=json`) before the next
   shrug.

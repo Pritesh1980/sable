@@ -1,6 +1,5 @@
 import { clearBlobUrls } from '../data/blobUrls'
 import { DEVICE_COPIES_KEY, STAGED_IMAGES_DB, UPLOAD_OUTBOX_KEY } from '../data/stagedImageStore'
-import { SWEEP_LEDGER_KEY } from '../data/legacyPhotoSweep'
 import { purgeDirtySidecars } from './dirty'
 import { SHARE_CACHE } from '../sw/shareTarget'
 
@@ -20,10 +19,10 @@ const PURGE_KEYS = [
   // board carries photos the user took of the winning pieces, so it leaves with
   // them.
   'tattoo_convention_winners',
-  // The retired one-time migration flag, still cleared on devices that set it,
-  // and the legacy photo sweep's ledger that replaced it (#118).
+  // Retired with the legacy photo cache (#149), still cleared on devices that
+  // set them: the one-time migration flag and the sweep's ledger (#118).
   'tattoo_img_migrated_v1',
-  SWEEP_LEDGER_KEY,
+  'tattoo_legacy_sweep_v1',
   // Photos still waiting to upload (#115): the queue here, the bytes in
   // STAGED_IMAGES_DB below. Unsynced, like the dirty sidecars, so they go too.
   UPLOAD_OUTBOX_KEY,
@@ -66,9 +65,9 @@ export async function purgeLocalUserData() {
     console.error('[tattoo] purge localStorage failed:', e)
   }
   clearBlobUrls()
-  // Display image cache only — the simulated remote (tattoo-blobs-v1) stays;
-  // its blob keys are already per-user-namespaced (user/<userId>/...) so it
-  // doesn't leak between accounts the way an unnamespaced cache would.
+  // The retired legacy photo cache (#149), for a device that still has one. The
+  // simulated remote (tattoo-blobs-v1) stays; its blob keys are already
+  // per-user-namespaced (user/<userId>/...) so it doesn't leak between accounts.
   await deleteDatabaseAsync('tattoo-images-v1')
   await deleteDatabaseAsync(STAGED_IMAGES_DB)
   // An uncollected shared screenshot is this user's content sitting in an

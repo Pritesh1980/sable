@@ -6,15 +6,10 @@ import { AuthProvider } from '../context/AuthContext'
 import { useAuth } from '../context/useAuth'
 import { DEFAULT_ARTISTS } from '../data/artists'
 import { clearBlobUrls, registerBlobUrl } from '../data/blobUrls'
-import { dbPut } from '../data/legacyArtistImages'
-import { createArtistsPolicy } from '../data/artistsPolicy'
 import { backend } from '../backend'
-import { resolveImage } from '../data/imageResolver'
-import { fingerprint } from '../data/legacyPhotoSweep'
 
 // #116: artist state holds the stored refs themselves. Display resolution is
-// per tile (useImageSrc); the only display-only addition left is the legacy-cache
-// IndexedDB overlay.
+// per tile (useImageSrc).
 
 const KEY = 'user/u1/artists/zoia/own-photo.jpg'
 const STAMP = '2026-09-01T10:00:00.000Z'
@@ -35,7 +30,6 @@ function seedReturningUser({ ownPhoto = true } = {}) {
   localStorage.setItem('tattoo_local_session', JSON.stringify({ user: { id: 'u1', email: 'owner@example.com' } }))
   localStorage.setItem('tattoo_artists_meta', JSON.stringify(rows))
   localStorage.setItem('tattoo_remote_artistsMeta', JSON.stringify(rows))
-  localStorage.setItem('tattoo_img_migrated_v1', '1')
   return rows
 }
 
@@ -54,17 +48,9 @@ async function mount() {
 const edit = (result, change) =>
   act(() => result.current[1]((prev) => prev.map((a) => (a.id === firstId ? change(a) : a))))
 
-async function clearLegacyCache() {
-  await new Promise((resolve) => {
-    const req = indexedDB.deleteDatabase('tattoo-images-v1')
-    req.onsuccess = req.onerror = req.onblocked = () => resolve()
-  })
-}
-
-beforeEach(async () => {
+beforeEach(() => {
   localStorage.clear()
   clearBlobUrls()
-  await clearLegacyCache()
   vi.spyOn(console, 'error').mockImplementation(() => {})
 })
 afterEach(() => vi.restoreAllMocks())
@@ -108,105 +94,5 @@ describe('artist state holds refs (#116)', () => {
     edit(result, (a) => ({ ...a, images: [...a.images, 'data:image/png;base64,INLINE'] }))
     expect(stateRow(result, firstId).images).toContain('data:image/png;base64,INLINE')
     expect(localStorage.getItem('tattoo_artists_meta')).not.toContain('INLINE')
-  })
-
-  it('sweeps a legacy IndexedDB-only photo into a key at the front, and keeps it when another photo is added (#118)', async () => {
-    seedReturningUser({ ownPhoto: false })
-    await dbPut(firstId, ['data:image/png;base64,LEGACY'])
-    const result = await mount()
-    await waitFor(() => expect(stateRow(result, firstId).images[0]?.key).toMatch(/^user\/u1\/artists\//))
-    const swept = stateRow(result, firstId).images[0]
-    expect(await resolveImage(swept)).toBe('data:image/png;base64,LEGACY')
-    expect(stateRow(result, firstId).images).not.toContain('data:image/png;base64,LEGACY')
-
-    edit(result, (a) => ({ ...a, images: [...a.images, 'images/artists/extra.jpg'] }))
-    expect(stateRow(result, firstId).images[0]).toEqual(swept)
-    expect(localStorage.getItem('tattoo_artists_meta')).toContain(swept.key)
-    expect(localStorage.getItem('tattoo_artists_meta')).not.toContain('LEGACY')
-  })
-
-})
-
-// Policy-level: the legacy overlay is idempotent and a deleted legacy photo stays deleted.
-describe('legacy overlay', () => {
-  it('is idempotent and does not bring a deleted legacy photo back', async () => {
-    const { policy, codec } = createArtistsPolicy()
-    await dbPut('a', ['data:image/png;base64,LEGACY'])
-    await policy.onMount()
-
-    const shown = await codec.toDisplay([{ id: 'a', images: [] }])
-    expect(shown[0].images).toEqual(['data:image/png;base64,LEGACY'])
-    expect((await codec.toDisplay(shown))[0].images).toEqual(['data:image/png;base64,LEGACY']) // not doubled
-
-    const [edited] = policy.onEdit([shown[0]], [{ ...shown[0], images: [] }], '2026-01-01T00:00:00Z')
-    expect((await codec.toDisplay([edited]))[0].images).toEqual([]) // stays deleted
-  })
-
-  // On a cold reload nothing is registered yet, so a cached data url that is
-  // really one of the artist's own keyed photos (the local backend resolves a
-  // key to exactly those bytes) looks "legacy" until the key is resolved.
-  it('does not show a keyed photo a second time from the cache after a cold reload', async () => {
-    const key = 'user/u1/artists/a/own.jpg'
-    const bytes = 'data:image/jpeg;base64,T1dOLVBIT1RP'
-    await backend.blobs.upload('u1', key, bytes, 'image/jpeg')
-    await dbPut('a', [bytes])
-    clearBlobUrls()
-    const { policy, codec } = createArtistsPolicy()
-    await policy.onMount()
-
-    const shown = await codec.toDisplay([{ id: 'a', images: [{ key }] }])
-    expect(shown[0].images).toEqual([{ key }])
-  })
-
-  it('still shows a true legacy photo first, once, beside the artist\'s own keyed photo', async () => {
-    const key = 'user/u1/artists/a/own.jpg'
-    await backend.blobs.upload('u1', key, 'data:image/jpeg;base64,T1dO', 'image/jpeg')
-    await dbPut('a', ['data:image/png;base64,TRUELEGACY'])
-    clearBlobUrls()
-    const { policy, codec } = createArtistsPolicy()
-    await policy.onMount()
-
-    const shown = await codec.toDisplay([{ id: 'a', images: [{ key }] }])
-    expect(shown[0].images).toEqual(['data:image/png;base64,TRUELEGACY', { key }])
-    expect((await codec.toDisplay(shown))[0].images).toEqual(['data:image/png;base64,TRUELEGACY', { key }])
-  })
-
-  // #118: after a reload nothing maps the cached data url to the key it was
-  // swept under; the ledger is what says it is handled.
-  it('hides a cached photo the sweep has recorded, without resolving anything', async () => {
-    const key = 'user/u1/artists/a/swept.jpg'
-    const legacy = 'data:image/png;base64,TEVHQUNZ'
-    localStorage.setItem('tattoo_legacy_sweep_v1', JSON.stringify({ a: { [fingerprint(legacy)]: key } }))
-    await dbPut('a', [legacy])
-    clearBlobUrls()
-    const { policy, codec } = createArtistsPolicy()
-    await policy.onMount()
-    const getUrl = vi.spyOn(backend.blobs, 'getUrl')
-
-    const shown = await codec.toDisplay([{ id: 'a', images: [{ key }] }])
-    expect(shown[0].images).toEqual([{ key }])
-    expect(getUrl).not.toHaveBeenCalled()
-  })
-
-  it('resolves nothing for an artist whose cache holds no unrecognised data url', async () => {
-    await dbPut('a', [{ key: 'user/u1/artists/a/own.jpg' }, 'images/artists/a/1.jpg'])
-    const { policy, codec } = createArtistsPolicy()
-    await policy.onMount()
-    const getUrl = vi.spyOn(backend.blobs, 'getUrl')
-
-    await codec.toDisplay([{ id: 'a', images: [{ key: 'user/u1/artists/a/own.jpg' }] }, { id: 'b', images: [{ key: 'user/u1/artists/b/x.jpg' }] }])
-    expect(getUrl).not.toHaveBeenCalled()
-  })
-
-  it('resolves nothing when every cached data url is already recognised', async () => {
-    registerBlobUrl('user/u1/artists/a/old.jpg', 'data:image/png;base64,KNOWN')
-    await dbPut('a', ['data:image/png;base64,KNOWN'])
-    const { policy, codec } = createArtistsPolicy()
-    await policy.onMount()
-    const getUrl = vi.spyOn(backend.blobs, 'getUrl')
-
-    const shown = await codec.toDisplay([{ id: 'a', images: [{ key: 'user/u1/artists/a/own.jpg' }] }])
-    expect(getUrl).not.toHaveBeenCalled()
-    expect(shown[0].images).toEqual([{ key: 'user/u1/artists/a/own.jpg' }])
   })
 })
