@@ -305,7 +305,7 @@ flowchart TB
   SAVED{"Already in gallery?"}
   ADD["Add artist<br/>also marks them attending"]
   FLAG["Toggle attendance for saved artist"]
-  KEEP["Gallery research and attendance<br/>follow normal account sync"]
+  KEEP["Gallery research and attendance<br/>follow selected library storage"]
   WIN["Competition winners → paste results"]
   REVIEW["Review award category, place<br/>and matched artist identity"]
   PHOTO["Optionally attach photos<br/>of the winning piece"]
@@ -328,7 +328,8 @@ from picks, and wildcards are explicitly unjudged suggestions. This is a researc
 shortlist, not a mapped walking route.
 
 Imports and winner photos stay on this device. Only artists you explicitly save and
-attendance flags join synced collections. **Clear list** also suppresses the shipped
+attendance flags join library collections, synced only with a remote storage adapter.
+**Clear list** also suppresses the shipped
 seed; a later import makes the list available again. Winner-name matches should be
 checked, especially when the app reports a name-prefix match rather than a handle.
 
@@ -354,7 +355,7 @@ flowchart TB
   RETURN{"What happens next?"}
   RETRY["After reconnect, reopen Sable<br/>or make another edit to retry"]
   DEVICE["With remote backend configured:<br/>sign in elsewhere and pull account data"]
-  BACKUP["Settings → Export Backup<br/>download a JSON document snapshot"]
+  BACKUP["Settings → Export Backup<br/>download portable JSON with canonical images"]
   LOSS{"Need to recover or replace data?"}
   IMPORT["Settings → Import Backup"]
   REPLACE["Choose backup file<br/>current collections are replaced"]
@@ -387,11 +388,12 @@ queued in an upload outbox. Sable retries the queue when it launches, when conne
 returns (the `online` event) and on every flush; an entry leaves the queue only after the
 upload is confirmed, and the photo stays viewable offline from its copy on this device.
 
-Backup export serialises the values currently in memory. Inline `data:` images remain
-embedded, but backend-resolved or signed image URLs are not fetched and materialised
-into the JSON; those URLs may expire. Treat export as a document restore point, not a
-guaranteed standalone archive of every image byte. Account sync remains the normal path
-for moving backend image blobs between devices when a remote adapter is configured.
+Backup export embeds canonical image blobs and inline `data:` images in the JSON.
+External URLs and shipped static assets remain references, not embedded archives.
+A photo whose bytes can't be read at export time (offline, a missing blob) stays a
+reference and is counted as skipped, so that backup is not complete. Download and test a
+restore in a fresh browser context before relying on it.
+Account sync is available only when a remote storage adapter is configured.
 Settings backup covers the five account collections, not the device-only convention
 imports or winner photos. Sign-out clears winner-board references but currently leaves
 the photo bytes in IndexedDB; it is not a complete photo-erasure operation.

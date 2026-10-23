@@ -1,5 +1,9 @@
 # Sable — AI Vision (July 2026)
 
+> Historical design rationale, not a current feature inventory. The Taste Engine,
+> screenshot intake, visual Map and on-skin preview are implemented. Copilot and
+> discovery beyond the saved collection remain proposals. See [the current guide](README.md).
+
 How AI could make Sable genuinely unique — in the app, in its workflows, and in
 its content — reviewed page by page against the two project objectives:
 **ease of use** for the real tattoo-planning workflow (iPhone, Instagram-driven)
