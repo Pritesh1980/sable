@@ -157,6 +157,9 @@ export function createCollectionStore({
   // rows and regress the synced baseline.
   let flushChain = Promise.resolve()
   let editSeq = 0
+  // A confirmed delete can clear its sidecar before an older list resolves.
+  // Retain that intent only for pulls that could still deliver the old row.
+  const pullDeletionHistories = new Set()
   // This store's own singleton edit stamp. The tattoo_stamp_ sidecar is shared
   // across tabs, so flushing under readStamp() could launder a stale map with
   // another tab's newer stamp; the flush must carry the stamp of the edit it is
@@ -203,6 +206,9 @@ export function createCollectionStore({
       const removed = rowIds(prev).filter((id) => id !== undefined && !liveIds.has(id))
       if (removed.length) {
         addPendingDeletes(key, removed)
+        for (const history of pullDeletionHistories) {
+          removed.forEach((id) => history.add(id))
+        }
         // A deleted row's tracked generation would otherwise linger forever —
         // nothing will ever push it again to confirm it (#84).
         dropRowGenerations(key, removed)
@@ -348,7 +354,11 @@ export function createCollectionStore({
 
     const tasks = [backend.store.upsert(collection, rows)]
     if (pendingDeletes.length) tasks.push(backend.store.remove(collection, pendingDeletes))
-    await Promise.all(tasks)
+    // A rejection must not release the queue while a sibling delete can still
+    // land after the next flush's re-add. Preserve dirty state on any failure.
+    const results = await Promise.allSettled(tasks)
+    const failed = results.find((result) => result.status === 'rejected')
+    if (failed) throw failed.reason
     assertCurrent()
     if (checkedSnapshot) backend.ownerScope.assertCurrent(checkedSnapshot)
 
@@ -366,12 +376,15 @@ export function createCollectionStore({
     }
   }
 
-  function flush() {
-    const flushUser = user
-    const run = () => runFlush(flushUser)
+  function enqueueWrite(run) {
     const p = flushChain.then(run, run)
     flushChain = p.then(noop, noop)
     return p
+  }
+
+  function flush() {
+    const flushUser = user
+    return enqueueWrite(() => runFlush(flushUser))
   }
 
   function commitChecked(updater, expected) {
@@ -415,9 +428,7 @@ export function createCollectionStore({
       requireConceptReceipt(codec.toCanonical(value), expected)
       return { ...expected, committed: true }
     }
-    const p = flushChain.then(work, work)
-    flushChain = p.then(noop, noop)
-    return p
+    return enqueueWrite(work)
   }
 
   // Resolve cached canonical refs to displayable values. Independent of the
@@ -437,6 +448,8 @@ export function createCollectionStore({
   // Pull + reconcile. Never pushes unless an edit is still unconfirmed or the
   // codec moved images, so it can't clobber newer remote data.
   async function pull(pullUser, live, ctx) {
+    const deletedDuringPull = new Set(readPendingDeletes(key))
+    pullDeletionHistories.add(deletedDuringPull)
     try {
       // Before the list; whatever it returns is merge's `prep`.
       const prep = policy.beforeFirstPull ? await policy.beforeFirstPull(ctx, value) : undefined
@@ -464,8 +477,11 @@ export function createCollectionStore({
         const superseded = allPending.filter((id) => localIds.has(id))
         if (superseded.length) clearPendingDeletes(key, superseded)
         pendingDeletes = allPending.filter((id) => !localIds.has(id))
-        const usableRemote = pendingDeletes.length
-          ? remoteRows.filter((r) => !pendingDeletes.includes(r.id))
+        const deletedIds = new Set(
+          [...pendingDeletes, ...deletedDuringPull].filter((id) => !localIds.has(id))
+        )
+        const usableRemote = deletedIds.size
+          ? remoteRows.filter((r) => !deletedIds.has(r.id))
           : remoteRows
         if (policy.merge) {
           merge = policy.merge({ local: value, remote: usableRemote, prep, ctx })
@@ -504,9 +520,20 @@ export function createCollectionStore({
       }
 
       const retried = pendingDeletes.length
-        ? backend.store
-            .remove(collection, pendingDeletes)
-            .then(() => clearPendingDeletes(key, pendingDeletes))
+        ? enqueueWrite(async () => {
+            assertCurrent()
+            if (!live()) return
+            // Recheck when this reaches the queue head: a re-add may already
+            // have superseded the pull's original delete list.
+            const liveIds = new Set(rowIds(value))
+            const ids = readPendingDeletes(key).filter(
+              (id) => pendingDeletes.includes(id) && !liveIds.has(id)
+            )
+            if (!ids.length) return
+            await backend.store.remove(collection, ids)
+            assertCurrent()
+            clearPendingDeletes(key, ids)
+          })
             .catch((e) => console.error(`[tattoo] retry delete failed for ${collection}:`, e))
         : null
       const uploaded = await codec.ensureUploaded(display, { userId: pullUser.id })
@@ -524,6 +551,8 @@ export function createCollectionStore({
       await retried
     } catch (e) {
       console.error(`[tattoo] sync pull failed for ${collection}:`, e)
+    } finally {
+      pullDeletionHistories.delete(deletedDuringPull)
     }
   }
 
@@ -567,6 +596,7 @@ export function createCollectionStore({
     epoch += 1
     user = null
     stopped = true
+    pullDeletionHistories.clear()
     // The edit is already in the cache, its tombstones and generations in the
     // sidecars; the next start's pull pushes whatever is still unconfirmed.
     clearTimeout(pushTimer)
