@@ -43,7 +43,7 @@ only with **⇅ Reorder** on, so a default Grid shot has bare cards either way. 
 with Reorder **off** — that is the view people arrive in.
 
 1. Start a dev server pinned to the offline backend so seeded data can't sync to a
-   real account: `VITE_BACKEND=local npm run dev -- --port 5174` (then capture against
+   real account: `VITE_BACKEND=local VITE_AUTH_BACKEND=local VITE_AI_RELAY_URL= VITE_PRIVATE_OWNER_ID= VITE_OWNER_EMAIL= VITE_SUPABASE_URL= VITE_SUPABASE_ANON_KEY= npm run dev -- --port 5174 --strictPort` (then capture against
    http://localhost:5174).
 2. **Seed with the demo dataset, never real artist imagery.** These screenshots are
    committed and published — the curated images under `public/images/artists/` are
@@ -59,9 +59,12 @@ with Reorder **off** — that is the view people arrive in.
    // Boards — { id, name, description, ideaIds[], cover } (demo idea ids:
    // demo-idea-forest, demo-idea-eclipse, demo-idea-geometry)
    // Concepts — { id, prompt, imageUrl, response, tags[], createdAt, updatedAt }
-   // See the capture script pattern in git history (guide-recapture, July 2026).
+   // See scripts/captureGuide.mjs for the current safe fixture and capture pattern.
    ```
-3. Navigate each route and save into `public/guide/` with the existing filenames:
+3. Run `node scripts/captureGuide.mjs` (or set `GUIDE_URL` for another local port).
+   It captures the public demo surfaces below. Then run the fictional refinement
+   capture described later for the five remaining images.
+   Keep the existing filenames:
 
    | Route | Files |
    |---|---|
@@ -138,7 +141,7 @@ and covered the artist's name, so tapping the name opened Instagram. The victim 
 
 ```bash
 npx playwright install chromium   # once
-npm run test:e2e                  # builds, serves, runs everything
+npm run test:e2e                  # builds, serves, runs the public demo suite
 npx playwright test e2e/stl.e2e.js --project=iphone   # one file
 npx playwright show-trace test-results/public/<test>/trace.zip   # after a failure
 ```
@@ -191,7 +194,9 @@ persistence proof; real-device validation remains in [activation](RELAY-ACTIVATI
 To recapture `concepts.png`, `concept-card.png`, `settings.png`,
 `concept-refinement.png` and `concept-refinement-compare.png`, build with the same
 fictional env as `playwright.refinement.config.js`, serve `dist-refinement` on port
-4181, and run `node scripts/captureRefinementGuide.mjs`. It uses synthetic PNGs,
+4181, and run `node scripts/captureRefinementGuide.mjs`. An isolated dev server using
+`vite.refinement.config.js` and the same fictional env on 4181 also works for capture;
+do not use that config for deployment. It uses synthetic PNGs,
 desktop 1280 x 900 and mobile 430 x 920 with `isMobile` and touch, viewport-only.
 Never substitute portfolio images, body photos, private library bytes or paid results.
 Keep the guide links and Help `SECTIONS` images aligned, then run `npm run docs:check`.
