@@ -28,9 +28,10 @@ already set). One panel, top to bottom:
   feathers dissolving into smoke, heavy black shading."*
 - **Placement** — forearm, upper arm, chest, back, calf…
 - **Generate image** — creates the image in-app (needs an API key, below).
-- **Copy prompt instead** — copies a richly-structured prompt for ChatGPT, Claude, Gemini
-  or AI Studio. Run it there, then **drop or paste the result** into the composer's
-  drop zone — it saves to the wall exactly like a generated image.
+- **Copy prompt instead** — copies the same image prompt **Generate image** sends (idea,
+  steer style and placement), for an image generator such as ChatGPT, Gemini or AI
+  Studio. Run it there, then **drop or paste the image** into the composer's drop zone —
+  it saves to the wall exactly like a generated image.
 
 Your draft (steer, idea, placement) is kept on this device, so hopping out to another AI
 tab and back never loses it. It clears when the concept saves.

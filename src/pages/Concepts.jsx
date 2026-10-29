@@ -22,7 +22,7 @@ import {
 import { buildConceptWallItems, isDraftConcept } from '../data/concepts'
 import { clearComposerDraft, loadComposerDraft, saveComposerDraft } from '../data/composerDraft'
 import { generateImageWithGemini } from '../data/geminiImage'
-import { buildImagePrompt, buildTextPrompt } from '../data/conceptPrompts'
+import { buildImagePrompt } from '../data/conceptPrompts'
 import { stageImage, withStagedImages } from '../data/imageStaging'
 import useImageStatuses from '../hooks/useImageStatuses'
 import { useAuth } from '../context/useAuth'
@@ -251,10 +251,12 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
     }
   }
 
+  // The round trip expects an image back (the paste-back zone takes one), so
+  // this copies the same image prompt direct DALL·E generation sends (#156).
   async function copyPrompt() {
     if (!idea.trim()) return
     const steerArtist = artists.find((a) => a.id === steerArtistId)
-    const full = buildTextPrompt(idea, {
+    const full = buildImagePrompt(idea, {
       styleDescriptor: steerArtist?.styleDescriptor || '',
       tags: steerArtist?.tags || [],
       placement,

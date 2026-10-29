@@ -210,7 +210,7 @@ export default function ConceptComposer({
       <p className="font-v2-ui text-xs text-v2-muted leading-relaxed mt-3.5">
         {hasApiKey
           ? 'Generates with your saved API key. Results land on this wall — open one full-screen for variants and relief STL export.'
-          : 'No key? "Copy prompt" builds a structured prompt for ChatGPT / Claude / Gemini — paste the result back below.'}
+          : 'No key? "Copy prompt" copies an image prompt for ChatGPT, Gemini or another image generator — paste the image back below.'}
       </p>
 
       <div className="mt-6 pt-5 border-t border-v2-hairline">

@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { describe, expect, it, beforeEach } from 'vitest'
+import { describe, expect, it, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import Concepts from '../pages/Concepts'
 import { COMPOSER_DRAFT_KEY, loadComposerDraft, saveComposerDraft } from '../data/composerDraft'
+import { buildImagePrompt } from '../data/conceptPrompts'
 
 const artists = [
   { id: 'zoia.ink', handle: 'zoia.ink', name: '', tags: ['dark-illustrative', 'surrealism'], images: ['/images/artists/zoia.ink/1.jpg'] },
@@ -117,6 +118,23 @@ describe('Concepts page', () => {
 
     await waitFor(() => expect(localStorage.getItem(COMPOSER_DRAFT_KEY)).toBeNull())
     expect(screen.queryByLabelText('Your idea')).not.toBeInTheDocument()
+  })
+
+  // #156: the copy-prompt round trip expects an image back, so the copied
+  // prompt must be the image prompt (as direct generation uses), not the
+  // text-consultant prompt that makes a chatbot answer in prose.
+  it('copies the image prompt, with steer and placement, for the paste-back round trip', async () => {
+    const writeText = vi.fn(() => Promise.resolve())
+    Object.defineProperty(window.navigator, 'clipboard', { value: { writeText }, configurable: true })
+    saveComposerDraft({ steerArtistId: 'victorportugal', idea: 'A moth study', placement: 'forearm' })
+    render(<ConceptsHarness />)
+    fireEvent.click(screen.getAllByRole('button', { name: '+ New concept' })[0])
+    fireEvent.click(screen.getByRole('button', { name: 'Copy prompt instead' }))
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1))
+    expect(writeText.mock.calls[0][0]).toBe(buildImagePrompt('A moth study', {
+      styleDescriptor: '', tags: ['blackwork'], placement: 'forearm',
+    }))
+    expect(writeText.mock.calls[0][0]).not.toMatch(/concept consultant/i)
   })
 
   it('saves a pasted-back image identically to a generated concept, landing on the wall', async () => {
