@@ -56,6 +56,19 @@ test('in-app navigation keeps the base', async ({ page }) => {
   await expect(page).toHaveURL(/\/sable\/gallery$/)
 })
 
+// #159: overlay params ride on the based URL, and Back pops them within it.
+test('Back closes the wall viewer within the base', async ({ page }) => {
+  await page.goto('gallery')
+  await page.goto('')
+  await page.getByRole('button', { name: /^Open / }).first().click()
+  await expect(page).toHaveURL(/\/sable\/\?(.+&)?photo=/)
+  await page.goBack()
+  await expect(page).toHaveURL(/\/sable\/(\?demo=1)?$/)
+  await expect(page.getByRole('button', { name: /everything else/i })).toBeVisible()
+  await page.goBack()
+  await expect(page).toHaveURL(/\/sable\/gallery$/)
+})
+
 test('shared capture saves and removes only its consumed query parameter', async ({ page }) => {
   await page.goto('share')
   await expect(page).toHaveURL(/\/sable\/gallery\?shared=1/)

@@ -49,6 +49,80 @@ test.describe('wall viewer', () => {
   })
 })
 
+// #159: Back (Android's button, Safari's edge swipe) closes the overlay rather
+// than leaving the page, and closing from the UI leaves no entry behind.
+test.describe('Back closes the overlay', () => {
+  test('wall viewer: Back closes the photo, and a second Back leaves the Wall', async ({ page }) => {
+    await openDemo(page, '/brief')
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Open Mora Vane' }).first().click()
+    const viewer = page.getByRole('dialog', { name: imageLabel })
+    await expect(viewer).toBeVisible()
+    await expect(page).toHaveURL(/\/\?photo=/)
+
+    await swipe(page, ...LEFT(centre(page)))
+    await expect(page).toHaveURL(/\?photo=.+\.2$/)
+
+    await page.goBack()
+    await expect(viewer).toBeHidden()
+    await expect(page).toHaveURL(/\/$/)
+    await expect(page.getByRole('button', { name: /everything else/i })).toBeVisible()
+
+    await page.goBack()
+    await expect(page).toHaveURL(/\/brief$/)
+  })
+
+  test('wall viewer: Close leaves no entry for Back to land on', async ({ page }) => {
+    await openDemo(page, '/brief')
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Open Vesper Ash' }).first().click()
+    await page.getByRole('button', { name: 'Close viewer' }).tap()
+    await expect(page).toHaveURL(/\/$/)
+    await page.goBack()
+    await expect(page).toHaveURL(/\/brief$/)
+  })
+
+  test('wall viewer: Escape closes Info & notes first, then the viewer', async ({ page }) => {
+    await openDemo(page, '/')
+    await page.getByRole('button', { name: 'Open Mora Vane' }).first().click()
+    const viewer = page.getByRole('dialog', { name: imageLabel })
+    await page.keyboard.press('i')
+    await expect(viewer.getByText('Linked ideas')).toBeVisible()
+
+    await page.keyboard.press('Escape')
+    await expect(viewer.getByText('Linked ideas')).toBeHidden()
+    await expect(viewer).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(viewer).toBeHidden()
+  })
+
+  test('artist detail: Back closes the detail onto the gallery', async ({ page }) => {
+    await openDemo(page, '/')
+    await page.goto('/gallery')
+    await page.getByRole('button', { name: 'Open Mora Vane' }).first().click()
+    const back = page.getByRole('button', { name: '← Back' })
+    await expect(back).toBeVisible()
+    await expect(page).toHaveURL(/\/gallery\?artist=/)
+
+    await page.goBack()
+    await expect(back).toBeHidden()
+    await expect(page).toHaveURL(/\/gallery$/)
+    await expect(page.getByRole('heading', { name: 'Artists' })).toBeVisible()
+  })
+
+  test('artist detail: a deep link opens it, and ← Back stays on the gallery', async ({ page }) => {
+    await openDemo(page, '/gallery')
+    await page.getByRole('button', { name: 'Open Mora Vane' }).first().click()
+    const url = page.url()
+    await page.goto(url)
+    const back = page.getByRole('button', { name: '← Back' })
+    await expect(back).toBeVisible()
+    await back.tap()
+    await expect(back).toBeHidden()
+    await expect(page).toHaveURL(/\/gallery$/)
+  })
+})
+
 test.describe('concept viewer', () => {
   test.beforeEach(async ({ page }) => {
     await openDemo(page, '/concepts', { concepts: [SECOND_CONCEPT, DEMO_CONCEPT] })

@@ -61,6 +61,9 @@ An edge-to-edge wall of everyone's work — pure visual browsing.
 
 Tap any card to open the full **artist detail**: a photo carousel, their tags, status,
 studio, notes, and any conventions they're attending. Tap **Edit details** to change them.
+**← Back**, or the browser's Back (Android's back button, Safari's back swipe), closes it
+and leaves you on the gallery. The address shows the artist (`?artist=…`), so a link to it
+opens their detail.
 
 ![Artist detail](../public/guide/artist-detail.png)
 
