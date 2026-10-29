@@ -110,3 +110,66 @@ describe('BackupPanel import (#114)', () => {
     await waitFor(() => expect(setArtists).not.toHaveBeenCalled())
   })
 })
+
+// #158: an import replaces the whole library, so it asks first when there is
+// something to lose, naming both sides.
+describe('BackupPanel import confirmation (#158)', () => {
+  const fileOf = (backup) => new File([JSON.stringify(backup)], 'backup.json', { type: 'application/json' })
+  const importFile = (backup) => {
+    const input = document.querySelector('input[type="file"]')
+    fireEvent.change(input, { target: { files: [fileOf(backup)] } })
+    return input
+  }
+  const current = { artists: [{ id: 'old1' }, { id: 'old2' }], ideas: [{ id: 'oldIdea' }] }
+  const backup = { version: 1, exportedAt: '2026-10-01T12:00:00.000Z', data: { artists: [{ id: 'new' }] } }
+  let confirm
+  beforeEach(() => { confirm = vi.spyOn(window, 'confirm') })
+
+  it('asks before replacing a library that has data, naming both sides and the date', async () => {
+    confirm.mockReturnValue(true)
+    renderPanel(current)
+    importFile(backup)
+    expect(await screen.findByText('Backup imported.')).toBeInTheDocument()
+    expect(confirm).toHaveBeenCalledWith(
+      "Replace your library (2 artists, 1 idea) with this backup from 1 Oct 2026 (1 artist, 0 ideas)? This can't be undone.",
+    )
+    expect(setArtists).toHaveBeenCalledWith([{ id: 'new' }])
+  })
+
+  it('changes nothing when declined, and the same file can be chosen again', async () => {
+    confirm.mockReturnValue(false)
+    renderPanel(current)
+    const input = importFile(backup)
+    expect(await screen.findByText(/import cancelled/i)).toBeInTheDocument()
+    expect(setArtists).not.toHaveBeenCalled()
+    expect(setIdeas).not.toHaveBeenCalled()
+    expect(stageImage).not.toHaveBeenCalled()
+    expect(input.value).toBe('')
+    expect(screen.getByRole('button', { name: /import backup/i })).toBeEnabled()
+  })
+
+  it('does not stage any photo before the user agrees', async () => {
+    confirm.mockReturnValue(false)
+    renderPanel(current)
+    importFile({ version: 2, data: { ideas: [{ id: 'i', images: [{ url: PNG, note: '' }] }] } })
+    await screen.findByText(/import cancelled/i)
+    expect(stageImage).not.toHaveBeenCalled()
+  })
+
+  it('does not ask when the library is empty', async () => {
+    renderPanel()
+    importFile(backup)
+    expect(await screen.findByText('Backup imported.')).toBeInTheDocument()
+    expect(confirm).not.toHaveBeenCalled()
+  })
+
+  it('shows an invalid or newer file\'s error without asking', async () => {
+    renderPanel(current)
+    importFile({ version: 3, data: { artists: [] } })
+    expect(await screen.findByText(/newer version of Sable/i)).toBeInTheDocument()
+    importFile({ data: { artists: {} } })
+    expect(await screen.findByText(/must be an array/i)).toBeInTheDocument()
+    expect(confirm).not.toHaveBeenCalled()
+    expect(setArtists).not.toHaveBeenCalled()
+  })
+})

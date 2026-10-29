@@ -66,9 +66,20 @@ as proof that a backup contains the bytes. Relay results are only recoverable fo
 
 Tap **Import Backup** and choose a previously exported file. This **replaces** the current
 data with the backup's contents — useful for recovering an earlier snapshot, or for pulling
-your data into an account that doesn't have it yet. Embedded photos are saved to the
+your data into an account that doesn't have it yet. If your library already holds anything,
+Sable asks first and names both sides, e.g. *“Replace your library (12 artists, 4 ideas)
+with this backup from 1 Oct 2026 (8 artists, 2 ideas)? This can't be undone.”* Cancel and
+nothing changes. There is no undo after you agree, so export a backup of the current
+library first if you might want it back. Embedded photos are saved to the
 account you're signed in to as they come back in. Backups made by earlier versions of Sable
 still import; a backup from a *newer* version is refused with a message to update first.
+
+## Appearance
+
+Theme (**◑ / ◐**) and text size (**A+ / A−**) sit at the right-hand end of the bottom
+bar on every page except the home Wall, on phone and desktop alike. The Wall has no
+bottom bar: open its menu (**⋯**) and pick any page to reach them. Both are per-device
+and don't sync.
 
 ## When to back up
 

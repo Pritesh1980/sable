@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { buildBoardBrief, buildIdeaBrief, createBackup, parseBackup, requestBackupDownload } from '../data/export'
+import { buildBoardBrief, buildIdeaBrief, createBackup, parseBackup, replaceLibraryQuestion, requestBackupDownload } from '../data/export'
 
 it('initiates a date-named download from an attached anchor before deferred URL cleanup', () => {
   vi.useFakeTimers()
@@ -84,6 +84,45 @@ describe('parseBackup', () => {
 
   it('rejects non-array fields', () => {
     expect(() => parseBackup({ data: { artists: {} } })).toThrow('artists')
+  })
+})
+
+// #158: importing replaces everything, so the confirm names both sides.
+describe('replaceLibraryQuestion', () => {
+  const rows = (n, prefix) => Array.from({ length: n }, (_, i) => ({ id: `${prefix}${i}` }))
+  const library = (counts = {}, conventionOverrides = {}) => ({
+    artists: rows(counts.artists || 0, 'a'),
+    ideas: rows(counts.ideas || 0, 'i'),
+    boards: rows(counts.boards || 0, 'b'),
+    concepts: rows(counts.concepts || 0, 'c'),
+    conventionOverrides,
+  })
+  // Midday UTC, so the date reads the same in any test-runner time zone.
+  const OCT_1 = '2026-10-01T12:00:00.000Z'
+
+  it('asks nothing when the current library is empty', () => {
+    expect(replaceLibraryQuestion(library(), library({ artists: 8 }), OCT_1)).toBeNull()
+  })
+
+  it('names both sides with counts and the backup date', () => {
+    expect(replaceLibraryQuestion(library({ artists: 12, ideas: 4 }), library({ artists: 8, ideas: 2 }), OCT_1))
+      .toBe("Replace your library (12 artists, 4 ideas) with this backup from 1 Oct 2026 (8 artists, 2 ideas)? This can't be undone.")
+  })
+
+  it('lists a collection on both sides when either side has it, so a loss shows as 0', () => {
+    expect(replaceLibraryQuestion(library({ artists: 1, concepts: 3 }), library({ artists: 2, boards: 1 }), OCT_1))
+      .toBe("Replace your library (1 artist, 0 boards, 3 concepts) with this backup from 1 Oct 2026 (2 artists, 1 board, 0 concepts)? This can't be undone.")
+  })
+
+  it('leaves the date out when the file has none or it is not a date', () => {
+    const question = 'Replace your library (1 idea) with this backup (0 ideas)? This can\'t be undone.'
+    expect(replaceLibraryQuestion(library({ ideas: 1 }), library(), undefined)).toBe(question)
+    expect(replaceLibraryQuestion(library({ ideas: 1 }), library(), 'yesterday')).toBe(question)
+  })
+
+  it('counts recorded convention attendance as library content', () => {
+    expect(replaceLibraryQuestion(library({}, { 'big-london': ['a0'] }), library(), OCT_1))
+      .toBe("Replace your library (attendance at 1 convention) with this backup from 1 Oct 2026 (attendance at 0 conventions)? This can't be undone.")
   })
 })
 

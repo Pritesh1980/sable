@@ -201,6 +201,34 @@ export async function restoreBackupImages(data, { userId } = {}) {
   return { data: out, failed }
 }
 
+// What an import would replace, as the question to ask before doing it (#158).
+// Null when the current library holds nothing, so there is nothing to lose. A
+// collection either side holds is listed on both, so a loss reads "0 concepts"
+// rather than going unmentioned.
+const LIBRARY_PARTS = [
+  { count: (lib) => lib.artists?.length || 0, label: (n) => `${n} artist${n === 1 ? '' : 's'}` },
+  { count: (lib) => lib.ideas?.length || 0, label: (n) => `${n} idea${n === 1 ? '' : 's'}` },
+  { count: (lib) => lib.boards?.length || 0, label: (n) => `${n} board${n === 1 ? '' : 's'}` },
+  { count: (lib) => lib.concepts?.length || 0, label: (n) => `${n} concept${n === 1 ? '' : 's'}` },
+  {
+    count: (lib) => Object.keys(lib.conventionOverrides || {}).length,
+    label: (n) => `attendance at ${n} convention${n === 1 ? '' : 's'}`,
+  },
+]
+
+function backupDate(exportedAt) {
+  if (typeof exportedAt !== 'string' || Number.isNaN(Date.parse(exportedAt))) return ''
+  return new Date(exportedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+export function replaceLibraryQuestion(current, incoming, exportedAt) {
+  const parts = LIBRARY_PARTS.filter((part) => part.count(current) > 0 || part.count(incoming) > 0)
+  if (!parts.some((part) => part.count(current) > 0)) return null
+  const summary = (lib) => parts.map((part) => part.label(part.count(lib))).join(', ')
+  const date = backupDate(exportedAt)
+  return `Replace your library (${summary(current)}) with this backup${date ? ` from ${date}` : ''} (${summary(incoming)})? This can't be undone.`
+}
+
 export function parseBackup(raw) {
   const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw
   if (!parsed || typeof parsed !== 'object') {
