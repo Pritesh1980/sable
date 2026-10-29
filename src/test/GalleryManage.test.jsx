@@ -42,6 +42,25 @@ describe('Gallery manage mode', () => {
     expect(screen.getByRole('button', { name: /manage/i })).toBeInTheDocument()
   })
 
+  // #161: an empty collection showed only filters and view buttons, in every view.
+  it('greets an empty collection with a way to add the first artist', () => {
+    renderGallery({ artists: [] })
+    expect(screen.getByText(/no artists here yet/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '+ Add artist' }))
+    expect(screen.getByRole('dialog', { name: 'Add an artist' })).toBeInTheDocument()
+  })
+
+  it('keeps the empty message out of a collection that has artists', () => {
+    renderGallery()
+    expect(screen.queryByText(/no artists here yet/i)).toBeNull()
+    expect(screen.queryByRole('button', { name: '+ Add artist' })).toBeNull()
+  })
+
+  it('is a main landmark', () => {
+    renderGallery()
+    expect(screen.getByRole('main')).toBeInTheDocument()
+  })
+
   it('toggles the add-artist form and maintenance table', () => {
     renderGallery()
     expect(screen.queryByText('Add New Artist')).not.toBeInTheDocument()
