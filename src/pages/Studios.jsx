@@ -108,7 +108,7 @@ export default function Studios({ artists = [] }) {
         </div>
 
         {withArtists.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {withArtists.map(({ studio, artists }) => (
               <StudioCard key={studio.id} studio={studio} artists={artists} />
             ))}

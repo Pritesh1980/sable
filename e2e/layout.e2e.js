@@ -138,3 +138,25 @@ for (const width of WIDTHS) {
     })
   })
 }
+
+// #155: the route check above runs with every artist index closed. Opening
+// one made the convention cards' single implicit grid column size itself to
+// the widest row, so the page panned sideways and the Add buttons sat
+// off-screen (561px on a 390px phone).
+test('an open artist index keeps Radar within the screen', async ({ page }) => {
+  await openDemo(page, '/conventions')
+  await settle(page)
+  const width = page.viewportSize().width
+  const card = page.locator('#convention-big-london')
+  await card.getByRole('button', { name: /artist index/i }).click()
+  const failures = []
+  for (const view of ['All', 'New to you']) {
+    await card.getByRole('button', { name: view, exact: true }).click()
+    await expect(card.getByRole('button', { name: /^add$/i }).first()).toBeVisible()
+    const { scrollWidth, culprits } = await overflow(page)
+    if (scrollWidth > width) failures.push(`${view}: ${scrollWidth}px\n    ${culprits.join('\n    ')}`)
+    const add = await card.getByRole('button', { name: /^add$/i }).first().boundingBox()
+    if (add.x + add.width > width) failures.push(`${view}: first Add ends at ${Math.round(add.x + add.width)}px`)
+  }
+  expect(failures, failures.join('\n')).toEqual([])
+})
