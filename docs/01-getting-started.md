@@ -62,7 +62,7 @@ tiled edge to edge. No panels, no stats — the work itself is the interface.
 - On phones, the header puts **Sable**, the **+** add-artist button and the **⋯**
   Drawer menu on the first row, with **Artists / Concepts** on a second row.
   Wider screens keep these controls in one row.
-- At the very bottom of the Wall, a quiet **Consider** shelf suggests artists matched
+- Just below the Top 5 strip, above the photos, a quiet **Consider** shelf suggests artists matched
   to the styles you already collect. Open the Instagram profile to judge for yourself,
   then **+ Add** (the form comes pre-filled) or **Not for me** (never suggested again).
   **Find more like this** asks AI for a fresh batch — those arrive marked *unverified*
