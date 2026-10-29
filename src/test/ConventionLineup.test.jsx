@@ -199,7 +199,16 @@ describe('ConventionLineup — index', () => {
 })
 
 describe('ConventionLineup — Top picks', () => {
-  it('opens on Top picks and shows the saved artist under Must see, without a search box', () => {
+  // docs/05 and Help describe this default (#162); keep them in step.
+  it('opens on All, with the search box, and Top picks one tap away', () => {
+    renderLineup({ entries })
+    open()
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Top picks' })).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.getByLabelText(/search the line-up/i)).toBeInTheDocument()
+  })
+
+  it('Top picks shows the saved artist under Must see, without a search box', () => {
     renderLineup({ entries })
     open()
     fireEvent.click(screen.getByRole('button', { name: 'Top picks' }))

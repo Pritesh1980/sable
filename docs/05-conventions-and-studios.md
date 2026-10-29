@@ -32,7 +32,8 @@ floor.
 
 #### Top picks
 
-The index opens on **Top picks** — a verdict, not a list. **Must see** is whichever of your
+The index opens on **All**, the searchable A–Z list. Tap **Top picks** for a verdict
+instead of a list. **Must see** is whichever of your
 own gallery is at this show, each with a one-line reason ("#5 in your ranking", "Matches your
 styles: realism, dark-fantasy"). Nothing else goes there: if an artist isn't in your gallery,
 they aren't under Must see.
@@ -47,7 +48,7 @@ appears under **Not in the line-up** rather than silently vanishing.
 follow — someone new, at the same studio as an artist you've saved — so a stand you'd
 otherwise walk past gets a reason to stop. Style matching only ever fires for an artist
 already in your gallery: the show's own list carries no style data, so nothing is guessed.
-Switch to **All** for the plain, searchable A–Z list.
+Switch back to **All** for the plain, searchable A–Z list.
 
 #### Big London 2026 is already there
 
