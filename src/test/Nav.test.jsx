@@ -1,9 +1,11 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import Nav from '../components/Nav'
 import { ThemeProvider } from '../context/ThemeContext'
 import { AuthProvider } from '../context/AuthContext'
+import { AuthContext } from '../context/auth-context'
+import { backend } from '../backend'
 
 function renderNav(initialEntries = ['/']) {
   return render(
@@ -72,5 +74,67 @@ describe('Nav', () => {
       expect(el.className).not.toMatch(/fixed/)
       el = el.parentElement
     }
+  })
+})
+
+// #161: the bottom bar's ⏻ sits right against the theme toggle, so a stray tap
+// must not sign out. The Settings page's own Sign out button is unchanged.
+describe('Nav sign-out (#161)', () => {
+  const originalKind = backend.kind
+  let signOut
+  let confirm
+  beforeEach(() => {
+    localStorage.clear()
+    signOut = vi.fn()
+    confirm = vi.spyOn(window, 'confirm')
+  })
+  afterEach(() => {
+    backend.kind = originalKind
+    vi.restoreAllMocks()
+  })
+
+  function renderSignedIn() {
+    return render(
+      <AuthContext.Provider value={{ user: { id: 'u', email: 'me@example.test' }, signOut }}>
+        <ThemeProvider>
+          <MemoryRouter initialEntries={['/gallery']}>
+            <Nav />
+          </MemoryRouter>
+        </ThemeProvider>
+      </AuthContext.Provider>
+    )
+  }
+  const signOutButton = () => screen.getByRole('button', { name: 'Sign out (me@example.test)' })
+
+  it('asks before signing out, and stays signed in when declined', () => {
+    confirm.mockReturnValue(false)
+    renderSignedIn()
+    fireEvent.click(signOutButton())
+    expect(confirm).toHaveBeenCalledTimes(1)
+    expect(confirm.mock.calls[0][0]).toMatch(/^Sign out of Sable\?/)
+    expect(signOut).not.toHaveBeenCalled()
+  })
+
+  it('signs out once confirmed', () => {
+    confirm.mockReturnValue(true)
+    renderSignedIn()
+    fireEvent.click(signOutButton())
+    expect(signOut).toHaveBeenCalledTimes(1)
+  })
+
+  it('says a device-only library stays on this device', () => {
+    backend.kind = 'local'
+    confirm.mockReturnValue(false)
+    renderSignedIn()
+    fireEvent.click(signOutButton())
+    expect(confirm.mock.calls[0][0]).toMatch(/device-only library stays on this device/i)
+  })
+
+  it('says a cloud library syncs back on sign-in', () => {
+    backend.kind = 'supabase'
+    confirm.mockReturnValue(false)
+    renderSignedIn()
+    fireEvent.click(signOutButton())
+    expect(confirm.mock.calls[0][0]).toMatch(/syncs back when you sign in/i)
   })
 })

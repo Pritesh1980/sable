@@ -19,7 +19,7 @@ const SECTIONS = [
       'Leave the mouse still and the viewer’s controls fade away, leaving just the image; move it or press a key and they return. The @handle link opens the artist’s Instagram in a new tab.',
       'With a keyboard, Esc also closes whatever else is on top — the add-artist sheet, the More menu, a full-screen photo on an artist’s page, the status picker — one layer per press. Wall photos, concepts, artist cards, thumbnails, Style Wall tiles and ideas open with Tab then Enter.',
       'On phones, the Wall header has Sable, + to add an artist, and the ⋯ Drawer on its first row, with Artists / Concepts below. Wider screens keep one row. The Drawer holds the Classic gallery, Ideas, Pipeline, Radar, Studios, Settings and Help.',
-      'The old Home dashboard lives at Drawer → Pipeline, unchanged: Top 5 coverflow, shortlist pipeline, idea stats and matches. On the classic pages the familiar bottom bar is still there, with the A+/A− text size, ◑/◐ theme and ⏻ sign-out controls at its right end. Tap the Sable logo at the top-left of any classic page to return to the Home Wall.',
+      'The old Home dashboard lives at Drawer → Pipeline, unchanged: Top 5 coverflow, shortlist pipeline, idea stats and matches. On the classic pages the familiar bottom bar is still there, with the A+/A− text size, ◑/◐ theme and ⏻ sign-out controls at its right end (⏻ asks before signing you out). Tap the Sable logo at the top-left of any classic page to return to the Home Wall.',
       'Studios and conventions come pre-loaded. The public demo includes fictional artists; offline owner builds can include a curated starter list. Real-auth libraries do not seed artists from an email match. Ideas, boards and concepts are yours to build.',
     ],
   },

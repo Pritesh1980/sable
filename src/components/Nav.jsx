@@ -3,6 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router'
 import { useTheme } from '../context/useTheme'
 import { useAuth } from '../context/useAuth'
 import { useEscapeToClose } from '../hooks/useDialogFocus'
+import { backend } from '../backend'
 
 // Four tabs mirror the workflow: see what's next, curate artists, match ideas,
 // generate concepts. Everything reference/admin lives under More.
@@ -52,6 +53,15 @@ function MoreMenu({ onClose }) {
       </div>
     </div>
   )
+}
+
+// ⏻ sits right against the theme toggle, so a stray tap asks first (#161). The
+// note matches Settings: what signing out leaves behind depends on storage.
+function confirmSignOut() {
+  const note = backend.kind === 'local'
+    ? 'Your device-only library stays on this device; sign in again as the same owner to see it.'
+    : 'Your cloud-stored library syncs back when you sign in again.'
+  return window.confirm(`Sign out of Sable?\n\n${note}`)
 }
 
 // The visible circle. The button around it is the tap target, and is bigger.
@@ -125,7 +135,7 @@ export default function Nav() {
             </button>
             {auth?.user && (
               <button
-                onClick={() => auth.signOut()}
+                onClick={() => { if (confirmSignOut()) auth.signOut() }}
                 title={`Sign out (${auth.user.email})`}
                 aria-label={`Sign out (${auth.user.email})`}
                 className="w-11 h-11 flex items-center justify-center group"
