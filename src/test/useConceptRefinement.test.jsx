@@ -385,3 +385,25 @@ it('retains fresh unconfirmed bytes when the calibrated server clock differs fro
   expect(await journal.list('A')).toHaveLength(1)
   expect(relay.submit).toHaveBeenCalledOnce()
 })
+
+// #157: with no relay to list jobs, an accepted marker is the only sign of a
+// paid job awaiting recovery; the page keeps recovery visible while one exists.
+it('counts journaled jobs even when the relay cannot list them, and recounts after removal', async () => {
+  await addMarker()
+  relay.capabilities.mockResolvedValue({ enabled: false, operations: [], provider: null, profile: null,
+    quota: null, serverTime: 1_800_000_000_000 })
+  await mount()
+  expect(relay.list).not.toHaveBeenCalled()
+  expect(hook.result.current.state.recoverableJobs).toEqual([])
+  expect(hook.result.current.state.journaled).toBe(1)
+  await act(async () => { await hook.result.current.discard(id) })
+  expect(hook.result.current.state.journaled).toBe(0)
+})
+
+it('recounts the journal after a recovered import removes its marker', async () => {
+  await addMarker(); relay.status.mockResolvedValue(succeeded)
+  await mount()
+  await act(async () => { await hook.result.current.importRecovered(id) })
+  expect(await journal.list('A')).toEqual([])
+  expect(hook.result.current.state.journaled).toBe(0)
+})

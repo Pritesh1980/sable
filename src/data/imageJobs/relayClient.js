@@ -202,6 +202,9 @@ export function createRelayClient({ baseUrl, auth, fetchImpl = globalThis.fetch,
     return job
   }
   return {
+    // Synchronous and network-free: false means this build (or this user) has
+    // no relay, so no paid refinement can be sent from here (#157).
+    configured: Boolean(base),
     capabilities: () => call('/v1/image-capabilities', { offlineDisabled: true }),
     serverNow: () => Math.round(now() + clockOffset),
     async submit(pending) {

@@ -60,9 +60,19 @@ it('never fetches for absent configuration or offline authentication', async () 
   await expect(client.submit(pending())).rejects.toMatchObject({ code: 'relay_disabled' })
 })
 
+// #157: the page hides paid-refinement panels in builds with no relay, and
+// needs to know that synchronously, before any network round trip.
+it('reports whether a relay is configured without fetching', () => {
+  expect(client.configured).toBe(true)
+  expect(createRelayClient({ auth, fetchImpl }).configured).toBe(false)
+  expect(createRelayClient({ baseUrl: '', auth, fetchImpl }).configured).toBe(false)
+  expect(fetchImpl).not.toHaveBeenCalled()
+})
+
 it.each(['http://external.example', 'https://user:secret@relay.example', 'https://relay.example?q=secret',
   '/v1/image-jobs', 'https://relay.example/#fragment'])('fails closed for unsafe configuration %s', async baseUrl => {
   const bad = createRelayClient({ baseUrl, auth, fetchImpl })
+  expect(bad.configured).toBe(false)
   expect((await bad.capabilities()).enabled).toBe(false)
   expect(fetchImpl).not.toHaveBeenCalled()
 })

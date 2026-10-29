@@ -115,6 +115,12 @@ known destinations are recovered into the library; an unknown or deleted destina
 requires you to select a concept before saving. Disabled payment can still allow recovery
 of previously accepted jobs.
 
+The **Check recovery** bar and the **Paid image backup** box (above the wall, on the page
+and in the drawer) appear only when paid refinement can happen or has happened: the build
+has the private relay, a request is still pending or awaiting recovery on this device, or
+your library holds paid results. The public demo and offline builds show neither, and the
+manual path above is unchanged.
+
 Saved refinements show **Original and variation** side by side on desktop and stacked
 on a phone. A deleted parent is labelled **Source image unavailable** without hiding
 the child. Rating, **Mark Best** and **Try on skin** act on the saved variation.

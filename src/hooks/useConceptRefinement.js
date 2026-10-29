@@ -12,7 +12,10 @@ const fail = code => imageJobError(code, 409)
 const initialState = () => ({ open: false, phase: 'idle', source: null, destination: null,
   draft: { change: 'Refine the composition', keep: 'Preserve the original character', palette: 'black' },
   draftRevision: 0, job: null, pending: null, comparison: null, error: null,
-  capabilities: null, persistence: null, storageWarningAccepted: false, recoverableJobs: [], recovering: true })
+  capabilities: null, persistence: null, storageWarningAccepted: false, recoverableJobs: [], recovering: true,
+  // Markers in the device journal: the only trace of an accepted paid job when
+  // the relay can't be asked to list them, so the page keeps recovery visible.
+  journaled: 0 })
 const SAFE_ERRORS = new Set(['owner_changed', 'draft_changed', 'source_unreadable', 'source_too_large',
   'invalid_source', 'invalid_request', 'commit_unavailable', 'commit_unverified', 'commit_conflict',
   'storage_full', 'journal_unavailable', 'pending_not_found', 'idempotency_conflict', 'storage_warning_required',
@@ -238,7 +241,8 @@ export function useConceptRefinement({ ownerId, ownerScope, concepts, commitConc
       patch({ phase: 'saved', comparison: { jobId, conceptId, variantId: receipt.variantId,
         sourceUrl: sourceUrl ?? null, resultUrl: getCachedBlobUrl(receipt.imageKey) || existing?.imageUrl || null },
       pending: current.current.pending?.requestId === marker?.requestId ? null : current.current.pending,
-      recoverableJobs: current.current.recoverableJobs.filter(row => row.id !== jobId), error: null })
+      recoverableJobs: current.current.recoverableJobs.filter(row => row.id !== jobId), error: null,
+      journaled: markers.length - (marker ? 1 : 0) })
       return receipt
     } catch (error) {
       if (snapshot) report(error, snapshot, { phase: 'recoverable' })
@@ -256,6 +260,8 @@ export function useConceptRefinement({ ownerId, ownerScope, concepts, commitConc
       assertSession(snapshot)
       const markers = await latest.current.journal.list(snapshot.ownerId)
       assertSession(snapshot)
+      // Before any relay call, so an unreachable relay can't hide these.
+      patch({ journaled: markers.length })
       const caps = await latest.current.relay.capabilities()
       assertSession(snapshot)
       const jobs = caps.provider ? await latest.current.relay.list() : []
@@ -346,11 +352,13 @@ export function useConceptRefinement({ ownerId, ownerScope, concepts, commitConc
       assertSession(snapshot)
       const markers = await latest.current.journal.list(snapshot.ownerId)
       assertSession(snapshot)
-      for (const marker of markers.filter(row => row.jobId === jobId)) {
+      const removed = markers.filter(row => row.jobId === jobId)
+      for (const marker of removed) {
         await latest.current.journal.remove(snapshot.ownerId, marker.requestId)
         assertSession(snapshot)
       }
       patch({ recoverableJobs: current.current.recoverableJobs.filter(row => row.id !== jobId),
+        journaled: markers.length - removed.length,
         job: current.current.job?.id === jobId ? null : current.current.job,
         pending: current.current.pending?.jobId === jobId ? null : current.current.pending })
       return true

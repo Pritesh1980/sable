@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { createOwnerScope } from '../backend/ownerScope'
 import { MemoryRouter } from 'react-router'
 import Concepts from '../pages/Concepts'
 import { COMPOSER_DRAFT_KEY, loadComposerDraft, saveComposerDraft } from '../data/composerDraft'
@@ -188,6 +189,96 @@ describe('Concepts page', () => {
       expect(scrollIntoView).not.toHaveBeenCalled()
       fireEvent.click(toggle)
       expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    })
+  })
+
+  // #157: a build without the paid relay (the public demo, offline builds)
+  // can't run a paid refinement, so its recovery bar and paid-backup box only
+  // confused a first-time user. They stay whenever there is something to
+  // recover or a saved paid result to back up.
+  describe('paid-refinement panels', () => {
+    const ownerScope = createOwnerScope({ privateMode: true, getOwnerId: () => 'A' })
+    const journalWith = (markers = []) => ({ expire: vi.fn(async () => {}), list: vi.fn(async () => markers),
+      put: vi.fn(), remove: vi.fn(), markAccepted: vi.fn() })
+    const disabledCaps = { enabled: false, operations: [], provider: null, profile: null, quota: null, serverTime: 0 }
+    const configuredRelay = () => ({ configured: true, capabilities: vi.fn(async () => disabledCaps),
+      serverNow: () => 0, list: vi.fn(async () => []) })
+    const paidVariant = { id: 'relay:1', imageUrl: 'data:image/png;base64,abc', title: 'Refined',
+      generation: { version: 1, provenance: 'relay' } }
+
+    function SignedIn({ initialConcepts = [], relay, journal }) {
+      const [concepts, setConcepts] = useState(initialConcepts)
+      return (
+        <MemoryRouter initialEntries={['/concepts']}>
+          <Concepts concepts={concepts} setConcepts={setConcepts} artists={artists} ideas={[]}
+            backupOwnerId="A" onExportBackup={vi.fn()} ownerScope={ownerScope}
+            {...(relay ? { relay } : {})} journal={journal} />
+        </MemoryRouter>
+      )
+    }
+    async function settle(journal) {
+      await waitFor(() => expect(journal.list).toHaveBeenCalled())
+      await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)) })
+    }
+    const recoveryBar = () => screen.queryByRole('region', { name: 'Refinement recovery' })
+    const backupBox = () => screen.queryByRole('region', { name: 'Paid image backup' })
+
+    it('hides the recovery bar and paid backup box when no relay is configured and nothing is pending', async () => {
+      const journal = journalWith()
+      render(<SignedIn journal={journal} />)
+      await settle(journal)
+      expect(recoveryBar()).not.toBeInTheDocument()
+      expect(backupBox()).not.toBeInTheDocument()
+      expect(screen.getByText(/no concepts yet/i)).toBeInTheDocument()
+    })
+
+    it('keeps recovery reachable without a relay while the journal holds an accepted job', async () => {
+      const journal = journalWith([{ requestId: 'r1', ownerId: 'A', accepted: true, jobId: 'j1', source: null,
+        destination: { ownerId: 'A', conceptId: 'gone', parentVariantId: null, draftRevision: 1 } }])
+      render(<SignedIn journal={journal} />)
+      await waitFor(() => expect(recoveryBar()).toBeInTheDocument())
+      expect(within(recoveryBar()).getByRole('status')).toHaveTextContent('Refinement needs attention')
+      expect(within(recoveryBar()).getByRole('button', { name: 'Check recovery' })).toBeInTheDocument()
+      expect(backupBox()).toBeInTheDocument()
+    })
+
+    it('shows both when the library holds a saved paid result, even without a relay', async () => {
+      const journal = journalWith()
+      render(<SignedIn journal={journal} initialConcepts={[
+        { id: 'c1', prompt: 'A raven', imageUrl: '/img/raven.png', tags: [], variants: [paidVariant] },
+      ]} />)
+      await settle(journal)
+      expect(recoveryBar()).toBeInTheDocument()
+      expect(backupBox()).toBeInTheDocument()
+    })
+
+    it('shows both from first paint when a relay is configured', () => {
+      render(<SignedIn journal={journalWith()} relay={configuredRelay()} />)
+      expect(recoveryBar()).toBeInTheDocument()
+      expect(backupBox()).toBeInTheDocument()
+    })
+
+    it('leaves the paid backup box out of the manual refinement drawer when no relay is configured', async () => {
+      const journal = journalWith()
+      render(<SignedIn journal={journal} initialConcepts={[
+        { id: 'c1', prompt: 'A raven', imageUrl: '/img/raven.png', tags: [] },
+      ]} />)
+      await settle(journal)
+      fireEvent.click(screen.getByAltText('A raven'))
+      fireEvent.click(screen.getByRole('button', { name: 'Refine this' }))
+      const drawer = await screen.findByRole('dialog', { name: 'Refine image' })
+      expect(within(drawer).getByRole('button', { name: 'Copy refinement prompt' })).toBeInTheDocument()
+      expect(within(drawer).queryByRole('region', { name: 'Paid image backup' })).not.toBeInTheDocument()
+    })
+
+    it('keeps the paid backup box in the refinement drawer when a relay is configured', async () => {
+      render(<SignedIn journal={journalWith()} relay={configuredRelay()} initialConcepts={[
+        { id: 'c1', prompt: 'A raven', imageUrl: '/img/raven.png', tags: [] },
+      ]} />)
+      fireEvent.click(screen.getByAltText('A raven'))
+      fireEvent.click(screen.getByRole('button', { name: 'Refine this' }))
+      const drawer = await screen.findByRole('dialog', { name: 'Refine image' })
+      expect(within(drawer).getByRole('region', { name: 'Paid image backup' })).toBeInTheDocument()
     })
   })
 
