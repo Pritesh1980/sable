@@ -87,7 +87,7 @@ The keyboard does the driving:
 | `↑` `↓` | jump to the **previous / next artist** |
 | `G` | **generate a concept** in this artist's style |
 | `I` | open the artist's **info & notes** (status, notes, linked ideas) |
-| `Esc` | back to the Wall |
+| `Esc` | back to the Wall (with **info & notes** open, the first `Esc` closes just the panel) |
 
 Outside the viewer, **Esc** closes whatever is on top (the add-artist sheet, the More
 menu, a full-screen photo on an artist's page, the status picker), one layer per press.
@@ -104,6 +104,12 @@ top and a small **Details** handle at the bottom. Swipe instead of using the arr
 | tap the photo (or **Details**) | show or hide the panel: filmstrip, the artist's name and `@handle`, **‹ Previous artist** / **Next artist ›**, **Generate a concept** and **Info & notes** |
 
 Pinch to zoom in on the linework as usual; swipes pause while you're zoomed in.
+
+**Back closes the photo.** The browser's Back (Android's back button, Safari's back swipe)
+takes you back to the Wall, not to the page you were on before it. The address shows the
+photo you're on (`?photo=…`), so a link to it opens that photo. Swiping between photos
+doesn't add to your history: one Back closes the viewer however many you looked at. An app
+installed on the iPhone home screen has no back gesture; use **× Close** or swipe down.
 
 A filmstrip of the artist's other photos sits along the bottom — click one to jump. The
 artist's `@handle ↗` opens their Instagram in a new tab. With a mouse, leave it still for a

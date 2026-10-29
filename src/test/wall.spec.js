@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildWallItems, isRecent, stampAddedAt } from '../data/wall'
+import { buildWallItems, isRecent, stampAddedAt, photoParam, findPhotoIndex } from '../data/wall'
 
 const NOW = new Date('2026-07-04T12:00:00.000Z')
 
@@ -171,5 +171,27 @@ describe('buildWallItems', () => {
       {}
     )
     expect(items[0].isRecent).toBe(true)
+  })
+})
+
+describe('photo URL param (#159)', () => {
+  const items = buildWallItems([
+    { id: 'zoia.ink', handle: 'zoia.ink', images: ['a.jpg', 'b.jpg'] },
+    { id: 'carlosvalera', handle: 'carl245tattoo', images: ['c.jpg'] },
+  ])
+
+  it('names a photo by artist id and 1-based position', () => {
+    expect(photoParam(items[1])).toBe('zoia.ink.2')
+    expect(photoParam(items[2])).toBe('carlosvalera.1')
+  })
+
+  it('round-trips, including handles that contain dots', () => {
+    items.forEach((item, i) => expect(findPhotoIndex(items, photoParam(item))).toBe(i))
+  })
+
+  it('is -1 for anything that no longer names a photo', () => {
+    for (const value of [null, '', 'zoia.ink', 'zoia.ink.3', 'zoia.ink.0', 'zoia.ink.x', '.1', 'gone.1', 'zoia.ink.1.5']) {
+      expect(findPhotoIndex(items, value)).toBe(-1)
+    }
   })
 })

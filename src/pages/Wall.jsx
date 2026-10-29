@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router'
-import { buildWallItems, stampAddedAt } from '../data/wall'
+import { buildWallItems, stampAddedAt, photoParam, findPhotoIndex } from '../data/wall'
+import useOverlayParam from '../hooks/useOverlayParam'
 import WallPiece from '../components/WallPiece'
 import WallViewer from '../components/WallViewer'
 import AddArtistModal from '../components/AddArtistModal'
@@ -74,7 +74,11 @@ function Bar({ activeView, onSwitchView, onAddArtist, onOpenDrawer }) {
 
 export default function Wall({ artists = [], ideas = [], setArtists = () => {}, onOpenArtist, onOpenDrawer, onSwitchView, activeView = 'artists' }) {
   const items = buildWallItems(artists)
-  const [viewerIndex, setViewerIndex] = useState(null)
+  // The open photo lives in the URL (?photo=<artistId>.<n>, #159): the browser's
+  // Back closes the viewer instead of leaving the Wall, and a photo can be
+  // linked to. A link to a photo that has gone just shows the Wall.
+  const photo = useOverlayParam('photo')
+  const viewerIndex = findPhotoIndex(items, photo.value)
   const [addArtistOpen, setAddArtistOpen] = useState(false)
   const [captureReceipt, setCaptureReceipt] = useState(null)
   const [addArtistInitial, setAddArtistInitial] = useState(null)
@@ -111,10 +115,9 @@ export default function Wall({ artists = [], ideas = [], setArtists = () => {}, 
     }
   }
 
-  const navigate = useNavigate()
   const { user, signOut } = useAuth() || {}
 
-  const viewerOpen = viewerIndex !== null
+  const viewerOpen = viewerIndex !== -1
 
   // Overlay owns the screen while it's open — lock page scroll so the wall
   // behind it can't move, then hand scroll back when it closes.
@@ -139,15 +142,21 @@ export default function Wall({ artists = [], ideas = [], setArtists = () => {}, 
 
   function handleOpen(item) {
     onOpenArtist?.(item)
-    setViewerIndex(items.indexOf(item))
+    photo.open(photoParam(item))
+  }
+
+  // Swiping between photos replaces the entry: Back closes the viewer, it does
+  // not step back through every photo seen.
+  function handleIndexChange(item) {
+    const value = photoParam(item)
+    if (value !== photo.value) photo.replace(value)
   }
 
   function handleGenerate(item) {
-    // Viewer closes first so back-nav from Concepts returns to the wall, not
-    // to the viewer.
-    setViewerIndex(null)
+    // The viewer's entry is dropped on the way out so back-nav from Concepts
+    // returns to the wall, not to the viewer.
     // t7: Concepts composer reads `steer` to pre-select this artist's style.
-    void navigate(`/concepts?steer=${item.artistId}`)
+    photo.leave(`/concepts?steer=${encodeURIComponent(item.artistId)}`)
   }
 
   // Shared by both drop targets — the wall-piece drop zone (#1) and the
@@ -272,9 +281,10 @@ export default function Wall({ artists = [], ideas = [], setArtists = () => {}, 
           artists={artists}
           ideas={ideas}
           open={viewerOpen}
-          onClose={() => setViewerIndex(null)}
+          onClose={photo.close}
           onPasteImage={addImageToArtist}
           onGenerate={handleGenerate}
+          onIndexChange={handleIndexChange}
         />
       )}
 

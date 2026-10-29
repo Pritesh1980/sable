@@ -83,6 +83,7 @@ export default function WallViewer({
   onClose,
   onGenerate,
   onPasteImage,
+  onIndexChange,
 }) {
   const [showInfo, setShowInfo] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -92,6 +93,7 @@ export default function WallViewer({
   // Pinch-zoomed: hand one-finger drags back to the browser as pans.
   const zoomed = useViewportZoomed()
   const sheetId = useId()
+  const dialogRef = useDialogFocus(open)
 
   const {
     current,
@@ -105,14 +107,15 @@ export default function WallViewer({
   } = useWallKeyboard({
     items,
     initialIndex,
-    onClose,
+    // One layer per Escape (#159): the Info & notes panel closes first.
+    onClose: showInfo ? () => setShowInfo(false) : onClose,
     onGenerate,
     onToggleInfo: () => setShowInfo((s) => !s),
     enabled: open,
+    dialogRef,
   })
 
   const idle = useIdleFade(2000)
-  const dialogRef = useDialogFocus(open)
 
   const gestures = useSwipeTap({
     enabled: !zoomed,
@@ -126,6 +129,11 @@ export default function WallViewer({
       else if (dir === 'down') onClose?.()
     },
   })
+
+  // Tells the Wall which photo is showing, so it can keep the URL on it (#159).
+  useEffect(() => {
+    if (open && current) onIndexChange?.(current)
+  }, [open, current, onIndexChange])
 
   // Paste (⌘V) with the viewer open adds the pasted image to the artist
   // currently in view.

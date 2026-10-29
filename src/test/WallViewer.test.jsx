@@ -121,6 +121,34 @@ describe('WallViewer', () => {
     expect(screen.getByText('Sleeve concept')).toBeInTheDocument()
   })
 
+  // #159: one layer per Escape. With Info & notes open, the first Escape closes
+  // only the panel; the next one closes the viewer.
+  it('Escape closes the Info & notes panel before the viewer', () => {
+    const onClose = vi.fn()
+    renderViewer({ onClose })
+    fireEvent.keyDown(window, { key: 'I' })
+    expect(screen.getByText('Loved the last piece.')).toBeInTheDocument()
+
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(screen.queryByText('Loved the last piece.')).not.toBeInTheDocument()
+    expect(onClose).not.toHaveBeenCalled()
+
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('leaves an Escape alone when a layer above it is the top dialog', () => {
+    const onClose = vi.fn()
+    render(
+      <>
+        <WallViewer items={items} artists={artists} ideas={ideas} onClose={onClose} />
+        <div role="dialog" aria-modal="true" aria-label="Drawer on top" />
+      </>
+    )
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
   it('renders nothing when open is false', () => {
     const { container } = renderViewer({ open: false })
     expect(container).toBeEmptyDOMElement()

@@ -138,6 +138,10 @@ function AppShell() {
                 manifest's share_target and the iOS Shortcut both point here, so
                 intake can move without breaking either. */}
             <Route path="/share" element={<Navigate to="/gallery?shared=1" replace />} />
+            {/* Anything else goes home rather than painting a blank page under the
+                bottom bar (#161). Inside the gate, so a signed-out visit still sees
+                Login first. */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
         {drawerOpen && <Drawer onClose={() => setDrawerOpen(false)} />}

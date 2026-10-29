@@ -44,11 +44,29 @@ test('legacy routes redirect within the base', async ({ page }) => {
   await expect(page).toHaveURL(/\/sable\/gallery\?mode=manage$/)
   await page.goto('boards')
   await expect(page).toHaveURL(/\/sable\/brief\?tab=boards$/)
+  // #161: an unknown path goes home, still inside the base.
+  await page.goto('does-not-exist')
+  // The router writes its home as the bare base (`/sable`), as the logo link does.
+  await expect(page).toHaveURL(/\/sable\/?$/)
+  await expect(page.getByRole('button', { name: /everything else/i })).toBeVisible()
 })
 
 test('in-app navigation keeps the base', async ({ page }) => {
   await page.goto('help')
   await page.getByRole('link', { name: 'Artists' }).tap()
+  await expect(page).toHaveURL(/\/sable\/gallery$/)
+})
+
+// #159: overlay params ride on the based URL, and Back pops them within it.
+test('Back closes the wall viewer within the base', async ({ page }) => {
+  await page.goto('gallery')
+  await page.goto('')
+  await page.getByRole('button', { name: /^Open / }).first().click()
+  await expect(page).toHaveURL(/\/sable\/?\?(.+&)?photo=/)
+  await page.goBack()
+  await expect(page).toHaveURL(/\/sable\/?(\?demo=1)?$/)
+  await expect(page.getByRole('button', { name: /everything else/i })).toBeVisible()
+  await page.goBack()
   await expect(page).toHaveURL(/\/sable\/gallery$/)
 })
 

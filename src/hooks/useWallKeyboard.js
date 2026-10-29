@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { isTopmostDialog } from './useDialogFocus'
 
 // True when the active element is a form field — keyboard nav must not steal
 // keystrokes from a text input, textarea, select, or contenteditable region.
@@ -26,6 +27,10 @@ function buildArtistGroups(items) {
   return groups
 }
 
+function photoKey(item) {
+  return item ? `${item.artistId}\u0000${item.imageIndex}` : undefined
+}
+
 function groupForIndex(groups, index) {
   return groups.find((g) => index >= g.startIndex && index < g.endIndex)
 }
@@ -34,6 +39,11 @@ function groupForIndex(groups, index) {
 // ←/→ move within the current artist's images (wraps at the ends).
 // ↑/↓ jump to the previous/next artist's first image (no wrap past the ends).
 // G/I/Esc call the matching callback. Ignored while a form field has focus.
+// Stacked overlays (#159, CLAUDE.md "Stacked overlays and Escape"): keys are
+// ignored once another layer has handled them (defaultPrevented) or while a
+// dialog sits above `dialogRef`, and the Escape this layer acts on is marked
+// handled. Escape calls `onClose`; the viewer passes a handler that closes its
+// Info & notes panel first, so one press peels one layer.
 export default function useWallKeyboard({
   items,
   initialIndex = 0,
@@ -41,8 +51,26 @@ export default function useWallKeyboard({
   onGenerate,
   onToggleInfo,
   enabled = true,
+  dialogRef,
 }) {
-  const [index, setIndex] = useState(initialIndex)
+  // The open photo is held by identity as well as by position (#159, codex
+  // review). `items` is rebuilt from the artists on every render, so a photo
+  // synced in on an earlier artist shifts every later photo along by one; a
+  // bare position would then show, and the Wall would write into the URL, the
+  // neighbour that slid into the old slot. Moves update both; a shift is
+  // followed during render, so the wrong photo is never committed.
+  const [pos, setPos] = useState(() => ({ index: initialIndex, key: photoKey(items[initialIndex]) }))
+  if (pos.key !== undefined && photoKey(items[pos.index]) !== pos.key) {
+    const found = items.findIndex((item) => photoKey(item) === pos.key)
+    if (found !== -1) setPos({ index: found, key: pos.key })
+  }
+  const index = pos.index
+  const setIndex = useCallback((next) => {
+    setPos((p) => {
+      const i = typeof next === 'function' ? next(p.index) : next
+      return i === p.index ? p : { index: i, key: photoKey(items[i]) }
+    })
+  }, [items])
 
   const groups = useMemo(() => buildArtistGroups(items), [items])
 
@@ -55,7 +83,7 @@ export default function useWallKeyboard({
       const nextPos = (pos + delta + count) % count
       return g.startIndex + nextPos
     })
-  }, [groups])
+  }, [groups, setIndex])
 
   const jumpArtist = useCallback((delta) => {
     setIndex((current) => {
@@ -65,13 +93,15 @@ export default function useWallKeyboard({
       if (nextGi < 0 || nextGi >= groups.length) return current
       return groups[nextGi].startIndex
     })
-  }, [groups])
+  }, [groups, setIndex])
 
   useEffect(() => {
     if (!enabled) return undefined
 
     function handleKeyDown(e) {
       if (isFormFieldFocused()) return
+      if (e.defaultPrevented) return
+      if (dialogRef?.current && !isTopmostDialog(dialogRef.current)) return
 
       switch (e.key) {
         case 'ArrowLeft':
@@ -99,6 +129,7 @@ export default function useWallKeyboard({
           onToggleInfo?.()
           break
         case 'Escape':
+          e.preventDefault()
           onClose?.()
           break
         default:
@@ -108,7 +139,7 @@ export default function useWallKeyboard({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [enabled, moveWithinArtist, jumpArtist, onGenerate, onToggleInfo, onClose, items, index])
+  }, [enabled, moveWithinArtist, jumpArtist, onGenerate, onToggleInfo, onClose, items, index, dialogRef])
 
   const group = groupForIndex(groups, index)
   const groupIndex = group ? groups.indexOf(group) : -1
