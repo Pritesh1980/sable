@@ -258,6 +258,20 @@ describe('Concepts page', () => {
       expect(backupBox()).toBeInTheDocument()
     })
 
+    it('keeps recovery reachable while a configured relay is unreachable, and retries without sending', async () => {
+      const relay = configuredRelay()
+      relay.submit = vi.fn()
+      relay.capabilities.mockRejectedValueOnce(Object.assign(new Error('offline'), { code: 'relay_unavailable' }))
+      const journal = journalWith()
+      render(<SignedIn journal={journal} relay={relay} />)
+      await settle(journal)
+      expect(relay.capabilities).toHaveBeenCalledTimes(1)
+      fireEvent.click(within(recoveryBar()).getByRole('button', { name: 'Check recovery' }))
+      expect(await screen.findByRole('dialog', { name: 'Refine image' })).toBeInTheDocument()
+      await waitFor(() => expect(relay.capabilities).toHaveBeenCalledTimes(2))
+      expect(relay.submit).not.toHaveBeenCalled()
+    })
+
     it('leaves the paid backup box out of the manual refinement drawer when no relay is configured', async () => {
       const journal = journalWith()
       render(<SignedIn journal={journal} initialConcepts={[
