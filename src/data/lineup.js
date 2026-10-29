@@ -188,12 +188,17 @@ export function filterLineup(indexed = [], { query = '', view = 'all' } = {}) {
   })
 }
 
+// A handle-only row is labelled "@handle"; it is grouped and sorted on the
+// handle itself, or every one of them sorts before the named rows in its
+// letter, since "@" collates before any letter (#160).
+const sortLabel = (entry) => entry.label.replace(/^@/, '')
+
 // A–Z sections, the way the show prints its own list; anything not starting
 // with a letter falls into a trailing '#' group.
 export function groupLineup(indexed = []) {
   const groups = new Map()
   for (const entry of indexed) {
-    const first = entry.label.replace(/^@/, '').charAt(0).toUpperCase()
+    const first = sortLabel(entry).charAt(0).toUpperCase()
     const letter = /[A-Z]/.test(first) ? first : '#'
     if (!groups.has(letter)) groups.set(letter, [])
     groups.get(letter).push(entry)
@@ -202,7 +207,7 @@ export function groupLineup(indexed = []) {
     .sort(([a], [b]) => (a === '#' ? 1 : b === '#' ? -1 : a.localeCompare(b)))
     .map(([letter, entries]) => ({
       letter,
-      entries: entries.sort((x, y) => x.label.localeCompare(y.label, undefined, { sensitivity: 'base' })),
+      entries: entries.sort((x, y) => sortLabel(x).localeCompare(sortLabel(y), undefined, { sensitivity: 'base' })),
     }))
 }
 
