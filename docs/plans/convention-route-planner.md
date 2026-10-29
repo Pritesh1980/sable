@@ -206,8 +206,9 @@ Gemini key"), and mark enriched rows visibly as guesses.
   controls need `can-hover:opacity-0`, not bare `opacity-0` (see CLAUDE.md).
 - Touch targets `min-h-11`; no `cream-muted/30|40` (`v2-tokens.spec.js` bans them).
 - `outline-hidden` must be paired with a `focus:border-*` (`a11yAffordances.spec.js`).
-- Update the README's "The suite is N Vitest tests across M files" claim —
-  `readmeClaims.test.js` asserts the file count exactly.
+- The README's "The suite has over N Vitest tests across more than M files" claim
+  is a floor: `readmeClaims.test.js` only fails once the suite outgrows it by a
+  quarter, and then the fix is to raise N/M to round numbers just below the counts.
 - Docs sync: `docs/05-conventions-and-studios.md` and the `conventions-studios`
   section of `src/pages/Help.jsx`.
 - Run the suite from inside a worktree if one exists, or vitest double-counts.

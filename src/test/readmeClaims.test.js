@@ -11,6 +11,13 @@ import { KEY_TO_COLLECTION, collectionFor } from '../backend/sync'
 // the suite had grown to 632 across 81. Nothing failed, because prose isn't checked.
 // A wrong number in the README is worse than no number — it's the first thing a
 // reader can verify, and getting it wrong undermines everything next to it.
+//
+// So the README states floors ("over N tests across more than M files") and this
+// checks them with bounded headroom: the suite must clear each floor, by no more than
+// a quarter. Exact figures (the first design) failed the suite on nearly every new
+// test file until the prose was edited (#163). A floor absorbs ordinary growth; the
+// cap still catches a claim left far behind. When the cap trips, raise the floors to
+// round numbers just below the new counts.
 
 const ROOT = process.cwd()
 const README = readFileSync(join(ROOT, 'README.md'), 'utf8')
@@ -38,7 +45,7 @@ function collectTestFiles(dir) {
 
 // A lower bound on the number of cases: one per `it(` / `test(` call site. Generated
 // cases (`it.each`) expand to several at runtime, so the real total sits at or above
-// this floor — which is why the assertion below is a band, not an equality.
+// this count: a count that reaches the README's floor proves the claim.
 function countCaseCallSites(files) {
   const CALL_SITE = /^[ \t]*(?:it|test)(?:\.[a-zA-Z]+)*\s*[([`]/gm
   return files.reduce(
@@ -47,33 +54,41 @@ function countCaseCallSites(files) {
   )
 }
 
+// How far the suite may outgrow a floor before the claim counts as stale.
+const HEADROOM = 1.25
+const ceilingFor = (floor) => Math.ceil(floor * HEADROOM)
+const toNumber = (digits) => Number(digits.replaceAll(',', ''))
+
 describe('README claims stay true', () => {
   const claim = README.match(
-    /The suite is (\d[\d,]*) Vitest tests across (\d+) files/
+    /The suite has over (\d[\d,]*) Vitest tests across more than (\d[\d,]*) files/
   )
 
   it('states its suite size in the expected form', () => {
     // If this fails, the sentence was reworded — update the pattern above rather
     // than deleting the guard, or the numbers go unchecked again.
-    expect(claim, 'README should state "The suite is N Vitest tests across M files"')
-      .not.toBeNull()
+    expect(
+      claim,
+      'README should state "The suite has over N Vitest tests across more than M files"'
+    ).not.toBeNull()
   })
 
-  it('claims the real number of test files', () => {
+  it('claims a test-file floor the suite has not outgrown', () => {
     const actual = collectTestFiles(join(ROOT, 'src')).length
-    expect(Number(claim[2])).toBe(actual)
+    const floor = toNumber(claim[2])
+
+    expect(actual, `README claims more than ${floor} test files`).toBeGreaterThan(floor)
+    expect(actual, `README's ${floor}-file floor is stale: raise it`)
+      .toBeLessThanOrEqual(ceilingFor(floor))
   })
 
-  it('claims a test total consistent with the suite', () => {
-    const files = collectTestFiles(join(ROOT, 'src'))
-    const floor = countCaseCallSites(files)
-    const claimed = Number(claim[1].replace(/,/g, ''))
+  it('claims a test-total floor the suite has not outgrown', () => {
+    const counted = countCaseCallSites(collectTestFiles(join(ROOT, 'src')))
+    const floor = toNumber(claim[1])
 
-    // At least the statically-visible call sites...
-    expect(claimed).toBeGreaterThanOrEqual(floor)
-    // ...and not wildly above them. The headroom covers `it.each` expansion; a
-    // stale claim left behind by a growing suite falls below the floor and fails.
-    expect(claimed).toBeLessThanOrEqual(Math.ceil(floor * 1.15))
+    expect(counted, `README claims over ${floor} tests`).toBeGreaterThanOrEqual(floor)
+    expect(counted, `README's ${floor}-test floor is stale: raise it`)
+      .toBeLessThanOrEqual(ceilingFor(floor))
   })
 
   it('links the user-workflow maps from both documentation entry points', () => {
