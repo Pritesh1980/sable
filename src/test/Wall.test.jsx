@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { useState } from 'react'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import Wall from '../pages/Wall'
@@ -160,6 +161,59 @@ describe('Wall page', () => {
       await waitFor(() => expect(setArtists).toHaveBeenCalled())
       const next = setArtists.mock.calls[0][0](baseArtists)
       expect(next.some((a) => a.handle === 'new_artist')).toBe(true)
+    })
+  })
+
+  // #161: a new artist lands unranked at the foot of the Wall, out of sight
+  // under "Artist saved". Bring its first photo into view; order is unchanged.
+  describe('revealing a newly saved artist', () => {
+    let scrolled
+    const realScroll = Element.prototype.scrollIntoView
+    const realMatchMedia = window.matchMedia
+
+    beforeEach(() => {
+      scrolled = []
+      Element.prototype.scrollIntoView = function (options) { scrolled.push({ el: this, options }) }
+    })
+    afterEach(() => {
+      Element.prototype.scrollIntoView = realScroll
+      window.matchMedia = realMatchMedia
+    })
+
+    // A library that gives each artist it has not seen a photo, so the new
+    // artist has a Wall tile to scroll to.
+    function LiveWall() {
+      const [artists, setArtistsState] = useState(baseArtists)
+      const setArtists = (update) => setArtistsState((prev) => {
+        const next = typeof update === 'function' ? update(prev) : update
+        return next.map((a) => (prev.some((p) => p.id === a.id) ? a : { ...a, images: [...(a.images || []), '/images/new/1.jpg'] }))
+      })
+      return <Wall artists={artists} setArtists={setArtists} onOpenArtist={vi.fn()} onOpenDrawer={vi.fn()} onSwitchView={vi.fn()} />
+    }
+
+    async function saveNewArtist() {
+      render(<MemoryRouter><LiveWall /></MemoryRouter>)
+      fireEvent.click(screen.getByRole('button', { name: /\+ add artist/i }))
+      fireEvent.change(screen.getByPlaceholderText(/handle or instagram url/i), { target: { value: '@new_artist' } })
+      fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
+      await screen.findByText('Artist saved')
+    }
+
+    it('scrolls the new artist\'s first tile into view, smoothly', async () => {
+      await saveNewArtist()
+      await waitFor(() => expect(scrolled).toHaveLength(1))
+      const tile = main().getByRole('button', { name: 'Open new_artist' }).closest('figure')
+      expect(scrolled[0].el).toBe(tile)
+      expect(scrolled[0].options).toMatchObject({ behavior: 'smooth' })
+      // Still last: revealing it does not reorder the Wall.
+      expect(main().getAllByRole('button', { name: /^Open / }).at(-1)).toHaveAccessibleName('Open new_artist')
+    })
+
+    it('jumps without animation under reduced motion', async () => {
+      window.matchMedia = (query) => ({ matches: query.includes('reduce'), media: query, addEventListener() {}, removeEventListener() {} })
+      await saveNewArtist()
+      await waitFor(() => expect(scrolled).toHaveLength(1))
+      expect(scrolled[0].options).toMatchObject({ behavior: 'auto' })
     })
   })
 

@@ -29,6 +29,7 @@ export default function WallPiece({ item, onOpen, onDropImage }) {
 
   return (
     <figure
+      data-artist-id={item.artistId}
       className={`relative mb-[6px] break-inside-avoid overflow-hidden group ${
         dragOver ? 'ring-2 ring-v2-accent ring-inset' : ''
       }`}

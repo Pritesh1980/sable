@@ -127,6 +127,16 @@ export default function Wall({ artists = [], ideas = [], setArtists = () => {}, 
     }
   }, [viewerOpen])
 
+  // #161: a new artist is unranked, so it lands at the foot of the Wall, out of
+  // sight under "Artist saved". Bring its first photo into view; the order stays.
+  useEffect(() => {
+    if (captureReceipt?.kind !== 'created') return
+    const tile = [...document.querySelectorAll('main [data-artist-id]')]
+      .find((el) => el.dataset.artistId === captureReceipt.artistId)
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    tile?.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'center' })
+  }, [captureReceipt])
+
   function handleOpen(item) {
     onOpenArtist?.(item)
     setViewerIndex(items.indexOf(item))
