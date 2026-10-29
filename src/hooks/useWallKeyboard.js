@@ -27,6 +27,10 @@ function buildArtistGroups(items) {
   return groups
 }
 
+function photoKey(item) {
+  return item ? `${item.artistId}\u0000${item.imageIndex}` : undefined
+}
+
 function groupForIndex(groups, index) {
   return groups.find((g) => index >= g.startIndex && index < g.endIndex)
 }
@@ -49,7 +53,24 @@ export default function useWallKeyboard({
   enabled = true,
   dialogRef,
 }) {
-  const [index, setIndex] = useState(initialIndex)
+  // The open photo is held by identity as well as by position (#159, codex
+  // review). `items` is rebuilt from the artists on every render, so a photo
+  // synced in on an earlier artist shifts every later photo along by one; a
+  // bare position would then show, and the Wall would write into the URL, the
+  // neighbour that slid into the old slot. Moves update both; a shift is
+  // followed during render, so the wrong photo is never committed.
+  const [pos, setPos] = useState(() => ({ index: initialIndex, key: photoKey(items[initialIndex]) }))
+  if (pos.key !== undefined && photoKey(items[pos.index]) !== pos.key) {
+    const found = items.findIndex((item) => photoKey(item) === pos.key)
+    if (found !== -1) setPos({ index: found, key: pos.key })
+  }
+  const index = pos.index
+  const setIndex = useCallback((next) => {
+    setPos((p) => {
+      const i = typeof next === 'function' ? next(p.index) : next
+      return i === p.index ? p : { index: i, key: photoKey(items[i]) }
+    })
+  }, [items])
 
   const groups = useMemo(() => buildArtistGroups(items), [items])
 
@@ -62,7 +83,7 @@ export default function useWallKeyboard({
       const nextPos = (pos + delta + count) % count
       return g.startIndex + nextPos
     })
-  }, [groups])
+  }, [groups, setIndex])
 
   const jumpArtist = useCallback((delta) => {
     setIndex((current) => {
@@ -72,7 +93,7 @@ export default function useWallKeyboard({
       if (nextGi < 0 || nextGi >= groups.length) return current
       return groups[nextGi].startIndex
     })
-  }, [groups])
+  }, [groups, setIndex])
 
   useEffect(() => {
     if (!enabled) return undefined

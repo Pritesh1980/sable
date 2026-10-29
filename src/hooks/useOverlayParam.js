@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 
 // Marks a history entry this hook pushed, so closing knows whether the entry
@@ -34,8 +34,10 @@ export default function useOverlayParam(name) {
   const pushed = location.state?.[MARK] === name
   // history.back() is asynchronous: until the pop lands, the location is
   // unchanged, so a second close (Escape and a swipe, a deleted item's own
-  // close) would go back twice and leave the page.
+  // close) would go back twice and leave the page. Cleared once the location
+  // moves, because Forward brings back the very same entry key (codex review).
   const closingKey = useRef(null)
+  useEffect(() => { closingKey.current = null }, [location.key])
 
   const target = useCallback((next) => {
     const params = new URLSearchParams(location.search)

@@ -37,8 +37,13 @@ const here = () => `${probe.location.pathname}${probe.location.search}`
 const back = () => act(() => { probe.navigate(-1) })
 
 function renderApp(props = {}, { entries = ['/'], strict = false } = {}) {
+  const view = render(tree(props, { entries, strict }))
+  return { ...view, rerender: (next) => view.rerender(tree(next, { entries, strict })) }
+}
+
+function tree(props, { entries, strict }) {
   const Wrap = strict ? StrictMode : 'div'
-  return render(
+  return (
     <Wrap>
     <MemoryRouter initialEntries={entries} initialIndex={entries.length - 1}>
       <Probe />
@@ -193,6 +198,29 @@ describe('Wall → WallViewer integration', () => {
       expect(here()).toBe('/')
       back()
       expect(screen.getByText('Brief page mock')).toBeInTheDocument()
+    })
+
+    it('Close still works after Forward reopens the photo (codex review)', () => {
+      renderApp({}, { entries: ['/brief', '/'] })
+      clickPiece('zoia.ink')
+      fireEvent.click(screen.getByRole('button', { name: /close viewer/i }))
+      act(() => { probe.navigate(1) })
+      expect(viewerHeading('zoia.ink')).toBeInTheDocument()
+
+      fireEvent.click(screen.getByRole('button', { name: /close viewer/i }))
+      expect(here()).toBe('/')
+      expect(viewerHeading('zoia.ink')).not.toBeInTheDocument()
+    })
+
+    it('stays on the linked photo when a photo lands on an earlier artist (codex review)', () => {
+      const { rerender } = renderApp({}, { entries: ['/?photo=carlosvalera.1'] })
+      expect(viewerHeading('Carlos Valera')).toBeInTheDocument()
+
+      const synced = [{ ...artists[0], images: [...artists[0].images, '/images/artists/zoia.ink/3.jpg'] }, artists[1]]
+      rerender({ artists: synced })
+
+      expect(viewerHeading('Carlos Valera')).toBeInTheDocument()
+      expect(here()).toBe('/?photo=carlosvalera.1')
     })
 
     it('closing from the UI leaves no entry behind: the next Back leaves the Wall', () => {
