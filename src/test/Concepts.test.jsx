@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { describe, expect, it, beforeEach, vi } from 'vitest'
+import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import Concepts from '../pages/Concepts'
@@ -135,6 +135,60 @@ describe('Concepts page', () => {
       styleDescriptor: '', tags: ['blackwork'], placement: 'forearm',
     }))
     expect(writeText.mock.calls[0][0]).not.toMatch(/concept consultant/i)
+  })
+
+  // #157: with no key, Generate opens AI setup at the bottom of a tall
+  // composer — on a phone that is off-screen, so it looked like nothing happened.
+  describe('Generate image with no key', () => {
+    const originalScroll = Element.prototype.scrollIntoView
+    const originalMatchMedia = window.matchMedia
+    let scrollIntoView
+    beforeEach(() => {
+      scrollIntoView = vi.fn()
+      Element.prototype.scrollIntoView = scrollIntoView
+    })
+    afterEach(() => {
+      Element.prototype.scrollIntoView = originalScroll
+      window.matchMedia = originalMatchMedia
+    })
+
+    function openComposerWithIdea() {
+      render(<ConceptsHarness />)
+      fireEvent.click(screen.getAllByRole('button', { name: '+ New concept' })[0])
+      fireEvent.change(screen.getByLabelText('Your idea'), { target: { value: 'A moth study' } })
+    }
+
+    it('opens AI setup, scrolls it into view and focuses the first key field', async () => {
+      openComposerWithIdea()
+      const toggle = screen.getByRole('button', { name: /AI setup/ })
+      expect(toggle).toHaveAttribute('aria-expanded', 'false')
+      fireEvent.click(screen.getByRole('button', { name: 'Generate image' }))
+      expect(toggle).toHaveAttribute('aria-expanded', 'true')
+      const panel = document.getElementById(toggle.getAttribute('aria-controls'))
+      expect(panel).toBeInTheDocument()
+      await waitFor(() => expect(document.activeElement).toBe(screen.getByPlaceholderText('AIza…')))
+      expect(scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }))
+      expect(scrollIntoView.mock.contexts[0]).toBe(panel)
+    })
+
+    it('scrolls instantly when the user prefers reduced motion', async () => {
+      window.matchMedia = vi.fn((query) => ({ matches: query.includes('reduce'), media: query,
+        addEventListener() {}, removeEventListener() {} }))
+      openComposerWithIdea()
+      fireEvent.click(screen.getByRole('button', { name: 'Generate image' }))
+      await waitFor(() => expect(scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'auto' })))
+    })
+
+    it('does not move focus when AI setup is opened from its own toggle', () => {
+      openComposerWithIdea()
+      const toggle = screen.getByRole('button', { name: /AI setup/ })
+      fireEvent.click(toggle)
+      expect(toggle).toHaveAttribute('aria-expanded', 'true')
+      expect(document.activeElement).not.toBe(screen.getByPlaceholderText('AIza…'))
+      expect(scrollIntoView).not.toHaveBeenCalled()
+      fireEvent.click(toggle)
+      expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    })
   })
 
   it('saves a pasted-back image identically to a generated concept, landing on the wall', async () => {

@@ -39,7 +39,8 @@ tab and back never loses it. It clears when the concept saves.
 ### AI setup — keys and providers
 
 Open **AI setup** in the composer to add an **OpenAI key** (DALL·E 3) or a **Gemini key**,
-each stored only on your device. Both need **provider API billing**, with prices depending
+each stored only on your device. Tapping **Generate image** with no key saved opens AI
+setup for you, scrolled into view with the Gemini key field focused. Both need **provider API billing**, with prices depending
 on the model and provider. A Google AI Pro subscription does **not** cover Gemini *API* usage — to
 stay free, use **Copy prompt** and paste the result back instead. With both keys set, a
 provider toggle appears. These browser keys are separate from private relay activation;

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { PLACEMENTS } from '../data/artists'
 import ArtistImage from './ArtistImage'
 
@@ -62,8 +62,30 @@ export default function ConceptComposer({
 }) {
   const [pickerOpen, setPickerOpen] = useState(false)
   const [dragOver, setDragOver] = useState(false)
+  const aiSetupId = useId()
+  const aiSetupRef = useRef(null)
+  // Generate with no key opens AI setup, which sits at the bottom of a tall
+  // composer — off-screen on a phone. Bring it into view and focus the first
+  // key field so the tap visibly does something (#157). Opening it from its
+  // own toggle leaves scroll and focus alone.
+  const revealPending = useRef(false)
+  const [revealRequest, setRevealRequest] = useState(0)
+  useEffect(() => {
+    if (!revealPending.current || !aiSetupOpen || !aiSetupRef.current) return
+    revealPending.current = false
+    const panel = aiSetupRef.current
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+    panel.scrollIntoView?.({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' })
+    panel.querySelector('input')?.focus({ preventScroll: true })
+  }, [revealRequest, aiSetupOpen])
 
   if (!open) return null
+
+  function revealAiSetup() {
+    revealPending.current = true
+    setRevealRequest((n) => n + 1)
+    onToggleAiSetup(true)
+  }
 
   const steerArtist = artists.find((a) => a.id === steerArtistId) || null
 
@@ -193,7 +215,7 @@ export default function ConceptComposer({
 
       <div className="flex gap-2.5 mt-4">
         <button
-          onClick={() => (hasApiKey ? onGenerate() : onToggleAiSetup(true))}
+          onClick={() => (hasApiKey ? onGenerate() : revealAiSetup())}
           disabled={generating || !idea.trim()}
           className="flex-1 bg-v2-accent text-v2-cream font-v2-ui text-sm font-medium rounded-xs px-4 py-3 transition-colors hover:brightness-110 disabled:opacity-30 disabled:cursor-not-allowed"
         >
@@ -248,12 +270,15 @@ export default function ConceptComposer({
 
       <div className="mt-4">
         <button
+          type="button"
+          aria-expanded={Boolean(aiSetupOpen)}
+          aria-controls={aiSetupId}
           onClick={() => onToggleAiSetup(!aiSetupOpen)}
           className="font-v2-ui text-sm text-v2-muted hover:text-v2-cream underline underline-offset-4"
         >
           AI setup {hasApiKey ? '(key set)' : '(no key — copy-prompt only)'}
         </button>
-        {aiSetupOpen && <div className="mt-3">{aiSetupPanel}</div>}
+        {aiSetupOpen && <div id={aiSetupId} ref={aiSetupRef} className="mt-3 scroll-mt-4">{aiSetupPanel}</div>}
       </div>
     </aside>
   )
