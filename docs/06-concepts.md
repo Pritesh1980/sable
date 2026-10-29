@@ -28,9 +28,10 @@ already set). One panel, top to bottom:
   feathers dissolving into smoke, heavy black shading."*
 - **Placement** — forearm, upper arm, chest, back, calf…
 - **Generate image** — creates the image in-app (needs an API key, below).
-- **Copy prompt instead** — copies a richly-structured prompt for ChatGPT, Claude, Gemini
-  or AI Studio. Run it there, then **drop or paste the result** into the composer's
-  drop zone — it saves to the wall exactly like a generated image.
+- **Copy prompt instead** — copies the same image prompt **Generate image** sends (idea,
+  steer style and placement), for an image generator such as ChatGPT, Gemini or AI
+  Studio. Run it there, then **drop or paste the image** into the composer's drop zone —
+  it saves to the wall exactly like a generated image.
 
 Your draft (steer, idea, placement) is kept on this device, so hopping out to another AI
 tab and back never loses it. It clears when the concept saves.
@@ -38,7 +39,8 @@ tab and back never loses it. It clears when the concept saves.
 ### AI setup — keys and providers
 
 Open **AI setup** in the composer to add an **OpenAI key** (DALL·E 3) or a **Gemini key**,
-each stored only on your device. Both need **provider API billing**, with prices depending
+each stored only on your device. Tapping **Generate image** with no key saved opens AI
+setup for you, scrolled into view with the Gemini key field focused. Both need **provider API billing**, with prices depending
 on the model and provider. A Google AI Pro subscription does **not** cover Gemini *API* usage — to
 stay free, use **Copy prompt** and paste the result back instead. With both keys set, a
 provider toggle appears. These browser keys are separate from private relay activation;
@@ -112,6 +114,12 @@ provider outcome requires explicit confirmation before a new paid request. Succe
 known destinations are recovered into the library; an unknown or deleted destination
 requires you to select a concept before saving. Disabled payment can still allow recovery
 of previously accepted jobs.
+
+The **Check recovery** bar and the **Paid image backup** box (above the wall, on the page
+and in the drawer) appear only when paid refinement can happen or has happened: the build
+has the private relay, a request is still pending or awaiting recovery on this device, or
+your library holds paid results. The public demo and offline builds show neither, and the
+manual path above is unchanged.
 
 Saved refinements show **Original and variation** side by side on desktop and stacked
 on a phone. A deleted parent is labelled **Source image unavailable** without hiding

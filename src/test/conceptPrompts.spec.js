@@ -1,7 +1,7 @@
 // Review-fix coverage: ALL generation paths must honour the steer artist and
 // placement — not just Gemini. "Generate in this style" parity.
 import { describe, it, expect } from 'vitest'
-import { buildImagePrompt, buildTextPrompt } from '../data/conceptPrompts'
+import { buildImagePrompt } from '../data/conceptPrompts'
 
 const steer = {
   styleDescriptor: 'heavy blackwork with engraved linework',
@@ -24,21 +24,19 @@ describe('buildImagePrompt', () => {
   })
 })
 
-describe('buildTextPrompt', () => {
-  it('works unsteered (back-compat)', () => {
-    const p = buildTextPrompt('a raven on a pocket watch')
-    expect(p).toContain('a raven on a pocket watch')
+describe('buildImagePrompt punctuation', () => {
+  // Copy prompt shows this text to the user now (#156); an idea written as a
+  // full sentence must not produce "shading.. in the style of".
+  it('does not double the full stop after an idea that ends in one', () => {
+    const p = buildImagePrompt('A raven, heavy black shading. ', steer)
+    expect(p).toContain('heavy black shading. in the style of')
+    expect(p).not.toContain('..')
   })
+})
 
-  it('folds style descriptor, tags and placement into the prompt', () => {
-    const p = buildTextPrompt('a raven on a pocket watch', steer)
-    expect(p).toContain('heavy blackwork with engraved linework')
-    expect(p).toContain('dark-illustrative')
-    expect(p).toContain('upper arm')
-  })
-
+describe('buildImagePrompt steer fragment', () => {
   it('omits steer language when fields are empty', () => {
-    const p = buildTextPrompt('a raven', { styleDescriptor: '', tags: [], placement: '' })
+    const p = buildImagePrompt('a raven', { styleDescriptor: '', tags: [], placement: '' })
     expect(p).not.toContain('in the style of')
     expect(p).not.toContain('Placement:')
   })

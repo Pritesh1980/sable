@@ -22,7 +22,7 @@ import {
 import { buildConceptWallItems, isDraftConcept } from '../data/concepts'
 import { clearComposerDraft, loadComposerDraft, saveComposerDraft } from '../data/composerDraft'
 import { generateImageWithGemini } from '../data/geminiImage'
-import { buildImagePrompt, buildTextPrompt } from '../data/conceptPrompts'
+import { buildImagePrompt } from '../data/conceptPrompts'
 import { stageImage, withStagedImages } from '../data/imageStaging'
 import useImageStatuses from '../hooks/useImageStatuses'
 import { useAuth } from '../context/useAuth'
@@ -34,6 +34,7 @@ import { pendingImageJobs } from '../data/imageJobs/pendingJobs'
 import { prepareRefinementSource } from '../data/imageJobs/prepareSource'
 import { knownKeyForUrl } from '../data/blobUrls'
 import { refKey } from '../data/imageRef'
+import { paidVariantIds } from '../data/backupStatus'
 import { readStagedImage } from '../data/stagedImageStore'
 import { resolveAssetPath } from '../data/assetPath'
 import { LIMITS } from '../../shared/imageJobs'
@@ -251,10 +252,12 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
     }
   }
 
+  // The round trip expects an image back (the paste-back zone takes one), so
+  // this copies the same image prompt direct DALL·E generation sends (#156).
   async function copyPrompt() {
     if (!idea.trim()) return
     const steerArtist = artists.find((a) => a.id === steerArtistId)
-    const full = buildTextPrompt(idea, {
+    const full = buildImagePrompt(idea, {
       styleDescriptor: steerArtist?.styleDescriptor || '',
       tags: steerArtist?.tags || [],
       placement,
@@ -461,6 +464,21 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
     return refinement.recover()
   }
 
+  // Paid refinement needs the private relay; a build without one (the public
+  // demo, offline builds) can't send a paid request, so its recovery bar and
+  // paid-backup box are noise there (#157). They stay whenever there is
+  // something to recover — an in-flight or journaled job, or one the relay
+  // lists — or saved paid results to back up, so recovery is never hidden
+  // while it has work.
+  const rs = refinement.state
+  const needsRecovery = Boolean(rs.pending || rs.job || rs.recoverableJobs.length || rs.journaled
+    || rs.phase === 'saved')
+  const showPaidPanels = Boolean(relay?.configured || rs.capabilities?.enabled || rs.capabilities?.provider
+    || needsRecovery || paidVariantIds(concepts).length)
+  const paidBackupStatus = showPaidPanels && backupOwnerId && onExportBackup && (
+    <ConceptBackupStatus ownerId={backupOwnerId} concepts={concepts} onExport={onExportBackup} revision={backupRevision} />
+  )
+
   const comparison = manualComparison || refinement.state.comparison
   const comparisonConcept = concepts.find(row => row.id === comparison?.conceptId)
   const comparisonVariant = comparisonConcept?.variants?.find(variant => variant.id === comparison.variantId)
@@ -548,15 +566,17 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
         </button>
       </header>
 
-      <section aria-label="Refinement recovery" className="flex flex-wrap items-center justify-between gap-2 border-b border-v2-hairline px-4 sm:px-8 py-2 font-v2-ui text-sm text-v2-muted">
-        <span role="status">{refinement.state.phase === 'saved' ? 'Variation saved' : refinement.state.recovering
-          ? 'Checking refinement recovery' : refinement.state.pending || refinement.state.recoverableJobs.length
-            ? 'Refinement needs attention' : 'Refinement recovery'}</span>
-        <button type="button" onClick={() => refinement.recover({ open: true })}
-          className="inline-flex min-h-11 items-center gap-2 px-3 text-v2-cream focus-visible:outline-2 hover:text-v2-accent">
-          <RefreshCw size={18} aria-hidden="true" />Check recovery
-        </button>
-      </section>
+      {showPaidPanels && (
+        <section aria-label="Refinement recovery" className="flex flex-wrap items-center justify-between gap-2 border-b border-v2-hairline px-4 sm:px-8 py-2 font-v2-ui text-sm text-v2-muted">
+          <span role="status">{rs.phase === 'saved' ? 'Variation saved' : rs.recovering
+            ? 'Checking refinement recovery' : rs.pending || rs.recoverableJobs.length || rs.journaled
+              ? 'Refinement needs attention' : 'Refinement recovery'}</span>
+          <button type="button" onClick={() => refinement.recover({ open: true })}
+            className="inline-flex min-h-11 items-center gap-2 px-3 text-v2-cream focus-visible:outline-2 hover:text-v2-accent">
+            <RefreshCw size={18} aria-hidden="true" />Check recovery
+          </button>
+        </section>
+      )}
 
       {wallItems.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-4 py-32 text-center px-6">
@@ -615,9 +635,9 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
         </section>
       )}
 
-      {backupOwnerId && onExportBackup && (
-        <div className="max-w-3xl mx-auto px-4 md:px-8 pb-10">
-          <ConceptBackupStatus key={backupOwnerId} ownerId={backupOwnerId} concepts={concepts} onExport={onExportBackup} revision={backupRevision} />
+      {paidBackupStatus && (
+        <div key={backupOwnerId} className="max-w-3xl mx-auto px-4 md:px-8 pb-10">
+          {paidBackupStatus}
         </div>
       )}
 
@@ -692,8 +712,7 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
         onSelectSource={file => refinement.openSource(refinement.state.destination, file)}
         onRecover={recoverRefinement} onClose={refinement.close} destinations={concepts} comparison={comparisonPanel}
         message={refinementMessage}
-        backupStatus={backupOwnerId && onExportBackup && <ConceptBackupStatus ownerId={backupOwnerId}
-          concepts={concepts} onExport={onExportBackup} revision={backupRevision} />}
+        backupStatus={paidBackupStatus}
       />}
     </div>
   )
