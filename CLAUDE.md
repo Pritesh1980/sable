@@ -311,6 +311,32 @@ them. Keep messages terse and conventional (e.g. `feat(home): …`, `docs: …`)
 
 ---
 
+## Working efficiently
+
+Measured by the owner's private AI usage ledger (`~/code/ai-usage`), Sept–Oct 2026.
+Nearly all the waste is context, not the choice of model: every reply re-reads the
+whole conversation, so cost grows with what a session is carrying.
+
+- **One unit of work per session.** Two sessions that ran for 11 and 12 days carried
+  about 70% of Claude spend, and new tasks often began on 300k–950k tokens left over
+  from earlier ones. When new work is asked for in a session already past ~150k
+  tokens ("what's next?", "do #N"), say so before starting it. Offer a fresh session
+  (`/clear`) with a handoff written on the issue (what's done, what's next) so any
+  agent can pick it up, or run the task as a worktree subagent. Don't start it inline.
+- **Don't resume a big session after a long break.** The prompt cache expires after
+  an hour, and the first reply after that rewrites the whole context at full price:
+  38 of 57 such rebuilds followed a gap of an hour or more. After a night or a
+  usage-limit pause, start fresh and orient with `git log -5` and `gh pr list`.
+- **Wait, don't poll.** Start reviewers (`codex exec`, `agy --print`) and slow commands
+  in the background and wait for the exit notification (Claude Code: Bash
+  `run_in_background`); don't loop on `sleep`, `pgrep` or `wc -c`. For CI, run one
+  `gh pr checks <n> --watch`. Every poll re-reads the whole context.
+- **Work on another repo from its own directory.** Building the ledger from this
+  checkout got its cost booked to Sable and carried this file in context throughout.
+  Start that work with `cd ~/code/ai-usage && claude`.
+
+---
+
 ## Testing
 
 **Use a TDD approach for all new code.** Write tests before writing the implementation.
