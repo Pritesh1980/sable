@@ -86,6 +86,8 @@ test.describe('Back closes the overlay', () => {
     await openDemo(page, '/')
     await page.getByRole('button', { name: 'Open Mora Vane' }).first().click()
     const viewer = page.getByRole('dialog', { name: imageLabel })
+    // The key handler attaches once the viewer is up; a press before that is lost.
+    await expect(viewer).toBeVisible()
     await page.keyboard.press('i')
     await expect(viewer.getByText('Linked ideas')).toBeVisible()
 
@@ -99,7 +101,8 @@ test.describe('Back closes the overlay', () => {
   test('artist detail: Back closes the detail onto the gallery', async ({ page }) => {
     await openDemo(page, '/')
     await page.goto('/gallery')
-    await page.getByRole('button', { name: 'Open Mora Vane' }).first().click()
+    // The card's centre holds the status button; its name opens the detail.
+    await page.getByRole('button', { name: /^Open / }).first().getByRole('heading').click()
     const back = page.getByRole('button', { name: '← Back' })
     await expect(back).toBeVisible()
     await expect(page).toHaveURL(/\/gallery\?artist=/)
@@ -112,7 +115,8 @@ test.describe('Back closes the overlay', () => {
 
   test('artist detail: a deep link opens it, and ← Back stays on the gallery', async ({ page }) => {
     await openDemo(page, '/gallery')
-    await page.getByRole('button', { name: 'Open Mora Vane' }).first().click()
+    // The card's centre holds the status button; its name opens the detail.
+    await page.getByRole('button', { name: /^Open / }).first().getByRole('heading').click()
     const url = page.url()
     await page.goto(url)
     const back = page.getByRole('button', { name: '← Back' })
