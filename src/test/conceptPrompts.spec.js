@@ -24,6 +24,16 @@ describe('buildImagePrompt', () => {
   })
 })
 
+describe('buildImagePrompt punctuation', () => {
+  // Copy prompt shows this text to the user now (#156); an idea written as a
+  // full sentence must not produce "shading.. in the style of".
+  it('does not double the full stop after an idea that ends in one', () => {
+    const p = buildImagePrompt('A raven, heavy black shading. ', steer)
+    expect(p).toContain('heavy black shading. in the style of')
+    expect(p).not.toContain('..')
+  })
+})
+
 describe('buildImagePrompt steer fragment', () => {
   it('omits steer language when fields are empty', () => {
     const p = buildImagePrompt('a raven', { styleDescriptor: '', tags: [], placement: '' })

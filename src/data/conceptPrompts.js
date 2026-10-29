@@ -4,6 +4,8 @@
 // thing regardless of provider. Copy-prompt sends the image prompt too: the
 // round trip expects an image pasted back, not a written description (#156).
 
+import { trimEndChars } from './textTrim'
+
 // Renders the steer fields as a prompt fragment; empty when nothing is set.
 function steerFragment({ styleDescriptor = '', tags = [], placement = '' } = {}) {
   const parts = []
@@ -14,5 +16,8 @@ function steerFragment({ styleDescriptor = '', tags = [], placement = '' } = {})
 }
 
 export function buildImagePrompt(userPrompt, steer = {}) {
-  return `Professional tattoo concept art: ${userPrompt}.${steerFragment(steer)} Black ink tattoo design on white background, fine line illustration, high contrast, clean lines, suitable for tattooing, tattoo flash art style, no text, no watermarks`
+  // The idea is often a full sentence; drop its own closing stop so the
+  // template's doesn't double it.
+  const idea = trimEndChars(userPrompt, '.,;:', { whitespace: true })
+  return `Professional tattoo concept art: ${idea}.${steerFragment(steer)} Black ink tattoo design on white background, fine line illustration, high contrast, clean lines, suitable for tattooing, tattoo flash art style, no text, no watermarks`
 }
