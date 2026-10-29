@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import Conventions from '../pages/Conventions'
+import Studios from '../pages/Studios'
 import { CONVENTIONS } from '../data/conventions'
 
 const artists = [
@@ -225,5 +226,50 @@ describe('Conventions artist index', () => {
     expect(row.queryByRole('button', { name: /^add$/i })).not.toBeInTheDocument()
     expect(row.getByText('#2')).toBeInTheDocument()
     expect(setArtists).not.toHaveBeenCalled()
+  })
+})
+
+// Studios has no spec of its own; it shares this guide section (docs/05) and
+// this page-test pattern, so it lives here. #161.
+describe('Studios page', () => {
+  function renderStudios(studioArtists) {
+    return render(
+      <MemoryRouter>
+        <Studios artists={studioArtists} />
+      </MemoryRouter>
+    )
+  }
+
+  function studioCard(name) {
+    return within(screen.getByRole('heading', { name }).closest('div.animate-slide-up'))
+  }
+
+  it('counts one artist as "1 of your artists here"', () => {
+    renderStudios([{ id: 'berkbosveren', handle: 'berkbosveren', name: '', studio: 'london-glitch', rank: 9 }])
+    const card = studioCard('London Glitch')
+    expect(card.getByText('1 of your artists here')).toBeInTheDocument()
+    expect(card.queryByText(/of your artist here/)).toBeNull()
+  })
+
+  it('counts several artists the same way', () => {
+    renderStudios([
+      { id: 'a', handle: 'a.ink', name: '', studio: 'london-glitch', rank: 1 },
+      { id: 'b', handle: 'b.ink', name: '', studio: 'london-glitch', rank: 2 },
+    ])
+    expect(studioCard('London Glitch').getByText('2 of your artists here')).toBeInTheDocument()
+  })
+
+  it('shows an artist’s name on the chip when there is one, keeping the handle on the link', () => {
+    renderStudios([
+      { id: 'carlosvalera', handle: 'carl245tattoo', name: 'Carlos Valera', studio: 'london-glitch', rank: 5 },
+      { id: 'berkbosveren', handle: 'berkbosveren', name: '', studio: 'london-glitch', rank: 9 },
+    ])
+    const card = studioCard('London Glitch')
+    const named = card.getByRole('link', { name: /carlos valera/i })
+    expect(named).toHaveAttribute('href', 'https://instagram.com/carl245tattoo')
+    expect(named).toHaveAttribute('title', '@carl245tattoo')
+    expect(card.queryByText('@carl245tattoo')).toBeNull()
+    // No name saved: the handle is all there is to show.
+    expect(card.getByRole('link', { name: /@berkbosveren/ })).toHaveAttribute('href', 'https://instagram.com/berkbosveren')
   })
 })

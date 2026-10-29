@@ -92,7 +92,7 @@ const SECTIONS = [
       'Competition winners does the same for a show’s results board. Paste the categories and placings in — award category on its own line, then "1st - Name @handle" under it — and Sable groups them by category, whole-show prizes first, telling you which winners are already in your gallery.',
       'It reads the format shows publish ("1st Place - Tia tattooed by Adam Blakey, New Mind") as well as a plain "1st - Name @handle" — and in the published form the first name is the collector wearing the tattoo, so Sable credits the artist after "tattooed by" and keeps the collector as context.',
       'Tap + Add a photo of the winning tattoo on any winner to attach the shots you took — the piece, the trophy, the stage. Several per winner is fine. They stay on this device and survive a re-import, so you can add Saturday’s results and the rest after Sunday’s judging without losing them.',
-      'Drawer → Studios groups your saved artists by the studio they work at, sorted by distance, with links to Instagram and the studio site.',
+      'Drawer → Studios groups your saved artists by the studio they work at, sorted by distance, with links to Instagram and the studio site. Each artist chip shows their name when you have saved one, otherwise their handle.',
       'Assign an artist to a studio in the Classic gallery’s Manage mode (or the artist detail) to make them appear under Studios.',
     ],
   },

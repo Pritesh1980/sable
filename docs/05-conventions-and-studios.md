@@ -216,7 +216,9 @@ state. Assign a studio in an artist's detail view to populate it; Sable only sho
 studios linked to your saved artists, not every shipped studio.
 
 - Only studios that have at least one of *your* artists appear.
-- Each card lists those artists as chips — **tap a chip to open their Instagram**.
+- Each card says how many of your artists work there and lists them as chips, showing the
+  artist's name when you've saved one (otherwise their handle) — **tap a chip to open their
+  Instagram**.
 - **Visit site** links to the studio's page where known.
 
 An artist shows up here once you've set their **Studio** field — do that from
