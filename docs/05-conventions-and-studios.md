@@ -217,7 +217,8 @@ studios linked to your saved artists, not every shipped studio.
 
 - Only studios that have at least one of *your* artists appear.
 - Each card says how many of your artists work there and lists them as chips, showing the
-  artist's name when you've saved one (otherwise their handle) — **tap a chip to open their
+  artist's name with their handle beside it when you've saved a name (otherwise just the
+  handle) — **tap a chip to open their
   Instagram**.
 - **Visit site** links to the studio's page where known.
 

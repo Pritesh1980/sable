@@ -267,8 +267,9 @@ describe('Studios page', () => {
     const card = studioCard('London Glitch')
     const named = card.getByRole('link', { name: /carlos valera/i })
     expect(named).toHaveAttribute('href', 'https://instagram.com/carl245tattoo')
-    expect(named).toHaveAttribute('title', '@carl245tattoo')
-    expect(card.queryByText('@carl245tattoo')).toBeNull()
+    // Secondary text, not just a title: iPhone never shows a title tooltip.
+    expect(within(named).getByText('Carlos Valera')).toBeInTheDocument()
+    expect(within(named).getByText('@carl245tattoo')).toBeInTheDocument()
     // No name saved: the handle is all there is to show.
     expect(card.getByRole('link', { name: /@berkbosveren/ })).toHaveAttribute('href', 'https://instagram.com/berkbosveren')
   })

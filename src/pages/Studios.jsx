@@ -16,8 +16,9 @@ function DistanceBadge({ distanceMiles }) {
   )
 }
 
-// The display name when one is saved, else the handle (#161). The handle stays
-// on the link itself and in its title, since the chip opens their Instagram.
+// The display name when one is saved, else the handle (#161). A named chip
+// keeps the handle as dimmer secondary text (a title alone never shows on
+// iPhone), since the chip opens their Instagram.
 function ArtistChip({ artist }) {
   const handle = `@${artist.handle}`
   const label = artist.name || handle
@@ -33,6 +34,9 @@ function ArtistChip({ artist }) {
         <ArtistImage src={artist.images?.[0]} label={label} className="w-full h-full object-cover" monogramClassName="text-xs" />
       </span>
       <span className="text-xs font-mono text-cream-muted truncate">{label}</span>
+      {artist.name && (
+        <span className="text-[0.625rem] font-mono text-cream-muted/50 truncate">{handle}</span>
+      )}
     </a>
   )
 }
