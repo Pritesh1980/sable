@@ -92,6 +92,7 @@ export default function WallViewer({
   // Pinch-zoomed: hand one-finger drags back to the browser as pans.
   const zoomed = useViewportZoomed()
   const sheetId = useId()
+  const dialogRef = useDialogFocus(open)
 
   const {
     current,
@@ -105,14 +106,15 @@ export default function WallViewer({
   } = useWallKeyboard({
     items,
     initialIndex,
-    onClose,
+    // One layer per Escape (#159): the Info & notes panel closes first.
+    onClose: showInfo ? () => setShowInfo(false) : onClose,
     onGenerate,
     onToggleInfo: () => setShowInfo((s) => !s),
     enabled: open,
+    dialogRef,
   })
 
   const idle = useIdleFade(2000)
-  const dialogRef = useDialogFocus(open)
 
   const gestures = useSwipeTap({
     enabled: !zoomed,

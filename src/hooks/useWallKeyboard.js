@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { isTopmostDialog } from './useDialogFocus'
 
 // True when the active element is a form field — keyboard nav must not steal
 // keystrokes from a text input, textarea, select, or contenteditable region.
@@ -34,6 +35,11 @@ function groupForIndex(groups, index) {
 // ←/→ move within the current artist's images (wraps at the ends).
 // ↑/↓ jump to the previous/next artist's first image (no wrap past the ends).
 // G/I/Esc call the matching callback. Ignored while a form field has focus.
+// Stacked overlays (#159, CLAUDE.md "Stacked overlays and Escape"): keys are
+// ignored once another layer has handled them (defaultPrevented) or while a
+// dialog sits above `dialogRef`, and the Escape this layer acts on is marked
+// handled. Escape calls `onClose`; the viewer passes a handler that closes its
+// Info & notes panel first, so one press peels one layer.
 export default function useWallKeyboard({
   items,
   initialIndex = 0,
@@ -41,6 +47,7 @@ export default function useWallKeyboard({
   onGenerate,
   onToggleInfo,
   enabled = true,
+  dialogRef,
 }) {
   const [index, setIndex] = useState(initialIndex)
 
@@ -72,6 +79,8 @@ export default function useWallKeyboard({
 
     function handleKeyDown(e) {
       if (isFormFieldFocused()) return
+      if (e.defaultPrevented) return
+      if (dialogRef?.current && !isTopmostDialog(dialogRef.current)) return
 
       switch (e.key) {
         case 'ArrowLeft':
@@ -99,6 +108,7 @@ export default function useWallKeyboard({
           onToggleInfo?.()
           break
         case 'Escape':
+          e.preventDefault()
           onClose?.()
           break
         default:
@@ -108,7 +118,7 @@ export default function useWallKeyboard({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [enabled, moveWithinArtist, jumpArtist, onGenerate, onToggleInfo, onClose, items, index])
+  }, [enabled, moveWithinArtist, jumpArtist, onGenerate, onToggleInfo, onClose, items, index, dialogRef])
 
   const group = groupForIndex(groups, index)
   const groupIndex = group ? groups.indexOf(group) : -1

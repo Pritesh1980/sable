@@ -125,6 +125,22 @@ describe('useWallKeyboard', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
+  it('marks the Escape it closes on as handled, and ignores one already handled (#159)', () => {
+    const items = makeItems([{ artistId: 'a', count: 1 }])
+    const onClose = vi.fn()
+    renderHook(() => useWallKeyboard({ items, onClose }))
+
+    const handled = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    handled.preventDefault()
+    act(() => { window.dispatchEvent(handled) })
+    expect(onClose).not.toHaveBeenCalled()
+
+    const fresh = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    act(() => { window.dispatchEvent(fresh) })
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(fresh.defaultPrevented).toBe(true)
+  })
+
   it('ignores keys while a form field has focus', () => {
     const input = document.createElement('input')
     document.body.appendChild(input)
