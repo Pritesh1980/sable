@@ -92,9 +92,17 @@ function editorAlpha(back) {
   return back.evaluate((el) => {
     let node = el
     while (node && getComputedStyle(node).position !== 'fixed') node = node.parentElement
+    // Opaque computes as `rgb(r, g, b)`: only a fourth component, or one after
+    // a slash in the newer colour syntaxes, is an alpha.
     const colour = getComputedStyle(node).backgroundColor
-    const match = colour.match(/,\s*([\d.]+)\)$/) || colour.match(/\/\s*([\d.]+)\)$/)
-    return match ? Number(match[1]) : 1
+    const rgba = colour.match(/^rgba?\(([^)]*)\)$/)
+    if (rgba) {
+      const parts = rgba[1].split(',')
+      return parts.length === 4 ? Number(parts[3]) : 1
+    }
+    const slash = colour.match(/\/\s*([\d.]+)(%?)\s*\)$/)
+    if (!slash) return 1
+    return slash[2] ? Number(slash[1]) / 100 : Number(slash[1])
   })
 }
 
