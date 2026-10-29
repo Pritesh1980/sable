@@ -21,9 +21,11 @@ function renderHome({ a = artists, ideas = [], boards = [] } = {}) {
 describe('Home pipeline', () => {
   beforeEach(() => localStorage.clear())
 
-  it('is titled Home and shows the three active pipeline stages', () => {
+  // The bottom bar's HOME is the Wall; this page is Pipeline in the Drawer (#161).
+  it('is titled Pipeline and shows the three active pipeline stages', () => {
     renderHome()
-    expect(screen.getByRole('heading', { name: 'Home' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Pipeline' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Home' })).toBeNull()
     const labels = ['Researching', 'Shortlisted', 'Contact next']
     labels.forEach((l) => expect(screen.getAllByText(l)[0]).toBeInTheDocument())
   })

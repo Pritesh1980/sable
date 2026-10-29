@@ -43,12 +43,12 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
       <div className="pt-10 pb-6">
         <Logo size={28} className="mb-3" />
         <p className="font-mono text-xs text-accent tracking-[0.4em] uppercase mb-2">What's next</p>
-        <h1 className="font-display text-5xl text-cream leading-none tracking-tight">Home</h1>
+        <h1 className="font-display text-5xl text-cream leading-none tracking-tight">Pipeline</h1>
       </div>
 
       <HowItWorksStrip />
 
-      {/* Top 5 — the marquee "who am I prioritising" view, hero of Home */}
+      {/* Top 5 — the marquee "who am I prioritising" view, hero of Pipeline */}
       <Panel title="Top 5" action={<Link to="/gallery" className="text-xs font-mono text-accent tracking-widest uppercase">Rank</Link>}>
         <Top5Hero
           artists={summary.topArtists}

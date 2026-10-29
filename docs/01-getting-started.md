@@ -139,7 +139,8 @@ before it signs you out, since it sits right next to the theme toggle. Tap the
 
 ## The Pipeline page
 
-The old Home dashboard lives on at **Drawer → Pipeline**, unchanged: the Top 5 coverflow,
+The old Home dashboard lives on at **Drawer → Pipeline**, titled *Pipeline* (Home is the
+Wall): the Top 5 coverflow,
 the shortlist pipeline (researching → shortlisted → contact next), idea stats and matches.
 The viewer's `I` panel shows each artist's status in place, so you'll mostly need Pipeline
 when planning outreach.
