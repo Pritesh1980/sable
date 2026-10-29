@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { createBackupWithImages, parseBackup, restoreBackupImages, requestBackupDownload } from '../data/export'
+import { createBackupWithImages, parseBackup, replaceLibraryQuestion, restoreBackupImages, requestBackupDownload } from '../data/export'
 import { useAuth } from '../context/useAuth'
 
 // Compact: a v2 backup carries every photo as base64, so indentation would only
@@ -43,7 +43,16 @@ export default function BackupPanel({ artists, setArtists, ideas, setIdeas, boar
 
     setBusy(true)
     try {
-      const parsed = parseBackup(await file.text())
+      const raw = JSON.parse(await file.text())
+      const parsed = parseBackup(raw)
+      // Validated first, so a bad file shows its error without a question. Asked
+      // before any photo is staged: declining must leave nothing behind (#158).
+      const question = replaceLibraryQuestion(
+        { artists, ideas, boards, concepts, conventionOverrides }, parsed, raw.exportedAt)
+      if (question && !window.confirm(question)) {
+        setMessage('Import cancelled. Your library is unchanged.')
+        return
+      }
       // Photos embedded in the backup go through the normal staging/upload path
       // first, so the state set below already carries the new account's keys.
       const { data, failed } = await restoreBackupImages(parsed, { userId })

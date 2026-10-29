@@ -149,7 +149,7 @@ const SECTIONS = [
       'With device-local storage, your library stays on this device even with a real login. Signing out clears displayed caches; signing back in as the same owner restores this device’s library. Only cloud-storage builds sync across devices.',
       'Drawer → Settings shows your account (with sign out) and the backup tools.',
       'Use Export Backup to request a JSON download with artists, ideas, boards, concepts, notes, ranks, tags and local saved image bytes. Check that the file was actually saved. External portfolio and bundled image links remain references.',
-      'Use Import Backup to restore from a previously exported file — this replaces the current data.',
+      'Use Import Backup to restore from a previously exported file — this replaces the current data. If your library already holds anything, Sable first asks to confirm, naming what you have and what the backup holds (with its date). Cancel and nothing changes; there is no undo after you agree, so export first if you might want the current library back.',
       'Private full-library backups stop if a required local photo cannot be read. Ordinary offline Settings exports report missing photos; reconnect and export again. A requested download does not prove the file was saved.',
       'An image kept on this device can be backed up before its upload succeeds. Refinement can also prepare that device copy offline; imported variations are stored before they join the library.',
       'The refinement drawer offers the same Export full library backup action. Back up after Variation saved; pending jobs are not saved library results. Confirm the download and keep a copy off this device.',
