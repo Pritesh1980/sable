@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { CONVENTIONS, getConventionFavicon, mergeConventionOverrides, toggleConventionAttendee } from '../data/conventions'
+import { CONVENTIONS, getConventionFavicon, isPastEdition, mergeConventionOverrides, toggleConventionAttendee } from '../data/conventions'
 import { mergeLineupEntries, parseLineup } from '../data/lineup'
 import { mergeLineupSeeds } from '../data/lineupSeeds'
 import { parseLineupHash } from '../data/lineupGrabber'
@@ -43,6 +43,16 @@ function ConventionLogo({ convention, size }) {
         loading="lazy"
       />
     </div>
+  )
+}
+
+// The data holds the latest known edition of a show that recurs every year, so
+// once that edition is over its dates would otherwise read as upcoming (#160).
+function PastEditionNote({ convention }) {
+  return (
+    <p className="text-[0.6875rem] font-mono text-accent/80 tracking-wide mt-1">
+      This edition has passed — {convention.url ? 'check the site for next year’s dates' : 'next year’s dates TBC'}.
+    </p>
   )
 }
 
@@ -110,7 +120,7 @@ function AttendeesEditor({ artists, attendingIds, onToggle }) {
   )
 }
 
-function HeroCard({ convention, artists, attendingIds, onToggle, lineupProps, winnerProps }) {
+function HeroCard({ convention, past, artists, attendingIds, onToggle, lineupProps, winnerProps }) {
   return (
     <div id={`convention-${convention.id}`} className="bg-gradient-to-br from-accent/10 to-ink-card border border-accent/40 rounded-xs p-6 animate-slide-up">
       <div className="flex items-start gap-4">
@@ -123,6 +133,7 @@ function HeroCard({ convention, artists, attendingIds, onToggle, lineupProps, wi
             <p className="text-cream text-sm font-mono">{convention.dates}</p>
             <DistanceBadge distanceMiles={convention.distanceMiles} />
           </div>
+          {past && <PastEditionNote convention={convention} />}
         </div>
       </div>
       <p className="text-cream-muted text-sm md:text-base font-body leading-relaxed mt-4">{convention.summary}</p>
@@ -153,7 +164,7 @@ function HeroCard({ convention, artists, attendingIds, onToggle, lineupProps, wi
   )
 }
 
-function ConventionCard({ convention, artists, attendingIds, onToggle, lineupProps, winnerProps }) {
+function ConventionCard({ convention, past, artists, attendingIds, onToggle, lineupProps, winnerProps }) {
   return (
     <div
       id={`convention-${convention.id}`}
@@ -178,6 +189,7 @@ function ConventionCard({ convention, artists, attendingIds, onToggle, lineupPro
         <p className="text-cream-muted text-xs font-mono">{convention.dates}</p>
         <DistanceBadge distanceMiles={convention.distanceMiles} />
       </div>
+      {past && <PastEditionNote convention={convention} />}
 
       <p className="text-cream-muted text-sm font-body leading-relaxed mt-3 flex-1">{convention.summary}</p>
 
@@ -217,6 +229,8 @@ export default function Conventions({
   setConventionLineups = () => {},
   conventionWinners = {},
   setConventionWinners = () => {},
+  // Injected by tests; the app always renders against the real clock.
+  now = new Date(),
 }) {
   const merged = mergeConventionOverrides(conventionOverrides)
   const attendanceById = Object.fromEntries(merged.map((c) => [c.id, c.attendingArtistIds]))
@@ -432,6 +446,7 @@ export default function Conventions({
           <HeroCard
             key={c.id}
             convention={c}
+            past={isPastEdition(c, now)}
             artists={artists}
             attendingIds={attendanceById[c.id] || []}
             onToggle={(artistId) => toggle(c.id, artistId)}
@@ -445,6 +460,7 @@ export default function Conventions({
             <ConventionCard
               key={c.id}
               convention={c}
+              past={isPastEdition(c, now)}
               artists={artists}
               attendingIds={attendanceById[c.id] || []}
               onToggle={(artistId) => toggle(c.id, artistId)}

@@ -72,6 +72,36 @@ describe('Conventions attendance editor', () => {
   })
 })
 
+// #160: the data holds the latest edition of shows that recur, so once that
+// edition is over the card says so instead of presenting it as upcoming.
+describe('Conventions past editions', () => {
+  const bigLondonShow = CONVENTIONS.find((c) => c.id === 'big-london')
+  const cardFor = (c) => within(screen.getByRole('heading', { name: c.name }).closest('div.animate-slide-up'))
+
+  it('marks an edition whose last day has gone, keeping its dates', () => {
+    renderConventions({ now: new Date(2026, 9, 29) })
+    const card = cardFor(bigLondonShow)
+    expect(card.getByText(bigLondonShow.dates)).toBeInTheDocument()
+    expect(card.getByText(/this edition has passed/i)).toHaveTextContent(/next year/i)
+    // The hero card too.
+    expect(cardFor(localConv).getByText(/this edition has passed/i)).toBeInTheDocument()
+  })
+
+  it('does not mark an edition that is still to come', () => {
+    renderConventions({ now: new Date(2026, 0, 1) })
+    expect(cardFor(bigLondonShow).queryByText(/this edition has passed/i)).toBeNull()
+  })
+
+  it('keeps the distance ordering whether or not a show has passed', () => {
+    const order = () => screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)
+    const { unmount } = renderConventions({ now: new Date(2026, 0, 1) })
+    const before = order()
+    unmount()
+    renderConventions({ now: new Date(2026, 9, 29) })
+    expect(order()).toEqual(before)
+  })
+})
+
 // The Big London Tattoo Show publishes ~500 artists; the index makes that list
 // workable from the page you plan the show on.
 const bigLondon = CONVENTIONS.find((c) => c.id === 'big-london')

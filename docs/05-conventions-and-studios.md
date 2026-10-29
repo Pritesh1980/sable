@@ -22,7 +22,8 @@ artist's detail card, on the Pipeline page, and next to the artist in idea match
 on the backlog; for now you set this yourself.)
 
 > Conventions recur annually — the dates shown are for the latest known edition, so follow
-> the link for the next one.
+> the link for the next one. Once that edition is over, its card says *This edition has
+> passed* under the dates; the order (nearest first) doesn't change.
 
 ### Artist index
 

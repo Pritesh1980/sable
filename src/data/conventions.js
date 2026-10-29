@@ -6,6 +6,8 @@
 // `popular: true`     largest / most prestigious shows.
 // `distanceMiles`     approximate driving distance from Milton Keynes (0 = local).
 // `endDate`           ISO YYYY-MM-DD of the last day; null when not yet announced.
+// `endMonth`          ISO YYYY-MM, only when `endDate` is null but `dates` names the
+//                     month — enough to tell that the edition is over (isPastEdition).
 // `attendingArtistIds` artist IDs from your saved list confirmed attending (kept for
 //                      the cross-reference on other pages; populate later if you want).
 
@@ -58,6 +60,7 @@ export const CONVENTIONS = [
     popular: true,
     distanceMiles: 55,
     endDate: null,
+    endMonth: '2026-09',
     attendingArtistIds: [],
   },
   {
@@ -83,6 +86,7 @@ export const CONVENTIONS = [
     summary: 'Built by tattoo artists for tattoo artists, on Liverpool\'s King\'s Dock waterfront. The north-west\'s main destination show.',
     distanceMiles: 175,
     endDate: null,
+    endMonth: '2026-05',
     attendingArtistIds: [],
   },
   {
@@ -111,6 +115,19 @@ export const CONVENTIONS = [
     attendingArtistIds: [],
   },
 ]
+
+const pad2 = (n) => String(n).padStart(2, '0')
+
+// Whether the edition in the data is over: true from the day after `endDate`
+// (local time, so a show is still on until midnight on its last day), or from
+// the month after `endMonth` when only the month is known. A show with
+// neither is never called past — there is nothing to say it is (#160).
+export function isPastEdition(convention, now = new Date()) {
+  const today = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`
+  if (/^\d{4}-\d{2}-\d{2}$/.test(convention?.endDate || '')) return convention.endDate < today
+  if (/^\d{4}-\d{2}$/.test(convention?.endMonth || '')) return convention.endMonth < today.slice(0, 7)
+  return false
+}
 
 export function mergeConventionOverrides(overrides = {}) {
   return CONVENTIONS.map((c) => ({
