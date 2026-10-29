@@ -44,6 +44,10 @@ test('legacy routes redirect within the base', async ({ page }) => {
   await expect(page).toHaveURL(/\/sable\/gallery\?mode=manage$/)
   await page.goto('boards')
   await expect(page).toHaveURL(/\/sable\/brief\?tab=boards$/)
+  // #161: an unknown path goes home, still inside the base.
+  await page.goto('does-not-exist')
+  await expect(page).toHaveURL(/\/sable\/$/)
+  await expect(page.getByRole('button', { name: /everything else/i })).toBeVisible()
 })
 
 test('in-app navigation keeps the base', async ({ page }) => {

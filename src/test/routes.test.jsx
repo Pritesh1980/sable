@@ -48,6 +48,24 @@ describe('legacy route redirects', () => {
   })
 })
 
+describe('unknown routes (#161)', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  it('sends an unknown path home instead of a blank page', async () => {
+    seedSession()
+    renderAt('/does-not-exist')
+    await waitFor(() => expect(screen.getByText('Sable')).toBeInTheDocument())
+  })
+
+  it('still shows the sign-in gate first when signed out', async () => {
+    renderAt('/does-not-exist')
+    await waitFor(() => expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument())
+    expect(screen.queryByRole('button', { name: /everything else/i })).not.toBeInTheDocument()
+  })
+})
+
 describe('root and pipeline routes', () => {
   beforeEach(() => {
     localStorage.clear()
