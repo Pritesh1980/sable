@@ -1,4 +1,4 @@
-import { test, expect, openDemo, DEMO_CONCEPT } from './fixtures'
+import { test, expect, openDemo, openIdeaWithPhoto, DEMO_CONCEPT } from './fixtures'
 
 // No page may be wider than the phone it's on. A single overflowing row lets
 // the whole page pan sideways on iPhone, and jsdom can't see it (no layout),
@@ -85,6 +85,29 @@ for (const width of [390, 1024]) {
     })
   })
 }
+
+// The alpha of the fixed layer a full-screen editor's "← Back" sits on. A
+// translucent one let the list behind read through the form (#161).
+function editorAlpha(back) {
+  return back.evaluate((el) => {
+    let node = el
+    while (node && getComputedStyle(node).position !== 'fixed') node = node.parentElement
+    const colour = getComputedStyle(node).backgroundColor
+    const match = colour.match(/,\s*([\d.]+)\)$/) || colour.match(/\/\s*([\d.]+)\)$/)
+    return match ? Number(match[1]) : 1
+  })
+}
+
+test('the idea editor hides the list behind it', async ({ page }) => {
+  await openIdeaWithPhoto(page)
+  expect(await editorAlpha(page.getByRole('button', { name: '← Back' }).first())).toBe(1)
+})
+
+test('the board editor hides the list behind it', async ({ page }) => {
+  await openDemo(page, '/brief?tab=boards')
+  await page.getByRole('button', { name: 'New board', exact: true }).click()
+  expect(await editorAlpha(page.getByRole('button', { name: '← Back' }).first())).toBe(1)
+})
 
 for (const width of WIDTHS) {
   test.describe(`at ${width}px`, () => {
