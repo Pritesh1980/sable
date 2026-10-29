@@ -60,6 +60,16 @@ describe('Settings page', () => {
     expect(await screen.findByText('Download requested—check the file was saved.')).toBeInTheDocument()
   })
 
+  // #162: the controls live in the bottom bar (Nav), which the Wall doesn't show.
+  it('says theme and font size are in the bottom bar, not on the Wall', () => {
+    renderSettings()
+    const copy = screen.getByText(/theme \(◑\) and font size \(A\+\)/i).textContent
+    expect(copy).not.toMatch(/top-right/i)
+    expect(copy).toMatch(/bottom bar/i)
+    expect(copy).toMatch(/except the home wall/i)
+    expect(copy).toMatch(/per-device and don't sync/i)
+  })
+
   it('describes device-only and cloud sign-in restoration separately', () => {
     const original = backend.kind
     try {

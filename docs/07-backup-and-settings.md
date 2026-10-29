@@ -74,6 +74,13 @@ library first if you might want it back. Embedded photos are saved to the
 account you're signed in to as they come back in. Backups made by earlier versions of Sable
 still import; a backup from a *newer* version is refused with a message to update first.
 
+## Appearance
+
+Theme (**◑ / ◐**) and text size (**A+ / A−**) sit at the right-hand end of the bottom
+bar on every page except the home Wall, on phone and desktop alike. The Wall has no
+bottom bar: open its menu (**⋯**) and pick any page to reach them. Both are per-device
+and don't sync.
+
 ## When to back up
 
 - **Before clearing your browser data** or its site storage.

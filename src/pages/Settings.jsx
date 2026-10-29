@@ -100,7 +100,7 @@ export default function Settings({ artists, setArtists, ideas, setIdeas, boards,
       <div className="bg-ink-card border border-ink-border rounded-xs p-4">
         <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-1">Appearance</p>
         <p className="text-cream-muted/90 text-sm font-body leading-relaxed">
-          Theme (◑) and font size (A+) live in the top-right corner on every page. They're per-device and don't sync.
+          Theme (◑) and font size (A+) sit at the right-hand end of the bottom bar on every page except the home Wall, on phone and desktop alike. From the Wall, open the menu (⋯) and pick any page to reach them. They're per-device and don't sync.
         </p>
       </div>
     </div>
