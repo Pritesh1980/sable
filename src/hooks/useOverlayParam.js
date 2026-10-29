@@ -48,31 +48,31 @@ export default function useOverlayParam(name) {
   }, [location.pathname, location.search, location.hash, name])
 
   const replace = useCallback((next) => {
-    navigate(target(next), { replace: true, state: location.state })
+    void navigate(target(next), { replace: true, state: location.state })
   }, [navigate, target, location.state])
 
   const open = useCallback((next) => {
     if (pushed) replace(next)
-    else navigate(target(next), { state: { ...location.state, [MARK]: name } })
+    else void navigate(target(next), { state: { ...location.state, [MARK]: name } })
   }, [pushed, replace, navigate, target, location.state, name])
 
   const close = useCallback(() => {
     if (value == null || closingKey.current === location.key) return
     if (pushed) {
       closingKey.current = location.key
-      navigate(-1)
+      void navigate(-1)
     } else {
-      navigate(target(null), { replace: true, state: withoutMark(location.state, name) })
+      void navigate(target(null), { replace: true, state: withoutMark(location.state, name) })
     }
   }, [value, pushed, navigate, target, location.key, location.state, name])
 
   const leave = useCallback((to) => {
     if (pushed) {
-      navigate(to, { replace: true })
+      void navigate(to, { replace: true })
       return
     }
-    if (value != null) navigate(target(null), { replace: true, state: withoutMark(location.state, name) })
-    navigate(to)
+    if (value != null) void navigate(target(null), { replace: true, state: withoutMark(location.state, name) })
+    void navigate(to)
   }, [pushed, value, navigate, target, location.state, name])
 
   return { value, open, replace, close, leave }
