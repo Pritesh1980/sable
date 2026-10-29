@@ -28,14 +28,20 @@ describe('Big London curated picks', () => {
     expect(notInLineup).toEqual(['tolgatemirlenk.ink'])
   })
 
-  it('puts the priority picks in mustSee and the wildcards in their own section', () => {
+  it('files priority picks outside the gallery under the field guide, and the wildcards in their own section', () => {
     const plan = buildShowPlan(entries, {
       artists: DEFAULT_ARTISTS,
       studios: DEFAULT_STUDIOS,
       curated: BIG_LONDON_2026_PICKS,
     })
     const mustSee = plan.mustSee.map((m) => m.entry.handle)
+    const fieldGuide = plan.fieldGuide.map((m) => m.entry.handle)
     for (const h of ['thomascarlijarlier', 'lennoxtattoo', 'davidcorden', 'zap.ink']) {
+      expect(fieldGuide, h).toContain(h)
+      expect(mustSee, h).not.toContain(h)
+    }
+    // Priority picks the owner already has saved stay under Must see.
+    for (const h of ['berkbosveren', 'silas_balaio']) {
       expect(mustSee, h).toContain(h)
     }
     expect(plan.wildcards.map((w) => w.entry.handle).sort()).toEqual(
@@ -58,8 +64,23 @@ describe('Big London curated picks', () => {
       studios: DEFAULT_STUDIOS,
       curated: BIG_LONDON_2026_PICKS,
     })
-    const lowestMustSee = Math.min(...plan.mustSee.map((m) => m.score))
+    const lowestMustSee = Math.min(...[...plan.mustSee, ...plan.fieldGuide].map((m) => m.score))
     const highestWildcard = Math.max(...plan.wildcards.map((w) => w.score))
     expect(highestWildcard).toBeLessThan(lowestMustSee)
+  })
+
+  // #160: the picks ship to every user, including a demo visitor whose gallery
+  // holds none of them. None may be presented as already in their gallery.
+  it('puts nothing under Must see for a gallery with none of the picks', () => {
+    const plan = buildShowPlan(entries, {
+      artists: [],
+      studios: DEFAULT_STUDIOS,
+      curated: BIG_LONDON_2026_PICKS,
+    })
+    expect(plan.mustSee).toEqual([])
+    const priority = Object.entries(BIG_LONDON_2026_PICKS)
+      .filter(([handle, pick]) => pick.tier === 'priority' && lineupHandles.has(handle))
+      .map(([handle]) => handle)
+    expect(plan.fieldGuide.map((m) => m.entry.handle).sort()).toEqual(priority.sort())
   })
 })

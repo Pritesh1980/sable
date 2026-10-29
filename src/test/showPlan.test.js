@@ -197,6 +197,7 @@ describe('buildShowPlan', () => {
   it('returns empty sections rather than throwing for an empty line-up', () => {
     expect(buildShowPlan([], { artists: [], studios: [] })).toEqual({
       mustSee: [],
+      fieldGuide: [],
       suggested: [],
       wildcards: [],
       missing: [],
@@ -217,11 +218,29 @@ describe('buildShowPlan with a curated shortlist', () => {
     { name: 'Nobody Known', handle: 'nobody', note: 'Some Parlour, Booth 900' },
   ]
 
-  it('promotes a curated priority pick into mustSee even with no saved artist', () => {
+  // #160: Must see is headed "Already in your gallery". A curated pick the user
+  // has never saved must not be filed there, or a demo visitor is told the
+  // owner's field guide is their own gallery.
+  it('files a curated priority pick that is not in the gallery under fieldGuide, not mustSee', () => {
     const plan = buildShowPlan(entries, { artists: [], studios: [], curated })
-    expect(plan.mustSee.map((m) => m.entry.handle)).toContain('thomascarlijarlier')
-    expect(plan.mustSee.find((m) => m.entry.handle === 'thomascarlijarlier').reasons.join(' '))
-      .toMatch(/guest judge/i)
+    expect(plan.mustSee.map((m) => m.entry.handle)).not.toContain('thomascarlijarlier')
+    expect(plan.fieldGuide.map((m) => m.entry.handle)).toEqual(['thomascarlijarlier'])
+    expect(plan.fieldGuide[0].kind).toBe('fieldGuide')
+    expect(plan.fieldGuide[0].reasons.join(' ')).toMatch(/guest judge/i)
+  })
+
+  it('keeps a curated priority pick that is in the gallery under mustSee', () => {
+    const saved = [{ id: 'thomascarlijarlier', handle: 'thomascarlijarlier', tags: [], rank: 4 }]
+    const plan = buildShowPlan(entries, { artists: saved, studios: [], curated })
+    expect(plan.mustSee.map((m) => m.entry.handle)).toEqual(['thomascarlijarlier'])
+    expect(plan.fieldGuide).toHaveLength(0)
+  })
+
+  it('puts only gallery artists in mustSee', () => {
+    const saved = [{ id: 'nobody', handle: 'nobody', tags: [], rank: 9 }]
+    const plan = buildShowPlan(entries, { artists: saved, studios: [], curated })
+    expect(plan.mustSee.every((m) => m.savedArtistId)).toBe(true)
+    expect(plan.mustSee.map((m) => m.entry.handle)).toEqual(['nobody'])
   })
 
   it('keeps wildcards in their own section rather than mixing them into mustSee', () => {
@@ -232,7 +251,7 @@ describe('buildShowPlan with a curated shortlist', () => {
 
   it('ranks a curated priority pick above a wildcard', () => {
     const plan = buildShowPlan(entries, { artists: [], studios: [], curated })
-    const priority = plan.mustSee.find((m) => m.entry.handle === 'thomascarlijarlier')
+    const priority = plan.fieldGuide.find((m) => m.entry.handle === 'thomascarlijarlier')
     expect(priority.score).toBeGreaterThan(plan.wildcards[0].score)
   })
 
@@ -254,6 +273,7 @@ describe('buildShowPlan with a curated shortlist', () => {
   it('behaves exactly as before when no curated list is supplied', () => {
     const plan = buildShowPlan(entries, { artists: [], studios: [] })
     expect(plan.mustSee).toHaveLength(0)
+    expect(plan.fieldGuide).toHaveLength(0)
     expect(plan.wildcards).toHaveLength(0)
     expect(plan.missing).toHaveLength(0)
   })

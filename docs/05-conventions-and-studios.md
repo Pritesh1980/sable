@@ -34,7 +34,16 @@ floor.
 
 The index opens on **Top picks** — a verdict, not a list. **Must see** is whichever of your
 own gallery is at this show, each with a one-line reason ("#5 in your ranking", "Matches your
-styles: realism, dark-fantasy"). **Worth a look** is a stablemate at a studio you already
+styles: realism, dark-fantasy"). Nothing else goes there: if an artist isn't in your gallery,
+they aren't under Must see.
+
+Big London also ships with a hand-researched **field guide**: a short list of artists worth
+seeing, each with the note it was picked for. Its picks that aren't in your gallery appear
+under **From the field guide** ("Researched before the show; not in your gallery yet"). Its
+speculative suggestions are kept apart as **Wildcards**, and a pick the line-up doesn't list
+appears under **Not in the line-up** rather than silently vanishing.
+
+**Worth a look** is a stablemate at a studio you already
 follow — someone new, at the same studio as an artist you've saved — so a stand you'd
 otherwise walk past gets a reason to stop. Style matching only ever fires for an artist
 already in your gallery: the show's own list carries no style data, so nothing is guessed.

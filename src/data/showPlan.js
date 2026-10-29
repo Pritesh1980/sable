@@ -167,14 +167,18 @@ export function scoreShowEntry(entry, { artists = [], attendingIds = [], studioI
     if (pick.why) reasons.push(pick.why)
   }
 
-  const kind = artist || pick?.tier === 'priority'
-    ? 'mustSee'
-    : pick?.tier === 'wildcard'
-      ? 'wildcard'
-      : studio
-        ? 'suggested'
-        : 'other'
-  return { entry, artist, score, kind, tier: pick?.tier || null, savedArtistId: artist?.id || null, reasons }
+  return { entry, artist, score, kind: kindOf(artist, pick, studio), tier: pick?.tier || null, savedArtistId: artist?.id || null, reasons }
+}
+
+// Must see means "in your gallery and at this show", and nothing else (#160).
+// The curated list ships to every user, so a priority pick the user has not
+// saved gets its own 'fieldGuide' section instead: filing it under Must see
+// told a demo visitor the owner's research was their own gallery.
+function kindOf(artist, pick, studio) {
+  if (artist) return 'mustSee'
+  if (pick?.tier === 'priority') return 'fieldGuide'
+  if (pick?.tier === 'wildcard') return 'wildcard'
+  return studio ? 'suggested' : 'other'
 }
 
 // entries: raw line-up entries — indexed against the gallery here, so callers
@@ -184,7 +188,7 @@ export function buildShowPlan(
   { artists = [], studios = [], attendingIds = [], curated = {} } = {}
 ) {
   if (entries.length === 0) {
-    return { mustSee: [], suggested: [], wildcards: [], missing: [], skipped: [] }
+    return { mustSee: [], fieldGuide: [], suggested: [], wildcards: [], missing: [], skipped: [] }
   }
 
   const indexed = indexLineup(entries, artists)
@@ -193,6 +197,7 @@ export function buildShowPlan(
   const ctx = { artists, attendingIds, studioIndex, styles, curated }
 
   const mustSee = []
+  const fieldGuide = []
   const suggested = []
   const wildcards = []
   const skipped = []
@@ -201,6 +206,7 @@ export function buildShowPlan(
     const scored = scoreShowEntry(entry, ctx)
     if (scored.kind === 'skipped') skipped.push(scored)
     else if (scored.kind === 'mustSee') mustSee.push(scored)
+    else if (scored.kind === 'fieldGuide') fieldGuide.push(scored)
     else if (scored.kind === 'wildcard') wildcards.push(scored)
     else if (scored.kind === 'suggested') suggested.push(scored)
     // 'other' — no saved artist, no curated pick, no known studio — isn't a
@@ -217,9 +223,10 @@ export function buildShowPlan(
 
   const byScore = (a, b) => b.score - a.score
   mustSee.sort(byScore)
+  fieldGuide.sort(byScore)
   suggested.sort(byScore)
   wildcards.sort(byScore)
-  return { mustSee, suggested, wildcards, missing, skipped }
+  return { mustSee, fieldGuide, suggested, wildcards, missing, skipped }
 }
 
 // Re-exported so callers of buildShowPlan don't also need to import parseLineup
