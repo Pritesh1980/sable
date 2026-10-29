@@ -56,3 +56,55 @@ it('closes', () => {
   fireEvent.click(screen.getByRole('button', { name: /^done$/i }))
   expect(onClose).toHaveBeenCalled()
 })
+
+// #161: the board was a plain fixed div — no dialog role, focus left behind on
+// the Wall, Escape heard by every layer, and ▲/▼ about 32px square.
+it('is a modal dialog named by its heading, and takes focus', () => {
+  render(<RankBoard artists={artists} setArtists={vi.fn()} onClose={vi.fn()} />)
+  const dialog = screen.getByRole('dialog', { name: 'Rank artists' })
+  expect(dialog).toHaveAttribute('aria-modal', 'true')
+  expect(dialog).toHaveFocus()
+})
+
+it('closes on Escape and marks it handled', () => {
+  const onClose = vi.fn()
+  render(<RankBoard artists={artists} setArtists={vi.fn()} onClose={onClose} />)
+  const unhandled = fireEvent.keyDown(document, { key: 'Escape' })
+  expect(onClose).toHaveBeenCalledTimes(1)
+  expect(unhandled).toBe(false)
+})
+
+it('leaves Escape to a dialog stacked above it', () => {
+  const onClose = vi.fn()
+  render(
+    <>
+      <RankBoard artists={artists} setArtists={vi.fn()} onClose={onClose} />
+      <div role="dialog" aria-modal="true" aria-label="Above" />
+    </>
+  )
+  fireEvent.keyDown(document, { key: 'Escape' })
+  expect(onClose).not.toHaveBeenCalled()
+})
+
+it('ignores an Escape another layer already handled', () => {
+  const onClose = vi.fn()
+  render(<RankBoard artists={artists} setArtists={vi.fn()} onClose={onClose} />)
+  const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+  event.preventDefault()
+  document.dispatchEvent(event)
+  expect(onClose).not.toHaveBeenCalled()
+})
+
+it('gives every row control a 44px touch target', () => {
+  render(<RankBoard artists={artists} setArtists={vi.fn()} onClose={vi.fn()} />)
+  const controls = [
+    ...screen.getAllByRole('button', { name: /^Move .* (up|down)$/ }),
+    ...screen.getAllByRole('button', { name: /^Drop .* out of top 5$/ }),
+    ...screen.getAllByRole('button', { name: /^Move .* into top 5$/ }),
+    screen.getByRole('button', { name: 'Done' }),
+  ]
+  for (const control of controls) expect(control.className).toMatch(/\bmin-h-11\b/)
+  for (const nudge of screen.getAllByRole('button', { name: /^Move .* (up|down)$/ })) {
+    expect(nudge.className).toMatch(/\bmin-w-11\b/)
+  }
+})

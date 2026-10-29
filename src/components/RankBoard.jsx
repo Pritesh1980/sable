@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { moveUp, moveDown, moveIntoTop5, moveOutOfTop5 } from '../data/ranking'
+import useDialogFocus, { isTopmostDialog } from '../hooks/useDialogFocus'
 import ArtistImage from './ArtistImage'
 
 const label = (a) => a.name || `@${a.handle}`
@@ -12,20 +13,24 @@ function Cover({ artist, size }) {
   )
 }
 
+// Side by side, not stacked: two 44px targets stacked would double every
+// row's height (#161).
+const NUDGE = 'min-h-11 min-w-11 flex items-center justify-center text-v2-muted hover:text-v2-cream text-xs leading-none'
+
 function NudgeButtons({ artist, onNudge }) {
   return (
-    <span className="flex flex-col shrink-0">
+    <span className="flex shrink-0">
       <button
         aria-label={`Move ${label(artist)} up`}
         onClick={() => onNudge(artist, -1)}
-        className="text-v2-muted hover:text-v2-cream text-xs leading-none px-3 py-2.5"
+        className={NUDGE}
       >
         ▲
       </button>
       <button
         aria-label={`Move ${label(artist)} down`}
         onClick={() => onNudge(artist, 1)}
-        className="text-v2-muted hover:text-v2-cream text-xs leading-none px-3 py-2.5"
+        className={NUDGE}
       >
         ▼
       </button>
@@ -47,6 +52,8 @@ export default function RankBoard({ artists = [], setArtists = () => {}, onClose
   const [pinnedId, setPinnedId] = useState(null)
   const [pinnedIndex, setPinnedIndex] = useState(null)
   const idleTimerRef = useRef(null)
+  const dialogRef = useDialogFocus(true)
+  const titleId = useId()
 
   // Own the body-scroll lock, saving/restoring the previous value so this and
   // the WallViewer never clobber each other's overflow.
@@ -56,11 +63,17 @@ export default function RankBoard({ artists = [], setArtists = () => {}, onClose
     return () => { document.body.style.overflow = previous }
   }, [])
 
+  // Topmost layer only, and an Escape another layer handled is left alone
+  // (src/hooks/useDialogFocus.js), so one press peels one layer.
   useEffect(() => {
-    function onKey(e) { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+    function onKey(e) {
+      if (e.key !== 'Escape' || e.defaultPrevented || !isTopmostDialog(dialogRef.current)) return
+      e.preventDefault()
+      onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose, dialogRef])
 
   useEffect(() => () => clearTimeout(idleTimerRef.current), [])
 
@@ -107,12 +120,19 @@ export default function RankBoard({ artists = [], setArtists = () => {}, onClose
   const rest = displayArtists.slice(5)
 
   return (
-    <div className="fixed inset-0 z-[60] bg-v2-ink flex flex-col animate-fade-in">
-      <header className="shrink-0 flex items-center justify-between px-5 py-4 border-b border-v2-hairline">
-        <h2 className="font-v2-display text-v2-cream text-lg tracking-wide">Rank artists</h2>
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      tabIndex={-1}
+      className="fixed inset-0 z-[60] bg-v2-ink flex flex-col animate-fade-in outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-v2-accent"
+    >
+      <header className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-v2-hairline">
+        <h2 id={titleId} className="font-v2-display text-v2-cream text-lg tracking-wide">Rank artists</h2>
         <button
           onClick={onClose}
-          className="font-v2-ui text-sm text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-xs px-4 py-1.5 transition-colors"
+          className="font-v2-ui text-sm text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-xs px-4 min-h-11 transition-colors"
         >
           Done
         </button>
@@ -140,7 +160,7 @@ export default function RankBoard({ artists = [], setArtists = () => {}, onClose
                 <button
                   aria-label={`Drop ${label(a)} out of top 5`}
                   onClick={() => setArtists((prev) => moveOutOfTop5(prev, a.id))}
-                  className="shrink-0 font-v2-ui text-xs text-v2-muted hover:text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-xs px-2.5 py-1.5 transition-colors"
+                  className="shrink-0 font-v2-ui text-xs text-v2-muted hover:text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-xs px-2.5 min-h-11 transition-colors"
                 >
                   Drop ↓
                 </button>
@@ -166,7 +186,7 @@ export default function RankBoard({ artists = [], setArtists = () => {}, onClose
                     <button
                       aria-label={`Move ${label(a)} into top 5`}
                       onClick={() => setArtists((prev) => moveIntoTop5(prev, a.id))}
-                      className="shrink-0 font-v2-ui text-xs text-v2-muted hover:text-v2-accent border border-v2-hairline hover:border-v2-accent rounded-xs px-2.5 py-1.5 transition-colors"
+                      className="shrink-0 font-v2-ui text-xs text-v2-muted hover:text-v2-accent border border-v2-hairline hover:border-v2-accent rounded-xs px-2.5 min-h-11 transition-colors"
                     >
                       ↑ To top 5
                     </button>
