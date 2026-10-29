@@ -63,6 +63,29 @@ async function settle(page) {
   await expect(page.locator('#root')).not.toBeEmpty()
 }
 
+// The Wall header is two rows on a phone and one from `md` up, and the Top 5
+// strip sticks under it. A fixed offset that fit neither left the strip behind
+// the header with a sliver showing (#161). 1024 is the one-row layout.
+for (const width of [390, 1024]) {
+  test.describe(`Top 5 strip at ${width}px`, () => {
+    test.use({ viewport: { width, height: 844 } })
+
+    test('sticks directly below the wall header while scrolling', async ({ page }) => {
+      await openDemo(page, '/')
+      await settle(page)
+      await page.evaluate(() => window.scrollTo(0, 900))
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
+      const header = page.locator('header').first()
+      const strip = page.getByRole('region', { name: 'Your top five' })
+      await expect.poll(async () => {
+        const [h, s] = await Promise.all([header.boundingBox(), strip.boundingBox()])
+        return Math.abs(s.y - (h.y + h.height))
+      }).toBeLessThanOrEqual(1)
+      expect((await header.boundingBox()).y).toBeLessThanOrEqual(1)
+    })
+  })
+}
+
 for (const width of WIDTHS) {
   test.describe(`at ${width}px`, () => {
     test.use({ viewport: { width, height: 800 } })
