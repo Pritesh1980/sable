@@ -14,7 +14,9 @@ The **Classic gallery** (**⋯ → Classic gallery**) is where structured browsi
 Wall is for looking, this page is for organising. A sticky bar at the top holds the
 **style filter** (tap a tag to show only artists with it; tap **All** to clear) and a
 **view toggle** on the right with four modes. (Everyday ranking now lives on the Home
-Wall — see [Ranking your favourites](#ranking-your-favourites) below.)
+Wall — see [Ranking your favourites](#ranking-your-favourites) below.) With no artists
+saved yet, every view shows **+ Add artist** instead, which opens the same capture form
+as **+ Add** in the header.
 
 ## The four views
 

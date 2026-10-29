@@ -293,7 +293,7 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
   }
 
   return (
-    <div className="min-h-screen bg-ink-black pt-safe-top">
+    <main className="min-h-screen bg-ink-black pt-safe-top">
       {/* Page header */}
       <div className="px-4 pt-10 pb-4 flex flex-wrap items-end justify-between gap-y-4">
         <div>
@@ -455,7 +455,20 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
         </div>
       </div>
 
-      {viewMode === 'wall' ? (
+      {/* #161: with nobody saved, every view was blank under its filters. */}
+      {artists.length === 0 ? (
+        <div className="flex flex-col items-center gap-4 px-6 py-24 text-center">
+          <p className="font-display text-xl text-cream tracking-wide">
+            No artists here yet — add one to start your collection.
+          </p>
+          <button
+            onClick={() => setQuickAdding(true)}
+            className="font-mono text-xs text-accent hover:text-cream border border-accent/40 hover:border-accent px-5 min-h-11 rounded-xs transition-colors tracking-widest uppercase"
+          >
+            + Add artist
+          </button>
+        </div>
+      ) : viewMode === 'wall' ? (
         <StyleWall artists={artists} onOpenArtist={setSelected} />
       ) : viewMode === 'filmstrip' ? (
         <FilmstripView artists={sorted} onOpenArtist={setSelected} onSetRank={setRank} onSetStatus={setStatus} />
@@ -477,16 +490,8 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
           {sorted.length === 0 && (
             <div className="py-10 text-center">
               <p className="text-cream-muted/90 tracking-widest uppercase text-xs font-mono">
-                {artists.length === 0 ? 'No artists yet' : 'No artists match this filter'}
+                No artists match this filter
               </p>
-              {artists.length === 0 && (
-                <button
-                  onClick={() => changeManage(true)}
-                  className="text-accent hover:text-accent-hover font-body text-sm mt-3 underline underline-offset-4"
-                >
-                  Add your first artist
-                </button>
-              )}
             </div>
           )}
         </div>
@@ -554,6 +559,6 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
           }}
         />
       )}
-    </div>
+    </main>
   )
 }

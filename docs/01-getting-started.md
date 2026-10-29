@@ -62,7 +62,7 @@ tiled edge to edge. No panels, no stats — the work itself is the interface.
 - On phones, the header puts **Sable**, the **+** add-artist button and the **⋯**
   Drawer menu on the first row, with **Artists / Concepts** on a second row.
   Wider screens keep these controls in one row.
-- At the very bottom of the Wall, a quiet **Consider** shelf suggests artists matched
+- Just below the Top 5 strip, above the photos, a quiet **Consider** shelf suggests artists matched
   to the styles you already collect. Open the Instagram profile to judge for yourself,
   then **+ Add** (the form comes pre-filled) or **Not for me** (never suggested again).
   **Find more like this** asks AI for a fresh batch — those arrive marked *unverified*
@@ -139,7 +139,8 @@ before it signs you out, since it sits right next to the theme toggle. Tap the
 
 ## The Pipeline page
 
-The old Home dashboard lives on at **Drawer → Pipeline**, unchanged: the Top 5 coverflow,
+The old Home dashboard lives on at **Drawer → Pipeline**, titled *Pipeline* (Home is the
+Wall): the Top 5 coverflow,
 the shortlist pipeline (researching → shortlisted → contact next), idea stats and matches.
 The viewer's `I` panel shows each artist's status in place, so you'll mostly need Pipeline
 when planning outreach.

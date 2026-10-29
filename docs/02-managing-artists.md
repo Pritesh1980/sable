@@ -22,7 +22,8 @@ same capture form.
 
 **Details** starts collapsed and holds display name, tags, status and a style note.
 You can add or edit those later. **Artist saved** confirms the local library update;
-it does not claim cloud sync or an off-device backup.
+it does not claim cloud sync or an off-device backup. A new artist starts unranked, so
+their photos join the end of the Wall; saved from the Wall, it scrolls down to them.
 
 For an existing handle, attach photos and tap **Add images to … instead**. Sable
 preserves the artist's existing details and confirms the number of photos added.

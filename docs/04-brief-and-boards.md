@@ -10,7 +10,8 @@
 
 **Brief** is your collection of tattoo ideas. Each card shows the title, a snippet, style
 tags, placement and how many artists are linked. The tabs at the top filter by status
-(**All / Idea / Booked / Done**).
+(**All / Idea / Booked / Done**). A status tab only appears once at least one idea has
+that status, so there is no **Done** tab until something is done.
 
 ![The Brief list](../public/guide/brief-list.png)
 

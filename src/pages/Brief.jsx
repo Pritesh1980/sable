@@ -278,7 +278,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
 
   return (
     <>
-    <div className="fixed inset-0 z-50 bg-ink-black/95 flex flex-col animate-fade-in overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-ink-black flex flex-col animate-fade-in overflow-y-auto">
       <div className="px-5 pt-safe-top pt-6 pb-4 border-b border-ink-border sticky top-0 bg-ink-black z-10">
         <div className="flex items-center justify-between">
           <button onClick={onClose} className="text-cream-muted hover:text-cream text-sm tracking-widest uppercase">
