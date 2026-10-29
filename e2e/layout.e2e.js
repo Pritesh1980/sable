@@ -109,6 +109,29 @@ test('the board editor hides the list behind it', async ({ page }) => {
   expect(await editorAlpha(page.getByRole('button', { name: '← Back' }).first())).toBe(1)
 })
 
+// 44px ▲/▼ side by side left a benched name about 30px wide at 320px (#161
+// review). On a narrow screen, or with A+, the controls wrap below the name.
+test.describe('ranking board at 320px with A+', () => {
+  test.use({ viewport: { width: 320, height: 800 } })
+
+  test('keeps every artist name readable', async ({ page }) => {
+    await openDemo(page, '/', { storage: { tattoo_font: 'large' } })
+    await settle(page)
+    await page.getByRole('button', { name: 'Rank ⤢' }).click()
+    const board = page.getByRole('dialog', { name: 'Rank artists' })
+    await expect(board).toBeVisible()
+    const widths = await board.getByTestId('rank-board-row').evaluateAll((rows) => rows.map((row) => {
+      const name = row.querySelector('.truncate').getBoundingClientRect()
+      return { name: Math.round(name.width), right: Math.round(row.getBoundingClientRect().right) }
+    }))
+    expect(widths.length).toBeGreaterThan(5)
+    for (const { name, right } of widths) {
+      expect(name).toBeGreaterThanOrEqual(76)
+      expect(right).toBeLessThanOrEqual(320)
+    }
+  })
+})
+
 for (const width of WIDTHS) {
   test.describe(`at ${width}px`, () => {
     test.use({ viewport: { width, height: 800 } })

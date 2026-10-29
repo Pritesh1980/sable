@@ -38,6 +38,10 @@ function NudgeButtons({ artist, onNudge }) {
   )
 }
 
+// The name keeps at least 5rem; when a narrow screen (or A+) can't fit it
+// beside the controls, the controls wrap to a right-aligned second line.
+const ROW_CONTROLS = 'ml-auto flex shrink-0 items-center gap-2'
+
 const NUDGE_IDLE_RELEASE_MS = 700
 
 // One consolidated full-screen ranking home. Top 5 pinned; everyone else below.
@@ -143,27 +147,29 @@ export default function RankBoard({ artists = [], setArtists = () => {}, onClose
           <p className="font-v2-ui text-v2-muted text-sm">Add artists to start ranking.</p>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto px-5 py-4">
+        <div className="flex-1 overflow-y-auto px-4 py-4">
           <p className="font-v2-ui text-[0.6875rem] tracking-[0.28em] uppercase text-v2-accent mb-2">Top 5</p>
           <ul data-testid="board-top5" className="mb-8">
             {top5.map((a, i) => (
               <li
                 key={a.id}
                 data-testid="rank-board-row"
-                className="flex items-center gap-3 py-2 border-b border-v2-hairline/60"
+                className="flex flex-wrap items-center gap-2 py-2 border-b border-v2-hairline/60"
                 onMouseLeave={() => releasePin(a.id)}
               >
                 <span className="font-v2-display text-v2-accent text-xl w-6 text-center shrink-0">{a.rank}</span>
                 <Cover artist={a} size="w-11 h-11" />
-                <span className="font-v2-ui text-sm text-v2-cream flex-1 truncate">{label(a)}</span>
-                <NudgeButtons artist={a} onNudge={(artist, delta) => handleNudge(artist, i, delta)} />
-                <button
-                  aria-label={`Drop ${label(a)} out of top 5`}
-                  onClick={() => setArtists((prev) => moveOutOfTop5(prev, a.id))}
-                  className="shrink-0 font-v2-ui text-xs text-v2-muted hover:text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-xs px-2.5 min-h-11 transition-colors"
-                >
-                  Drop ↓
-                </button>
+                <span className="font-v2-ui text-sm text-v2-cream flex-1 min-w-20 truncate">{label(a)}</span>
+                <span className={ROW_CONTROLS}>
+                  <NudgeButtons artist={a} onNudge={(artist, delta) => handleNudge(artist, i, delta)} />
+                  <button
+                    aria-label={`Drop ${label(a)} out of top 5`}
+                    onClick={() => setArtists((prev) => moveOutOfTop5(prev, a.id))}
+                    className="shrink-0 font-v2-ui text-xs text-v2-muted hover:text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-xs px-2.5 min-h-11 transition-colors"
+                  >
+                    Drop ↓
+                  </button>
+                </span>
               </li>
             ))}
           </ul>
@@ -176,20 +182,22 @@ export default function RankBoard({ artists = [], setArtists = () => {}, onClose
                   <li
                     key={a.id}
                     data-testid="rank-board-row"
-                    className="flex items-center gap-3 py-1.5 border-b border-v2-hairline/40"
+                    className="flex flex-wrap items-center gap-2 py-1.5 border-b border-v2-hairline/40"
                     onMouseLeave={() => releasePin(a.id)}
                   >
                     <span className="font-v2-ui text-v2-muted text-sm w-6 text-center shrink-0">{a.rank}</span>
                     <Cover artist={a} size="w-8 h-8" />
-                    <span className="font-v2-ui text-sm text-v2-cream flex-1 truncate">{label(a)}</span>
-                    <NudgeButtons artist={a} onNudge={(artist, delta) => handleNudge(artist, i + top5.length, delta)} />
-                    <button
-                      aria-label={`Move ${label(a)} into top 5`}
-                      onClick={() => setArtists((prev) => moveIntoTop5(prev, a.id))}
-                      className="shrink-0 font-v2-ui text-xs text-v2-muted hover:text-v2-accent border border-v2-hairline hover:border-v2-accent rounded-xs px-2.5 min-h-11 transition-colors"
-                    >
-                      ↑ To top 5
-                    </button>
+                    <span className="font-v2-ui text-sm text-v2-cream flex-1 min-w-20 truncate">{label(a)}</span>
+                    <span className={ROW_CONTROLS}>
+                      <NudgeButtons artist={a} onNudge={(artist, delta) => handleNudge(artist, i + top5.length, delta)} />
+                      <button
+                        aria-label={`Move ${label(a)} into top 5`}
+                        onClick={() => setArtists((prev) => moveIntoTop5(prev, a.id))}
+                        className="shrink-0 font-v2-ui text-xs text-v2-muted hover:text-v2-accent border border-v2-hairline hover:border-v2-accent rounded-xs px-2.5 min-h-11 transition-colors"
+                      >
+                        ↑ To top 5
+                      </button>
+                    </span>
                   </li>
                 ))}
               </ul>
