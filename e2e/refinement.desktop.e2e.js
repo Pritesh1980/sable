@@ -47,6 +47,9 @@ test('downloaded backup restores paid image and provenance in a fresh offline co
     await fresh.goto('settings')
     await expect(fresh.getByRole('button', { name: 'Import Backup' })).toBeVisible()
     await expect(fresh.getByText(/external portfolio links remain references/i)).toBeVisible()
+    // Import asks before replacing a non-empty library (#158); Playwright would
+    // otherwise dismiss that confirm and cancel the round trip under test.
+    fresh.on('dialog', (dialog) => dialog.accept())
     await fresh.locator('input[type=file]').setInputFiles({ name: 'portable-backup.json', mimeType: 'application/json', buffer: backup })
     await expect(fresh.getByText('Backup imported.')).toBeVisible()
     await fresh.goto('concepts')
