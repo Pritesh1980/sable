@@ -1,6 +1,7 @@
+import { StrictMode, useEffect } from 'react'
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, within } from '@testing-library/react'
-import { MemoryRouter, Routes, Route } from 'react-router'
+import { render, screen, fireEvent, within, act } from '@testing-library/react'
+import { MemoryRouter, Routes, Route, useLocation, useNavigate } from 'react-router'
 import Wall from '../pages/Wall'
 
 // t6b — the wave that makes "open app → click any image → full screen, 1
@@ -24,9 +25,23 @@ const artists = [
   },
 ]
 
-function renderApp(props = {}) {
+// Exposes the router to the test: where we are, and the browser's Back.
+const probe = {}
+function Probe() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  useEffect(() => { Object.assign(probe, { location, navigate }) })
+  return null
+}
+const here = () => `${probe.location.pathname}${probe.location.search}`
+const back = () => act(() => { probe.navigate(-1) })
+
+function renderApp(props = {}, { entries = ['/'], strict = false } = {}) {
+  const Wrap = strict ? StrictMode : 'div'
   return render(
-    <MemoryRouter initialEntries={['/']}>
+    <Wrap>
+    <MemoryRouter initialEntries={entries} initialIndex={entries.length - 1}>
+      <Probe />
       <Routes>
         <Route
           path="/"
@@ -43,8 +58,10 @@ function renderApp(props = {}) {
           )}
         />
         <Route path="/concepts" element={<div>Concepts page mock</div>} />
+        <Route path="/brief" element={<div>Brief page mock</div>} />
       </Routes>
     </MemoryRouter>
+    </Wrap>
   )
 }
 
@@ -148,5 +165,105 @@ describe('Wall → WallViewer integration', () => {
     expect(onOpenArtist).toHaveBeenCalledTimes(1)
     expect(onOpenArtist.mock.calls[0][0]).toMatchObject({ artistId: 'zoia.ink' })
     expect(screen.getByRole('heading', { name: 'zoia.ink' })).toBeInTheDocument()
+  })
+
+  // #159: the open photo lives in the URL, so the browser's Back closes the
+  // viewer instead of leaving the Wall.
+  describe('Back button and the URL', () => {
+    const viewerHeading = (name) => screen.queryByRole('heading', { name })
+
+    it('opening a photo pushes ?photo=<artist>.<n>, and Back closes the viewer onto the Wall', () => {
+      renderApp({}, { entries: ['/brief', '/'] })
+      clickPiece('Carlos Valera')
+      expect(here()).toBe('/?photo=carlosvalera.1')
+
+      back()
+
+      expect(here()).toBe('/')
+      expect(viewerHeading('Carlos Valera')).not.toBeInTheDocument()
+      expect(screen.getByText('Sable')).toBeInTheDocument()
+    })
+
+    it('under StrictMode, one open is one entry and swipes add none', () => {
+      renderApp({}, { entries: ['/brief', '/'], strict: true })
+      clickPiece('zoia.ink')
+      fireEvent.keyDown(window, { key: 'ArrowRight' })
+      expect(here()).toBe('/?photo=zoia.ink.2')
+      back()
+      expect(here()).toBe('/')
+      back()
+      expect(screen.getByText('Brief page mock')).toBeInTheDocument()
+    })
+
+    it('closing from the UI leaves no entry behind: the next Back leaves the Wall', () => {
+      renderApp({}, { entries: ['/brief', '/'] })
+      clickPiece('zoia.ink')
+      fireEvent.click(screen.getByRole('button', { name: /close viewer/i }))
+      expect(here()).toBe('/')
+      expect(viewerHeading('zoia.ink')).not.toBeInTheDocument()
+
+      back()
+      expect(screen.getByText('Brief page mock')).toBeInTheDocument()
+    })
+
+    it('Escape closes the same way, once, even if pressed twice before Back lands', () => {
+      renderApp({}, { entries: ['/brief', '/'] })
+      clickPiece('zoia.ink')
+      fireEvent.keyDown(window, { key: 'Escape' })
+      fireEvent.keyDown(window, { key: 'Escape' })
+      expect(here()).toBe('/')
+      expect(screen.getByText('Sable')).toBeInTheDocument()
+    })
+
+    it('moving between photos replaces the entry instead of stacking one per photo', () => {
+      renderApp({}, { entries: ['/brief', '/'] })
+      clickPiece('zoia.ink')
+      fireEvent.keyDown(window, { key: 'ArrowRight' })
+      expect(here()).toBe('/?photo=zoia.ink.2')
+      fireEvent.keyDown(window, { key: 'ArrowDown' })
+      expect(here()).toBe('/?photo=carlosvalera.1')
+
+      back()
+      expect(here()).toBe('/')
+      expect(viewerHeading('Carlos Valera')).not.toBeInTheDocument()
+    })
+
+    it('keeps the other query params (?demo=1) through open and close', () => {
+      renderApp({}, { entries: ['/?demo=1'] })
+      clickPiece('zoia.ink')
+      expect(here()).toBe('/?demo=1&photo=zoia.ink.1')
+      fireEvent.click(screen.getByRole('button', { name: /close viewer/i }))
+      expect(here()).toBe('/?demo=1')
+    })
+
+    it('a deep link opens that photo, and closing it stays on the Wall', () => {
+      renderApp({}, { entries: ['/brief', '/?photo=zoia.ink.2'] })
+      expect(viewerHeading('zoia.ink')).toBeInTheDocument()
+      expect(screen.getByText(/artist 1 of 2/)).toHaveTextContent('02')
+
+      fireEvent.click(screen.getByRole('button', { name: /close viewer/i }))
+      expect(here()).toBe('/')
+      expect(screen.getByText('Sable')).toBeInTheDocument()
+      // Replaced in place: nothing between the Wall and the page before it.
+      back()
+      expect(screen.getByText('Brief page mock')).toBeInTheDocument()
+    })
+
+    it('a deep link to a photo that no longer exists just shows the Wall', () => {
+      renderApp({}, { entries: ['/?photo=gone.artist.1'] })
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(screen.getByText('Sable')).toBeInTheDocument()
+    })
+
+    it('Generate replaces the viewer entry, so Back from Concepts returns to the Wall', () => {
+      renderApp({}, { entries: ['/brief', '/'] })
+      clickPiece('Carlos Valera')
+      fireEvent.keyDown(window, { key: 'g' })
+      expect(here()).toBe('/concepts?steer=carlosvalera')
+
+      back()
+      expect(here()).toBe('/')
+      expect(viewerHeading('Carlos Valera')).not.toBeInTheDocument()
+    })
   })
 })

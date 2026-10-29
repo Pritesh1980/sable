@@ -73,3 +73,21 @@ export function buildWallItems(artists = [], { now = new Date() } = {}) {
   }
   return items
 }
+
+// The Wall viewer's open photo in the URL (#159): `?photo=<artistId>.<n>`, with
+// n counting from 1 like the viewer's own counter. Artist ids are handles and
+// can hold dots ("zoia.ink"), so the number is whatever follows the last dot.
+export function photoParam(item) {
+  return `${item.artistId}.${item.imageIndex + 1}`
+}
+
+// Where a `?photo=` value sits in `items`, or -1 when it no longer names a
+// photo (artist removed, photo deleted, a malformed link).
+export function findPhotoIndex(items, value) {
+  if (!value) return -1
+  const dot = value.lastIndexOf('.')
+  const n = Number(value.slice(dot + 1))
+  if (dot <= 0 || !Number.isInteger(n) || n < 1) return -1
+  const artistId = value.slice(0, dot)
+  return items.findIndex((item) => item.artistId === artistId && item.imageIndex === n - 1)
+}

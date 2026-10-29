@@ -83,6 +83,7 @@ export default function WallViewer({
   onClose,
   onGenerate,
   onPasteImage,
+  onIndexChange,
 }) {
   const [showInfo, setShowInfo] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -128,6 +129,11 @@ export default function WallViewer({
       else if (dir === 'down') onClose?.()
     },
   })
+
+  // Tells the Wall which photo is showing, so it can keep the URL on it (#159).
+  useEffect(() => {
+    if (open && current) onIndexChange?.(current)
+  }, [open, current, onIndexChange])
 
   // Paste (⌘V) with the viewer open adds the pasted image to the artist
   // currently in view.
