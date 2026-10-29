@@ -16,18 +16,27 @@ function DistanceBadge({ distanceMiles }) {
   )
 }
 
+// The display name when one is saved, else the handle (#161). A named chip
+// keeps the handle as dimmer secondary text (a title alone never shows on
+// iPhone), since the chip opens their Instagram.
 function ArtistChip({ artist }) {
+  const handle = `@${artist.handle}`
+  const label = artist.name || handle
   return (
     <a
       href={`https://instagram.com/${artist.handle}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-2 bg-ink-muted/60 rounded-xs pl-1 pr-2.5 py-1 hover:bg-ink-muted transition-colors"
+      title={handle}
+      className="flex items-center gap-2 min-w-0 max-w-full bg-ink-muted/60 rounded-xs pl-1 pr-2.5 py-1 hover:bg-ink-muted transition-colors"
     >
       <span className="w-6 h-6 rounded-xs overflow-hidden shrink-0">
-        <ArtistImage src={artist.images?.[0]} label={artist.name || `@${artist.handle}`} className="w-full h-full object-cover" monogramClassName="text-xs" />
+        <ArtistImage src={artist.images?.[0]} label={label} className="w-full h-full object-cover" monogramClassName="text-xs" />
       </span>
-      <span className="text-xs font-mono text-cream-muted">@{artist.handle}</span>
+      <span className="text-xs font-mono text-cream-muted truncate">{label}</span>
+      {artist.name && (
+        <span className="text-[0.625rem] font-mono text-cream-muted/50 truncate">{handle}</span>
+      )}
     </a>
   )
 }
@@ -56,7 +65,7 @@ function StudioCard({ studio, artists }) {
       {artists.length > 0 && (
         <div className="mt-4 pt-4 border-t border-ink-border/50">
           <p className="text-[0.625rem] font-mono text-cream-muted/50 tracking-widest uppercase mb-2">
-            {artists.length} of your artist{artists.length !== 1 ? 's' : ''} here
+            {artists.length} of your artists here
           </p>
           <div className="flex flex-wrap gap-2">
             {artists.map((a) => <ArtistChip key={a.id} artist={a} />)}
@@ -103,7 +112,7 @@ export default function Studios({ artists = [] }) {
         </div>
 
         {withArtists.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {withArtists.map(({ studio, artists }) => (
               <StudioCard key={studio.id} studio={studio} artists={artists} />
             ))}

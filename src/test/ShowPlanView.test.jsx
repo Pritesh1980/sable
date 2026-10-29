@@ -52,6 +52,34 @@ describe('ShowPlanView', () => {
     expect(screen.queryByText('Nobody Known')).not.toBeInTheDocument()
   })
 
+  // #160: the curated list ships to everyone; a pick the user never saved must
+  // not sit under a heading that says it is already in their gallery.
+  it('gives curated priority picks outside the gallery their own section', () => {
+    const curated = {
+      nobody: { tier: 'priority', why: 'Benchmark booth' },
+      ghost: { tier: 'priority', why: 'Never turned up' },
+    }
+    renderView({ curated })
+    const mustSee = screen.getByRole('heading', { name: /must see/i }).closest('section')
+    expect(within(mustSee).queryByText('Nobody Known')).not.toBeInTheDocument()
+
+    const guide = screen.getByRole('heading', { name: /from the field guide/i }).closest('section')
+    expect(within(guide).getByText('Nobody Known')).toBeInTheDocument()
+    expect(within(guide).getByText(/benchmark booth/i)).toBeInTheDocument()
+    expect(guide).toHaveTextContent(/not in your gallery yet/i)
+    expect(guide).not.toHaveTextContent(/already in your gallery/i)
+
+    // A pick missing from the line-up is not claimed as the user's either.
+    const missing = screen.getByRole('heading', { name: /not in the line-up/i }).closest('section')
+    expect(missing).not.toHaveTextContent(/your shortlist/i)
+  })
+
+  it('shows the field guide even when nothing in the gallery is at the show', () => {
+    renderView({ artists: [], curated: { nobody: { tier: 'priority', why: 'Benchmark booth' } } })
+    expect(screen.queryByRole('heading', { name: /must see/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /from the field guide/i })).toBeInTheDocument()
+  })
+
   it('says so when there is nothing to pick from yet', () => {
     renderView({ entries: [] })
     expect(screen.getByText(/no picks yet/i)).toBeInTheDocument()

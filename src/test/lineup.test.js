@@ -181,6 +181,28 @@ describe('groupLineup', () => {
     expect(groupLineup(indexed).map((g) => g.letter)).toEqual(['A', 'Z', '#'])
     expect(groupLineup(indexed)[0].entries.map((e) => e.label)).toEqual(['alpha', 'Ate Wamz'])
   })
+
+  // #160: "@" sorts before letters, so handle-only rows all came first in a
+  // letter ("@ademtattoo … @arianna.tattoos", then "A Darker Shade").
+  it('sorts within a letter as if a handle-only label had no leading @', () => {
+    const indexed = indexLineup(
+      [
+        { name: '', handle: 'arianna.tattoos', note: '' },
+        { name: 'Aaron Sidney', handle: '', note: '' },
+        { name: '', handle: 'ademtattoo', note: '' },
+        { name: 'A Darker Shade', handle: '', note: '' },
+        { name: 'Azure Ink', handle: '', note: '' },
+      ],
+      []
+    )
+    expect(groupLineup(indexed)[0].entries.map((e) => e.label)).toEqual([
+      'A Darker Shade',
+      'Aaron Sidney',
+      '@ademtattoo',
+      '@arianna.tattoos',
+      'Azure Ink',
+    ])
+  })
 })
 
 describe('lineupCounts', () => {

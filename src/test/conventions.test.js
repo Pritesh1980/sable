@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { CONVENTIONS, getConventionFavicon, toggleConventionAttendee } from '../data/conventions'
+import { CONVENTIONS, getConventionFavicon, isPastEdition, toggleConventionAttendee } from '../data/conventions'
 import { DEFAULT_ARTISTS } from '../data/artists'
 
 describe('CONVENTIONS', () => {
@@ -69,6 +69,40 @@ describe('CONVENTIONS', () => {
     const popular = CONVENTIONS.filter((c) => c.popular)
     expect(popular.length).toBeGreaterThan(0)
     expect(popular.length).toBeLessThanOrEqual(CONVENTIONS.length)
+  })
+})
+
+// #160: every show in the list recurs, and the data holds the latest known
+// edition. Once that edition is over the card has to say so.
+describe('isPastEdition', () => {
+  const show = { endDate: '2026-09-06' }
+
+  it('is false up to and including the last day', () => {
+    expect(isPastEdition(show, new Date(2026, 8, 1))).toBe(false)
+    expect(isPastEdition(show, new Date(2026, 8, 6, 23, 30))).toBe(false)
+  })
+
+  it('is true from the day after the last day', () => {
+    expect(isPastEdition(show, new Date(2026, 8, 7, 0, 5))).toBe(true)
+    expect(isPastEdition(show, new Date(2027, 0, 1))).toBe(true)
+  })
+
+  it('falls back to the month when only the month is known', () => {
+    const tbc = { endDate: null, endMonth: '2026-09' }
+    expect(isPastEdition(tbc, new Date(2026, 8, 30))).toBe(false)
+    expect(isPastEdition(tbc, new Date(2026, 9, 1))).toBe(true)
+  })
+
+  it('never calls a show past when nothing says when it ends', () => {
+    expect(isPastEdition({ endDate: null }, new Date(2030, 0, 1))).toBe(false)
+    expect(isPastEdition({}, new Date(2030, 0, 1))).toBe(false)
+  })
+
+  it('can date every curated show, at least to the month', () => {
+    CONVENTIONS.forEach((c) => {
+      const dated = /^\d{4}-\d{2}-\d{2}$/.test(c.endDate || '') || /^\d{4}-\d{2}$/.test(c.endMonth || '')
+      expect(dated, `${c.id} needs an endDate or endMonth`).toBe(true)
+    })
   })
 })
 

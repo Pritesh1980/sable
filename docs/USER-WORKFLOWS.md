@@ -300,7 +300,7 @@ flowchart TB
   MERGE["Validate and merge entries<br/>new import overrides seeded details"]
   VIEW{"How to browse?"}
   ALL["All / In your gallery / New to you<br/>search names, handles and booth notes"]
-  PICKS["Top picks<br/>Must see · Wildcards · Worth a look"]
+  PICKS["Top picks<br/>Must see · From the field guide · Wildcards · Worth a look"]
   CHECK["Read the reasons; inspect Instagram<br/>unmatched curated picks stay visible"]
   SAVED{"Already in gallery?"}
   ADD["Add artist<br/>also marks them attending"]

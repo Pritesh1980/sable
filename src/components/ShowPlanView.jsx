@@ -3,8 +3,9 @@ import { buildShowPlan } from '../data/showPlan'
 import { LineupRow } from './ConventionLineup'
 
 // Not an alphabetical list — a verdict. Must see is your own gallery showing
-// up in this line-up; Worth a look is a stablemate at a studio you already
-// follow. Everyone else in the 466 stays in the plain A-Z index, one tap away
+// up in this line-up; From the field guide is a researched pick that ships
+// with the app and is not in your gallery; Worth a look is a stablemate at a
+// studio you already follow. Everyone else in the 466 stays in the plain A-Z index, one tap away
 // on the All view, rather than crowding a page meant to be short.
 function Section({ title, subtitle, picks, convention, attendingIds, onAddArtist, onToggleAttending }) {
   if (picks.length === 0) return null
@@ -50,6 +51,7 @@ export default function ShowPlanView({
 
   if (
     plan.mustSee.length === 0 &&
+    plan.fieldGuide.length === 0 &&
     plan.suggested.length === 0 &&
     plan.wildcards.length === 0 &&
     plan.missing.length === 0
@@ -67,6 +69,17 @@ export default function ShowPlanView({
         title="Must see"
         subtitle="Already in your gallery, and at this show"
         picks={plan.mustSee}
+        convention={convention}
+        attendingIds={attendingIds}
+        onAddArtist={onAddArtist}
+        onToggleAttending={onToggleAttending}
+      />
+      {/* The curated list ships to every user, so it never claims to be the
+          user's own gallery (#160). */}
+      <Section
+        title="From the field guide"
+        subtitle="Researched before the show; not in your gallery yet"
+        picks={plan.fieldGuide}
         convention={convention}
         attendingIds={attendingIds}
         onAddArtist={onAddArtist}
@@ -95,7 +108,7 @@ export default function ShowPlanView({
         <section className="mt-4">
           <h3 className="font-display text-cream text-base">Not in the line-up</h3>
           <p className="text-cream-muted/60 text-[0.6875rem] font-mono mt-0.5">
-            On your shortlist, but this line-up doesn&rsquo;t list them — check with the show
+            In the field guide, but this line-up doesn&rsquo;t list them — check with the show
           </p>
           <ul className="mt-1.5">
             {plan.missing.map((m) => (

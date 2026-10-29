@@ -786,7 +786,7 @@ flowchart TB
   AZ["All / Saved / New<br/>searchable artist index"]
   PLAN["buildShowPlan<br/>rank · status · styles · studio connections"]
   CURATED["Bundled studios and curated picks<br/>priority / wildcard reasons"]
-  PICKS["Top picks<br/>Must see · Wildcards · Worth a look<br/>unmatched curated picks reported"]
+  PICKS["Top picks<br/>Must see · From the field guide · Wildcards · Worth a look<br/>unmatched curated picks reported"]
   KEEP["Explicit Add artist / attendance toggle"]
   SYNC["Gallery and attendance setters<br/>selected storage adapter"]
 
