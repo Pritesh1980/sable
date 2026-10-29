@@ -67,6 +67,7 @@ const SECTIONS = [
     image: 'brief-idea-editor.png',
     steps: [
       'Open Ideas and tap + to create an idea. Add a title, description, style tags, body placement and reference images. 3D print on a reference image turns it into a printable relief STL.',
+      'The tabs at the top of Ideas filter by status: All, then Idea, Booked or Done once at least one idea has that status.',
       'An AI-generated imagery label stays visible in an idea or board editor when it shows a shipped demo image; a Board cover is labeled even if its linked ideas have no demo images.',
       'With a Gemini key set and a reference image uploaded, Fill idea from image drafts the title, description, tags and placement from the image — only fields you left empty are filled.',
       'As you add style tags, matching artists appear ranked by overlap, status and rank — tap to link them to the idea.',
