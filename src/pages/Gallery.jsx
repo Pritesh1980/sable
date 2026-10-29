@@ -31,6 +31,7 @@ import TagPill from '../components/TagPill'
 import AddArtistForm from '../components/AddArtistForm'
 import ArtistTable from '../components/ArtistTable'
 import AddArtistModal from '../components/AddArtistModal'
+import useOverlayParam from '../hooks/useOverlayParam'
 import { useAuth } from '../context/useAuth'
 import { STYLE_TAGS, createArtist } from '../data/artists'
 import { withStagedImages } from '../data/imageStaging'
@@ -91,7 +92,13 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
   const [searchParams, setSearchParams] = useSearchParams()
   const userId = user?.id
   const [activeTag, setActiveTag] = useState(null)
-  const [selected, setSelected] = useState(null)
+  // The open artist lives in the URL (?artist=<id>, #159): the browser's Back
+  // closes the detail instead of leaving the gallery, and a detail can be
+  // linked. Read from the live list, so the sheet always shows the newest
+  // record; a link to an artist who has gone just shows the gallery.
+  const detail = useOverlayParam('artist')
+  const selected = detail.value ? artists.find((a) => a.id === detail.value) || null : null
+  const openArtist = (artist) => detail.open(artist.id)
   const [viewMode, setViewMode] = useState('filmstrip')
   // #70: grid cards are pure navigation until this is on. Only grid can reorder,
   // so leaving grid drops it — otherwise the state outlives its only switch.
@@ -229,10 +236,10 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
     const applyPatch = (record) =>
       typeof patchOrUpdater === 'function' ? patchOrUpdater(record) : { ...record, ...patchOrUpdater }
     const matches = (record) => record.id === id && record.generation === generation
+    // The open sheet reads the live record, and which artist is open is the
+    // URL's business, so a stale save for an artist that is no longer open
+    // cannot reopen them on top of whatever is now selected (#78).
     setArtists((prev) => prev.map((a) => (matches(a) ? applyPatch(a) : a)))
-    // Same identity guard as before (#78): a stale save for an artist that is
-    // no longer open must not reopen them on top of whatever is now selected.
-    setSelected((current) => (current && matches(current) ? applyPatch(current) : current))
   }
 
   // Delegates so both entry points resolve an updater against the newest list;
@@ -469,11 +476,11 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
           </button>
         </div>
       ) : viewMode === 'wall' ? (
-        <StyleWall artists={artists} onOpenArtist={setSelected} />
+        <StyleWall artists={artists} onOpenArtist={openArtist} />
       ) : viewMode === 'filmstrip' ? (
-        <FilmstripView artists={sorted} onOpenArtist={setSelected} onSetRank={setRank} onSetStatus={setStatus} />
+        <FilmstripView artists={sorted} onOpenArtist={openArtist} onSetRank={setRank} onSetStatus={setStatus} />
       ) : viewMode === 'compare' ? (
-        <CompareView artists={artists} onOpenArtist={setSelected} />
+        <CompareView artists={artists} onOpenArtist={openArtist} />
       ) : (
         <div className="px-4 max-w-7xl mx-auto">
           <ArtistGrid
@@ -482,7 +489,7 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
             onDragStart={() => setDragActive(true)}
             onDragEnd={handleDragEnd}
             onDragCancel={() => setDragActive(false)}
-            onOpen={setSelected}
+            onOpen={openArtist}
             onSaveImages={saveImages}
             editing={editing}
             onLongPress={() => setEditing(true)}
@@ -508,18 +515,19 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
           // was open first — draft still named it, spread last in the write.
           key={selected.id}
           artist={selected}
-          onClose={() => setSelected(null)}
+          onClose={detail.close}
           onSave={saveArtist}
           attendingConventions={mergedConventions.filter((c) => c.attendingArtistIds.includes(selected.id))}
           allArtists={artists}
-          onSelectArtist={setSelected}
+          // Similar ink swaps the artist in place: Back still closes the sheet.
+          onSelectArtist={(artist) => detail.replace(artist.id)}
         />
       )}
 
       {mapOpen && (
         <TasteMap
           artists={artists}
-          onOpenArtist={(artist) => { setMapOpen(false); setSelected(artist) }}
+          onOpenArtist={(artist) => { setMapOpen(false); openArtist(artist) }}
           onClose={() => setMapOpen(false)}
         />
       )}

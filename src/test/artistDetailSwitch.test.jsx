@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { render, cleanup, fireEvent, screen, within } from '@testing-library/react'
-import { MemoryRouter } from 'react-router'
+import { render, cleanup, fireEvent, screen, within, act } from '@testing-library/react'
+import { MemoryRouter, Routes, Route, useLocation, useNavigate } from 'react-router'
 
 // #78. Gallery renders <ArtistDetail artist={selected} …> — before this fix,
 // with no key. ArtistDetail's local images/draft initialise once from props
@@ -134,5 +134,93 @@ describe('switching the open artist inside ArtistDetail, through Gallery (#78)',
     expect(b.images).toEqual(seed[1].images)
     expect(b.tags).toEqual(seed[1].tags)
     expect(lastArtists).toHaveLength(seed.length)
+  })
+})
+
+// #159: the open artist lives in the URL (?artist=<id>), so the browser's Back
+// closes the detail instead of leaving the gallery, and a detail can be linked.
+describe('artist detail and the Back button (#159)', () => {
+  const probe = {}
+  function Probe() {
+    const location = useLocation()
+    const navigate = useNavigate()
+    useEffect(() => { Object.assign(probe, { location, navigate }) })
+    return null
+  }
+  const here = () => `${probe.location.pathname}${probe.location.search}`
+  const back = () => act(() => { probe.navigate(-1) })
+
+  function RoutedHarness({ entries }) {
+    const [artists, setArtists] = useState(seed)
+    lastArtists = artists
+    return (
+      <MemoryRouter initialEntries={entries} initialIndex={entries.length - 1}>
+        <Probe />
+        <Routes>
+          <Route path="/" element={<div>Home page mock</div>} />
+          <Route path="/gallery" element={<Gallery artists={artists} setArtists={setArtists} />} />
+        </Routes>
+      </MemoryRouter>
+    )
+  }
+  const renderAt = (...entries) => render(<RoutedHarness entries={entries} />)
+
+  it('tapping an artist pushes ?artist=<id>, and Back closes the detail onto the gallery', () => {
+    renderAt('/', '/gallery')
+    fireEvent.click(screen.getByText('Artist A'))
+    expect(here()).toBe('/gallery?artist=a')
+    expect(detailSheet()).not.toBeNull()
+
+    back()
+
+    expect(here()).toBe('/gallery')
+    expect(detailSheet()).toBeNull()
+    expect(screen.getByRole('heading', { name: 'Artists' })).toBeInTheDocument()
+  })
+
+  it('the sheet\'s own ← Back leaves no entry behind', () => {
+    renderAt('/', '/gallery')
+    fireEvent.click(screen.getByText('Artist A'))
+    fireEvent.click(within(detailSheet()).getByRole('button', { name: /back/i }))
+    expect(here()).toBe('/gallery')
+    expect(detailSheet()).toBeNull()
+
+    back()
+    expect(screen.getByText('Home page mock')).toBeInTheDocument()
+  })
+
+  it('switching artist inside the sheet replaces the entry', () => {
+    renderAt('/', '/gallery')
+    fireEvent.click(screen.getByText('Artist A'))
+    fireEvent.click(within(detailSheet()).getByText('switch to Artist B'))
+    expect(here()).toBe('/gallery?artist=b')
+
+    back()
+    expect(here()).toBe('/gallery')
+    expect(detailSheet()).toBeNull()
+  })
+
+  it('keeps the other query params through open and close', () => {
+    renderAt('/gallery?demo=1')
+    fireEvent.click(screen.getByText('Artist A'))
+    expect(here()).toBe('/gallery?demo=1&artist=a')
+    fireEvent.click(within(detailSheet()).getByRole('button', { name: /back/i }))
+    expect(here()).toBe('/gallery?demo=1')
+  })
+
+  it('a deep link opens that artist; closing it stays on the gallery', () => {
+    renderAt('/', '/gallery?artist=b')
+    expect(within(detailSheet()).getByText('Artist B')).toBeInTheDocument()
+    fireEvent.click(within(detailSheet()).getByRole('button', { name: /back/i }))
+    expect(here()).toBe('/gallery')
+    expect(detailSheet()).toBeNull()
+    back()
+    expect(screen.getByText('Home page mock')).toBeInTheDocument()
+  })
+
+  it('a deep link to an artist who is not in the gallery shows the gallery', () => {
+    renderAt('/gallery?artist=nobody')
+    expect(detailSheet()).toBeNull()
+    expect(screen.getByRole('heading', { name: 'Artists' })).toBeInTheDocument()
   })
 })
