@@ -1,0 +1,17 @@
+// Editor / language-server config only: Vite, Vitest and ESLint don't read it.
+// It tells the TypeScript language server how Vite resolves imports
+// (extensionless, bundler-style) so go-to-definition and find-references
+// work across files. Worktrees are left out on purpose: listing them would
+// give every symbol duplicate definitions.
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "checkJs": false,
+    "skipLibCheck": true,
+    "types": ["vite/client", "vitest/globals"]
+  },
+  "include": ["src", "e2e", "scripts", "server", "*.js"]
+}
