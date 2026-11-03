@@ -24,9 +24,9 @@ This is a personal app for one user (the owner). (A read-only share link for the
 ## Tech Stack
 
 - **Framework**: React (PWA-configured)
-- **Routing**: React Router v8 — import from **`react-router`**, never `react-router-dom` (that package no longer exists in v8; only `RouterProvider`/`HydratedRouter` come from `react-router/dom`, and Sable uses neither — it's a plain `BrowserRouter`). 9 deep-linkable routes (Home Wall, Pipeline `/pipeline`, Artists `/gallery`, Ideas `/brief`, Radar `/conventions`, Studios, AI `/concepts`, Settings, Help); legacy `/manage` → `/gallery?mode=manage` and `/boards` → `/brief?tab=boards` redirect. The unit suite renders through `MemoryRouter`, so **it never exercises `BrowserRouter` or `basename`** — verify routing changes in a browser under both `/` and `VITE_BASE=/sable/`.
+- **Routing**: React Router v8 — import from **`react-router`**, never `react-router-dom` (that package no longer exists in v8; only `RouterProvider`/`HydratedRouter` come from `react-router/dom`, and Sable uses neither — it's a plain `BrowserRouter`). 9 deep-linkable routes (Home Wall, Pipeline `/pipeline`, Artists `/gallery`, Ideas `/brief`, Radar `/conventions`, Studios, AI `/concepts`, Settings, Help); legacy `/manage` → `/gallery?mode=manage` and `/boards` → `/brief?tab=boards` redirect; `/share` → `/gallery?shared=1` is the stable landing URL for the manifest's share target and the iOS Shortcut (don't move it); unknown paths go to `/` (#161). The unit suite renders through `MemoryRouter`, so **it never exercises `BrowserRouter` or `basename`** — verify routing changes in a browser under both `/` and `VITE_BASE=/sable/`.
 - **Styling**: Tailwind CSS **v4**. `src/index.css` starts with `@import 'tailwindcss'` (not the v3 `@tailwind` triple) plus `@config '../tailwind.config.js'` — the JS config is deliberately **kept** rather than ported to CSS-first `@theme`, because `src/test/v2-tokens.spec.js` imports it and asserts the six v2 colours and both font families; moving the tokens into CSS would silently delete that guard. PostCSS uses `@tailwindcss/postcss`; autoprefixer is gone (v4 prefixes via Lightning CSS). Three v4 renames are load-bearing here — **use `rounded-xs`, `backdrop-blur-xs`, `outline-hidden`**, since v4's `rounded-sm`/`backdrop-blur-sm` are a step larger and its `outline-none` no longer means what v3's did. Also: **`leading-*` now overrides the line-height bundled with `text-*`** (in v3 the `text-*` value silently won), so adding both classes actually changes spacing now. Finally, `index.css` defines **`@custom-variant can-hover`** (`@media (hover: hover)`), and hover-revealed controls are written **`can-hover:opacity-0 group-hover:opacity-100`** — gating the *hiding*, not just the reveal. v4 already wraps `hover:`/`group-hover:` in `@media (hover: hover)`, so a bare `opacity-0` left nine controls (including Brief's remove-photo) permanently invisible yet tappable on iPhone. With `can-hover:` they are simply always visible on touch and unchanged on a mouse. This replaced the migration's `@custom-variant hover (&:hover)` shim (#49, Aug 2026); `src/test/a11yAffordances.spec.js` guards both halves. **A source-level test cannot prove the media wrapper survives compilation** — if you touch this, check `dist/assets/*.css` structurally that `.can-hover\:opacity-0` sits *inside* `@media (hover:hover)`, and verify in a real mobile browser context (`isMobile: true`), not a narrow desktop viewport: only that reports `hover: none`.
-- **Hosting**: a live, backend-free demo runs on **GitHub Pages** (`.github/workflows/deploy-pages.yml`, published from `main` at https://pritesh1980.github.io/sable/ under base `/sable/`; it's the `?demo=1` experience, local backend, no secrets). A real accounts + sync deployment (S3 + CloudFront) is still planned. The build is **base-aware** — `VITE_BASE` threads through the router `basename`, the SW (derives its base from `self.location`), and the precache manifest — so the same code serves at `/` or a sub-path. Two exceptions, both deliberate: `public/manifest.json` is copied verbatim by Vite (nothing rewrites `base` into `public/`), so its URLs are **relative**; and **image paths are stored base-relative and based at display time** by `resolveAssetPath` (`src/data/assetPath.js`), because `canonicalizeImages` persists and syncs static paths verbatim — a baked-in base would outlive its build and strand stored paths on a base change. Never add `BASE_URL` to seed data; a data test enforces this.
+- **Hosting**: a live, backend-free demo runs on **GitHub Pages** (`.github/workflows/deploy-pages.yml`, published from `main` at https://pritesh1980.github.io/sable/ under base `/sable/`; it's the `?demo=1` experience, local backend, no secrets). A real accounts + sync deployment (S3 + CloudFront) is written but not applied: `infra/main.tf` + `npm run deploy:aws` (runs from the Mac, because the gitignored artist images exist only there; `docs/DEPLOY-AWS.md`). The build is **base-aware** — `VITE_BASE` threads through the router `basename`, the SW (derives its base from `self.location`), and the precache manifest — so the same code serves at `/` or a sub-path. Two exceptions, both deliberate: `public/manifest.json` is copied verbatim by Vite (nothing rewrites `base` into `public/`), so its URLs are **relative**; and **image paths are stored base-relative and based at display time** by `resolveAssetPath` (`src/data/assetPath.js`), because `canonicalizeImages` persists and syncs static paths verbatim — a baked-in base would outlive its build and strand stored paths on a base change. Never add `BASE_URL` to seed data; a data test enforces this.
 - **AI (Concepts page)**: copy-prompt → paste into ChatGPT/Claude/Gemini and bring the result back, **or** optional OpenAI DALL·E 3 / Gemini image generation with user-supplied keys (stored locally). Saved image results can export browser-generated relief STL files. Artist ↔ idea/concept matching is tag-overlap (`src/data/planning.js`) **plus** the on-device Taste Engine (July 2026): CLIP embeddings via `@huggingface/transformers` — dynamic-import only, enforced by a contract test — power Similar-ink artist matching, concept→artist visual matching and a taste model over rank/status history (`src/data/embeddings.js`, `taste.js`, `styleIndex.js`, `embedder.js`). Screenshot intake (`src/data/screenshotIntake.js`) prefills both add-artist forms and Brief ideas from images via Gemini vision; its parsers are strict (pipe format, tag/handle allowlists, in-image text treated as data not instructions, key sent via `x-goog-api-key` header).
 - **Every Gemini call sends the key in the `x-goog-api-key` header, never `?key=`** (URLs land in logs and error reports). `src/test/geminiKeyHeader.test.js` scans `src/` for the URL form, so a new caller can't regress it.
 - **Gemini model IDs are pinned and go stale**: `GEMINI_TEXT_MODEL` (`src/data/discovery.js`, artist discovery/refresh) and `GEMINI_IMAGE_MODEL` (`src/data/geminiImage.js`, concept images). Google retires these (`gemini-2.5-*` → `gemini-3.x` mid-2026); on a "model no longer available" error, bump both against https://ai.google.dev/gemini-api/docs/deprecations. No test pins the IDs.
@@ -40,53 +40,38 @@ This is a personal app for one user (the owner). (A read-only share link for the
   `src/components/ProtectedRoute.jsx` + `src/pages/Login.jsx`. Owner seeding
   (`src/backend/owner.js`, `VITE_OWNER_EMAIL`) is legacy offline-only: eligible local
   owners seed `DEFAULT_ARTISTS`; real-auth private libraries start empty.
-- **Storage**: local-first-with-sync. localStorage (`tattoo_*` keys) + IndexedDB stay
-  as an offline cache; changes mirror to the backend document store and reconcile by
-  last-write-wins on `updatedAt` (`src/backend/sync.js`). The protocol runs in one
-  framework-free engine, `src/sync/collectionStore.js` (#111), bound to React by
-  `useCollection` (`useSyncExternalStore`, stable setter); `useStorage` is a thin
-  wrapper over it, and so is `useArtistStorage` (#112): everything artist-specific
-  (owner seeding, tombstones) is the policy in `src/data/artistsPolicy.js`, passed to the
-  engine as hooks (`initial`, `merge`, `onEdit`). Its lifecycle
-  is load-bearing: creating a store only reads the cache (StrictMode runs lazy
-  initialisers twice), each `start(user)` opens an epoch so a stopped start's pull or
-  hydration is discarded, an edit writes the cache before `set` returns, a late
-  hydration never overwrites an edit or the pull, and an edit made while stopped is
-  parked (replayed on restart, dropped on a real unmount). Stores are per user: `AppShell` is
-  keyed by `user.id`, so never hand a running store a different user. Images are referenced by small canonical `{ key }` refs in
-  synced data with bytes in blob storage (`src/data/blobUrls.js`, `uploadImages`). The
-  old IndexedDB photo cache (`tattoo-images-v1`) and its #118 sweep are gone (#149, once
-  every device had run the sweep); only sign-out still deletes the cache and its ledger. Idea and
-  concept images use the same key-based blob storage via per-collection codecs
-  (`src/data/imageCodec.js`) wired into `useStorage`. **Idea, concept and variant state
-  holds the stored ref** (#117) — `{ key, note }` for an idea photo, a bare key string for
-  a concept's or variant's `imageUrl` — and resolves where it renders (`RefImage`,
-  `useImageSrc`, `useImageStatuses`); the codecs only warm the URL cache and move inline
-  photos stored before staging existed (`ensureUploaded` returns `{ value, moved }`). Put
-  the staged **key** into state, never a display URL, and give test fixtures `user/…` keys
-  (anything else is not a key to `refKey`). **A ref that can't be resolved (offline) is
-  kept, not dropped** (#101): "offline" is a render status, not a field; **artists hold the
-  stored refs themselves** (#116): `artist.images` is static paths, `{ key }` and
-  `{ url, addedAt }`, nothing is held aside, so there is no side list to reinsert and
-  `canonicalizeArtist` only strips inline data URLs. `initial()` paints the stored rows
-  directly (the owner's starter photos are unioned in by `applyDefaults`, tombstone-aware,
-  de-duplicated by identity); the artists' `codec.toDisplay` is the identity. `onEdit` normalises whatever a producer emitted into refs
-  (`normalizeArtistImages`). Never write a save path that persists only a resolved list
-  — a device that starts offline would delete its own photos from the server. The UI
-  renders one `PhotoTile` per ref (`src/components/PhotoTile.jsx`): ready is interactive,
-  `loading` is an empty `aria-busy` box (never the "Available when online" tile),
-  `unavailable` is the `OfflinePhoto` tile; a photo that is not ready cannot be opened or
-  edited. Never drop a superseded URL's reverse mapping in
-  `blobUrls.js` (#110): state can still hold it, and canonicalizing an unmapped URL
-  stores the expiring URL in place of its key. Every add path **stages** its image first (#115, `src/data/imageStaging.js`): bytes go to IndexedDB `tattoo-staged-images-v1` and an entry to the `tattoo_upload_outbox` + `tattoo_device_copies` localStorage lists *before* the key reaches state, so an offline or failed upload survives a reload and is retried on launch, on the `online` event and on every flush; `resolveBlobKey` reads the device copy first (kept after upload too, so an offline reload still shows the photo). Both stores are device-local and purged on sign-out. The first pull also reads dirty state / pending deletes
-  *after* `await store.list(...)`, not before. Device-local and NOT synced: `tattoo_theme`, `tattoo_font`,
-  `openai_api_key`, `gemini_api_key`, the Taste Engine's embedding index
-  (IndexedDB `tattoo-style-index-v2` — derivable from images, keyed by model id and photo identity,
-  rebuilt per device), `tattoo_convention_lineups`, `tattoo_convention_winners`,
-  and the winner-photo bytes (IndexedDB `tattoo-winner-photos-v1`). The two
-  convention stores differ on sign-out: line-ups stay (a show's published
-  exhibitor list is nobody's private data), winners are purged (they carry photos
-  the user took). JSON export/import backup still available.
+- **Storage**: local-first-with-sync. localStorage (`tattoo_*`) + IndexedDB are an
+  offline cache; changes mirror to the backend and reconcile last-write-wins on
+  `updatedAt` (`src/backend/sync.js`). One framework-free engine,
+  `src/sync/collectionStore.js` (#111), bound to React by `useCollection`; `useStorage`
+  and `useArtistStorage` (#112) wrap it, with artist policy (seeding, tombstones) in
+  `src/data/artistsPolicy.js` as `initial`/`merge`/`onEdit` hooks. How it works:
+  `docs/ARCHITECTURE.md` §2–3. Rules that break things if ignored:
+  - **Lifecycle:** creating a store only reads the cache (StrictMode runs lazy initialisers
+    twice); each `start(user)` opens an epoch that discards a stopped start's pull/hydration;
+    an edit writes the cache before `set` returns; a late hydration never overwrites an edit
+    or the pull; an edit made while stopped is parked. The first pull reads dirty state and
+    pending deletes *after* `await store.list(...)`. `AppShell` is keyed by `user.id`:
+    never hand a running store a different user.
+  - **Images are `{ key }` refs**, bytes in blob storage (`src/data/blobUrls.js`). Idea,
+    concept and variant state holds the stored ref (#117): `{ key, note }` for an idea
+    photo, a bare key string for `imageUrl`, resolved where it renders (`RefImage`,
+    `useImageSrc`). `artist.images` holds static paths, `{ key }` and `{ url, addedAt }`
+    (#116); `onEdit` normalises via `normalizeArtistImages`. Put the staged **key** in
+    state, never a display URL; test fixtures use `user/…` keys (`refKey` rejects others).
+  - **Never persist only a resolved list**: a ref that can't be resolved offline is kept
+    (#101), or a device that starts offline deletes its own photos from the server.
+    `PhotoTile` renders ready / `loading` (empty `aria-busy` box, never the offline tile) /
+    `unavailable`; a not-ready photo can't be opened or edited.
+  - **Never drop a superseded URL's reverse mapping** in `blobUrls.js` (#110): state may
+    still hold it, and canonicalizing an unmapped URL stores the expiring URL.
+  - **Every add path stages first** (#115, `src/data/imageStaging.js`): bytes to IndexedDB
+    `tattoo-staged-images-v1`, entries to `tattoo_upload_outbox` + `tattoo_device_copies`,
+    *before* the key reaches state; retried on launch, `online` and every flush.
+    `resolveBlobKey` reads the device copy first. Both are purged on sign-out.
+  - **Device-local, not synced:** `tattoo_theme`, `tattoo_font`, `openai_api_key`,
+    `gemini_api_key`, the Taste Engine index (IndexedDB `tattoo-style-index-v2`, rebuilt
+    per device), convention line-ups and winners. JSON export/import backup exists.
 
 ### Image Refinement Relay
 
@@ -139,83 +124,30 @@ A personal mood board / brief section.
 - Distance from **Milton Keynes** shown for each
 - Cross-reference: which saved artists are attending each convention (surfaced on the dashboard, artist detail, and idea editor)
 - Curated in `src/data/conventions.js`; ordered by distance (local show as hero, then nearest first)
-- **Artist index** per convention (`src/data/lineup.js`, `src/components/ConventionLineup.jsx`):
-  the show's published line-up (Big London fields ~500 names) pasted in and turned into a
-  searchable index — cross-referenced against the gallery, one-tap add (which also flags
-  attendance), A–Z grouping, re-import merges. The list arrives by **paste, not fetch**: the
-  shows' artist pages are client-rendered, and third-party portfolio data does not belong in
-  the repo. Parsing is strict like `screenshotIntake` (handles validated against Instagram's
-  alphabet, page chrome and prose dropped). The shows' pages lazy-load, so hand-copying only
-  ever gets the first screenful — hence the **grabber** (`src/data/lineupGrabber.js`): a
-  bookmarklet that scrolls the show's page, harvests Instagram links, and hands back to
-  `#lineup=<id>&data=<text>`, which `Conventions.jsx` re-parses through the same strict
-  parser. It is built by stringifying `grabberBody()` and **base64-encoding it**
-  (`javascript:eval(atob('…'))`), so that function must stay self-contained (no
-  module-scope refs) and ASCII-only (btoa). **Do not "simplify" this back to inlining the
-  source with its whitespace collapsed** — that was v1 and it is silently broken in
-  production only: the minifier rewrites `'\n'` as a template literal holding a *real*
-  newline, so collapsing whitespace turned every line break in the harvest into a space and
-  the whole line-up arrived as one unparseable line (the overlay reported 3× the true count
-  — the space-split token count — and the import landed nothing). The same pass folds
-  `String.fromCharCode(35)` back to a literal `#`, which truncates a saved bookmark URL.
-  Encoding sidesteps both by embedding the minifier's output byte-for-byte. Tests
-  *evaluate the built bookmarklet* (the only honest way to test it) and assert the source is
-  embedded verbatim, but **only a production build catches this class** — dev is unminified,
-  so re-run `.e2e-prod` style checks against `vite preview` after touching the builder.
-  **Big London 2026 ships with the app** (`src/data/lineups/bigLondon2026.js`, wired through
-  `src/data/lineupSeeds.js`): 466 artists with studio + booth, held as the same *text* the
-  import box takes so it goes through `parseLineup` rather than a second parallel code path.
-  A seed is a floor — user imports merge on top and win on conflicts, and `cleared: true` is
-  what keeps "Clear list" honest against a shipped list. The owner decided a published
-  exhibitor list is fine to commit to the public repo; that does not extend to portfolio
-  images. Only the user's own imports are stored under `tattoo_convention_lineups`
-  — deliberately **not** a sync collection: it is bulky, re-importable in seconds, and what you
-  keep from it syncs as gallery artists
-- **Competition winners** per convention (`src/data/winners.js`,
-  `src/components/ConventionWinners.jsx`, Sept 2026): the award board a show posts on the
-  last afternoon, turned into the same kind of index as the line-up — grouped by award
-  category (whole-show prizes first, 1st→3rd within), cross-referenced against the gallery,
-  one-tap add. A line-up is 500 names; the results are the ten-to-twenty a room of judges
-  just picked out of them, already sorted into the style brackets the gallery is tagged by,
-  which makes it the highest-signal list a convention produces. Paste-in, same as line-ups.
-  **Three things about real results data that are not obvious and that a from-scratch
-  parser gets wrong** (all learned by checking against
-  `brightontattoo.com/news/2026-competition-winners` and Big London winners' own Instagram
-  posts, Sept 2026 — the first version of this parser was written against an *invented*
-  format and got real data almost entirely wrong):
-  1. **The published row is `1st Place - <collector> tattooed by <artist>, <studio>, <town>`.**
-     The name that comes *first* is the collector wearing the tattoo; the artist is the one
-     after **"tattooed by"**. Convention comps work that way — the collector walks the
-     stage, the trophy credits the artist. Sable is an app about artists, so the artist is
-     the winner and the collector is kept as `collector` for context. Guessing by position
-     files every winner under the wrong person.
-  2. **Shows invent their own categories** ("Asian Inspired", "Ornamental", "Best of
-     Saturday", plus a size × finish grid). A heading the taxonomy has never met and that
-     doesn't start with "Best" is undecidable from its own line — it looks exactly like a
-     person's name. `parseWinners` settles it by **lookahead**: a heading has a result row
-     under it, a trailing "Thanks everyone" does not.
-  3. **Most boards publish no Instagram handles at all** (Brighton 2026: 18 winners, zero
-     handles), while most of `DEFAULT_ARTISTS` is saved the other way round — a handle with
-     `name: ''`. Exact matching therefore connects *nothing*. `indexWinners` also tries the
-     winner's name as the **opening of a handle** ("Adam Blakey" → `adamblakeytattoos`),
-     guarded by an exact-match-wins rule, a minimum length, and a uniqueness requirement;
-     rows carry `matchedBy` so the UI can mark an inferred match with `?`. A near-miss (the
-     show's own "Blackey"/"Blakey" typo) deliberately fails — putting an award on the wrong
-     artist is worse than missing one.
-  Results are **not fetchable from the app**: of the seven shows only Brighton publishes
-  them as server-rendered text, and even that page sends no `access-control-allow-origin`,
-  so a browser fetch is CORS-blocked (the same wall that produced the line-up grabber).
-  Instagram/Facebook posts are the real source, which is why the paste box is the input.
-  **Do not add a Gemini "look up the winners" button**: `discovery.js` calls Gemini with no
-  search grounding, and fabricating award results about named real people is the worst
-  failure mode this app has.
-  Stored under `tattoo_convention_winners` — device-local like line-ups, **and additionally
-  purged on sign-out** (`src/backend/purge.js`), because unlike a published exhibitor list a
-  winners board carries photos the user took. Photos themselves live in **IndexedDB**
-  (`src/data/winnerPhotos.js`, `tattoo-winner-photos-v1`) with only an id on the record:
-  winners arrive as phone screenshots and a dozen data URLs would blow the ~5MB origin
-  quota — which is *shared with the gallery's offline cache*, so it takes that down too.
-  Cropped winner photos live in the gitignored `public/images/winners/`.
+- **Line-up index** (`src/data/lineup.js`, `ConventionLineup.jsx`) and **competition
+  winners** (`src/data/winners.js`, `ConventionWinners.jsx`): pasted lists turned into
+  searchable indexes cross-referenced against the gallery, with one-tap add. Both arrive by
+  **paste, never fetch**, and both are device-local, not synced. The reasons behind each
+  rule below are in `docs/ARCHITECTURE.md` §7 — read it before changing these parsers.
+  - **Grabber bookmarklet** (`src/data/lineupGrabber.js`): built by base64-encoding the
+    stringified `grabberBody()` (`javascript:eval(atob('…'))`), so that function stays
+    self-contained (no module-scope refs) and ASCII-only. **Never go back to inlining the
+    source with whitespace collapsed**: the minifier breaks it in production only. Tests
+    evaluate the built bookmarklet, but only a prod build catches this, so re-check against
+    `vite preview` after touching the builder.
+  - **Big London 2026 seed** (`lineups/bigLondon2026.js` via `lineupSeeds.js`) is stored as
+    paste *text* and goes through `parseLineup`. A seed is a floor: user imports merge on top
+    and win, and `cleared: true` keeps "Clear list" honest. No portfolio images in the repo.
+  - **Winners:** the artist is the name after **"tattooed by"**; the first name is the
+    collector. Unknown category headings are told apart from names by lookahead.
+    Handle-prefix matching ("Adam Blakey" → `adamblakeytattoos`) is guarded (exact match
+    wins, minimum length, unique) and marked via `matchedBy`. A near-miss must fail.
+  - **Never add a Gemini "look up the winners" button**: `discovery.js` has no search
+    grounding, and inventing award results about named real people is the worst failure
+    this app has.
+  - Storage: `tattoo_convention_lineups` survives sign-out; `tattoo_convention_winners`
+    and its photos (IndexedDB `tattoo-winner-photos-v1`, only an id on the record) are
+    purged (`src/backend/purge.js`). Cropped winner photos: gitignored `public/images/winners/`.
 
 ### 4. AI Concept Generator (Concepts page)
 - Text prompt → copy a structured prompt into ChatGPT/Claude/Gemini and paste the result back, **or** generate an image directly with a user-supplied OpenAI or Gemini key
@@ -280,8 +212,8 @@ When looking for more work, inspect the open GitHub issues labelled `backlog`
 before proposing new tasks (skip any also labelled `in-progress` — another agent has
 it); `BACKLOG.md` is only the local pointer/index.
 
-- AWS S3 + CloudFront deploy — now only needed for real accounts + custom domain
-  (the public demo is already live on GitHub Pages)
+- Apply the AWS S3 + CloudFront deploy (code written, see Hosting) — only needed for
+  real accounts + custom domain (the public demo is already live on GitHub Pages)
 - Convention artist attendance auto-lookup. **Researched 2026-09-10, do not redo the
   survey:** of the seven curated shows only Brighton publishes results/attendance as
   server-rendered text (`brightontattoo.com/news/<year>-competition-winners`); Tattoo
@@ -306,8 +238,10 @@ them. Keep messages terse and conventional (e.g. `feat(home): …`, `docs: …`)
 ## Commands
 
 `npm run dev` (vite) · `npm run build` · `npm run preview` · `npm run lint` ·
-`npm test` · `npm run test:e2e` · `npm run docs:check` (mermaid validity) ·
-`npm run audit:targets` (touch-target audit). Node version: `.nvmrc`.
+`npm test` · `npm run test:coverage` · `npm run test:e2e` ·
+`npm run test:relay` / `npm run test:e2e:refinement` (relay; offline + fictional auth) ·
+`npm run docs:check` (mermaid validity) · `npm run audit:targets` (touch-target audit) ·
+`npm run deploy:aws -- --dry-run` (AWS deploy; unapplied, see Hosting). Node version: `.nvmrc`.
 
 ---
 
@@ -349,7 +283,7 @@ whole conversation, so cost grows with what a session is carrying.
 - Non-bundled files (e.g. `public/sw.js`) can't be imported: put the logic in a pure `src/` module with unit tests, plus a "contract test" that reads the file and asserts key invariants.
 - **Flaky under the full parallel run**: several specs fail intermittently on a
   loaded machine yet always pass isolated and on CI — `useArtistStorage` (image
-  migration) and `ConceptsVariants` (tracked in issue #23) are the long-standing
+  migration) and `ConceptsVariants` (#23, closed) are the long-standing
   pair, but the set is **not fixed**: three consecutive full runs on 2026-08-27
   each failed a *different* file (a Gallery spec, then `routes.test.jsx` +
   `useArtistStorage`, then green), all passing isolated. Treat any single-file

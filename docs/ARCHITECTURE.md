@@ -828,6 +828,59 @@ match. The gallery artist and attendance record can sync; the imported award boa
 and its photos cannot. Implementation: `lineup.js`, `lineupGrabber.js`,
 `lineupSeeds.js`, `showPlan.js`, `winners.js`, `winnerPhotos.js`, and `Conventions.jsx`.
 
+### Why line-ups arrive by paste, and why the grabber is base64
+
+The shows' artist pages are client-rendered and lazy-load, so a fetch gets nothing and
+hand-copying only ever gets the first screenful; third-party portfolio data also does
+not belong in the repo. Hence paste, plus the grabber bookmarklet that scrolls the page,
+harvests Instagram links and hands back to `#lineup=<id>&data=<text>`, which
+`Conventions.jsx` re-parses through the same strict `parseLineup` (handles validated
+against Instagram's alphabet, page chrome and prose dropped).
+
+The bookmarklet is built by stringifying `grabberBody()` and base64-encoding it
+(`javascript:eval(atob('…'))`). v1 inlined the source with its whitespace collapsed and
+was silently broken **in production only**: the minifier rewrites `'\n'` as a template
+literal holding a real newline, so collapsing whitespace turned every line break in the
+harvest into a space and the whole line-up arrived as one unparseable line (the overlay
+reported 3× the true count, the space-split token count, and the import landed
+nothing). The same pass folds `String.fromCharCode(35)` back to a literal `#`, which
+truncates a saved bookmark URL. Encoding embeds the minifier's output byte-for-byte.
+Dev is unminified, so only a production build shows this class of bug.
+
+The shipped Big London 2026 seed (`lineups/bigLondon2026.js`, 466 artists with studio +
+booth) is held as the same *text* the import box takes, so it goes through
+`parseLineup` rather than a second code path. Publishing an exhibitor list in the public
+repo was the owner's call; that does not extend to portfolio images.
+
+### What real results boards look like
+
+The first winners parser was written against an invented format and got real data
+almost entirely wrong. Checked against `brightontattoo.com/news/2026-competition-winners`
+and Big London winners' own Instagram posts (Sept 2026):
+
+1. **A row is `1st Place - <collector> tattooed by <artist>, <studio>, <town>`.** The
+   first name is the collector wearing the tattoo (they walk the stage; the trophy
+   credits the artist). Sable is about artists, so the artist is the winner and the
+   collector is kept as `collector`. Guessing by position files every winner under the
+   wrong person.
+2. **Shows invent their own categories** ("Asian Inspired", "Ornamental", "Best of
+   Saturday", a size × finish grid). An unknown heading that doesn't start with "Best"
+   looks exactly like a person's name, so `parseWinners` decides by **lookahead**: a
+   heading has a result row under it, a trailing "Thanks everyone" does not.
+3. **Most boards publish no handles** (Brighton 2026: 18 winners, zero handles), while
+   most of `DEFAULT_ARTISTS` is a handle with `name: ''`, so exact matching connects
+   nothing. `indexWinners` also tries the name as the **opening of a handle** ("Adam
+   Blakey" → `adamblakeytattoos`), guarded by exact-match-wins, a minimum length and
+   uniqueness. A near-miss (the show's own "Blackey" typo) deliberately fails: an award
+   on the wrong artist is worse than a missed one.
+
+Results cannot be fetched: of the seven shows only Brighton publishes server-rendered
+text, and that page sends no `access-control-allow-origin`. Instagram/Facebook posts are
+the real source. Winner photos live in IndexedDB with only an id on the record because a
+dozen screenshot data URLs would blow the ~5 MB origin quota, which is shared with the
+gallery's offline cache. Unlike a line-up, the winners board is purged on sign-out
+(`src/backend/purge.js`): it carries photos the user took.
+
 ---
 
 ## 8. Demo integrity
