@@ -45,6 +45,8 @@ dist-ssr
 # Session memory
 .remember/
 .ijfw/
+# IJFW 1.5.2+ "visible" memory layer at the repo root (wiki, facts, dump inbox)
+/ijfw/
 .superpowers/
 .worktrees/
 
