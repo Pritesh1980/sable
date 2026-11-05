@@ -122,6 +122,15 @@ export async function openRefinementFixture(page, options = {}) {
   return relay
 }
 
+// The refinement opens from the concept viewer, which lives in the URL
+// (?concept=, #171): a reload brings it back over the wall. Close it to reach
+// the page underneath.
+export async function closeReopenedViewer(page) {
+  const viewer = page.getByRole('dialog', { name: 'Concept: Temple study' })
+  await expect(viewer).toBeVisible()
+  await viewer.getByRole('button', { name: 'Close viewer' }).click()
+  await expect(viewer).toBeHidden()
+}
 export async function openComposer(page) {
   await page.getByRole('img', { name: 'Temple study', exact: true }).click()
   await page.getByRole('button', { name: 'Refine this', exact: true }).click()
