@@ -194,9 +194,14 @@ test.describe('drawers over the concept viewer', () => {
     await page.keyboard.press('Escape')
     await expect(drawer).toBeHidden()
     await expect(viewer(page)).toBeVisible()
-    // And with the drawer gone, the viewer is the top layer again.
+    // And with the drawer gone, the viewer is the top layer again: its info
+    // panel (where the drawer opened from) closes first (#171), then the viewer.
+    await page.keyboard.press('Escape')
+    await expect(viewer(page).getByRole('heading', { name: 'AI Results' })).toBeHidden()
+    await expect(viewer(page)).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(viewer(page)).toBeHidden()
+    await expect(page).toHaveURL(/\/concepts$/)
   })
 
   test('the try-on drawer and live camera stack, and Escape peels one layer at a time', async ({ page }) => {
@@ -217,7 +222,33 @@ test.describe('drawers over the concept viewer', () => {
     await expect(drawer).toBeHidden()
     await expect(viewer(page)).toBeVisible()
     await page.keyboard.press('Escape')
+    await expect(viewer(page).getByRole('heading', { name: 'AI Results' })).toBeHidden()
+    await page.keyboard.press('Escape')
     await expect(viewer(page)).toBeHidden()
+  })
+
+  // #171: the drawer's close goes back in history, which lands a moment later.
+  // A close of the viewer in that window acted on the drawer's stale entry, and
+  // the landing Back then reopened the viewer.
+  test('Escape pressed faster than Back lands still closes every layer', async ({ page }) => {
+    await page.getByRole('button', { name: /^Make STL from/ }).tap()
+    await expect(page.getByRole('dialog', { name: 'Make Relief STL' })).toBeVisible()
+    // Hold every Back for a while, as a slow device would, so the next two
+    // presses arrive while the drawer's Back is still in flight.
+    await page.evaluate(() => {
+      const go = history.go.bind(history)
+      history.go = (delta) => { setTimeout(() => go(delta), 600) }
+    })
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('dialog', { name: 'Make Relief STL' })).toBeHidden()
+    await page.keyboard.press('Escape')
+    await expect(viewer(page).getByRole('heading', { name: 'AI Results' })).toBeHidden()
+    await page.keyboard.press('Escape')
+    await expect(viewer(page)).toBeHidden()
+    await expect(page).toHaveURL(/\/concepts$/)
+    await page.waitForTimeout(1500)
+    await expect(viewer(page)).toBeHidden()
+    await expect(page).toHaveURL(/\/concepts$/)
   })
 
   // #171: each drawer has its own history entry, so Back peels one layer.
