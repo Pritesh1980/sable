@@ -108,8 +108,16 @@ export async function isOnTop(locator) {
 
 // From the Concepts wall to DEMO_CONCEPT's saved result, expanded so its
 // Make STL / Try on skin actions show: viewer → controls → results → expand.
+// Open a concept from the wall and wait for its viewer. It opens through the
+// URL (?concept=, #171), a render after the click, so a tap sent straight away
+// can land on the wall underneath instead.
+export async function openConceptViewer(page, name) {
+  await page.getByRole('figure', { name }).click()
+  await expect(page.getByRole('dialog', { name: /^Concept: / })).toBeVisible()
+}
+
 export async function openResult(page) {
-  await page.getByRole('figure', { name: /Moth over/ }).click()
+  await openConceptViewer(page, /Moth over/)
   await page.touchscreen.tap(...centre(page))
   await page.getByRole('button', { name: 'Variants & STL export' }).tap()
   await page.getByRole('button', { name: /^Expand Moth line study/ }).tap()

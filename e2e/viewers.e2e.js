@@ -1,4 +1,4 @@
-import { test, expect, openDemo, openResult, swipe, centre, isOnTop, DEMO_CONCEPT, SECOND_CONCEPT } from './fixtures'
+import { test, expect, openDemo, openResult, swipe, centre, isOnTop, DEMO_CONCEPT, SECOND_CONCEPT, openConceptViewer } from './fixtures'
 
 // The two full-screen viewers on a touch screen (#93): swipe between images,
 // tap to show the controls, swipe down or tap Close to leave. Unit tests fake
@@ -162,7 +162,7 @@ test.describe('concept viewer', () => {
   })
 
   test('delete from the viewer can be undone', async ({ page }) => {
-    await page.getByRole('figure', { name: /Moth over/ }).click()
+    await openConceptViewer(page, /Moth over/)
     await page.touchscreen.tap(...centre(page))
     await page.getByRole('button', { name: 'Delete' }).tap()
 
