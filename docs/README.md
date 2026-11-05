@@ -90,6 +90,13 @@ records, not activation instructions. The shared guide screenshots use fictional
 
 ---
 
+## Desktop tools (on the Mac)
+
+- **[On-body renders with Blender](BLENDER.md)** — wrap a concept round a 3D forearm at a
+  true size in cm, render three angles, and import them back as results.
+
+---
+
 ## A typical planning journey
 
 The pieces are designed to feed each other:
