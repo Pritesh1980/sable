@@ -63,7 +63,7 @@ with Reorder **off** — that is the view people arrive in.
    ```
 3. Run `node scripts/captureGuide.mjs` (or set `GUIDE_URL` for another local port).
    It captures the public demo surfaces below. Then run the fictional refinement
-   capture described later for the five remaining images.
+   capture described later for the four remaining images.
    Keep the existing filenames:
 
    | Route | Files |
@@ -191,7 +191,7 @@ Reports use `test-results/refinement/`, separate from `test-results/public/`.
 See [the fixture coverage](../e2e/README.md). Phone Chromium is not Safari/home-screen
 persistence proof; real-device validation remains in [activation](RELAY-ACTIVATION.md).
 
-To recapture `concepts.png`, `concept-card.png`, `settings.png`,
+To recapture `concept-card.png`, `settings.png`,
 `concept-refinement.png` and `concept-refinement-compare.png`, build with the same
 fictional env as `playwright.refinement.config.js`, serve `dist-refinement` on port
 4181, and run `node scripts/captureRefinementGuide.mjs`. An isolated dev server using

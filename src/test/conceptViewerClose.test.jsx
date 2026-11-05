@@ -37,4 +37,28 @@ describe('ConceptViewer close button (#94)', () => {
     expect(onClose).not.toHaveBeenCalled()
     expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
+
+  // #171: Escape closed the whole viewer even with its info panel open.
+  it('Escape closes the info panel first, then the viewer', () => {
+    const onClose = vi.fn()
+    render(<ConceptViewer items={items} onClose={onClose} />)
+    fireEvent.keyDown(window, { key: 'i' })
+    expect(document.querySelector('aside')).toBeInTheDocument()
+
+    const first = fireEvent.keyDown(window, { key: 'Escape' })
+    expect(first).toBe(false)
+    expect(document.querySelector('aside')).toBeNull()
+    expect(onClose).not.toHaveBeenCalled()
+
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('reports the concept showing, as it changes', () => {
+    const onIndexChange = vi.fn()
+    render(<ConceptViewer items={items} onClose={vi.fn()} onIndexChange={onIndexChange} />)
+    expect(onIndexChange).toHaveBeenLastCalledWith(items[0])
+    fireEvent.keyDown(window, { key: 'ArrowRight' })
+    expect(onIndexChange).toHaveBeenLastCalledWith(items[1])
+  })
 })

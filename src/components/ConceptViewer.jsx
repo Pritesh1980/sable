@@ -116,13 +116,11 @@ function stepped(place, items, delta) {
   return { id: items[next]?.id, index: next }
 }
 
-// `initialIndex` is read once, at mount — the caller (Concepts.jsx) only ever
-// mounts this fresh per open (`viewerOpen && <ConceptViewer key={viewerIndex}
-// .../>`), never changes it on a live instance, so there is nothing to
-// re-sync via an effect (#32 — that used to be `useEffect(() =>
-// setIndex(initialIndex), [initialIndex])`, dead weight given the call site).
-// A caller that ever needs to jump a mounted viewer to a different item must
-// change its `key`, the same way it already resets on open.
+// `initialIndex` is read once, at mount. Concepts.jsx mounts this fresh per
+// open (`viewerOpen && <ConceptViewer .../>`) and, since #171, keeps the URL
+// on the showing concept through `onIndexChange`, so the prop then follows
+// the viewer rather than steering it. A caller that ever needs to jump a
+// mounted viewer to a different item must change its `key`.
 export default function ConceptViewer({
   items,
   initialIndex = 0,
@@ -139,6 +137,7 @@ export default function ConceptViewer({
   onMakeStl,
   onTryOnSkin,
   onRefine,
+  onIndexChange,
 }) {
   // The open piece is tracked by id as well as position: `items` holds only the
   // pieces whose image can be shown, so it can grow while the viewer is open (an
@@ -201,7 +200,10 @@ export default function ConceptViewer({
           setShowInfo((s) => !s)
           break
         case 'Escape':
-          onClose?.()
+          // One layer per press (#171): the info panel closes first.
+          e.preventDefault()
+          if (showInfo) setShowInfo(false)
+          else onClose?.()
           break
         default:
           break
@@ -210,7 +212,13 @@ export default function ConceptViewer({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [open, items, onClose, dialogRef])
+  }, [open, items, onClose, dialogRef, showInfo])
+
+  // Tells the page which concept is showing, so it can keep the URL on it (#171).
+  const shownItem = open && !gone ? items[index] : undefined
+  useEffect(() => {
+    if (shownItem) onIndexChange?.(shownItem)
+  }, [shownItem, onIndexChange])
 
   if (!open || gone || !items[index]) return null
 

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
 import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { createOwnerScope } from '../backend/ownerScope'
-import { MemoryRouter } from 'react-router'
+import { MemoryRouter, useLocation, useNavigate } from 'react-router'
 import Concepts from '../pages/Concepts'
 import { COMPOSER_DRAFT_KEY, loadComposerDraft, saveComposerDraft } from '../data/composerDraft'
 import { buildImagePrompt } from '../data/conceptPrompts'
@@ -12,10 +12,18 @@ const artists = [
   { id: 'victorportugal', handle: 'victorportugal', name: 'Victor Portugal', tags: ['blackwork'], images: ['/images/artists/victorportugal/1.jpg'] },
 ]
 
+// Exposes the router to the tests that press the browser's Back.
+const probe = {}
+function Probe() {
+  Object.assign(probe, { location: useLocation(), navigate: useNavigate() })
+  return null
+}
+
 function ConceptsHarness({ initialConcepts = [], initialEntries = ['/concepts'] }) {
   const [concepts, setConcepts] = useState(initialConcepts)
   return (
-    <MemoryRouter initialEntries={initialEntries}>
+    <MemoryRouter initialEntries={initialEntries} initialIndex={initialEntries.length - 1}>
+      <Probe />
       <Concepts concepts={concepts} setConcepts={setConcepts} artists={artists} ideas={[]} />
     </MemoryRouter>
   )
@@ -82,6 +90,74 @@ describe('Concepts page', () => {
     expect(screen.getByRole('heading', { name: 'AI Results' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Expand Pass one result for A raven' }))
     expect(screen.getByRole('button', { name: 'Make STL from Pass one result for A raven' })).toBeInTheDocument()
+  })
+
+  // #171: Back left Concepts with the viewer open, and the drawers stacked over
+  // the viewer were plain state, so they couldn't be peeled one at a time.
+  describe('Back button and the URL', () => {
+    const here = () => `${probe.location.pathname}${probe.location.search}`
+    const back = () => act(() => { probe.navigate(-1) })
+    const withVariant = [{
+      id: '1', prompt: 'A raven', imageUrl: '/img/raven.png', tags: [],
+      variants: [{ id: 'v1', provider: 'chatgpt', title: 'Pass one', imageUrl: 'data:image/png;base64,abc',
+        response: '', notes: '', rating: 0, isBest: false, createdAt: '2026-06-01T00:00:00.000Z' }],
+    }, { id: '2', prompt: 'A moth', imageUrl: '/img/moth.png', tags: [] }]
+
+    function openVariantInViewer() {
+      fireEvent.click(screen.getByAltText('A raven'))
+      fireEvent.click(screen.getByText(/variants & stl export/i))
+      fireEvent.click(screen.getByRole('button', { name: 'Expand Pass one result for A raven' }))
+    }
+
+    it('opening a concept pushes ?concept=<id>; Back closes the viewer and stays on Concepts', () => {
+      render(<ConceptsHarness initialConcepts={withVariant} initialEntries={['/', '/concepts']} />)
+      fireEvent.click(screen.getByAltText('A raven'))
+      expect(here()).toBe('/concepts?concept=1')
+      expect(screen.getByRole('dialog', { name: /Concept: A raven/ })).toBeInTheDocument()
+      back()
+      expect(screen.queryByRole('dialog')).toBeNull()
+      expect(here()).toBe('/concepts')
+    })
+
+    it('stepping keeps the URL on the showing concept without adding entries', () => {
+      render(<ConceptsHarness initialConcepts={withVariant} initialEntries={['/', '/concepts']} />)
+      fireEvent.click(screen.getByAltText('A raven'))
+      fireEvent.keyDown(window, { key: 'ArrowRight' })
+      const moved = here()
+      expect(moved).toMatch(/^\/concepts\?concept=(1|2)$/)
+      expect(moved).not.toBe('/concepts?concept=1')
+      back()
+      expect(here()).toBe('/concepts')
+    })
+
+    it('a link to a concept opens it in the viewer', () => {
+      render(<ConceptsHarness initialConcepts={withVariant} initialEntries={['/concepts?concept=2']} />)
+      expect(screen.getByRole('dialog', { name: /Concept: A moth/ })).toBeInTheDocument()
+    })
+
+    it('Back closes the STL drawer and leaves the viewer open under it', () => {
+      render(<ConceptsHarness initialConcepts={withVariant} initialEntries={['/', '/concepts']} />)
+      openVariantInViewer()
+      fireEvent.click(screen.getByRole('button', { name: 'Make STL from Pass one result for A raven' }))
+      expect(screen.getByRole('dialog', { name: 'Make Relief STL' })).toBeInTheDocument()
+      expect(here()).toBe('/concepts?concept=1&layer=stl')
+      back()
+      expect(screen.queryByRole('dialog', { name: 'Make Relief STL' })).toBeNull()
+      expect(screen.getByRole('dialog', { name: /Concept: A raven/ })).toBeInTheDocument()
+      back()
+      expect(screen.queryByRole('dialog')).toBeNull()
+      expect(here()).toBe('/concepts')
+    })
+
+    it('closing the try-on drawer from its button leaves no entry for Back to land on', () => {
+      render(<ConceptsHarness initialConcepts={withVariant} initialEntries={['/', '/concepts']} />)
+      openVariantInViewer()
+      fireEvent.click(screen.getByRole('button', { name: 'Try Pass one result for A raven on skin' }))
+      expect(here()).toBe('/concepts?concept=1&layer=skin')
+      fireEvent.click(within(screen.getByRole('dialog', { name: 'Try on skin' })).getByRole('button', { name: 'Close' }))
+      expect(here()).toBe('/concepts?concept=1')
+      expect(screen.getByRole('dialog', { name: /Concept: A raven/ })).toBeInTheDocument()
+    })
   })
 
   it('pre-fills and opens the composer from a ?steer=<artistId> query param', () => {
@@ -190,6 +266,19 @@ describe('Concepts page', () => {
       fireEvent.click(toggle)
       expect(toggle).toHaveAttribute('aria-expanded', 'false')
     })
+  })
+
+  // #171: the Prompt packs disclosure said open/closed only with its +/− sign.
+  it('Prompt packs is a disclosure that reports its state', () => {
+    render(<ConceptsHarness />)
+    fireEvent.click(screen.getAllByRole('button', { name: '+ New concept' })[0])
+    const toggle = screen.getByRole('button', { name: 'Prompt packs' })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(toggle).toHaveTextContent('+ Prompt packs')
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(toggle).toHaveTextContent('− Prompt packs')
+    expect(document.getElementById(toggle.getAttribute('aria-controls'))).toBeInTheDocument()
   })
 
   // #157: a build without the paid relay (the public demo, offline builds)

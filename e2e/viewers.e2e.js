@@ -144,6 +144,23 @@ test.describe('concept viewer', () => {
     await expect(moth).toBeHidden()
   })
 
+  // #171: Back closes the concept, as it does a Wall photo (#159).
+  test('Back closes the concept, however many were swiped through', async ({ page }) => {
+    await page.getByRole('figure', { name: /Fern spiral/ }).click()
+    await expect(page.getByRole('dialog', { name: 'Concept: Fern spiral with seed heads' })).toBeVisible()
+    await expect(page).toHaveURL(/\/concepts\?concept=e2e-concept-2$/)
+
+    await swipe(page, ...LEFT(centre(page)))
+    const moth = page.getByRole('dialog', { name: 'Concept: Moth over a crescent moon' })
+    await expect(moth).toBeVisible()
+    await expect(page).toHaveURL(/\?concept=e2e-concept-1$/)
+
+    await page.goBack()
+    await expect(moth).toBeHidden()
+    await expect(page).toHaveURL(/\/concepts$/)
+    await expect(page.getByRole('figure', { name: /Moth over/ })).toBeVisible()
+  })
+
   test('delete from the viewer can be undone', async ({ page }) => {
     await page.getByRole('figure', { name: /Moth over/ }).click()
     await page.touchscreen.tap(...centre(page))
@@ -201,5 +218,37 @@ test.describe('drawers over the concept viewer', () => {
     await expect(viewer(page)).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(viewer(page)).toBeHidden()
+  })
+
+  // #171: each drawer has its own history entry, so Back peels one layer.
+  test('Back peels the live camera, then the try-on drawer, then the viewer', async ({ page }) => {
+    await page.getByRole('button', { name: /on skin$/ }).tap()
+    const drawer = page.getByRole('dialog', { name: 'Try on skin' })
+    await drawer.getByRole('button', { name: /live camera/i }).tap()
+    const live = page.getByRole('dialog', { name: 'Live try-on' })
+    await expect(live).toBeVisible()
+    await expect(page).toHaveURL(/\?concept=e2e-concept-1&layer=skin&camera=live$/)
+
+    await page.goBack()
+    await expect(live).toBeHidden()
+    await expect(drawer).toBeVisible()
+    await page.goBack()
+    await expect(drawer).toBeHidden()
+    await expect(viewer(page)).toBeVisible()
+    await page.goBack()
+    await expect(viewer(page)).toBeHidden()
+    await expect(page).toHaveURL(/\/concepts$/)
+  })
+
+  test('closing the STL drawer from the UI leaves no entry for Back to land on', async ({ page }) => {
+    await page.getByRole('button', { name: /^Make STL from/ }).tap()
+    const drawer = page.getByRole('dialog', { name: 'Make Relief STL' })
+    await expect(drawer).toBeVisible()
+    await page.keyboard.press('Escape')
+    await expect(drawer).toBeHidden()
+    await expect(page).toHaveURL(/\?concept=e2e-concept-1$/)
+    await page.goBack()
+    await expect(viewer(page)).toBeHidden()
+    await expect(page).toHaveURL(/\/concepts$/)
   })
 })

@@ -58,11 +58,19 @@ an image** strip under the wall until you paste a result in.
 
 **Click a concept on the wall** and it fills the screen — same viewer as the artists'
 Wall, same keys (`←` `→`, `Esc`, or tap **× Close** top-left; the controls fade when your mouse is still).
+With the details panel open, the first `Esc` closes just the panel.
 On a phone, swipe left / right between concepts, swipe down to close, and tap the image (or
 **Details**) to show **Delete** and **Variants & STL export**. Press **`I`**
 (or the on-screen button) for everything attached to it:
 
 ![A concept full-screen with its details open](../public/guide/concept-card.png)
+
+**Back closes the concept.** The browser's Back (Android's back button, Safari's back swipe)
+returns to the Concepts wall, not the page before it, and swiping between concepts doesn't
+add to your history. The address shows the concept (`?concept=…`), so a link opens it. A
+panel opened on top (**Make STL**, **Try on skin**, **Refine this**) closes first, and the
+live camera closes before its try-on panel. An app on the iPhone home screen has no back
+gesture; use **× Close** or swipe down.
 
 - **Prompt & response** — the original prompt, any saved pack (switch providers and copy
   again), and any AI text that came back.

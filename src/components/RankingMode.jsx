@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { computeSwipeRanking } from '../data/ranking'
+import useDialogFocus, { isTopmostDialog } from '../hooks/useDialogFocus'
 import ArtistImage from './ArtistImage'
 import GeneratedArtworkNotice from './GeneratedArtworkNotice'
 import TagPill from './TagPill'
@@ -38,7 +39,7 @@ function SummaryScreen({ decisions, artists, onApply, onDiscard }) {
   const total = decisions.length
 
   return (
-    <div className="fixed inset-0 z-50 bg-ink-black flex flex-col animate-fade-in">
+    <div className="flex-1 min-h-0 flex flex-col">
       <div className="flex-1 overflow-y-auto px-5 pt-14 pb-4">
         <p className="font-mono text-[0.6875rem] text-accent tracking-[0.4em] uppercase mb-2">Ranking Complete</p>
         <h2 className="font-display text-4xl text-cream mb-8 leading-none">
@@ -100,6 +101,7 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
   // driving the swipe-decide gesture — set in onTouchStart, checked by
   // onTouchMove/onTouchEnd, and reset by onTouchEnd/onTouchCancel.
   const touchOwnedByRow = useRef(false)
+  const dialogRef = useDialogFocus(true)
 
   const artist = queue[currentIdx]
   const images = artist?.images || []
@@ -174,44 +176,48 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
     touchStartY.current = null
   }
 
+  // Topmost layer only, and an Escape another layer handled is left alone
+  // (src/hooks/useDialogFocus.js), so one press peels one layer (#171). On the
+  // summary only Escape applies: undo there would change the count under it.
   useEffect(() => {
     function onKey(e) {
+      if (e.defaultPrevented || !isTopmostDialog(dialogRef.current)) return
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+        return
+      }
+      if (showSummary) return
       if (e.key === 'ArrowLeft')  decide('pass')
       if (e.key === 'ArrowRight') decide('top')
       if (e.key === 'ArrowUp')    decide('maybe')
-      if (e.key === 'Escape')     onClose()
       if (e.key === 'Backspace' || e.key === 'z' || e.key === 'Z') undo()
     }
+    // On window, which hears a key after any layer listening on the document.
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   })
+
+  // The button that made the last decision is gone once the summary shows;
+  // put focus back on the dialog rather than lose it to the page.
+  useEffect(() => {
+    if (showSummary) dialogRef.current?.focus()
+  }, [showSummary, dialogRef])
 
   function handleApply() {
     onApplyRanking(computeSwipeRanking(decisions, artists))
     onClose()
   }
 
-  if (showSummary) {
-    return (
-      <SummaryScreen
-        decisions={decisions}
-        artists={artists}
-        onApply={handleApply}
-        onDiscard={onClose}
-      />
-    )
-  }
-
-  if (!artist) return null
-
-  const displayName = artist.name || `@${artist.handle}`
-  const studio = artist.studio ? DEFAULT_STUDIOS.find((s) => s.id === artist.studio) : null
+  if (!showSummary && !artist) return null
+  const displayName = artist ? artist.name || `@${artist.handle}` : ''
+  const studio = artist?.studio ? DEFAULT_STUDIOS.find((s) => s.id === artist.studio) : null
   const dragLabel = dragX > 50 ? 'TOP' : dragX < -50 ? 'PASS' : null
   const labelOpacity = Math.min(Math.abs(dragX) / 80, 1)
 
-  return (
+  const swipeScreen = !showSummary && (
     <div
-      className="fixed inset-0 z-50 bg-ink-black flex flex-col animate-fade-in"
+      className="relative flex-1 min-h-0 flex flex-col"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
@@ -229,7 +235,7 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
       <div className="absolute top-0 inset-x-0 z-10 flex items-center justify-between px-5 pt-14 pb-4 bg-gradient-to-b from-ink-black/80 to-transparent pointer-events-none">
         <button
           onClick={onClose}
-          className="pointer-events-auto font-body text-sm text-cream-muted hover:text-cream transition-colors tracking-widest uppercase"
+          className="pointer-events-auto min-h-11 flex items-center font-body text-sm text-cream-muted hover:text-cream transition-colors tracking-widest uppercase"
         >
           Cancel
         </button>
@@ -237,7 +243,7 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
           {decisions.length > 0 && (
             <button
               onClick={undo}
-              className="pointer-events-auto font-mono text-[0.625rem] text-cream-muted/50 hover:text-cream-muted transition-colors tracking-widest uppercase"
+              className="pointer-events-auto min-h-11 px-2 flex items-center font-mono text-[0.625rem] text-cream-muted/50 hover:text-cream-muted transition-colors tracking-widest uppercase"
             >
               ← Undo
             </button>
@@ -344,6 +350,30 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
           </button>
         </div>
       </div>
+    </div>
+  )
+
+  // z-[60], as RankBoard: above the bottom nav (z-50), which otherwise
+  // covered the Pass / Maybe / Top buttons on a phone.
+  return (
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={showSummary ? 'Ranking complete' : 'Rank artists'}
+      tabIndex={-1}
+      className="fixed inset-0 z-[60] bg-ink-black flex flex-col animate-fade-in outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+    >
+      {showSummary ? (
+        <SummaryScreen
+          decisions={decisions}
+          artists={artists}
+          onApply={handleApply}
+          onDiscard={onClose}
+        />
+      ) : (
+        swipeScreen
+      )}
     </div>
   )
 }

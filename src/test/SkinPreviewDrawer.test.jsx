@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render as renderBare, screen, fireEvent, waitFor } from '@testing-library/react'
+import { MemoryRouter, useLocation, useNavigate } from 'react-router'
 import SkinPreviewDrawer from '../components/SkinPreviewDrawer'
+
+// The live camera keeps a history entry (#171), so the drawer needs a router.
+const render = (ui, options) => renderBare(ui, { wrapper: MemoryRouter, ...options })
 
 const h = vi.hoisted(() => ({ load: vi.fn(), generate: vi.fn(), toData: vi.fn(), shrink: vi.fn() }))
 vi.mock('../data/reliefImage', () => ({ loadPhotoForRelief: h.load }))
@@ -123,5 +127,42 @@ describe('SkinPreviewDrawer', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Generate preview' }))
     expect(await screen.findByText('API key not valid')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Generate preview' })).toBeEnabled()
+  })
+})
+
+// #171: the live camera opens over the drawer; Back closes the camera only.
+describe('SkinPreviewDrawer — live camera and Back', () => {
+  const probe = {}
+  function Probe() {
+    Object.assign(probe, { location: useLocation(), navigate: useNavigate() })
+    return null
+  }
+  const here = () => `${probe.location.pathname}${probe.location.search}`
+
+  function renderInRouter() {
+    renderBare(
+      <MemoryRouter initialEntries={['/concepts?layer=skin']}>
+        <Probe />
+        <SkinPreviewDrawer source={source} apiKey="" onSave={vi.fn()} onClose={vi.fn()} />
+      </MemoryRouter>
+    )
+  }
+
+  it('Back closes the camera and leaves the drawer open', () => {
+    renderInRouter()
+    fireEvent.click(screen.getByRole('button', { name: /Live camera/ }))
+    expect(screen.getByTestId('live-try-on')).toBeInTheDocument()
+    expect(here()).toBe('/concepts?layer=skin&camera=live')
+    act(() => { probe.navigate(-1) })
+    expect(screen.queryByTestId('live-try-on')).toBeNull()
+    expect(screen.getByRole('dialog', { name: 'Try on skin' })).toBeInTheDocument()
+    expect(here()).toBe('/concepts?layer=skin')
+  })
+
+  it("the camera's own close goes back over its entry", () => {
+    renderInRouter()
+    fireEvent.click(screen.getByRole('button', { name: /Live camera/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'close live' }))
+    expect(here()).toBe('/concepts?layer=skin')
   })
 })

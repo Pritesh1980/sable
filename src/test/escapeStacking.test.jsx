@@ -1,8 +1,12 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render as renderBare, screen, fireEvent } from '@testing-library/react'
+import { MemoryRouter } from 'react-router'
 import ConceptViewer from '../components/ConceptViewer'
 import SkinPreviewDrawer from '../components/SkinPreviewDrawer'
 import { isTopmostDialog } from '../hooks/useDialogFocus'
+
+// The live camera keeps a history entry (#171), so the drawer needs a router.
+const render = (ui, options) => renderBare(ui, { wrapper: MemoryRouter, ...options })
 
 // Concepts stacks overlays: the viewer, then the STL or try-on drawer over it,
 // then the live camera over the try-on drawer. Each layer listened for keys on

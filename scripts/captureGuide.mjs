@@ -1,6 +1,6 @@
 import { chromium, expect } from '@playwright/test'
 import { fileURLToPath } from 'node:url'
-import { openDemo, openIdeaWithPhoto } from '../e2e/fixtures.js'
+import { DEMO_CONCEPT, SECOND_CONCEPT, openDemo, openIdeaWithPhoto } from '../e2e/fixtures.js'
 
 const baseURL = process.env.GUIDE_URL || 'http://localhost:5174'
 if (!['localhost', '127.0.0.1'].includes(new URL(baseURL).hostname)) {
@@ -53,6 +53,16 @@ try {
       await page.goto('/gallery')
       await page.getByRole('button', { name: 'Grid view', exact: true }).click()
       await capture(page, 'gallery-grid-desktop')
+      // The public demo's composer, not the relay fixture's: the demo has no
+      // recovery bar or paid-backup box, and shows the no-key hint (#171).
+      // The fictional e2e concepts (committed demo SVGs), so the wall isn't empty.
+      await page.evaluate((concepts) => {
+        for (const key of ['tattoo_concepts', 'tattoo_remote_concepts']) localStorage.setItem(key, JSON.stringify(concepts))
+      }, [DEMO_CONCEPT, SECOND_CONCEPT])
+      await page.goto('/concepts')
+      await page.getByRole('button', { name: '+ New concept' }).first().click()
+      await page.getByLabel('Your idea').fill('A quiet temple, three pillars and a softened ink wash')
+      await capture(page, 'concepts')
     } else {
       for (const [path, name] of [['/pipeline', 'dashboard'], ['/conventions', 'conventions'],
         ['/studios', 'studios'], ['/help', 'help-overview'], ['/brief', 'brief-list']]) {

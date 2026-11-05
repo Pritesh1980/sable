@@ -10,6 +10,7 @@ import { useAuth } from '../context/useAuth'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
 import { refIdentity } from '../data/imageRef'
 import { useEscapeToClose } from '../hooks/useDialogFocus'
+import { isPastEdition } from '../data/conventions'
 
 export default function ArtistDetail({ artist, onClose, onSave, attendingConventions = [], allArtists = [], onSelectArtist }) {
   const [images, setImages] = useState(artist.images || [])
@@ -368,6 +369,10 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
                     <div className="min-w-0">
                       <p className="font-display text-cream text-base leading-tight truncate group-hover:text-accent transition-colors">{c.name}</p>
                       <p className="font-mono text-cream-muted/60 text-[0.625rem] tracking-widest mt-0.5">{c.dates}</p>
+                      {/* Same wording as the Radar cards (#171). */}
+                      {isPastEdition(c) && (
+                        <p className="font-mono text-accent/80 text-[0.625rem] tracking-wide mt-0.5">This edition has passed</p>
+                      )}
                     </div>
                     {c.distanceMiles != null && (
                       <span className="font-mono text-[0.625rem] text-cream-muted/50 shrink-0 mt-0.5">
