@@ -161,7 +161,7 @@ describe('scoreShowEntry', () => {
 
 describe('buildShowPlan', () => {
   it('puts every saved artist attending the show in mustSee, and studio stablemates in suggested', () => {
-    const entries = seedEntriesFor('big-london')
+    const entries = seedEntriesFor('big-london@2026')
     const plan = buildShowPlan(entries, { artists: DEFAULT_ARTISTS, studios: DEFAULT_STUDIOS })
 
     const mustSeeHandles = plan.mustSee.map((m) => m.entry.handle)
@@ -188,7 +188,7 @@ describe('buildShowPlan', () => {
     const passed = DEFAULT_ARTISTS.map((a) =>
       a.handle === 'carl245tattoo' ? { ...a, status: 'pass' } : a
     )
-    const plan = buildShowPlan(seedEntriesFor('big-london'), { artists: passed, studios: DEFAULT_STUDIOS })
+    const plan = buildShowPlan(seedEntriesFor('big-london@2026'), { artists: passed, studios: DEFAULT_STUDIOS })
     expect(plan.mustSee.some((m) => m.entry.handle === 'carl245tattoo')).toBe(false)
     expect(plan.suggested.some((m) => m.entry.handle === 'carl245tattoo')).toBe(false)
     expect(plan.skipped.some((m) => m.entry.handle === 'carl245tattoo')).toBe(true)

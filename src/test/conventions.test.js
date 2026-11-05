@@ -22,7 +22,6 @@ describe('CONVENTIONS', () => {
       expect(c.id, `${c.name} missing id`).toBeTruthy()
       expect(c.name, `${c.id} missing name`).toBeTruthy()
       expect(c.location, `${c.id} missing location`).toBeTruthy()
-      expect(c.dates, `${c.id} missing dates`).toBeTruthy()
       if (URL_NOT_REQUIRED.has(c.id)) {
         expect(c.url, `${c.id} should be explicitly falsy while its domain is bad, not a stray string`).toBeFalsy()
       } else {
@@ -52,17 +51,17 @@ describe('CONVENTIONS', () => {
     // Soft foreign key: consumers filter on `attendingArtistIds.includes(artist.id)`,
     // so a typo'd id fails silently (no badge, no error). Catch it here instead.
     const known = new Set(DEFAULT_ARTISTS.map((a) => a.id))
-    CONVENTIONS.forEach((c) => {
-      const unknown = (c.attendingArtistIds ?? []).filter((id) => !known.has(id))
-      expect(unknown, `${c.id} lists unknown artist ids: ${unknown.join(', ')}`).toEqual([])
-    })
+    CONVENTIONS.forEach((c) => c.editions.forEach((e) => {
+      const unknown = (e.attendingArtistIds ?? []).filter((id) => !known.has(id))
+      expect(unknown, `${c.id}@${e.year} lists unknown artist ids: ${unknown.join(', ')}`).toEqual([])
+    }))
   })
 
-  it('has no duplicate attending artists per convention', () => {
-    CONVENTIONS.forEach((c) => {
-      const ids = c.attendingArtistIds ?? []
-      expect(new Set(ids).size, `${c.id} has duplicate attending artist ids`).toBe(ids.length)
-    })
+  it('has no duplicate attending artists per edition', () => {
+    CONVENTIONS.forEach((c) => c.editions.forEach((e) => {
+      const ids = e.attendingArtistIds ?? []
+      expect(new Set(ids).size, `${c.id}@${e.year} has duplicate attending artist ids`).toBe(ids.length)
+    }))
   })
 
   it('marks some as popular but not all', () => {
@@ -98,11 +97,11 @@ describe('isPastEdition', () => {
     expect(isPastEdition({}, new Date(2030, 0, 1))).toBe(false)
   })
 
-  it('can date every curated show, at least to the month', () => {
-    CONVENTIONS.forEach((c) => {
-      const dated = /^\d{4}-\d{2}-\d{2}$/.test(c.endDate || '') || /^\d{4}-\d{2}$/.test(c.endMonth || '')
-      expect(dated, `${c.id} needs an endDate or endMonth`).toBe(true)
-    })
+  it('can date every edition of every curated show, at least to the month', () => {
+    CONVENTIONS.forEach((c) => c.editions.forEach((e) => {
+      const dated = /^\d{4}-\d{2}-\d{2}$/.test(e.endDate || '') || /^\d{4}-\d{2}$/.test(e.endMonth || '')
+      expect(dated, `${c.id}@${e.year} needs an endDate or endMonth`).toBe(true)
+    }))
   })
 })
 
@@ -125,24 +124,24 @@ describe('getConventionFavicon', () => {
 
 describe('toggleConventionAttendee', () => {
   it('adds an artist when not already attending', () => {
-    const next = toggleConventionAttendee({}, 'brighton', 'zoia.ink', [])
-    expect(next.brighton).toEqual(['zoia.ink'])
+    const next = toggleConventionAttendee({}, 'brighton@2027', 'zoia.ink', [])
+    expect(next['brighton@2027']).toEqual(['zoia.ink'])
   })
 
   it('removes an artist when already attending', () => {
-    const next = toggleConventionAttendee({ brighton: ['zoia.ink', 'keremtattz'] }, 'brighton', 'zoia.ink', ['zoia.ink', 'keremtattz'])
-    expect(next.brighton).toEqual(['keremtattz'])
+    const next = toggleConventionAttendee({ 'brighton@2027': ['zoia.ink', 'keremtattz'] }, 'brighton@2027', 'zoia.ink', ['zoia.ink', 'keremtattz'])
+    expect(next['brighton@2027']).toEqual(['keremtattz'])
   })
 
   it('seeds from the current merged list so base attendees are preserved', () => {
-    // No override yet for this convention, but base data lists keremtattz.
-    const next = toggleConventionAttendee({}, 'brighton', 'zoia.ink', ['keremtattz'])
-    expect(next.brighton).toEqual(['keremtattz', 'zoia.ink'])
+    // No override yet for this edition, but base data lists keremtattz.
+    const next = toggleConventionAttendee({}, 'brighton@2027', 'zoia.ink', ['keremtattz'])
+    expect(next['brighton@2027']).toEqual(['keremtattz', 'zoia.ink'])
   })
 
-  it('leaves other conventions untouched', () => {
-    const next = toggleConventionAttendee({ 'big-london': ['oscarakermo'] }, 'brighton', 'zoia.ink', [])
-    expect(next['big-london']).toEqual(['oscarakermo'])
-    expect(next.brighton).toEqual(['zoia.ink'])
+  it('leaves other editions untouched', () => {
+    const next = toggleConventionAttendee({ 'big-london@2026': ['oscarakermo'] }, 'brighton@2027', 'zoia.ink', [])
+    expect(next['big-london@2026']).toEqual(['oscarakermo'])
+    expect(next['brighton@2027']).toEqual(['zoia.ink'])
   })
 })

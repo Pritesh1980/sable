@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { CONVENTIONS, getConventionFavicon, isPastEdition, mergeConventionOverrides, toggleConventionAttendee } from '../data/conventions'
+import { CONVENTIONS, getConventionFavicon, isPastEdition, mergeConventionOverrides, migrateEditionMap, toggleConventionAttendee, viewEdition } from '../data/conventions'
 import { mergeLineupEntries, parseLineup } from '../data/lineup'
 import { mergeLineupSeeds } from '../data/lineupSeeds'
 import { parseLineupHash } from '../data/lineupGrabber'
@@ -46,13 +46,67 @@ function ConventionLogo({ convention, size }) {
   )
 }
 
-// The data holds the latest known edition of a show that recurs every year, so
-// once that edition is over its dates would otherwise read as upcoming (#160).
+// Once the latest edition in the data is over, its dates would otherwise read
+// as upcoming (#160).
 function PastEditionNote({ convention }) {
   return (
     <p className="text-[0.6875rem] font-mono text-accent/80 tracking-wide mt-1">
       This edition has passed — {convention.url ? 'check the site for next year’s dates' : 'next year’s dates TBC'}.
     </p>
+  )
+}
+
+// Days from a listings site rather than the show itself: worth checking
+// before booking travel.
+function UnconfirmedNote() {
+  return (
+    <p className="text-[0.6875rem] font-mono text-cream-muted/60 tracking-wide mt-1">
+      Dates from a listings site — not yet confirmed by the show.
+    </p>
+  )
+}
+
+// What sits under the dates: a past edition you switched back to is a record;
+// the current one may be over, or not yet confirmed.
+function EditionNotes({ convention, past, current }) {
+  if (!current) {
+    return (
+      <p className="text-[0.6875rem] font-mono text-cream-muted/60 tracking-wide mt-1">
+        Past edition — a record of who was there.
+      </p>
+    )
+  }
+  if (past) return <PastEditionNote convention={convention} />
+  if (convention.unconfirmed) return <UnconfirmedNote />
+  return null
+}
+
+// One button per edition, oldest first, so the row reads as a timeline (#178).
+// A card opens on the current edition; earlier ones keep their attendance,
+// line-up and winners as history.
+function EditionPicker({ convention, onPick }) {
+  if (!convention.editions || convention.editions.length < 2) return null
+  return (
+    <div role="group" aria-label={`${convention.name} edition`} className="flex flex-wrap gap-1.5 mt-2">
+      {convention.editions.map((e) => {
+        const on = e.year === convention.year
+        return (
+          <button
+            key={e.year}
+            type="button"
+            aria-pressed={on}
+            onClick={() => onPick(e.year)}
+            className={`min-h-11 min-w-11 px-3 rounded-xs border text-[0.6875rem] font-mono tracking-widest transition-colors ${
+              on
+                ? 'border-accent bg-accent/10 text-accent'
+                : 'border-ink-border text-cream-muted hover:border-cream-muted hover:text-cream'
+            }`}
+          >
+            {e.year}
+          </button>
+        )
+      })}
+    </div>
   )
 }
 
@@ -62,17 +116,18 @@ function artistLabel(a) {
 
 // Lets you record which of your saved artists are appearing at a convention.
 // (Manual for now — automatic look-up is on the backlog.)
-function AttendeesEditor({ artists, attendingIds, onToggle }) {
+function AttendeesEditor({ artists, attendingIds, onToggle, record = false }) {
   const [expanded, setExpanded] = useState(false)
   const attending = artists.filter((a) => attendingIds.includes(a.id))
+  const verb = record ? 'attended' : 'attending'
 
   return (
     <div className="mt-4 pt-3 border-t border-ink-border">
       <div className="flex items-center justify-between gap-2">
         <p className="text-[0.625rem] font-mono text-cream-muted tracking-widest uppercase">
           {attending.length > 0
-            ? `◎ ${attending.length} of your artists attending`
-            : 'Your artists attending'}
+            ? `◎ ${attending.length} of your artists ${verb}`
+            : `Your artists ${verb}`}
         </p>
         {artists.length > 0 && (
           <button
@@ -120,7 +175,7 @@ function AttendeesEditor({ artists, attendingIds, onToggle }) {
   )
 }
 
-function HeroCard({ convention, past, artists, attendingIds, onToggle, lineupProps, winnerProps }) {
+function HeroCard({ convention, past, current, onPickYear, artists, attendingIds, onToggle, lineupProps, winnerProps }) {
   return (
     <div id={`convention-${convention.id}`} className="bg-gradient-to-br from-accent/10 to-ink-card border border-accent/40 rounded-xs p-6 animate-slide-up">
       <div className="flex items-start gap-4">
@@ -133,7 +188,8 @@ function HeroCard({ convention, past, artists, attendingIds, onToggle, lineupPro
             <p className="text-cream text-sm font-mono">{convention.dates}</p>
             <DistanceBadge distanceMiles={convention.distanceMiles} />
           </div>
-          {past && <PastEditionNote convention={convention} />}
+          <EditionNotes convention={convention} past={past} current={current} />
+          <EditionPicker convention={convention} onPick={onPickYear} />
         </div>
       </div>
       <p className="text-cream-muted text-sm md:text-base font-body leading-relaxed mt-4">{convention.summary}</p>
@@ -147,14 +203,16 @@ function HeroCard({ convention, past, artists, attendingIds, onToggle, lineupPro
           More info →
         </a>
       )}
-      <AttendeesEditor artists={artists} attendingIds={attendingIds} onToggle={onToggle} />
+      <AttendeesEditor key={`att-${convention.editionKey}`} artists={artists} attendingIds={attendingIds} onToggle={onToggle} record={!current} />
       <ConventionLineup
+        key={`lineup-${convention.editionKey}`}
         convention={convention}
         artists={artists}
         attendingIds={attendingIds}
         {...lineupProps}
       />
       <ConventionWinners
+        key={`winners-${convention.editionKey}`}
         convention={convention}
         artists={artists}
         attendingIds={attendingIds}
@@ -164,7 +222,7 @@ function HeroCard({ convention, past, artists, attendingIds, onToggle, lineupPro
   )
 }
 
-function ConventionCard({ convention, past, artists, attendingIds, onToggle, lineupProps, winnerProps }) {
+function ConventionCard({ convention, past, current, onPickYear, artists, attendingIds, onToggle, lineupProps, winnerProps }) {
   return (
     <div
       id={`convention-${convention.id}`}
@@ -189,7 +247,8 @@ function ConventionCard({ convention, past, artists, attendingIds, onToggle, lin
         <p className="text-cream-muted text-xs font-mono">{convention.dates}</p>
         <DistanceBadge distanceMiles={convention.distanceMiles} />
       </div>
-      {past && <PastEditionNote convention={convention} />}
+      <EditionNotes convention={convention} past={past} current={current} />
+      <EditionPicker convention={convention} onPick={onPickYear} />
 
       <p className="text-cream-muted text-sm font-body leading-relaxed mt-3 flex-1">{convention.summary}</p>
 
@@ -203,14 +262,16 @@ function ConventionCard({ convention, past, artists, attendingIds, onToggle, lin
           More info →
         </a>
       )}
-      <AttendeesEditor artists={artists} attendingIds={attendingIds} onToggle={onToggle} />
+      <AttendeesEditor key={`att-${convention.editionKey}`} artists={artists} attendingIds={attendingIds} onToggle={onToggle} record={!current} />
       <ConventionLineup
+        key={`lineup-${convention.editionKey}`}
         convention={convention}
         artists={artists}
         attendingIds={attendingIds}
         {...lineupProps}
       />
       <ConventionWinners
+        key={`winners-${convention.editionKey}`}
         convention={convention}
         artists={artists}
         attendingIds={attendingIds}
@@ -232,12 +293,24 @@ export default function Conventions({
   // Injected by tests; the app always renders against the real clock.
   now = new Date(),
 }) {
-  const merged = mergeConventionOverrides(conventionOverrides)
-  const attendanceById = Object.fromEntries(merged.map((c) => [c.id, c.attendingArtistIds]))
+  // Each show as its current edition (#178). Everything below is keyed by
+  // edition (`big-london@2027`), never by show id alone: attendance, line-ups
+  // and winners all belong to one year of a show.
+  const merged = mergeConventionOverrides(conventionOverrides, now)
+  const attendanceByKey = Object.fromEntries(
+    merged.flatMap((c) => c.editions.map((e) => [e.key, e.attendingArtistIds]))
+  )
+  // Line-ups and winners stored before #178 sit under bare show ids; read them
+  // as their 2026 editions. Writes go through the same migration.
+  const lineups = migrateEditionMap(conventionLineups)
+  const winners = migrateEditionMap(conventionWinners)
 
-  function toggle(conventionId, artistId) {
+  // Which edition each card is showing, by show id. Unset means current.
+  const [years, setYears] = useState({})
+
+  function toggle(key, artistId) {
     setConventionOverrides((prev) =>
-      toggleConventionAttendee(prev, conventionId, artistId, attendanceById[conventionId] || [])
+      toggleConventionAttendee(prev, key, artistId, attendanceByKey[key] || [])
     )
   }
 
@@ -247,36 +320,39 @@ export default function Conventions({
   // Only the user's own imports are stored; anything the app ships with is
   // merged in at read time (see mergeLineupSeeds), so a shipped list is never
   // copied into storage just to sit there. Importing also lifts `cleared`.
-  function importLineup(conventionId, entries) {
-    setConventionLineups((prev) => ({
-      ...prev,
-      [conventionId]: {
-        entries: mergeLineupEntries(prev?.[conventionId]?.entries || [], entries),
-        updatedAt: new Date().toISOString(),
-        cleared: false,
-      },
-    }))
+  function importLineup(key, entries) {
+    setConventionLineups((stored) => {
+      const prev = migrateEditionMap(stored)
+      return {
+        ...prev,
+        [key]: {
+          entries: mergeLineupEntries(prev?.[key]?.entries || [], entries),
+          updatedAt: new Date().toISOString(),
+          cleared: false,
+        },
+      }
+    })
   }
 
   // Recorded rather than deleted: for a convention the app ships a line-up for,
   // deleting the record would just bring the shipped one back, and "Clear list"
   // would do nothing.
-  function clearLineup(conventionId) {
-    setConventionLineups((prev) => ({
-      ...prev,
-      [conventionId]: { entries: [], updatedAt: new Date().toISOString(), cleared: true },
+  function clearLineup(key) {
+    setConventionLineups((stored) => ({
+      ...migrateEditionMap(stored),
+      [key]: { entries: [], updatedAt: new Date().toISOString(), cleared: true },
     }))
   }
 
   // Adding from the index does both halves of the job: the artist lands in the
   // gallery to research later, and is flagged as attending this show so they
   // show up on the floor plan you actually walk round with.
-  function addFromLineup(conventionId, draft) {
+  function addFromLineup(key, draft) {
     const artist = createArtist(draft, artists)
     if (!artist) return
     setArtists((prev) => [...prev, artist])
-    if (!(attendanceById[conventionId] || []).includes(artist.id)) {
-      toggle(conventionId, artist.id)
+    if (!(attendanceByKey[key] || []).includes(artist.id)) {
+      toggle(key, artist.id)
     }
   }
 
@@ -293,6 +369,9 @@ export default function Conventions({
     return { conventionId: incoming.conventionId, entries: known ? parseLineup(incoming.text) : [] }
   })
   const landed = handoff?.entries.length ? handoff : null
+  // The show's page publishes the coming line-up, so a hand-off lands on the
+  // current edition.
+  const landedKey = landed ? merged.find((c) => c.id === landed.conventionId)?.editionKey : null
   // The effect does only the things that touch the world outside React.
   const handled = useRef(false)
   useEffect(() => {
@@ -300,7 +379,7 @@ export default function Conventions({
     handled.current = true
     const { pathname = '', search = '' } = globalThis.location || {}
     globalThis.history?.replaceState?.(null, '', `${pathname}${search}`)
-    if (landed) importLineup(landed.conventionId, landed.entries)
+    if (landedKey) importLineup(landedKey, landed.entries)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -308,21 +387,24 @@ export default function Conventions({
   // Sunday judging. So an import merges, exactly as the line-up does — and
   // mergeWinnerEntries protects the one thing a re-import can't replace, the
   // photo of the winning piece.
-  function importWinners(conventionId, entries) {
-    setConventionWinners((prev) => ({
-      ...prev,
-      [conventionId]: {
-        entries: mergeWinnerEntries(prev?.[conventionId]?.entries || [], entries),
-        updatedAt: new Date().toISOString(),
-        cleared: false,
-      },
-    }))
+  function importWinners(key, entries) {
+    setConventionWinners((stored) => {
+      const prev = migrateEditionMap(stored)
+      return {
+        ...prev,
+        [key]: {
+          entries: mergeWinnerEntries(prev?.[key]?.entries || [], entries),
+          updatedAt: new Date().toISOString(),
+          cleared: false,
+        },
+      }
+    })
   }
 
-  function clearWinners(conventionId) {
-    setConventionWinners((prev) => ({
-      ...prev,
-      [conventionId]: { entries: [], updatedAt: new Date().toISOString(), cleared: true },
+  function clearWinners(key) {
+    setConventionWinners((stored) => ({
+      ...migrateEditionMap(stored),
+      [key]: { entries: [], updatedAt: new Date().toISOString(), cleared: true },
     }))
   }
 
@@ -333,75 +415,97 @@ export default function Conventions({
   // The bytes go to IndexedDB first and only the id is put on the record, so the
   // synced-shaped store stays small enough to live in localStorage — a dozen
   // screenshots as data URLs would blow the origin quota (see winnerPhotos.js).
-  async function addPhoto(conventionId, key, dataUrl) {
+  async function addPhoto(edition, key, dataUrl) {
     const id = newPhotoId()
     await putPhoto(id, dataUrl)
-    setConventionWinners((prev) => ({
-      ...prev,
-      [conventionId]: {
-        ...prev?.[conventionId],
-        entries: (prev?.[conventionId]?.entries || []).map((e) =>
-          winnerKey(e) === key ? withPhotoId(e, id) : e
-        ),
-        updatedAt: new Date().toISOString(),
-      },
-    }))
+    setConventionWinners((stored) => {
+      const prev = migrateEditionMap(stored)
+      return {
+        ...prev,
+        [edition]: {
+          ...prev?.[edition],
+          entries: (prev?.[edition]?.entries || []).map((e) =>
+            winnerKey(e) === key ? withPhotoId(e, id) : e
+          ),
+          updatedAt: new Date().toISOString(),
+        },
+      }
+    })
   }
 
   // Drop the reference first, then the bytes: a failed delete leaves an orphan
   // blob (invisible, reclaimed on clear), where the other order would leave a
   // row pointing at nothing.
-  async function removePhoto(conventionId, key, photoId) {
-    setConventionWinners((prev) => ({
-      ...prev,
-      [conventionId]: {
-        ...prev?.[conventionId],
-        entries: (prev?.[conventionId]?.entries || []).map((e) =>
-          winnerKey(e) === key ? withoutPhotoId(e, photoId) : e
-        ),
-        updatedAt: new Date().toISOString(),
-      },
-    }))
+  async function removePhoto(edition, key, photoId) {
+    setConventionWinners((stored) => {
+      const prev = migrateEditionMap(stored)
+      return {
+        ...prev,
+        [edition]: {
+          ...prev?.[edition],
+          entries: (prev?.[edition]?.entries || []).map((e) =>
+            winnerKey(e) === key ? withoutPhotoId(e, photoId) : e
+          ),
+          updatedAt: new Date().toISOString(),
+        },
+      }
+    })
     await deletePhoto(photoId)
   }
 
   // Same two-part job as adding from the line-up: into the gallery to research,
   // and flagged as attending so they turn up on the floor plan.
-  function addFromWinners(conventionId, draft) {
+  function addFromWinners(key, draft) {
     const artist = createArtist(draft, artists)
     if (!artist) return
     setArtists((prev) => [...prev, artist])
-    if (!(attendanceById[conventionId] || []).includes(artist.id)) {
-      toggle(conventionId, artist.id)
+    if (!(attendanceByKey[key] || []).includes(artist.id)) {
+      toggle(key, artist.id)
     }
   }
 
-  function winnerPropsFor(conventionId) {
+  function winnerPropsFor(key) {
     return {
-      entries: conventionWinners?.[conventionId]?.entries || [],
-      onImport: (entries) => importWinners(conventionId, entries),
-      onClear: () => clearWinners(conventionId),
-      onAddArtist: (draft) => addFromWinners(conventionId, draft),
-      onToggleAttending: (artistId) => toggle(conventionId, artistId),
-      onAddPhoto: (key, dataUrl) => addPhoto(conventionId, key, dataUrl),
-      onRemovePhoto: (key, photoId) => removePhoto(conventionId, key, photoId),
+      entries: winners?.[key]?.entries || [],
+      onImport: (entries) => importWinners(key, entries),
+      onClear: () => clearWinners(key),
+      onAddArtist: (draft) => addFromWinners(key, draft),
+      onToggleAttending: (artistId) => toggle(key, artistId),
+      onAddPhoto: (winner, dataUrl) => addPhoto(key, winner, dataUrl),
+      onRemovePhoto: (winner, photoId) => removePhoto(key, winner, photoId),
     }
   }
 
-  function lineupPropsFor(conventionId) {
+  function lineupPropsFor(key) {
     return {
-      entries: mergeLineupSeeds(conventionLineups, conventionId),
-      onImport: (entries) => importLineup(conventionId, entries),
-      onClear: () => clearLineup(conventionId),
-      onAddArtist: (draft) => addFromLineup(conventionId, draft),
-      onToggleAttending: (artistId) => toggle(conventionId, artistId),
-      defaultExpanded: landed?.conventionId === conventionId,
+      entries: mergeLineupSeeds(lineups, key),
+      onImport: (entries) => importLineup(key, entries),
+      onClear: () => clearLineup(key),
+      onAddArtist: (draft) => addFromLineup(key, draft),
+      onToggleAttending: (artistId) => toggle(key, artistId),
+      defaultExpanded: landedKey === key,
+    }
+  }
+
+  // Everything a card needs for the edition it is showing.
+  function cardProps(c) {
+    const view = viewEdition(c, years[c.id] ?? c.year)
+    return {
+      convention: view,
+      current: view.editionKey === c.editionKey,
+      past: isPastEdition(view, now),
+      onPickYear: (year) => setYears((prev) => ({ ...prev, [c.id]: year })),
+      artists,
+      attendingIds: view.attendingArtistIds,
+      onToggle: (artistId) => toggle(view.editionKey, artistId),
+      lineupProps: lineupPropsFor(view.editionKey),
+      winnerProps: winnerPropsFor(view.editionKey),
     }
   }
 
   // Local show first as the hero, then the rest by reachability (nearest first).
-  const local = CONVENTIONS.filter((c) => c.distanceMiles === 0)
-  const rest = CONVENTIONS
+  const local = merged.filter((c) => c.distanceMiles === 0)
+  const rest = merged
     .filter((c) => c.distanceMiles !== 0)
     .sort((a, b) => (a.distanceMiles ?? Infinity) - (b.distanceMiles ?? Infinity))
 
@@ -413,7 +517,7 @@ export default function Conventions({
           <h1 className="font-display text-3xl md:text-4xl text-cream">Convention Radar</h1>
           <p className="text-cream-muted/80 text-xs md:text-sm font-mono mt-2">
             The shows worth your time — biggest UK conventions, your local fest, distances from Milton Keynes.
-            All recur annually; dates shown are the latest edition, so check the link for the next one.
+            Each card shows the next edition; tap a year to look back at the last one.
           </p>
         </div>
 
@@ -443,30 +547,12 @@ export default function Conventions({
         )}
 
         {local.map((c) => (
-          <HeroCard
-            key={c.id}
-            convention={c}
-            past={isPastEdition(c, now)}
-            artists={artists}
-            attendingIds={attendanceById[c.id] || []}
-            onToggle={(artistId) => toggle(c.id, artistId)}
-            lineupProps={lineupPropsFor(c.id)}
-            winnerProps={winnerPropsFor(c.id)}
-          />
+          <HeroCard key={c.id} {...cardProps(c)} />
         ))}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 mt-4">
           {rest.map((c) => (
-            <ConventionCard
-              key={c.id}
-              convention={c}
-              past={isPastEdition(c, now)}
-              artists={artists}
-              attendingIds={attendanceById[c.id] || []}
-              onToggle={(artistId) => toggle(c.id, artistId)}
-              lineupProps={lineupPropsFor(c.id)}
-              winnerProps={winnerPropsFor(c.id)}
-            />
+            <ConventionCard key={c.id} {...cardProps(c)} />
           ))}
         </div>
       </div>

@@ -10,7 +10,7 @@ import {
 } from '../data/lineup'
 import { appBaseUrl, buildGrabber } from '../data/lineupGrabber'
 import { DEFAULT_STUDIOS } from '../data/artists'
-import { CURATED_PICKS } from '../data/lineupSeeds'
+import { curatedPicksFor } from '../data/lineupSeeds'
 import ShowPlanView from './ShowPlanView'
 
 // The show's own artist list is 500 names in alphabetical order — useless on a
@@ -76,7 +76,7 @@ export function LineupRow({ entry, convention, attending, onAddArtist, onToggleA
           </button>
         ) : entry.handle ? (
           <button
-            onClick={() => onAddArtist(lineupArtistDraft(entry, convention.name))}
+            onClick={() => onAddArtist(lineupArtistDraft(entry, convention.label || convention.name))}
             className="min-h-11 px-2.5 flex items-center shrink-0 text-[0.625rem] font-mono text-cream-muted tracking-widest uppercase hover:text-accent transition-colors"
           >
             Add
@@ -321,7 +321,7 @@ export default function ConventionLineup({
               entries={entries}
               artists={artists}
               studios={DEFAULT_STUDIOS}
-              curated={CURATED_PICKS[convention.id] || {}}
+              curated={curatedPicksFor(convention.editionKey || convention.id)}
               attendingIds={attendingIds}
               onAddArtist={onAddArtist}
               onToggleAttending={onToggleAttending}

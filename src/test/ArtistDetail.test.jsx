@@ -43,3 +43,24 @@ describe('ArtistDetail attending conventions', () => {
     expect(newLink).toHaveTextContent('1–2 Mar 2099')
   })
 })
+
+// #178: past editions are history, listed apart from the shows ahead.
+describe('ArtistDetail convention history', () => {
+  const attended = {
+    id: 'big-london', editionKey: 'big-london@2026', year: 2026, name: 'Big London Tattoo Show',
+    label: 'Big London Tattoo Show 2026', dates: '4–6 September 2026', endDate: '2026-09-06',
+    url: 'https://example.com/bl', distanceMiles: 55,
+  }
+
+  it('lists editions the artist was at under their own heading, by year', () => {
+    render(<ArtistDetail artist={baseArtist} onClose={noop} onSave={noop} attendedConventions={[attended]} />)
+    expect(screen.getByText(/^attended$/i)).toBeInTheDocument()
+    expect(screen.getByText('Big London Tattoo Show 2026')).toBeInTheDocument()
+    expect(screen.queryByText(/attending conventions/i)).toBeNull()
+  })
+
+  it('shows nothing when there is no history', () => {
+    render(<ArtistDetail artist={baseArtist} onClose={noop} onSave={noop} />)
+    expect(screen.queryByText(/^attended$/i)).toBeNull()
+  })
+})

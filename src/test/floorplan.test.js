@@ -4,7 +4,7 @@ import { seedEntriesFor } from '../data/lineupSeeds'
 import { DEFAULT_ARTISTS } from '../data/artists'
 
 const boothOf = (note) => (note.match(/Booth ([A-Z]{0,2}[0-9]+)/) || [])[1] || ''
-const entries = seedEntriesFor('big-london')
+const entries = seedEntriesFor('big-london@2026')
 
 describe('Big London floorplan coordinates', () => {
   it('places 398 of the line-up booths', () => {

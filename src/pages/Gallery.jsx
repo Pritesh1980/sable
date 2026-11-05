@@ -34,6 +34,7 @@ import AddArtistModal from '../components/AddArtistModal'
 import useOverlayParam from '../hooks/useOverlayParam'
 import { useAuth } from '../context/useAuth'
 import { STYLE_TAGS, createArtist } from '../data/artists'
+import { pastAttendance } from '../data/conventions'
 import { withStagedImages } from '../data/imageStaging'
 
 function ArtistGrid({ items, sensors, onDragStart, onDragEnd, onDragCancel, onOpen, onSaveImages, editing, onLongPress }) {
@@ -518,6 +519,7 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
           onClose={detail.close}
           onSave={saveArtist}
           attendingConventions={mergedConventions.filter((c) => c.attendingArtistIds.includes(selected.id))}
+          attendedConventions={pastAttendance(mergedConventions, selected.id)}
           allArtists={artists}
           // Similar ink swaps the artist in place: Back still closes the sheet.
           onSelectArtist={(artist) => detail.replace(artist.id)}

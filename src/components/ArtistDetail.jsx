@@ -12,7 +12,7 @@ import { refIdentity } from '../data/imageRef'
 import { useEscapeToClose } from '../hooks/useDialogFocus'
 import { isPastEdition } from '../data/conventions'
 
-export default function ArtistDetail({ artist, onClose, onSave, attendingConventions = [], allArtists = [], onSelectArtist }) {
+export default function ArtistDetail({ artist, onClose, onSave, attendingConventions = [], attendedConventions = [], allArtists = [], onSelectArtist }) {
   const [images, setImages] = useState(artist.images || [])
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState({ ...artist })
@@ -382,6 +382,22 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
                   </a>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Past editions the artist was at (#178): a record, kept apart from
+              the shows ahead so last year's line-up never reads as next year's. */}
+          {attendedConventions.length > 0 && (
+            <div className="mb-6">
+              <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-3">Attended</p>
+              <ul className="space-y-1">
+                {attendedConventions.map((c) => (
+                  <li key={c.editionKey} className="flex items-baseline justify-between gap-3">
+                    <span className="font-display text-cream-muted text-sm leading-tight truncate">{c.label}</span>
+                    <span className="font-mono text-cream-muted/50 text-[0.625rem] tracking-widest shrink-0">{c.dates}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 

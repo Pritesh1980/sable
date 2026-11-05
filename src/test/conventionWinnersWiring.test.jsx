@@ -15,6 +15,10 @@ const artists = [
 ]
 
 const localConv = CONVENTIONS.find((c) => c.distanceMiles === 0)
+// Results belong to one edition (#178). With the clock fixed after every 2026
+// show, cards open on 2027, so that is where these fixtures live.
+const NOV_2026 = new Date(2026, 10, 5)
+const localKey = `${localConv.id}@2027`
 
 function heroCard() {
   return screen.getByRole('heading', { name: localConv.name }).closest('div.animate-slide-up')
@@ -30,6 +34,7 @@ function renderConventions(props = {}) {
         setConventionOverrides={vi.fn()}
         conventionWinners={{}}
         setConventionWinners={vi.fn()}
+        now={NOV_2026}
         {...props}
       />
     </MemoryRouter>
@@ -37,7 +42,7 @@ function renderConventions(props = {}) {
 }
 
 const winners = {
-  [localConv.id]: {
+  [localKey]: {
     entries: [
       { category: 'Best of Show', placing: 1, name: 'Oscar Akermo', handle: 'oscarakermo', note: '' },
       { category: 'Best Colour', placing: 1, name: 'Martin Kubala', handle: 'kubalizmus', note: '' },
@@ -67,6 +72,14 @@ describe('Conventions page — winners section', () => {
     others.forEach((b) => expect(b).toHaveTextContent(/not imported/i))
   })
 
+  it('keeps results imported before editions existed on the 2026 edition', () => {
+    renderConventions({ conventionWinners: { [localConv.id]: winners[localKey] } })
+    const card = within(heroCard())
+    expect(card.getByRole('button', { name: /competition winners/i })).not.toHaveTextContent(/2 winners/i)
+    fireEvent.click(card.getByRole('button', { name: /2026/ }))
+    expect(card.getByRole('button', { name: /competition winners/i })).toHaveTextContent(/2 winners/i)
+  })
+
   it('merges an import into the stored results for that convention', () => {
     const setConventionWinners = vi.fn()
     renderConventions({ setConventionWinners })
@@ -79,9 +92,9 @@ describe('Conventions page — winners section', () => {
 
     expect(setConventionWinners).toHaveBeenCalledTimes(1)
     const next = setConventionWinners.mock.calls[0][0]({})
-    expect(next[localConv.id].entries).toHaveLength(1)
-    expect(next[localConv.id].entries[0]).toMatchObject({ handle: 'oscarakermo', placing: 1 })
-    expect(next[localConv.id].cleared).toBe(false)
+    expect(next[localKey].entries).toHaveLength(1)
+    expect(next[localKey].entries[0]).toMatchObject({ handle: 'oscarakermo', placing: 1 })
+    expect(next[localKey].cleared).toBe(false)
   })
 
   it('records a clear rather than deleting, so “Clear results” stays honest', () => {
@@ -92,7 +105,7 @@ describe('Conventions page — winners section', () => {
     fireEvent.click(card.getByRole('button', { name: /clear results/i }))
 
     const next = setConventionWinners.mock.calls[0][0](winners)
-    expect(next[localConv.id]).toMatchObject({ entries: [], cleared: true })
+    expect(next[localKey]).toMatchObject({ entries: [], cleared: true })
   })
 
   it('adds a winner to the gallery and flags them as attending in one tap', () => {
@@ -120,11 +133,11 @@ describe('Conventions page — winners section', () => {
     await putPhoto('p1', 'data:image/jpeg;base64,AAA')
     const setConventionWinners = vi.fn()
     const withPhoto = {
-      [localConv.id]: {
-        ...winners[localConv.id],
+      [localKey]: {
+        ...winners[localKey],
         entries: [
-          { ...winners[localConv.id].entries[0], photoIds: ['p1'] },
-          winners[localConv.id].entries[1],
+          { ...winners[localKey].entries[0], photoIds: ['p1'] },
+          winners[localKey].entries[1],
         ],
       },
     }
@@ -134,10 +147,10 @@ describe('Conventions page — winners section', () => {
     fireEvent.click(await card.findByRole('button', { name: /remove photo of oscar akermo/i }))
 
     const next = setConventionWinners.mock.calls[0][0](withPhoto)
-    expect(next[localConv.id].entries[0].photoIds).toEqual([])
+    expect(next[localKey].entries[0].photoIds).toEqual([])
     // The other winner, and every other convention, are untouched.
-    expect(next[localConv.id].entries[1].photoIds).toBeUndefined()
-    expect(Object.keys(next)).toEqual([localConv.id])
+    expect(next[localKey].entries[1].photoIds).toBeUndefined()
+    expect(Object.keys(next)).toEqual([localKey])
   })
 
   // The whole point of the store: image bytes must not share the ~5MB origin

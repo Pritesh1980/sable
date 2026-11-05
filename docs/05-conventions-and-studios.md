@@ -17,13 +17,22 @@ Each card shows the venue, dates, distance from Milton Keynes, a short summary, 
 to the event's site. Popular shows are marked with a ★.
 
 **Mark who's going.** Each card has a *Your artists attending* line — tap **Edit** to toggle
-which of your saved artists are appearing at that show. Those names then surface on the
+which of your saved artists are appearing at that edition of the show. Those names then surface on the
 artist's detail card, on the Pipeline page, and next to the artist in idea matches. (Automatic look-up is
 on the backlog; for now you set this yourself.)
 
-> Conventions recur annually — the dates shown are for the latest known edition, so follow
-> the link for the next one. Once that edition is over, its card says *This edition has
-> passed* under the dates; the order (nearest first) doesn't change.
+**Editions.** Every show recurs, so each card holds its editions by year and opens on the
+next one. A row of year buttons under the dates (**2026 · 2027**) switches the whole card:
+dates, who's attending, the artist index and the winners all belong to that one edition.
+An earlier edition is kept as a record — the card says *Past edition — a record of who was
+there*, and the attendance line reads *attended* — so last year's line-up never reads as
+next year's. An artist's detail card lists those past editions under **Attended**.
+
+> Some dates come from listings sites because the show hasn't confirmed them yet; those
+> cards say *Dates from a listings site — not yet confirmed by the show*. A show that hasn't
+> announced anything shows its usual month with *(TBC)*. Check the show's own site before
+> booking travel. Once the latest edition in the app is over, its card says *This edition
+> has passed* under the dates; the order (nearest first) doesn't change.
 
 ### Artist index
 
@@ -53,8 +62,8 @@ Switch back to **All** for the plain, searchable A–Z list.
 
 #### Big London 2026 is already there
 
-The Big London Tattoo Show's published line-up ships with the app — **466 artists, with each
-one's studio and booth number**. Open **Artist index** on that card and it's ready: search it,
+The Big London Tattoo Show's published 2026 line-up ships with the app — **466 artists, with each
+one's studio and booth number**. Tap **2026** on that card, open **Artist index**, and it's ready: search it,
 filter to **In your gallery** to see who you already follow, or search a booth number to find
 out who's on it.
 

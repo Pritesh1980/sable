@@ -10,12 +10,17 @@
 // A seed is a floor, not a fixture. Whatever the user imports merges on top and
 // wins on conflicts, so a later, fuller line-up corrects a booth number rather
 // than sitting next to it, and clearing the list stays cleared.
+//
+// Line-ups belong to one edition of a show (#178): the 2026 exhibitor list is
+// not who is coming in 2027. Seeds, picks and stored imports are all keyed by
+// edition (`big-london@2026`); a bare show id still reads as its 2026 edition.
+import { editionKey, migrateEditionMap, normaliseEditionKey } from './conventions'
 import { mergeLineupEntries, parseLineup } from './lineup'
 import { BIG_LONDON_2026 } from './lineups/bigLondon2026'
 import { BIG_LONDON_2026_PICKS } from './lineups/bigLondon2026Picks'
 
 export const LINEUP_SEEDS = {
-  'big-london': BIG_LONDON_2026,
+  [editionKey('big-london', 2026)]: BIG_LONDON_2026,
 }
 
 // Parsed once per seed. The raw text goes through the same strict parser a
@@ -23,27 +28,33 @@ export const LINEUP_SEEDS = {
 // have rejected.
 const parsed = new Map()
 
-export function seedEntriesFor(conventionId) {
-  const raw = LINEUP_SEEDS[conventionId]
+export function seedEntriesFor(key) {
+  const at = normaliseEditionKey(key)
+  const raw = LINEUP_SEEDS[at]
   if (!raw) return []
-  if (!parsed.has(conventionId)) parsed.set(conventionId, parseLineup(raw))
-  return parsed.get(conventionId)
+  if (!parsed.has(at)) parsed.set(at, parseLineup(raw))
+  return parsed.get(at)
 }
 
 // The entries to show for a convention: the shipped list with the user's own
 // imports merged over it. `cleared` is what makes "Clear list" honest — without
 // it the seed would reappear the moment the user removed it.
-export function mergeLineupSeeds(stored = {}, conventionId) {
-  const record = stored?.[conventionId]
+export function mergeLineupSeeds(stored = {}, key) {
+  const at = normaliseEditionKey(key)
+  const record = migrateEditionMap(stored)[at]
   const imported = record?.entries || []
   if (record?.cleared) return imported
-  return mergeLineupEntries(seedEntriesFor(conventionId), imported)
+  return mergeLineupEntries(seedEntriesFor(at), imported)
 }
 
-// Hand-curated shortlists that ship with the app, keyed by convention id and
-// then by the handle the show lists. Separate from the line-up seeds above
+// Hand-curated shortlists that ship with the app, keyed by edition and then
+// by the handle the show lists. Separate from the line-up seeds above
 // because this is the user's own judgement about who matters, not the show's
 // roster — see bigLondon2026Picks.js for what the tiers mean.
 export const CURATED_PICKS = {
-  'big-london': BIG_LONDON_2026_PICKS,
+  [editionKey('big-london', 2026)]: BIG_LONDON_2026_PICKS,
+}
+
+export function curatedPicksFor(key) {
+  return CURATED_PICKS[normaliseEditionKey(key)] || {}
 }
