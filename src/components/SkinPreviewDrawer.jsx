@@ -13,7 +13,7 @@ const BUTTON_CLASS = 'rounded-xs border px-3 py-2 font-mono text-[0.6875rem] upp
 
 // Photograph the placement, and Gemini renders the chosen concept design
 // onto it as a tattoo. The result can be saved as a variant on the concept.
-function SkinPreviewContent({ source, apiKey, onSave, onClose }) {
+function SkinPreviewContent({ source, apiKey, onSave, onClose, liveOpen, onOpenLive, onCloseLive }) {
   const closeButtonRef = useRef(null)
   const dialogRef = useRef(null)
   const onCloseRef = useRef(onClose)
@@ -25,7 +25,10 @@ function SkinPreviewContent({ source, apiKey, onSave, onClose }) {
   const [result, setResult] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [live, setLive] = useState(false)
+  const [internalLive, setInternalLive] = useState(false)
+  const live = liveOpen !== undefined ? liveOpen : internalLive
+  const openLive = onOpenLive || (() => setInternalLive(true))
+  const closeLive = onCloseLive || (() => setInternalLive(false))
 
   useEffect(() => { onCloseRef.current = onClose }, [onClose])
 
@@ -183,7 +186,7 @@ function SkinPreviewContent({ source, apiKey, onSave, onClose }) {
           <div className="space-y-4">
             <button
               type="button"
-              onClick={() => setLive(true)}
+              onClick={openLive}
               className={`${BUTTON_CLASS} w-full border-accent/45 text-accent hover:bg-accent/10`}
             >
               Live camera — free, instant
@@ -245,14 +248,25 @@ function SkinPreviewContent({ source, apiKey, onSave, onClose }) {
           designUrl={source.imageUrl}
           label={label}
           onSave={(input) => onSave(source.conceptId, input)}
-          onClose={() => setLive(false)}
+          onClose={closeLive}
         />
       )}
     </div>
   )
 }
 
-export default function SkinPreviewDrawer({ source, apiKey, onSave, onClose }) {
+export default function SkinPreviewDrawer({ source, apiKey, onSave, onClose, liveOpen, onOpenLive, onCloseLive }) {
   if (!source) return null
-  return <SkinPreviewContent key={source.imageUrl} source={source} apiKey={apiKey} onSave={onSave} onClose={onClose} />
+  return (
+    <SkinPreviewContent
+      key={source.imageUrl}
+      source={source}
+      apiKey={apiKey}
+      onSave={onSave}
+      onClose={onClose}
+      liveOpen={liveOpen}
+      onOpenLive={onOpenLive}
+      onCloseLive={onCloseLive}
+    />
+  )
 }

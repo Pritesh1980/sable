@@ -63,6 +63,7 @@ export default function ConceptComposer({
   const [pickerOpen, setPickerOpen] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const aiSetupId = useId()
+  const promptPacksId = useId()
   const aiSetupRef = useRef(null)
   // Generate with no key opens AI setup, which sits at the bottom of a tall
   // composer — off-screen on a phone. Bring it into view and focus the first
@@ -260,12 +261,15 @@ export default function ConceptComposer({
 
       <div className="mt-6 pt-5 border-t border-v2-hairline">
         <button
+          type="button"
+          aria-expanded={Boolean(promptPacksOpen)}
+          aria-controls={promptPacksId}
           onClick={() => onTogglePromptPacks(!promptPacksOpen)}
           className="font-v2-ui text-xs tracking-widest uppercase text-v2-muted hover:text-v2-cream"
         >
           {promptPacksOpen ? '− Prompt packs' : '+ Prompt packs'}
         </button>
-        {promptPacksOpen && <div className="mt-3">{promptPackPanel}</div>}
+        {promptPacksOpen && <div id={promptPacksId} className="mt-3">{promptPackPanel}</div>}
       </div>
 
       <div className="mt-4">

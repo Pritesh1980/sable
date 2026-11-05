@@ -141,3 +141,77 @@ describe('RankingMode — unchanged behavior', () => {
     }
   })
 })
+
+describe('RankingMode — dialog a11y & touch targets (#171)', () => {
+  it('is a modal dialog with an accessible name and moves focus into it on open', () => {
+    const trigger = document.createElement('button')
+    document.body.appendChild(trigger)
+    trigger.focus()
+    try {
+      const { unmount } = render(<RankingMode artists={[artist, second]} onClose={vi.fn()} onApplyRanking={vi.fn()} />)
+      const dialog = screen.getByRole('dialog', { name: /rank artists/i })
+      expect(dialog).toHaveAttribute('aria-modal', 'true')
+      expect(dialog.contains(document.activeElement)).toBe(true)
+
+      unmount()
+      expect(document.activeElement).toBe(trigger)
+    } finally {
+      trigger.remove()
+    }
+  })
+
+  it('keeps dialog semantics on the summary screen after all artists are judged', () => {
+    vi.useFakeTimers()
+    try {
+      renderMode([artist])
+      fireEvent.keyDown(window, { key: 'ArrowRight' })
+      act(() => { vi.advanceTimersByTime(300) })
+      const dialog = screen.getByRole('dialog', { name: /ranking complete/i })
+      expect(dialog).toHaveAttribute('aria-modal', 'true')
+      expect(screen.getByRole('button', { name: /discard/i }).className).toMatch(/\bmin-h-11\b/)
+      expect(screen.getByRole('button', { name: /apply ranking/i }).className).toMatch(/\bmin-h-11\b/)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('Escape closes it and marks the key handled so a layer underneath ignores it', () => {
+    const { onClose } = renderMode()
+    const unhandled = fireEvent.keyDown(window, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(unhandled).toBe(false)
+  })
+
+  it('ignores an Escape that a layer above already handled', () => {
+    const { onClose } = renderMode()
+    const layerAbove = (e) => e.preventDefault()
+    document.addEventListener('keydown', layerAbove)
+    try {
+      fireEvent.keyDown(document.body, { key: 'Escape' })
+    } finally {
+      document.removeEventListener('keydown', layerAbove)
+    }
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('locks body scroll while open and restores it on unmount', () => {
+    document.body.style.overflow = 'auto'
+    const { unmount } = render(<RankingMode artists={[artist, second]} onClose={vi.fn()} onApplyRanking={vi.fn()} />)
+    expect(document.body.style.overflow).toBe('hidden')
+    unmount()
+    expect(document.body.style.overflow).toBe('auto')
+  })
+
+  it('gives top-bar Cancel and Undo buttons 44px (min-h-11) touch targets', () => {
+    vi.useFakeTimers()
+    try {
+      renderMode()
+      fireEvent.keyDown(window, { key: 'ArrowRight' })
+      act(() => { vi.advanceTimersByTime(300) })
+      expect(screen.getByRole('button', { name: /cancel/i }).className).toMatch(/\bmin-h-11\b/)
+      expect(screen.getByRole('button', { name: /undo/i }).className).toMatch(/\bmin-h-11\b/)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})

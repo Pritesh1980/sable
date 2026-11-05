@@ -146,6 +146,7 @@ test.describe('concept viewer', () => {
 
   test('delete from the viewer can be undone', async ({ page }) => {
     await page.getByRole('figure', { name: /Moth over/ }).click()
+    await expect(page.getByRole('dialog', { name: /^Concept:/ })).toBeVisible()
     await page.touchscreen.tap(...centre(page))
     await page.getByRole('button', { name: 'Delete' }).tap()
 
@@ -168,7 +169,7 @@ test.describe('drawers over the concept viewer', () => {
 
   const viewer = (page) => page.getByRole('dialog', { name: /^Concept: Moth/ })
 
-  test('the STL drawer opens on top, and Escape closes only it', async ({ page }) => {
+  test('the STL drawer opens on top, and Escape peels the drawer, info panel, then viewer', async ({ page }) => {
     await page.getByRole('button', { name: /^Make STL from/ }).tap()
     const drawer = page.getByRole('dialog', { name: 'Make Relief STL' })
     await expect(drawer).toBeVisible()
@@ -177,12 +178,15 @@ test.describe('drawers over the concept viewer', () => {
     await page.keyboard.press('Escape')
     await expect(drawer).toBeHidden()
     await expect(viewer(page)).toBeVisible()
-    // And with the drawer gone, the viewer is the top layer again.
+    // Next Escape closes the Variants & STL export info panel before the viewer (#171).
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('heading', { name: 'AI Results' })).toBeHidden()
+    await expect(viewer(page)).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(viewer(page)).toBeHidden()
   })
 
-  test('the try-on drawer and live camera stack, and Escape peels one layer at a time', async ({ page }) => {
+  test('the try-on drawer and live camera stack, and Escape and Back peel one layer at a time', async ({ page }) => {
     await page.getByRole('button', { name: /on skin$/ }).tap()
     const drawer = page.getByRole('dialog', { name: 'Try on skin' })
     await expect(drawer).toBeVisible()
@@ -200,6 +204,26 @@ test.describe('drawers over the concept viewer', () => {
     await expect(drawer).toBeHidden()
     await expect(viewer(page)).toBeVisible()
     await page.keyboard.press('Escape')
+    await expect(page.getByRole('heading', { name: 'AI Results' })).toBeHidden()
+    await expect(viewer(page)).toBeVisible()
+    await page.keyboard.press('Escape')
     await expect(viewer(page)).toBeHidden()
+
+    // Browser Back also peels live camera -> try-on drawer -> concept viewer -> wall (#171).
+    await openResult(page)
+    await page.getByRole('button', { name: /on skin$/ }).tap()
+    await expect(drawer).toBeVisible()
+    await drawer.getByRole('button', { name: /live camera/i }).tap()
+    await expect(live).toBeVisible()
+
+    await page.goBack()
+    await expect(live).toBeHidden()
+    await expect(drawer).toBeVisible()
+    await page.goBack()
+    await expect(drawer).toBeHidden()
+    await expect(viewer(page)).toBeVisible()
+    await page.goBack()
+    await expect(viewer(page)).toBeHidden()
+    await expect(page).toHaveURL(/\/concepts$/)
   })
 })

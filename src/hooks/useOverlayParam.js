@@ -75,5 +75,5 @@ export default function useOverlayParam(name) {
     void navigate(to)
   }, [pushed, value, navigate, target, location.state, name])
 
-  return { value, open, replace, close, leave }
+  return { value, pushed, open, replace, close, leave }
 }

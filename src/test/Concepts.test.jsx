@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
 import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { createOwnerScope } from '../backend/ownerScope'
-import { MemoryRouter } from 'react-router'
+import { MemoryRouter, Routes, Route, useLocation, useNavigate } from 'react-router'
 import Concepts from '../pages/Concepts'
 import { COMPOSER_DRAFT_KEY, loadComposerDraft, saveComposerDraft } from '../data/composerDraft'
 import { buildImagePrompt } from '../data/conceptPrompts'
@@ -99,6 +99,19 @@ describe('Concepts page', () => {
     fireEvent.click(screen.getAllByRole('button', { name: '+ New concept' })[0])
     fireEvent.change(screen.getByLabelText('Your idea'), { target: { value: 'A moth study' } })
     expect(loadComposerDraft().idea).toBe('A moth study')
+  })
+
+  it('gives the + Prompt packs toggle aria-expanded and aria-controls (#171)', () => {
+    render(<ConceptsHarness />)
+    fireEvent.click(screen.getAllByRole('button', { name: '+ New concept' })[0])
+    const toggle = screen.getByRole('button', { name: /prompt packs/i })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    const controlledId = toggle.getAttribute('aria-controls')
+    expect(controlledId).toBeTruthy()
+    expect(document.getElementById(controlledId)).toBeInTheDocument()
   })
 
   it('restores a saved draft on mount', () => {
@@ -314,5 +327,168 @@ describe('Concepts page', () => {
     fireEvent.change(input, { target: { files: [file] } })
 
     await waitFor(() => expect(screen.getByAltText('A moth study')).toBeInTheDocument())
+  })
+
+  describe('concept viewer, drawers and the Back button (#171)', () => {
+    const seedConcepts = [
+      {
+        id: 'c1',
+        prompt: 'A raven',
+        imageUrl: 'data:image/png;base64,abc',
+        tags: ['dark-illustrative'],
+        variants: [{
+          id: 'v1',
+          provider: 'chatgpt',
+          title: 'Pass one',
+          imageUrl: 'data:image/png;base64,abc',
+          response: '',
+          notes: '',
+          rating: 0,
+          isBest: false,
+          createdAt: '2026-06-01T00:00:00.000Z',
+        }],
+      },
+      { id: 'c2', prompt: 'A wolf', imageUrl: 'data:image/png;base64,def', tags: ['fine-line'] },
+    ]
+    const probe = {}
+    function Probe() {
+      const location = useLocation()
+      const navigate = useNavigate()
+      useEffect(() => {
+        probe.location = location
+        probe.navigate = navigate
+      }, [location, navigate])
+      return null
+    }
+    const here = () => `${probe.location.pathname}${probe.location.search}`
+    const back = () => act(() => { probe.navigate(-1) })
+
+    function RoutedConcepts({ entries = ['/', '/concepts'], initialConcepts = seedConcepts }) {
+      const [concepts, setConcepts] = useState(initialConcepts)
+      return (
+        <MemoryRouter initialEntries={entries} initialIndex={entries.length - 1}>
+          <Probe />
+          <Routes>
+            <Route path="/" element={<div>Home page mock</div>} />
+            <Route path="/concepts" element={<Concepts concepts={concepts} setConcepts={setConcepts} artists={artists} ideas={[]} />} />
+          </Routes>
+        </MemoryRouter>
+      )
+    }
+
+    it('tapping a concept pushes ?concept=<id>, and Back closes the viewer onto /concepts', () => {
+      render(<RoutedConcepts />)
+      fireEvent.click(screen.getByAltText('A raven'))
+      expect(here()).toBe('/concepts?concept=c1')
+      expect(screen.getByRole('dialog', { name: 'Concept: A raven' })).toBeInTheDocument()
+
+      back()
+
+      expect(here()).toBe('/concepts')
+      expect(screen.queryByRole('dialog', { name: /Concept:/ })).not.toBeInTheDocument()
+      expect(screen.getByAltText('A raven')).toBeInTheDocument()
+    })
+
+    it('stepping between concepts replaces the entry so one Back returns to /concepts', () => {
+      render(<RoutedConcepts />)
+      fireEvent.click(screen.getByAltText('A raven'))
+      expect(here()).toBe('/concepts?concept=c1')
+
+      fireEvent.keyDown(window, { key: 'ArrowRight' })
+      expect(here()).toBe('/concepts?concept=c2')
+      expect(screen.getByRole('dialog', { name: 'Concept: A wolf' })).toBeInTheDocument()
+
+      back()
+
+      expect(here()).toBe('/concepts')
+      expect(screen.queryByRole('dialog', { name: /Concept:/ })).not.toBeInTheDocument()
+    })
+
+    it('the viewer Close button leaves no entry behind', () => {
+      render(<RoutedConcepts />)
+      fireEvent.click(screen.getByAltText('A raven'))
+      expect(here()).toBe('/concepts?concept=c1')
+
+      fireEvent.click(screen.getByRole('button', { name: 'Close viewer' }))
+      expect(here()).toBe('/concepts')
+      expect(screen.queryByRole('dialog', { name: /Concept:/ })).not.toBeInTheDocument()
+
+      back()
+      expect(screen.getByText('Home page mock')).toBeInTheDocument()
+    })
+
+    it('a deep link opens that concept; closing it stays on /concepts', () => {
+      render(<RoutedConcepts entries={['/', '/concepts?concept=c2']} />)
+      expect(screen.getByRole('dialog', { name: 'Concept: A wolf' })).toBeInTheDocument()
+
+      fireEvent.click(screen.getByRole('button', { name: 'Close viewer' }))
+      expect(here()).toBe('/concepts')
+      expect(screen.queryByRole('dialog', { name: /Concept:/ })).not.toBeInTheDocument()
+
+      back()
+      expect(screen.getByText('Home page mock')).toBeInTheDocument()
+    })
+
+    it('a deep link to an unknown concept shows the wall', () => {
+      render(<RoutedConcepts entries={['/concepts?concept=missing']} />)
+      expect(screen.queryByRole('dialog', { name: /Concept:/ })).not.toBeInTheDocument()
+      expect(screen.getByAltText('A raven')).toBeInTheDocument()
+    })
+
+    it('each drawer over the viewer pushes its own entry so Back peels drawers before the viewer', async () => {
+      render(<RoutedConcepts />)
+      fireEvent.click(screen.getByAltText('A raven'))
+      expect(here()).toBe('/concepts?concept=c1')
+
+      // Open STL drawer over viewer -> pushes ?concept=c1&stl=1
+      fireEvent.click(screen.getByText(/variants & stl export/i))
+      fireEvent.click(screen.getByRole('button', { name: 'Expand Pass one result for A raven' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Make STL from Pass one result for A raven' }))
+      expect(await screen.findByRole('dialog', { name: 'Make Relief STL' })).toBeInTheDocument()
+      expect(here()).toBe('/concepts?concept=c1&stl=1')
+
+      // Back closes STL drawer, keeping viewer open at ?concept=c1
+      back()
+      expect(here()).toBe('/concepts?concept=c1')
+      expect(screen.queryByRole('dialog', { name: 'Make Relief STL' })).not.toBeInTheDocument()
+      expect(screen.getByRole('dialog', { name: 'Concept: A raven' })).toBeInTheDocument()
+
+      // Open Try on skin drawer -> pushes ?concept=c1&tryon=1, then Live camera -> pushes ?concept=c1&tryon=1&live=1
+      fireEvent.click(screen.getByRole('button', { name: 'Try Pass one result for A raven on skin' }))
+      expect(screen.getByRole('dialog', { name: /try on skin/i })).toBeInTheDocument()
+      expect(here()).toBe('/concepts?concept=c1&tryon=1')
+
+      fireEvent.click(screen.getByRole('button', { name: /live camera/i }))
+      expect(screen.getByRole('dialog', { name: 'Live try-on' })).toBeInTheDocument()
+      expect(here()).toBe('/concepts?concept=c1&tryon=1&live=1')
+
+      // Back 1: closes Live camera, leaves Try on skin open
+      back()
+      expect(here()).toBe('/concepts?concept=c1&tryon=1')
+      expect(screen.queryByRole('dialog', { name: 'Live try-on' })).not.toBeInTheDocument()
+      expect(screen.getByRole('dialog', { name: /try on skin/i })).toBeInTheDocument()
+
+      // Back 2: closes Try on skin, leaves ConceptViewer open
+      back()
+      expect(here()).toBe('/concepts?concept=c1')
+      expect(screen.queryByRole('dialog', { name: /try on skin/i })).not.toBeInTheDocument()
+      expect(screen.getByRole('dialog', { name: 'Concept: A raven' })).toBeInTheDocument()
+
+      // Open Refine this -> pushes ?concept=c1&refine=1
+      fireEvent.click(screen.getAllByRole('button', { name: /refine/i })[0])
+      expect(await screen.findByRole('dialog', { name: 'Refine image' })).toBeInTheDocument()
+      expect(here()).toBe('/concepts?concept=c1&refine=1')
+
+      // Back 3: closes Refine drawer, leaves ConceptViewer open
+      back()
+      expect(here()).toBe('/concepts?concept=c1')
+      expect(screen.queryByRole('dialog', { name: 'Refine image' })).not.toBeInTheDocument()
+      expect(screen.getByRole('dialog', { name: 'Concept: A raven' })).toBeInTheDocument()
+
+      // Back 4: closes ConceptViewer onto /concepts
+      back()
+      expect(here()).toBe('/concepts')
+      expect(screen.queryByRole('dialog', { name: /Concept:/ })).not.toBeInTheDocument()
+    })
   })
 })

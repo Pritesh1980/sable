@@ -4,6 +4,7 @@ import ArtistImage from './ArtistImage'
 import GeneratedArtworkNotice from './GeneratedArtworkNotice'
 import TagPill from './TagPill'
 import { DEFAULT_STUDIOS } from '../data/artists'
+import useDialogFocus, { isTopmostDialog } from '../hooks/useDialogFocus'
 
 function GroupSection({ label, items, accent }) {
   if (items.length === 0) return null
@@ -26,7 +27,7 @@ function GroupSection({ label, items, accent }) {
   )
 }
 
-function SummaryScreen({ decisions, artists, onApply, onDiscard }) {
+function SummaryScreen({ dialogRef, decisions, artists, onApply, onDiscard }) {
   const artistMap = Object.fromEntries(artists.map((a) => [a.id, a]))
 
   const groups = {
@@ -37,8 +38,19 @@ function SummaryScreen({ decisions, artists, onApply, onDiscard }) {
 
   const total = decisions.length
 
+  useEffect(() => {
+    dialogRef.current?.focus({ preventScroll: true })
+  }, [dialogRef])
+
   return (
-    <div className="fixed inset-0 z-50 bg-ink-black flex flex-col animate-fade-in">
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Ranking complete"
+      tabIndex={-1}
+      className="fixed inset-0 z-50 bg-ink-black flex flex-col animate-fade-in outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+    >
       <div className="flex-1 overflow-y-auto px-5 pt-14 pb-4">
         <p className="font-mono text-[0.6875rem] text-accent tracking-[0.4em] uppercase mb-2">Ranking Complete</p>
         <h2 className="font-display text-4xl text-cream mb-8 leading-none">
@@ -67,13 +79,13 @@ function SummaryScreen({ decisions, artists, onApply, onDiscard }) {
       <div className="shrink-0 px-5 pb-10 pt-4 border-t border-ink-border flex gap-3">
         <button
           onClick={onDiscard}
-          className="flex-1 py-3.5 font-mono text-xs tracking-widest uppercase text-cream-muted/60 border border-ink-border rounded-xs hover:text-cream-muted transition-colors"
+          className="flex-1 min-h-11 py-3.5 font-mono text-xs tracking-widest uppercase text-cream-muted/60 border border-ink-border rounded-xs hover:text-cream-muted transition-colors"
         >
           Discard
         </button>
         <button
           onClick={onApply}
-          className="flex-1 py-3.5 font-mono text-xs tracking-widest uppercase text-cream border border-cream/30 rounded-xs hover:bg-cream/5 transition-colors"
+          className="flex-1 min-h-11 py-3.5 font-mono text-xs tracking-widest uppercase text-cream border border-cream/30 rounded-xs hover:bg-cream/5 transition-colors"
         >
           Apply Ranking
         </button>
@@ -84,6 +96,7 @@ function SummaryScreen({ decisions, artists, onApply, onDiscard }) {
 
 export default function RankingMode({ artists, onClose, onApplyRanking }) {
   const queue = artists.filter((a) => a.images?.length > 0)
+  const dialogRef = useDialogFocus(true)
 
   const [currentIdx, setCurrentIdx] = useState(0)
   const [decisions, setDecisions] = useState([])
@@ -100,6 +113,14 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
   // driving the swipe-decide gesture — set in onTouchStart, checked by
   // onTouchMove/onTouchEnd, and reset by onTouchEnd/onTouchCancel.
   const touchOwnedByRow = useRef(false)
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [])
 
   const artist = queue[currentIdx]
   const images = artist?.images || []
@@ -176,10 +197,14 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
 
   useEffect(() => {
     function onKey(e) {
+      if (e.defaultPrevented || !isTopmostDialog(dialogRef.current)) return
       if (e.key === 'ArrowLeft')  decide('pass')
       if (e.key === 'ArrowRight') decide('top')
       if (e.key === 'ArrowUp')    decide('maybe')
-      if (e.key === 'Escape')     onClose()
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onClose()
+      }
       if (e.key === 'Backspace' || e.key === 'z' || e.key === 'Z') undo()
     }
     window.addEventListener('keydown', onKey)
@@ -194,6 +219,7 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
   if (showSummary) {
     return (
       <SummaryScreen
+        dialogRef={dialogRef}
         decisions={decisions}
         artists={artists}
         onApply={handleApply}
@@ -211,7 +237,12 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-ink-black flex flex-col animate-fade-in"
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Rank artists"
+      tabIndex={-1}
+      className="fixed inset-0 z-50 bg-ink-black flex flex-col animate-fade-in outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
@@ -229,7 +260,7 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
       <div className="absolute top-0 inset-x-0 z-10 flex items-center justify-between px-5 pt-14 pb-4 bg-gradient-to-b from-ink-black/80 to-transparent pointer-events-none">
         <button
           onClick={onClose}
-          className="pointer-events-auto font-body text-sm text-cream-muted hover:text-cream transition-colors tracking-widest uppercase"
+          className="pointer-events-auto min-h-11 inline-flex items-center font-body text-sm text-cream-muted hover:text-cream transition-colors tracking-widest uppercase"
         >
           Cancel
         </button>
@@ -237,7 +268,7 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
           {decisions.length > 0 && (
             <button
               onClick={undo}
-              className="pointer-events-auto font-mono text-[0.625rem] text-cream-muted/50 hover:text-cream-muted transition-colors tracking-widest uppercase"
+              className="pointer-events-auto min-h-11 inline-flex items-center font-mono text-[0.625rem] text-cream-muted/50 hover:text-cream-muted transition-colors tracking-widest uppercase"
             >
               ← Undo
             </button>

@@ -96,4 +96,21 @@ describe('keys reach only the top layer', () => {
 
     expect(onClose).not.toHaveBeenCalled()
   })
+
+  it('Escape in the concept viewer closes the Variants & STL export panel before closing the viewer (#171)', () => {
+    const onClose = vi.fn()
+    render(<ConceptViewer items={items} onClose={onClose} />)
+
+    fireEvent.keyDown(window, { key: 'i' })
+    expect(screen.getByRole('heading', { name: 'AI Results' })).toBeInTheDocument()
+
+    const firstUnhandled = fireEvent.keyDown(window, { key: 'Escape' })
+    expect(firstUnhandled).toBe(false)
+    expect(screen.queryByRole('heading', { name: 'AI Results' })).not.toBeInTheDocument()
+    expect(onClose).not.toHaveBeenCalled()
+
+    const secondUnhandled = fireEvent.keyDown(window, { key: 'Escape' })
+    expect(secondUnhandled).toBe(false)
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
 })

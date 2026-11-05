@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useLocation, useNavigate, useSearchParams } from 'react-router'
 import ConceptComposer from '../components/ConceptComposer'
 import ConceptPiece from '../components/ConceptPiece'
 import ConceptVariantLab from '../components/ConceptVariantLab'
@@ -26,6 +26,7 @@ import { buildImagePrompt } from '../data/conceptPrompts'
 import { stageImage, withStagedImages } from '../data/imageStaging'
 import useImageStatuses from '../hooks/useImageStatuses'
 import { useAuth } from '../context/useAuth'
+import useOverlayParam from '../hooks/useOverlayParam'
 import { useUndoableRemoval } from '../hooks/useUndoableRemoval'
 import { useConceptRefinement } from '../hooks/useConceptRefinement'
 import { backend } from '../backend'
@@ -142,8 +143,14 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
     batchMessage: (n) => `${n} concepts deleted`,
     confirmMessage: (n) => (n === 1 ? 'Concept restored' : `${n} concepts restored`),
   })
+  const location = useLocation()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const viewer = useOverlayParam('concept')
+  const stl = useOverlayParam('stl')
+  const tryon = useOverlayParam('tryon')
+  const live = useOverlayParam('live')
+  const refine = useOverlayParam('refine')
   // Every image saved here is staged under its concept first (#115), so the
   // concept stores a key, never base64, and survives a failed upload.
   const userId = useAuth()?.user?.id
@@ -172,9 +179,62 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
   const [genError, setGenError] = useState(null)
   const [copied, setCopied] = useState(false)
 
-  const [viewerIndex, setViewerIndex] = useState(null)
   const [stlSource, setStlSource] = useState(null)
   const [skinSource, setSkinSource] = useState(null)
+  const [hadStaleRefineOnMount] = useState(() => new URLSearchParams(location.search).has('refine'))
+  const wasStlParamOpen = useRef(false)
+  const wasTryonParamOpen = useRef(false)
+  const wasRefineParamOpen = useRef(false)
+
+  // Drawers hold their source in React memory and do not reopen across a page
+  // reload. Strip any leftover drawer param on mount; if a reload interrupted a
+  // refinement drawer (?refine=1), also clear ?concept so the wall's recovery
+  // bar isn't covered by the viewer.
+  useEffect(() => {
+    const next = new URLSearchParams(location.search)
+    const hadStaleDrawer = hadStaleRefineOnMount || next.has('stl') || next.has('tryon') || next.has('live')
+    if (!hadStaleDrawer) return
+    next.delete('stl')
+    next.delete('tryon')
+    next.delete('live')
+    next.delete('refine')
+    if (hadStaleRefineOnMount) next.delete('concept')
+    const s = next.toString()
+    navigate(
+      { pathname: location.pathname, search: s ? `?${s}` : '' },
+      { replace: true },
+    )
+    // Mount-only cleanup of stale drawer query params from a browser reload.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Sync drawer React state when Browser Back pops a drawer's URL param.
+  useEffect(() => {
+    if (stl.value) {
+      wasStlParamOpen.current = true
+    } else if (wasStlParamOpen.current) {
+      wasStlParamOpen.current = false
+      setStlSource(null)
+    }
+  }, [stl.value])
+
+  useEffect(() => {
+    if (tryon.value) {
+      wasTryonParamOpen.current = true
+    } else if (wasTryonParamOpen.current) {
+      wasTryonParamOpen.current = false
+      setSkinSource(null)
+    }
+  }, [tryon.value])
+
+  useEffect(() => {
+    if (refine.value) {
+      wasRefineParamOpen.current = true
+    } else if (wasRefineParamOpen.current) {
+      wasRefineParamOpen.current = false
+      if (refinement.state.open) refinement.close()
+    }
+  }, [refine.value, refinement])
 
   const hasOpenai = Boolean(openaiKey)
   const hasGemini = Boolean(geminiKey)
@@ -185,13 +245,6 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
   useEffect(() => {
     saveComposerDraft({ steerArtistId, idea, placement })
   }, [steerArtistId, idea, placement])
-
-  useEffect(() => {
-    if (viewerIndex === null) return undefined
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = previousOverflow }
-  }, [viewerIndex])
 
   function persistKey(which, value) {
     const v = value.trim()
@@ -349,13 +402,31 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
     )))
   }
 
-  function tryOnSkin(input) {
+  function tryOnSkin(input, { replaceRefine = false } = {}) {
     setSkinSource({
       conceptId: input.conceptId,
       conceptLabel: input.conceptLabel,
       variantLabel: input.variantLabel,
       imageUrl: input.imageUrl,
     })
+    if (replaceRefine && refine.value !== null) {
+      const next = new URLSearchParams(location.search)
+      next.delete('refine')
+      next.set('tryon', '1')
+      const state = location.state && typeof location.state === 'object' ? location.state : {}
+      navigate(
+        { pathname: location.pathname, search: `?${next}` },
+        { replace: refine.pushed, state: { ...state, sableOverlay: 'tryon' } },
+      )
+      return
+    }
+    tryon.open('1')
+  }
+
+  function closeSkinPreview() {
+    wasTryonParamOpen.current = false
+    setSkinSource(null)
+    tryon.close()
   }
 
   function makeStlFromVariant(input) {
@@ -364,6 +435,19 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
       label: input.variantLabel,
       filenameSeed: `${input.conceptLabel} ${input.variantLabel}`,
     })
+    stl.open('1')
+  }
+
+  function closeStlDrawer() {
+    wasStlParamOpen.current = false
+    setStlSource(null)
+    stl.close()
+  }
+
+  function closeRefinement() {
+    wasRefineParamOpen.current = false
+    refinement.close()
+    refine.close()
   }
 
   async function refineSource({ conceptId, parentVariantId, imageUrl }) {
@@ -395,7 +479,9 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
       // No arbitrary external URL fallback: let the user explicitly choose bytes.
     }
     ownerScope.assertCurrent(snapshot)
-    await refinement.openSource({ ownerId: snapshot.ownerId, conceptId, parentVariantId }, blob)
+    const openPromise = refinement.openSource({ ownerId: snapshot.ownerId, conceptId, parentVariantId }, blob)
+    refine.open('1')
+    await openPromise
   }
 
   function assertRefinementOwner() {
@@ -490,7 +576,7 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
     parentAvailable={Boolean(original?.imageUrl)}
     onMarkBest={variantId => markBest(comparison.conceptId, variantId)}
     onRate={(variantId, rating) => rateVariant(comparison.conceptId, variantId, rating)}
-    onTryOn={input => { refinement.close(); tryOnSkin({ ...input, conceptId: comparison.conceptId, conceptLabel: comparisonConcept.prompt }) }} />
+    onTryOn={input => { wasRefineParamOpen.current = false; refinement.close(); tryOnSkin({ ...input, conceptId: comparison.conceptId, conceptLabel: comparisonConcept.prompt }, { replaceRefine: true }) }} />
 
   const wallItems = useMemo(() => buildConceptWallItems(concepts, artists), [concepts, artists])
   const statuses = useImageStatuses(wallItems.map((item) => item.imageUrl))
@@ -504,16 +590,44 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
   // Concepts that never had an image can't live on an image wall — a pasted-back
   // result (or a prompt pack awaiting one) stays here until it has one.
   const draftConcepts = useMemo(() => concepts.filter(isDraftConcept), [concepts])
+  const [optimisticConceptId, setOptimisticConceptId] = useState(null)
+
+  const reloadInterruptedRefinement = hadStaleRefineOnMount && !refinement.state.open && refine.value !== null
+  const activeConceptId = viewer.value || optimisticConceptId
+  const viewerIndex = useMemo(() => {
+    if (!activeConceptId || reloadInterruptedRefinement) return null
+    const i = viewerItems.findIndex((item) => item.id === activeConceptId)
+    return i === -1 ? null : i
+  }, [activeConceptId, viewerItems, reloadInterruptedRefinement])
   const viewerOpen = viewerIndex !== null
 
+  useEffect(() => {
+    if (!viewerOpen) return undefined
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = previousOverflow }
+  }, [viewerOpen])
+
+  const handleViewerIndexChange = useCallback((item) => {
+    if (viewer.value && optimisticConceptId) setOptimisticConceptId(null)
+    if (item?.id && item.id !== activeConceptId) viewer.replace(item.id)
+  }, [activeConceptId, optimisticConceptId, viewer])
+
   function openViewer(item) {
-    const index = viewerItems.indexOf(item)
-    if (index !== -1) setViewerIndex(index)
+    if (viewerItems.some((v) => v.id === item.id)) {
+      setOptimisticConceptId(item.id)
+      viewer.open(item.id)
+    }
+  }
+
+  function closeViewer() {
+    setOptimisticConceptId(null)
+    viewer.close()
   }
 
   function handleDeleteFromViewer(id) {
     discard(id)
-    setViewerIndex(null)
+    closeViewer()
   }
 
   const aiSetupPanel = (
@@ -571,7 +685,7 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
           <span role="status">{rs.phase === 'saved' ? 'Variation saved' : rs.recovering
             ? 'Checking refinement recovery' : rs.pending || rs.recoverableJobs.length || rs.journaled
               ? 'Refinement needs attention' : 'Refinement recovery'}</span>
-          <button type="button" onClick={() => refinement.recover({ open: true })}
+          <button type="button" onClick={() => { refine.open('1'); refinement.recover({ open: true }) }}
             className="inline-flex min-h-11 items-center gap-2 px-3 text-v2-cream focus-visible:outline-2 hover:text-v2-accent">
             <RefreshCw size={18} aria-hidden="true" />Check recovery
           </button>
@@ -672,13 +786,13 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
 
       {viewerOpen && (
         <ConceptViewer
-          key={viewerIndex}
           items={viewerItems}
           initialIndex={viewerIndex}
           artists={artists}
           concepts={concepts}
           open={viewerOpen}
-          onClose={() => setViewerIndex(null)}
+          onClose={closeViewer}
+          onIndexChange={handleViewerIndexChange}
           onDelete={handleDeleteFromViewer}
           onSaveTags={saveTags}
           onAddVariant={addVariant}
@@ -692,25 +806,28 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
       )}
 
       <ReliefStlDrawer
-        source={stlSource}
-        onClose={() => setStlSource(null)}
+        source={stl.value ? stlSource : null}
+        onClose={closeStlDrawer}
       />
 
       <SkinPreviewDrawer
-        source={skinSource}
+        source={tryon.value ? skinSource : null}
         apiKey={geminiKey}
         onSave={addVariant}
-        onClose={() => setSkinSource(null)}
+        onClose={closeSkinPreview}
+        liveOpen={Boolean(live.value)}
+        onOpenLive={() => live.open('1')}
+        onCloseLive={live.close}
       />
 
-      {refinement.state.open && <RefinementComposer
+      {refinement.state.open && Boolean(refine.value) && <RefinementComposer
         key={`${refinement.state.destination?.conceptId}:${refinement.state.destination?.parentVariantId}:${refinement.state.source?.digest}`}
         state={refinement.state}
         capabilities={{ ...refinement.state.capabilities, enabled: Boolean(refinement.state.capabilities?.enabled && commitConcepts?.supported) }}
         persistence={refinement.state.persistence} onDraftChange={refinement.setDraft} onSubmit={refinement.submit}
         onCopyPrompt={copyRefinementPrompt} onExportSource={exportRefinementSource} onImportVariation={importManualVariation}
         onSelectSource={file => refinement.openSource(refinement.state.destination, file)}
-        onRecover={recoverRefinement} onClose={refinement.close} destinations={concepts} comparison={comparisonPanel}
+        onRecover={recoverRefinement} onClose={closeRefinement} destinations={concepts} comparison={comparisonPanel}
         message={refinementMessage}
         backupStatus={paidBackupStatus}
       />}

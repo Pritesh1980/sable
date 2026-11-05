@@ -224,3 +224,39 @@ describe('artist detail and the Back button (#159)', () => {
     expect(screen.getByRole('heading', { name: 'Artists' })).toBeInTheDocument()
   })
 })
+
+const { default: ArtistDetail } = await import('../components/ArtistDetail')
+
+describe('ArtistDetail attending conventions past edition note (#171)', () => {
+  it('notes when an attending convention edition has passed, and not when upcoming', () => {
+    const pastShow = {
+      id: 'past-show',
+      name: 'Past Tattoo Show',
+      dates: '9–10 May 2025',
+      endDate: '2025-05-10',
+      url: 'https://example.com/past',
+      distanceMiles: 40,
+    }
+    const futureShow = {
+      id: 'future-show',
+      name: 'Future Tattoo Show',
+      dates: '9–10 Oct 2099',
+      endDate: '2099-10-10',
+      url: 'https://example.com/future',
+      distanceMiles: 50,
+    }
+    render(
+      <ArtistDetail
+        artist={seed[0]}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+        attendingConventions={[pastShow, futureShow]}
+      />
+    )
+
+    const pastCard = screen.getByText('Past Tattoo Show').closest('a')
+    const futureCard = screen.getByText('Future Tattoo Show').closest('a')
+    expect(within(pastCard).getByText(/This edition has passed — check the site for next year’s dates\./)).toBeInTheDocument()
+    expect(within(futureCard).queryByText(/This edition has passed/)).not.toBeInTheDocument()
+  })
+})

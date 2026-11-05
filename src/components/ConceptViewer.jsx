@@ -130,6 +130,7 @@ export default function ConceptViewer({
   concepts = [],
   open = true,
   onClose,
+  onIndexChange,
   onDelete,
   onSaveTags,
   onAddVariant,
@@ -153,6 +154,10 @@ export default function ConceptViewer({
   useEffect(() => {
     if (gone) onClose?.()
   }, [gone, onClose])
+  // Tells Concepts which piece is showing, so it can keep the URL on it (#171).
+  useEffect(() => {
+    if (open && !gone && items[index]) onIndexChange?.(items[index])
+  }, [open, gone, items, index, onIndexChange])
   const [showInfo, setShowInfo] = useState(false)
   // Resolve the transition renderer once per viewer open (not per keypress).
   const [transitionMode] = useState(resolveTransitionMode)
@@ -201,7 +206,10 @@ export default function ConceptViewer({
           setShowInfo((s) => !s)
           break
         case 'Escape':
-          onClose?.()
+          e.preventDefault()
+          // One layer per Escape (#171): the Variants & STL export panel closes first.
+          if (showInfo) setShowInfo(false)
+          else onClose?.()
           break
         default:
           break
@@ -210,7 +218,7 @@ export default function ConceptViewer({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [open, items, onClose, dialogRef])
+  }, [open, items, showInfo, onClose, dialogRef])
 
   if (!open || gone || !items[index]) return null
 

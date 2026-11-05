@@ -1,6 +1,7 @@
 import { chromium, expect } from '@playwright/test'
 import { fileURLToPath } from 'node:url'
 import { openDemo, openIdeaWithPhoto } from '../e2e/fixtures.js'
+import { fixtureConcept } from '../e2e/refinementFixtures.js'
 
 const baseURL = process.env.GUIDE_URL || 'http://localhost:5174'
 if (!['localhost', '127.0.0.1'].includes(new URL(baseURL).hostname)) {
@@ -53,6 +54,14 @@ try {
       await page.goto('/gallery')
       await page.getByRole('button', { name: 'Grid view', exact: true }).click()
       await capture(page, 'gallery-grid-desktop')
+      await page.evaluate((v) => {
+        localStorage.setItem('tattoo_concepts', v)
+        localStorage.setItem('tattoo_remote_concepts', v)
+      }, JSON.stringify([fixtureConcept]))
+      await page.goto('/concepts')
+      await page.getByRole('button', { name: '+ New concept' }).click()
+      await page.getByLabel('Your idea').fill('A quiet temple, three pillars and a softened ink wash')
+      await capture(page, 'concepts')
     } else {
       for (const [path, name] of [['/pipeline', 'dashboard'], ['/conventions', 'conventions'],
         ['/studios', 'studios'], ['/help', 'help-overview'], ['/brief', 'brief-list']]) {

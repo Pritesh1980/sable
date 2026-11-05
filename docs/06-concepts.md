@@ -57,7 +57,7 @@ an image** strip under the wall until you paste a result in.
 ## Work with a concept
 
 **Click a concept on the wall** and it fills the screen — same viewer as the artists'
-Wall, same keys (`←` `→`, `Esc`, or tap **× Close** top-left; the controls fade when your mouse is still).
+Wall, same keys (`←` `→`, `Esc`, **× Close** top-left, or the browser’s **Back**; with **Variants & STL export** open, the first `Esc` closes just the panel, the address names the concept so a link opens it, and the controls fade when your mouse is still).
 On a phone, swipe left / right between concepts, swipe down to close, and tap the image (or
 **Details**) to show **Delete** and **Variants & STL export**. Press **`I`**
 (or the on-screen button) for everything attached to it:
