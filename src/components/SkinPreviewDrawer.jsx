@@ -3,6 +3,7 @@ import { PLACEMENTS } from '../data/artists'
 import LiveTryOn from './LiveTryOn'
 import RefImage from './RefImage'
 import { isTopmostDialog } from '../hooks/useDialogFocus'
+import useHistoryLayer from '../hooks/useHistoryLayer'
 import { loadPhotoForRelief } from '../data/reliefImage'
 import { generateSkinPreviewWithGemini, imageUrlToDataUrl, shrinkImageDataUrl } from '../data/skinPreview'
 
@@ -26,6 +27,9 @@ function SkinPreviewContent({ source, apiKey, onSave, onClose }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [live, setLive] = useState(false)
+  // The camera over this drawer is a layer of its own (#171): Back closes the
+  // camera and leaves the drawer.
+  useHistoryLayer('camera', live ? 'live' : null, () => setLive(false))
 
   useEffect(() => { onCloseRef.current = onClose }, [onClose])
 

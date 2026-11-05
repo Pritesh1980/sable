@@ -6,6 +6,15 @@ import { useLocation, useNavigate } from 'react-router'
 // entirely, e.g. a deep link opened in a fresh tab (replace in place).
 const MARK = 'sableOverlay'
 
+// Shared by every overlay on the page (#171). history.back() lands a moment
+// later, so while one overlay's Back is in flight the location still shows the
+// entry it is leaving. A second overlay closing in that window (Escape on the
+// drawer, then at once on the viewer under it) would act on that stale entry:
+// it would replace it, and the pending Back would then land on the viewer's
+// entry and reopen it. Instead the second close waits for the pop to land.
+let leaving = null
+const deferred = new Set()
+
 function withoutMark(state, name) {
   if (!state || state[MARK] !== name) return state
   const { [MARK]: _drop, ...rest } = state
@@ -37,7 +46,10 @@ export default function useOverlayParam(name) {
   // close) would go back twice and leave the page. Cleared once the location
   // moves, because Forward brings back the very same entry key (codex review).
   const closingKey = useRef(null)
-  useEffect(() => { closingKey.current = null }, [location.key])
+  useEffect(() => {
+    closingKey.current = null
+    if (leaving !== location.key) leaving = null
+  }, [location.key])
 
   const target = useCallback((next) => {
     const params = new URLSearchParams(location.search)
@@ -57,14 +69,32 @@ export default function useOverlayParam(name) {
   }, [pushed, replace, navigate, target, location.state, name])
 
   const close = useCallback(() => {
-    if (value == null || closingKey.current === location.key) return
+    if (value == null) return
+    if (leaving === location.key) {
+      // Our own close already in flight (a second Escape) is a no-op once it
+      // lands; another overlay's is followed by ours, against the new entry.
+      if (closingKey.current !== location.key) deferred.add(name)
+      return
+    }
+    if (closingKey.current === location.key) return
     if (pushed) {
       closingKey.current = location.key
+      leaving = location.key
       void navigate(-1)
     } else {
       void navigate(target(null), { replace: true, state: withoutMark(location.state, name) })
     }
   }, [value, pushed, navigate, target, location.key, location.state, name])
+
+  // A close deferred by an overlay that then unmounted must not fire on the
+  // next one to mount under the same name.
+  useEffect(() => () => { deferred.delete(name) }, [name])
+
+  useEffect(() => {
+    if (leaving === location.key || !deferred.has(name)) return
+    deferred.delete(name)
+    close()
+  }, [location.key, name, close])
 
   const leave = useCallback((to) => {
     if (pushed) {

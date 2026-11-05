@@ -141,3 +141,87 @@ describe('RankingMode — unchanged behavior', () => {
     }
   })
 })
+
+// #171: the swipe-compare screen hadn't had the dialog pass RankBoard got in
+// #169 — no dialog role, focus left on the gallery, and every key heard by it
+// even with another dialog stacked on top.
+describe('RankingMode — dialog semantics', () => {
+  it('is a modal dialog named "Rank artists", and takes focus', () => {
+    renderMode()
+    const dialog = screen.getByRole('dialog', { name: 'Rank artists' })
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    expect(dialog).toHaveFocus()
+  })
+
+  it('closes on Escape and marks it handled', () => {
+    const { onClose } = renderMode()
+    const unhandled = fireEvent.keyDown(document, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(unhandled).toBe(false)
+  })
+
+  it('ignores an Escape another layer already handled', () => {
+    const { onClose } = renderMode()
+    const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    event.preventDefault()
+    document.dispatchEvent(event)
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('leaves every key to a dialog stacked above it', () => {
+    vi.useFakeTimers()
+    try {
+      const onClose = vi.fn()
+      render(
+        <>
+          <RankingMode artists={[artist, second]} onClose={onClose} onApplyRanking={vi.fn()} />
+          <div role="dialog" aria-modal="true" aria-label="Above" />
+        </>
+      )
+      fireEvent.keyDown(document, { key: 'Escape' })
+      fireEvent.keyDown(document, { key: 'ArrowRight' })
+      act(() => { vi.advanceTimersByTime(500) })
+      expect(onClose).not.toHaveBeenCalled()
+      expect(screen.getByText('1 / 2')).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('stays one focused dialog on the summary, where undo keys do nothing', () => {
+    vi.useFakeTimers()
+    try {
+      renderMode()
+      for (const key of ['ArrowRight', 'ArrowLeft']) {
+        fireEvent.keyDown(document, { key })
+        act(() => { vi.advanceTimersByTime(300) })
+      }
+      const dialog = screen.getByRole('dialog', { name: 'Ranking complete' })
+      expect(dialog).toHaveAttribute('aria-modal', 'true')
+      expect(dialog).toHaveFocus()
+      fireEvent.keyDown(document, { key: 'z' })
+      expect(screen.getByText(/2 artists/)).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('gives Cancel and Undo a 44px touch target', () => {
+    vi.useFakeTimers()
+    try {
+      renderMode()
+      fireEvent.keyDown(document, { key: 'ArrowRight' })
+      act(() => { vi.advanceTimersByTime(300) })
+      for (const name of [/^cancel$/i, /undo/i]) {
+        expect(screen.getByRole('button', { name }).className).toMatch(/\bmin-h-11\b/)
+      }
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('sits above the bottom nav (z-50), which covered its buttons on a phone', () => {
+    renderMode()
+    expect(screen.getByRole('dialog', { name: 'Rank artists' }).className).toMatch(/(^|\s)z-\[60\](\s|$)/)
+  })
+})

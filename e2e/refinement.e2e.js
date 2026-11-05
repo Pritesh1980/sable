@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { openRefinementFixture, submitVariation, canonicalRows, openComposer, orientationJpeg, ROW_KEY, fixtureConcept } from './refinementFixtures.js'
+import { openRefinementFixture, submitVariation, canonicalRows, openComposer, closeReopenedViewer, orientationJpeg, ROW_KEY, fixtureConcept } from './refinementFixtures.js'
 
 test('a staged-only source opens for refinement without needing a backend image copy', async ({ page }) => {
   await openRefinementFixture(page)
@@ -70,6 +70,7 @@ test('disabled payment still recovers a previously accepted result', async ({ pa
   relay.enabled = false
   relay.complete()
   await page.reload()
+  await closeReopenedViewer(page)
   await expect(page.getByText('Variation saved', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Check recovery' }).click()
   await expect(page.getByRole('button', { name: 'Generate one variation' })).toHaveCount(0)
@@ -122,6 +123,7 @@ test('uncertain provider outcome does not silently start another paid request', 
   relay.uncertain()
   await expect(page.getByText('Provider outcome unknown', { exact: true }).first()).toBeVisible()
   await page.reload()
+  await closeReopenedViewer(page)
   await openComposer(page)
   await expect(page.getByText('Provider outcome unknown', { exact: true }).first()).toBeVisible()
   await expect(page.getByRole('checkbox', { name: /Confirm a new paid request/ })).toBeVisible()

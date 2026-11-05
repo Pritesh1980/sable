@@ -1,9 +1,13 @@
 import { describe, it, expect, vi } from 'vitest'
-import { fireEvent, render } from '@testing-library/react'
+import { fireEvent, render as renderBare } from '@testing-library/react'
+import { MemoryRouter } from 'react-router'
 import ConceptViewer from '../components/ConceptViewer'
 import ReliefStlDrawer from '../components/ReliefStlDrawer'
 import SkinPreviewDrawer from '../components/SkinPreviewDrawer'
 import RefinementComposer from '../components/RefinementComposer'
+
+// The live camera keeps a history entry (#171), so the drawer needs a router.
+const render = (ui, options) => renderBare(ui, { wrapper: MemoryRouter, ...options })
 
 // Make STL and Try on skin open from inside the full-screen concept viewer's
 // info panel. Both drawers must stack above that viewer, or they open hidden

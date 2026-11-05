@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import ConceptComposer from '../components/ConceptComposer'
 import ConceptPiece from '../components/ConceptPiece'
@@ -28,6 +28,8 @@ import useImageStatuses from '../hooks/useImageStatuses'
 import { useAuth } from '../context/useAuth'
 import { useUndoableRemoval } from '../hooks/useUndoableRemoval'
 import { useConceptRefinement } from '../hooks/useConceptRefinement'
+import useOverlayParam from '../hooks/useOverlayParam'
+import useHistoryLayer from '../hooks/useHistoryLayer'
 import { backend } from '../backend'
 import { createRelayClient } from '../data/imageJobs/relayClient'
 import { pendingImageJobs } from '../data/imageJobs/pendingJobs'
@@ -172,7 +174,9 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
   const [genError, setGenError] = useState(null)
   const [copied, setCopied] = useState(false)
 
-  const [viewerIndex, setViewerIndex] = useState(null)
+  // The open concept lives in the URL (?concept=<id>, #171), as the Wall's
+  // photo does (#159): Back closes the viewer instead of leaving Concepts.
+  const viewer = useOverlayParam('concept')
   const [stlSource, setStlSource] = useState(null)
   const [skinSource, setSkinSource] = useState(null)
 
@@ -185,13 +189,6 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
   useEffect(() => {
     saveComposerDraft({ steerArtistId, idea, placement })
   }, [steerArtistId, idea, placement])
-
-  useEffect(() => {
-    if (viewerIndex === null) return undefined
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = previousOverflow }
-  }, [viewerIndex])
 
   function persistKey(which, value) {
     const v = value.trim()
@@ -504,17 +501,42 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
   // Concepts that never had an image can't live on an image wall — a pasted-back
   // result (or a prompt pack awaiting one) stays here until it has one.
   const draftConcepts = useMemo(() => concepts.filter(isDraftConcept), [concepts])
-  const viewerOpen = viewerIndex !== null
+  const viewerIndex = viewer.value ? viewerItems.findIndex((item) => item.id === viewer.value) : -1
+  const viewerOpen = viewerIndex !== -1
+
+  useEffect(() => {
+    if (!viewerOpen) return undefined
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = previousOverflow }
+  }, [viewerOpen])
 
   function openViewer(item) {
-    const index = viewerItems.indexOf(item)
-    if (index !== -1) setViewerIndex(index)
+    if (viewerItems.includes(item)) viewer.open(item.id)
   }
+
+  // Stepping between concepts replaces the entry: Back closes the viewer, it
+  // does not walk back through every concept seen.
+  const { value: viewerValue, replace: replaceViewer } = viewer
+  const handleViewerIndexChange = useCallback((item) => {
+    if (item.id !== viewerValue) replaceViewer(item.id)
+  }, [viewerValue, replaceViewer])
 
   function handleDeleteFromViewer(id) {
     discard(id)
-    setViewerIndex(null)
+    viewer.close()
   }
+
+  // The drawers stacked over the viewer (and over the page) each take a
+  // history entry too (#171), so Back closes the drawer, not the viewer
+  // hidden under it. Their contents (a picked image, a prepared source) can't
+  // ride in the URL, so a link or reload onto one just shows what's under it.
+  const openLayer = stlSource ? 'stl' : skinSource ? 'skin' : refinement.state.open ? 'refine' : null
+  useHistoryLayer('layer', openLayer, () => {
+    if (stlSource) setStlSource(null)
+    else if (skinSource) setSkinSource(null)
+    else refinement.close()
+  })
 
   const aiSetupPanel = (
     <div className="p-4 bg-v2-ink border border-v2-hairline rounded-xs">
@@ -672,13 +694,13 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
 
       {viewerOpen && (
         <ConceptViewer
-          key={viewerIndex}
           items={viewerItems}
           initialIndex={viewerIndex}
           artists={artists}
           concepts={concepts}
           open={viewerOpen}
-          onClose={() => setViewerIndex(null)}
+          onClose={viewer.close}
+          onIndexChange={handleViewerIndexChange}
           onDelete={handleDeleteFromViewer}
           onSaveTags={saveTags}
           onAddVariant={addVariant}

@@ -182,6 +182,7 @@ describe('variants, the viewer and its tools resolve a stored key', () => {
   it('the on-skin drawer shows the design from its key', async () => {
     const { container } = render(
       <SkinPreviewDrawer source={{ conceptId: 'c1', conceptLabel: 'Moth', imageUrl: HERE }} apiKey="k" onSave={noop} onClose={noop} />,
+      { wrapper: MemoryRouter },
     )
     await waitFor(() => expect(container.querySelector(`img[src="${PHOTO}"]`)).toBeInTheDocument())
     expect(container.querySelector('img[src*="user/u1"]')).not.toBeInTheDocument()

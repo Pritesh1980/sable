@@ -58,6 +58,9 @@ test('downloaded backup restores paid image and provenance in a fresh offline co
     expect(restored.generation).toEqual(savedVariant.generation)
     expect(restored.sourceConceptId).toBe('temple')
     await fresh.getByRole('img', { name: 'Temple study', exact: true }).click()
+    // The viewer opens through the URL (#171), a render later: a key pressed
+    // before it is up is lost.
+    await expect(fresh.getByRole('dialog', { name: 'Concept: Temple study' })).toBeVisible()
     await fresh.keyboard.press('i')
     await fresh.getByRole('button', { name: /Expand .* result for Temple study/ }).click()
     const child = fresh.getByRole('region', { name: 'Refinement comparison' }).getByRole('img').last()
