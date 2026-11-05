@@ -771,6 +771,19 @@ Radar joins public show information with private gallery decisions. There is no
 background roster scraper and no AI request in Top picks. Import and ranking are
 separate stages, so importing a show does not add hundreds of artists to the gallery.
 
+**Everything is per edition (#178).** A show in `CONVENTIONS` holds `editions` by year,
+and attendance overrides, imported line-ups, winners boards, line-up seeds and curated
+picks are all keyed `${showId}@${year}`. Keyed by show id alone, moving the dates on a
+year would have carried 2026 attendees and the 2026 exhibitor list into 2027. Data stored
+before editions existed uses bare show ids, all of it about the 2026 editions, so
+`migrateEditionMap` reads a bare id as `@2026`. It runs before every read and every
+write, never on load: rewriting the synced attendance map with nothing changed would
+stamp it and could outrank a real edit made on another device. Pages read a show as its
+current edition (the first not yet over), flattened by `mergeConventionOverrides`, and
+past editions an artist attended come from `pastAttendance`. The grabber hand-off still
+carries a bare show id and lands on the current edition, because the show's page
+publishes the coming line-up.
+
 ```mermaid
 flowchart TB
   SEED["Shipped Big London lineup text"]

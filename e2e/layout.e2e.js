@@ -225,6 +225,8 @@ test('an open artist index keeps Radar within the screen', async ({ page }) => {
   await settle(page)
   const width = page.viewportSize().width
   const card = page.locator('#convention-big-london')
+  // The shipped 466-artist line-up belongs to the 2026 edition (#178).
+  await card.getByRole('button', { name: '2026', exact: true }).click()
   await card.getByRole('button', { name: /artist index/i }).click()
   const failures = []
   for (const view of ['All', 'New to you']) {

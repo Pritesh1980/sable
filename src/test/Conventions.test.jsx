@@ -13,6 +13,10 @@ const artists = [
 // The local (distanceMiles === 0) show renders as the hero card.
 const localConv = CONVENTIONS.find((c) => c.distanceMiles === 0)
 
+// A fixed clock: which edition a card opens on depends on the date (#178).
+// 5 Nov 2026 — every 2026 edition is over, every 2027 one is still to come.
+const NOV_2026 = new Date(2026, 10, 5)
+
 function heroCard() {
   return screen.getByRole('heading', { name: localConv.name }).closest('div.animate-slide-up')
 }
@@ -24,6 +28,7 @@ function renderConventions(props = {}) {
         artists={artists}
         conventionOverrides={{}}
         setConventionOverrides={vi.fn()}
+        now={NOV_2026}
         {...props}
       />
     </MemoryRouter>
@@ -41,11 +46,11 @@ describe('Conventions attendance editor', () => {
 
     expect(setConventionOverrides).toHaveBeenCalledTimes(1)
     const next = setConventionOverrides.mock.calls[0][0]({})
-    expect(next[localConv.id]).toEqual(['oscarakermo'])
+    expect(next[`${localConv.id}@2027`]).toEqual(['oscarakermo'])
   })
 
   it('summarises currently-attending artists without entering edit mode', () => {
-    renderConventions({ conventionOverrides: { [localConv.id]: ['zoia.ink'] } })
+    renderConventions({ conventionOverrides: { [`${localConv.id}@2027`]: ['zoia.ink'] } })
     const card = within(heroCard())
     expect(card.getByText(/1 of your artists attending/i)).toBeInTheDocument()
     expect(card.getByText('@zoia.ink')).toBeInTheDocument()
@@ -73,16 +78,17 @@ describe('Conventions attendance editor', () => {
   })
 })
 
-// #160: the data holds the latest edition of shows that recur, so once that
-// edition is over the card says so instead of presenting it as upcoming.
+// #160: once the latest edition in the data is over, the card says so instead
+// of presenting it as upcoming.
 describe('Conventions past editions', () => {
   const bigLondonShow = CONVENTIONS.find((c) => c.id === 'big-london')
+  const latest = (c) => c.editions[c.editions.length - 1]
   const cardFor = (c) => within(screen.getByRole('heading', { name: c.name }).closest('div.animate-slide-up'))
 
   it('marks an edition whose last day has gone, keeping its dates', () => {
-    renderConventions({ now: new Date(2026, 9, 29) })
+    renderConventions({ now: new Date(2027, 9, 29) })
     const card = cardFor(bigLondonShow)
-    expect(card.getByText(bigLondonShow.dates)).toBeInTheDocument()
+    expect(card.getByText(latest(bigLondonShow).dates)).toBeInTheDocument()
     expect(card.getByText(/this edition has passed/i)).toHaveTextContent(/next year/i)
     // The hero card too.
     expect(cardFor(localConv).getByText(/this edition has passed/i)).toBeInTheDocument()
@@ -98,8 +104,61 @@ describe('Conventions past editions', () => {
     const { unmount } = renderConventions({ now: new Date(2026, 0, 1) })
     const before = order()
     unmount()
-    renderConventions({ now: new Date(2026, 9, 29) })
+    renderConventions({ now: new Date(2027, 9, 29) })
     expect(order()).toEqual(before)
+  })
+})
+
+// #178: a card opens on the next edition; the one before is a tap away, as a
+// record of who was there rather than a claim about who is coming.
+describe('Conventions editions', () => {
+  const bigLondonShow = CONVENTIONS.find((c) => c.id === 'big-london')
+  const edition = (c, year) => c.editions.find((e) => e.year === year)
+  const cardFor = (c) => within(screen.getByRole('heading', { name: c.name }).closest('div.animate-slide-up'))
+
+  it('opens on the 2027 edition once 2026 is over', () => {
+    renderConventions()
+    const card = cardFor(bigLondonShow)
+    expect(card.getByText(edition(bigLondonShow, 2027).dates)).toBeInTheDocument()
+    expect(card.queryByText(edition(bigLondonShow, 2026).dates)).toBeNull()
+    expect(card.getByRole('button', { name: /2027/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(card.queryByText(/this edition has passed/i)).toBeNull()
+  })
+
+  it('does not show 2026 attendees as coming in 2027', () => {
+    const merged = { 'big-london': ['zoia.ink'] }
+    renderConventions({ conventionOverrides: merged })
+    expect(cardFor(bigLondonShow).queryByText(/of your artists attend/i)).toBeNull()
+  })
+
+  it('switches to the 2026 edition, worded as a record of who was there', () => {
+    renderConventions({ conventionOverrides: { 'big-london': ['zoia.ink'] } })
+    const card = cardFor(bigLondonShow)
+    fireEvent.click(card.getByRole('button', { name: /2026/ }))
+    expect(card.getByRole('button', { name: /2026/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(card.getByText(edition(bigLondonShow, 2026).dates)).toBeInTheDocument()
+    expect(card.getByText(/1 of your artists attended/i)).toBeInTheDocument()
+    expect(card.getByText(/past edition/i)).toBeInTheDocument()
+  })
+
+  it('writes attendance to the edition on screen', () => {
+    const setConventionOverrides = vi.fn()
+    renderConventions({ setConventionOverrides })
+    const card = cardFor(bigLondonShow)
+    fireEvent.click(card.getByRole('button', { name: /2026/ }))
+    fireEvent.click(card.getByRole('button', { name: 'Edit' }))
+    fireEvent.click(card.getByRole('button', { name: 'Oscar Akermo' }))
+    const next = setConventionOverrides.mock.calls[0][0]({})
+    expect(Object.keys(next)).toEqual(['big-london@2026'])
+    expect(next['big-london@2026']).toContain('oscarakermo')
+  })
+
+  it('says when dates come from a listing rather than the show itself', () => {
+    const freeze = CONVENTIONS.find((c) => c.id === 'tattoo-freeze')
+    expect(edition(freeze, 2027).unconfirmed).toBe(true)
+    renderConventions()
+    expect(cardFor(freeze).getByText(/not yet confirmed/i)).toBeInTheDocument()
+    expect(cardFor(bigLondonShow).queryByText(/not yet confirmed/i)).toBeNull()
   })
 })
 
@@ -120,10 +179,25 @@ function brightonCard() {
 }
 
 describe('Conventions artist index', () => {
-  it('ships the Big London line-up, so there is nothing to import', () => {
+  it('ships the Big London 2026 line-up, so there is nothing to import', () => {
     renderConventions()
     const card = within(bigLondonCard())
+    fireEvent.click(card.getByRole('button', { name: /2026/ }))
     expect(card.getByRole('button', { name: /artist index/i })).toHaveTextContent(/466 artists/)
+  })
+
+  it('does not offer the 2026 exhibitors as the 2027 line-up', () => {
+    renderConventions()
+    const card = within(bigLondonCard())
+    expect(card.getByRole('button', { name: /artist index/i })).not.toHaveTextContent(/466 artists/)
+  })
+
+  it('keeps a line-up imported before editions existed on the 2026 edition', () => {
+    renderConventions({ conventionLineups: { brighton: { entries: [{ name: 'Martin Kubala', handle: 'kubalizmus', note: '' }] } } })
+    const card = within(brightonCard())
+    expect(card.getByRole('button', { name: /artist index/i })).not.toHaveTextContent(/1 artist/)
+    fireEvent.click(card.getByRole('button', { name: /2026/ }))
+    expect(card.getByRole('button', { name: /artist index/i })).toHaveTextContent(/1 artist/)
   })
 
   it('imports a pasted line-up and indexes it against the gallery', () => {
@@ -138,15 +212,15 @@ describe('Conventions artist index', () => {
     fireEvent.click(card.getByRole('button', { name: /^import/i }))
 
     const next = setConventionLineups.mock.calls[0][0]({})
-    expect(next.brighton.entries.map((e) => e.handle)).toEqual(['oscarakermo', 'kubalizmus'])
-    expect(next.brighton.updatedAt).toEqual(expect.any(String))
+    expect(next['brighton@2027'].entries.map((e) => e.handle)).toEqual(['oscarakermo', 'kubalizmus'])
+    expect(next['brighton@2027'].updatedAt).toEqual(expect.any(String))
   })
 
   it('merges a second import instead of dropping what was already there', () => {
     const setConventionLineups = vi.fn()
     renderConventions({
       setConventionLineups,
-      conventionLineups: { brighton: { entries: [{ name: '', handle: 'oscarakermo', note: '' }] } },
+      conventionLineups: { 'brighton@2027': { entries: [{ name: '', handle: 'oscarakermo', note: '' }] } },
     })
 
     const card = within(brightonCard())
@@ -155,9 +229,9 @@ describe('Conventions artist index', () => {
     fireEvent.change(card.getByLabelText(/paste the line-up/i), { target: { value: '@kubalizmus' } })
     fireEvent.click(card.getByRole('button', { name: /^import/i }))
 
-    const prev = { brighton: { entries: [{ name: '', handle: 'oscarakermo', note: '' }] } }
+    const prev = { 'brighton@2027': { entries: [{ name: '', handle: 'oscarakermo', note: '' }] } }
     const next = setConventionLineups.mock.calls[0][0](prev)
-    expect(next.brighton.entries.map((e) => e.handle)).toEqual(['oscarakermo', 'kubalizmus'])
+    expect(next['brighton@2027'].entries.map((e) => e.handle)).toEqual(['oscarakermo', 'kubalizmus'])
   })
 
   it('adds an artist from the index to the gallery and flags them attending', () => {
@@ -166,7 +240,7 @@ describe('Conventions artist index', () => {
     renderConventions({
       setArtists,
       setConventionOverrides,
-      conventionLineups: { brighton: { entries: [{ name: 'Martin Kubala', handle: 'kubalizmus', note: '' }] } },
+      conventionLineups: { 'brighton@2027': { entries: [{ name: 'Martin Kubala', handle: 'kubalizmus', note: '' }] } },
     })
 
     const card = within(brightonCard())
@@ -176,7 +250,7 @@ describe('Conventions artist index', () => {
     const nextArtists = setArtists.mock.calls[0][0](artists)
     expect(nextArtists).toHaveLength(3)
     expect(nextArtists[2]).toMatchObject({ id: 'kubalizmus', handle: 'kubalizmus', name: 'Martin Kubala', status: 'researching' })
-    expect(setConventionOverrides.mock.calls[0][0]({}).brighton).toEqual(['kubalizmus'])
+    expect(setConventionOverrides.mock.calls[0][0]({})['brighton@2027']).toEqual(['kubalizmus'])
   })
 
   it('imports a hand-off from the grabber and says what landed', () => {
@@ -185,8 +259,9 @@ describe('Conventions artist index', () => {
 
     renderConventions({ setConventionLineups })
 
+    // The show's page publishes the coming line-up, so that is where it lands.
     const next = setConventionLineups.mock.calls[0][0]({})
-    expect(next['big-london'].entries.map((e) => e.handle)).toEqual(['atewamz', 'kubalizmus'])
+    expect(next['big-london@2027'].entries.map((e) => e.handle)).toEqual(['atewamz', 'kubalizmus'])
     expect(screen.getByRole('status')).toHaveTextContent(/imported 2 artists into big london/i)
     // …and a way straight to the card it landed in, which is well down the page.
     const jump = within(screen.getByRole('status')).getByRole('button', { name: /take me to it/i })
@@ -217,7 +292,7 @@ describe('Conventions artist index', () => {
     const setArtists = vi.fn()
     renderConventions({
       setArtists,
-      conventionLineups: { brighton: { entries: [{ name: 'Oscar Akermo', handle: 'oscarakermo', note: '' }] } },
+      conventionLineups: { 'brighton@2027': { entries: [{ name: 'Oscar Akermo', handle: 'oscarakermo', note: '' }] } },
     })
 
     const card = within(brightonCard())

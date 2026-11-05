@@ -4,12 +4,12 @@ import { CURATED_PICKS, seedEntriesFor } from '../data/lineupSeeds'
 import { buildShowPlan } from '../data/showPlan'
 import { DEFAULT_ARTISTS, DEFAULT_STUDIOS } from '../data/artists'
 
-const entries = seedEntriesFor('big-london')
+const entries = seedEntriesFor('big-london@2026')
 const lineupHandles = new Set(entries.map((e) => e.handle).filter(Boolean))
 
 describe('Big London curated picks', () => {
   it('is wired to the convention it belongs to', () => {
-    expect(CURATED_PICKS['big-london']).toBe(BIG_LONDON_2026_PICKS)
+    expect(CURATED_PICKS['big-london@2026']).toBe(BIG_LONDON_2026_PICKS)
   })
 
   it('uses only the two meaningful tiers', () => {

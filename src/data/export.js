@@ -1,4 +1,5 @@
 import { getImageNote, getImageUrl } from './planning'
+import { migrateEditionMap } from './conventions'
 import { stripEditGen } from '../backend/sync'
 import { keyForUrl } from './blobUrls'
 import { refIdentity, refKey } from './imageRef'
@@ -252,9 +253,9 @@ export function parseBackup(raw) {
     }
   })
 
-  out.conventionOverrides = (data.conventionOverrides && typeof data.conventionOverrides === 'object' && !Array.isArray(data.conventionOverrides))
-    ? data.conventionOverrides
-    : {}
+  // Attendance is per edition since #178; an older backup's bare show ids are
+  // its 2026 editions.
+  out.conventionOverrides = migrateEditionMap(data.conventionOverrides)
 
   return out
 }

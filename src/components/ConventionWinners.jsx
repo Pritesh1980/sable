@@ -155,7 +155,7 @@ function WinnerRow({ entry, convention, attending, onAddArtist, onToggleAttendin
           </button>
         ) : entry.handle ? (
           <button
-            onClick={() => onAddArtist(winnerArtistDraft(entry, convention.name))}
+            onClick={() => onAddArtist(winnerArtistDraft(entry, convention.label || convention.name))}
             className="min-h-11 px-2.5 flex items-center shrink-0 text-[0.625rem] font-mono text-cream-muted tracking-widest uppercase hover:text-accent transition-colors"
           >
             Add
