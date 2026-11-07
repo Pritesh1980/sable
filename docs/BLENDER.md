@@ -85,6 +85,7 @@ commit them.
 | `--white-point` | 0.9 | Paper at or above this sRGB level counts as bare skin, so off-white scans don't tint the arm. |
 | `--samples` / `--size` | 64 / 1024 | Render quality; `--size` is the long edge. |
 | `--views` | see below | Upper arm: any of `outer,front-three-quarter,back-three-quarter,front`. Forearm: any of `top,three-quarter,side`. Either: `close-up`. |
+| `--label` | none | A prefix for the view files and `params.json`: `--label koi-12cm` writes `koi-12cm-outer.png`, …, `koi-12cm-params.json`, so several runs can share a folder and the files stay apart once they leave it. |
 | `--body` | `parametric` | `parametric` (a smooth tapered tube) or `makehuman` (a real body). |
 | `--makehuman-data` | none | MakeHuman checkout (its root or its `makehuman/data` folder). Required with `--body makehuman`. |
 | `--mh-sex` | `random` | MakeHuman only: `random` draws a fully female or a fully male body, with even odds, from `--seed`. A number from 0 (female) to 1 (male) sets it instead; MakeHuman's own default is 0.5. See [Body sex](#body-sex). |
@@ -207,6 +208,82 @@ On 4 Linux CPU cores at the defaults, each view takes 35–45 s on the parametri
 OpenImageDenoise, and an Apple Silicon Mac should be quicker. For quick drafts, use
 `--samples 16 --size 512`.
 
+## Several sizes at once
+
+To compare sizes, render them all on the same body with one command from the repo root:
+
+```sh
+npm run render:body -- ~/Downloads/concept.png 12,15,18
+```
+
+It runs `render-on-body.py` once per size. All the sizes go in one folder per concept
+and spot under `~/Pictures/sable-renders`, with the size in every file name:
+
+```text
+concept-upper-outer/
+  concept-12cm-upper-outer-outer.png      concept-18cm-upper-outer-outer.png
+  concept-12cm-upper-outer-close-up.png   concept-18cm-upper-outer-close-up.png
+  concept-12cm-upper-outer-params.json    concept-18cm-upper-outer-params.json
+  summary.txt
+```
+
+So you can Quick Look from one size to the next in Finder, and AirDrop the PNGs in one
+go. The names still say which is which once they're on the phone. Running the same
+concept again overwrites those files.
+
+It draws one `--seed` for the whole batch, so with the MakeHuman body every size lands
+on the same body, and it prints the seed so you can render that body again. Before the
+first render starts, it checks every run's arguments, so a typo doesn't cost you a
+15-minute wait. When it finishes it prints one line per size, read from its
+`params.json`: how tall the design is, how far round the arm it wraps, how it measured
+on the rendered arm, and how many warnings it has. It saves the same lines to
+`summary.txt` for the notes when you add the renders to Sable.
+
+Your measurements and settings go in `~/.config/sable/render-body.json`, outside the
+repo, so they are never committed. Every key is optional:
+
+```json
+{
+  "blender": "/Applications/Blender.app/Contents/MacOS/Blender",
+  "out": "~/Pictures/sable-renders",
+  "render": { "body": "makehuman", "makehuman-data": "~/src/makehuman" },
+  "upper-arm": { "upper-arm-length-cm": 32, "biceps-cm": 30, "above-elbow-cm": 26 },
+  "forearm": { "length-cm": 25, "wrist-cm": 17, "elbow-cm": 26 }
+}
+```
+
+- `render` holds any `render-on-body.py` option (without the `--`), applied to every run.
+- `upper-arm` and `forearm` apply only on that placement, so both sets of measurements
+  can live in one file.
+- With no `blender` key, it uses `$BLENDER`, then the Mac app, then `blender` on the
+  `PATH`.
+- A `"seed"` key renders every batch on the same body. Leave it out to get a fresh body
+  each time, and pass `--seed` to repeat one.
+- With no file at all, it renders the default arm.
+
+The script sets `--image`, `--width-cm`, `--out`, `--label` and `--seed` itself. Any
+other option on the command line goes through to `render-on-body.py` and overrides the
+config. Its own options are:
+
+- `--seed N`: the body to use (overrides the config).
+- `--out DIR`: where the folders go.
+- `--config FILE`: a different config file.
+- `--dry-run`: print the Blender commands and render nothing.
+- `--help`: show this summary.
+
+To compare sizes, look at the arm views, not the close-up. The camera for `outer` (and
+the other arm views) is set by the arm alone, so a bigger design really does look
+bigger. The close-up is framed on the design, so every size fills about the same part
+of its picture. Use it to check how fine lines hold up at one size. For a quicker batch:
+
+```sh
+npm run render:body -- ~/Downloads/concept.png 12,15,18 --views outer,close-up
+```
+
+That takes about 3 minutes a size on the Intel Mac. All four default views take about
+5 minutes a size. It refuses to write inside the repo, and a relative image path is
+read from the folder you ran `npm` in.
+
 ## Bring the renders into Sable
 
 Open the concept, show its details (`I`), and under **AI Results** choose **Add Result**:
@@ -214,7 +291,8 @@ Open the concept, show its details (`I`), and under **AI Results** choose **Add 
 - **Provider:** Other
 - **Title:** for example *Upper arm 12 cm · outer*
 - **Image file:** the PNG
-- **Notes:** the measurements and width from `params.json`
+- **Notes:** the measurements and width from `params.json`, or that size's line from
+  `summary.txt` if you used `npm run render:body`
 
 Add one result per angle. They are then ordinary variants: rate them, mark the best,
 compare 12 cm with 18 cm. Add them on the device that holds your library (AirDrop the
@@ -538,7 +616,9 @@ files, drawing the body's sex from a seed, blending macro targets, posing the fo
 and lowering the arms, the upper arm's frame and the top of the shoulder, arc length
 round a cross-section (against polygons, circles, ellipses and a folded outline), open
 sections above the armpit, and the per-vertex fit and mapping on synthetic tubes, with
-the fit fading into a torso:
+the fit fading into a torso. The size wrapper's planning is tested the same way: the
+config, the shared seed, the labels, and checking every run's arguments before Blender
+starts:
 
 ```sh
 python3 -m unittest discover -s scripts/blender

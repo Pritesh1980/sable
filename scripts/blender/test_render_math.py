@@ -1506,3 +1506,25 @@ class Warnings(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class Label(unittest.TestCase):
+    BASE = ['--', '--image', 'a.png', '--width-cm', '12', '--out', 'r']
+
+    def test_files_are_named_after_the_view_without_a_label(self):
+        self.assertIsNone(rob.parse_args(self.BASE).label)
+        self.assertEqual(rob.view_filename('close-up', None), 'close-up.png')
+
+    def test_a_label_prefixes_every_view_file(self):
+        args = rob.parse_args(self.BASE + ['--label', 'koi-12cm'])
+        self.assertEqual(args.label, 'koi-12cm')
+        self.assertEqual(rob.view_filename('outer', args.label), 'koi-12cm-outer.png')
+
+    def test_a_label_names_params_json_too_so_sizes_can_share_a_folder(self):
+        self.assertEqual(rob.params_filename(None), 'params.json')
+        self.assertEqual(rob.params_filename('koi-12cm'), 'koi-12cm-params.json')
+
+    def test_a_label_must_be_a_plain_file_name(self):
+        for bad in ('', 'a/b', '../x', '.hidden', 'a b', 'x\\y'):
+            with self.subTest(bad=bad), self.assertRaises(SystemExit):
+                rob.parse_args(self.BASE + ['--label', bad])
