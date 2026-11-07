@@ -12,14 +12,15 @@ and renders three angles plus a ``params.json``. The arm is a tapered,
 slightly elliptical tube by default (``--body parametric``), or MakeHuman's
 CC0 body (``--body makehuman --makehuman-data DIR``): its upper arm, shoulder
 and torso with the arm lowered from the rest pose, or its forearm with the
-wrist and hand, fitted to the same measurements and mapped per vertex. The
-skin is a preset tone (``--skin-tone``) or an exact sRGB (``--skin-rgb``).
-The ink looks healed by default (``--ink healed``: spread a
-fraction of a millimetre, a cool settled black under the skin); ``--ink fresh``
-is the crisp just-inked look. ``params.json`` records the design's size as
-measured on the rendered mesh. Everything after ``--`` is this script's own
-arguments; see ``--help`` (``blender -b -P render-on-body.py -- --help``) and
-docs/BLENDER.md.
+wrist and hand, fitted to the same measurements and mapped per vertex. Its
+sex is drawn at random, fully female or fully male, from a seed that
+``params.json`` records (``--mh-sex``, ``--seed``). The skin is a preset tone
+(``--skin-tone``) or an exact sRGB (``--skin-rgb``). The ink looks healed by
+default (``--ink healed``: spread a fraction of a millimetre, a cool settled
+black under the skin); ``--ink fresh`` is the crisp just-inked look.
+``params.json`` records the design's size as measured on the rendered mesh.
+Everything after ``--`` is this script's own arguments; see ``--help``
+(``blender -b -P render-on-body.py -- --help``) and docs/BLENDER.md.
 
 The maths at the top of this file is plain Python so it can be unit tested
 without Blender: ``python3 -m unittest discover -s scripts/blender``.
@@ -30,6 +31,8 @@ import bisect
 import json
 import math
 import os
+import random
+import secrets
 import sys
 import time
 
@@ -368,7 +371,7 @@ SKIN_TONES = {
     'medium-brown': (128, 95, 66),
     'deep-brown': (80, 58, 42),
 }
-DEFAULT_SKIN_TONE = 'light-warm-brown'
+DEFAULT_SKIN_TONE = 'warm-brown'
 #: The tone the subsurface settings below were tuned on.
 SKIN_REFERENCE = SKIN_TONES['light-peach']
 #: Subsurface scattering distance per channel (× SUBSURFACE_SCALE_M) and the
@@ -617,6 +620,79 @@ def macro_targets(sex=0.5, muscle=0.5, weight=0.5):
                     out[f'macrodetails/universal-{name}-young-{m}muscle-{w}weight.target'] = (
                         w_sex * w_m * w_w)
     return out
+
+
+# The body's sex. MakeHuman's gender slider runs from 0 to 1, and its own
+# description (modifiers/modeling_modifiers_desc.json, "macrodetails/Gender")
+# says "min is female, max is male"; the target files are named the same way
+# (``*-female-*`` at 0, ``*-male-*`` at 1). ``--mh-sex random``, the default,
+# draws one end or the other.
+
+MH_SEX_RANDOM = 'random'
+#: Fresh seeds are below this, short enough to retype.
+SEED_LIMIT = 1_000_000
+_SEX_ERROR = "--mh-sex is a number from 0 (female) to 1 (male), or 'random'; got {!r}"
+
+
+def parse_mh_sex(value):
+    """``--mh-sex``: ``'random'`` (any case), or MakeHuman's gender value as a
+    float from 0 (female) to 1 (male), given as a number or as text. Anything
+    else raises ValueError."""
+    if isinstance(value, str):
+        text = value.strip().lower()
+        if text == MH_SEX_RANDOM:
+            return MH_SEX_RANDOM
+        try:
+            number = float(text)
+        except ValueError:
+            raise ValueError(_SEX_ERROR.format(value)) from None
+    elif isinstance(value, (int, float)) and not isinstance(value, bool):
+        number = float(value)
+    else:
+        raise ValueError(_SEX_ERROR.format(value))
+    if not 0.0 <= number <= 1.0:  # NaN fails this too
+        raise ValueError(_SEX_ERROR.format(value))
+    return number
+
+
+def body_sex(value, seed):
+    """MakeHuman's gender value for one run. A number from 0 (female) to 1
+    (male) passes through, whatever the seed. ``'random'`` draws a fully
+    female (0.0) or fully male (1.0) body with equal odds from ``seed``, a
+    whole number 0 or more. It uses ``random.Random(seed).random()``, the one
+    sequence Python promises to keep across versions, so a recorded seed
+    draws the same body again in any Blender."""
+    value = parse_mh_sex(value)
+    if value != MH_SEX_RANDOM:
+        return value
+    if isinstance(seed, bool) or not isinstance(seed, int) or seed < 0:
+        raise ValueError(f'--mh-sex random needs a seed, a whole number 0 or more; got {seed!r}')
+    return 1.0 if random.Random(seed).random() >= 0.5 else 0.0
+
+
+def new_seed():
+    """A fresh seed, for a random body when ``--seed`` isn't given."""
+    return secrets.randbelow(SEED_LIMIT)
+
+
+def sex_for_run(value, seed=None):
+    """The body's sex for one run, as params.json records it: ``{'sex', 'sex_random',
+    'seed'}``. A random sex without a seed gets a fresh one (``new_seed``), so
+    the run can be repeated with ``--seed``."""
+    value = parse_mh_sex(value)
+    is_random = value == MH_SEX_RANDOM
+    if is_random and seed is None:
+        seed = new_seed()
+    return {'sex': body_sex(value, seed), 'sex_random': is_random, 'seed': seed}
+
+
+def sex_label(sex):
+    """'female', 'male', or the value in between."""
+    if sex == 0.0:
+        return 'female'
+    if sex == 1.0:
+        return 'male'
+    return f'{sex:g} (0 female, 1 male)'
 
 
 def _sub(a, b):
@@ -1385,6 +1461,19 @@ def _skin_rgb(text):
         raise argparse.ArgumentTypeError(str(err)) from None
 
 
+def _mh_sex(text):
+    try:
+        return parse_mh_sex(text)
+    except ValueError as err:
+        raise argparse.ArgumentTypeError(str(err)) from None
+
+
+def _seed(text):
+    if not text.strip().isdecimal():
+        raise argparse.ArgumentTypeError(f'must be a whole number 0 or more, got {text}')
+    return int(text)
+
+
 def parse_args(argv):
     """Parse the arguments after ``--`` (Blender keeps everything before it)."""
     argv = list(argv)
@@ -1407,8 +1496,14 @@ def parse_args(argv):
                    help='which side carries the design: upper arm outer (default; the outside '
                         'of the arm) or inner (the front, over the biceps); forearm inner '
                         '(default; palm side) or outer (makehuman only)')
-    p.add_argument('--mh-sex', type=_fraction, default=0.5,
-                   help='makehuman: 0 female ... 1 male (MakeHuman\'s default 0.5)')
+    p.add_argument('--mh-sex', type=_mh_sex, default=MH_SEX_RANDOM, metavar='{random,0..1}',
+                   help='makehuman: random (default: a fully female or fully male body, even '
+                        'odds, drawn from --seed), or a number from 0 female to 1 male '
+                        '(MakeHuman\'s own default is 0.5)')
+    p.add_argument('--seed', type=_seed, default=None,
+                   help='makehuman: the seed for --mh-sex random; without one a fresh seed is '
+                        'drawn, printed and recorded in params.json, so the body can be rendered '
+                        'again')
     p.add_argument('--mh-muscle', type=_fraction, default=0.5, help='makehuman: muscle 0..1')
     p.add_argument('--mh-weight', type=_fraction, default=0.5, help='makehuman: weight 0..1')
     p.add_argument('--above-elbow-cm', type=_positive(float),
@@ -1746,7 +1841,7 @@ def subdivided_cage(bpy, cage, faces, name, shares=None):
     return mesh, points, tris, out
 
 
-def build_makehuman_arm(bpy, args, width_cm, height_cm, centre_cm, up):
+def build_makehuman_arm(bpy, args, width_cm, height_cm, centre_cm, up, *, sex):
     """MakeHuman's forearm and hand, fitted to the measurements, with the
     design mapped per vertex at true size (``fit_and_map``)."""
     from array import array  # noqa: PLC0415
@@ -1755,7 +1850,7 @@ def build_makehuman_arm(bpy, args, width_cm, height_cm, centre_cm, up):
     start = time.perf_counter()
     data = makehuman_data_dir(os.path.expanduser(args.makehuman_data))
     cage, faces, info = load_makehuman_forearm(
-        data, length_cm=L, side=args.side, sex=args.mh_sex, muscle=args.mh_muscle,
+        data, length_cm=L, side=args.side, sex=sex, muscle=args.mh_muscle,
         weight=args.mh_weight, past_elbow_cm=EXTEND_CM)
     mesh, points, tris, _ = subdivided_cage(bpy, cage, faces, 'Forearm')
     nv, nl, npoly = len(mesh.vertices), len(mesh.loops), len(mesh.polygons)
@@ -1813,7 +1908,7 @@ MH_AXIS_RANGE = (0.15, 0.55)
 NO_DESIGN_UV = (-1.0, -1.0)
 
 
-def build_makehuman_upper_arm(bpy, args, width_cm, height_cm, centre_cm, up):
+def build_makehuman_upper_arm(bpy, args, width_cm, height_cm, centre_cm, up, *, sex):
     """MakeHuman's whole body with the arms lowered, its left upper arm
     fitted to the measurements, and the design mapped per vertex at true size
     onto the upper arm's skin only (``fit_and_map``). Returns ``(object, fit,
@@ -1825,7 +1920,7 @@ def build_makehuman_upper_arm(bpy, args, width_cm, height_cm, centre_cm, up):
     start = time.perf_counter()
     data = makehuman_data_dir(os.path.expanduser(args.makehuman_data))
     cage, faces, shares, info = load_makehuman_upper_arm(
-        data, length_cm=L, side=args.side, sex=args.mh_sex, muscle=args.mh_muscle,
+        data, length_cm=L, side=args.side, sex=sex, muscle=args.mh_muscle,
         weight=args.mh_weight)
     mesh, points, tris, shares = subdivided_cage(bpy, cage, faces, 'Body', shares)
     arm, upper = shares['arm'], shares['upper']
@@ -2189,8 +2284,13 @@ def main(argv=None):
     lo, hi = centre_cm - height_cm / 2, centre_cm + height_cm / 2
     arm = body = None
     if args.body == 'makehuman':
+        # One body per run: every view below renders this same mesh.
+        sex = sex_for_run(args.mh_sex, args.seed)
+        how = (f'drawn at random with --seed {sex["seed"]}; pass it to render this body again'
+               if sex['sex_random'] else '--mh-sex')
+        print(f'[render-on-body] body: {sex_label(sex["sex"])} ({how})', flush=True)
         build = build_makehuman_upper_arm if upper_arm else build_makehuman_arm
-        arm, fit, body = build(bpy, args, width_cm, height_cm, centre_cm, up)
+        arm, fit, body = build(bpy, args, width_cm, height_cm, centre_cm, up, sex=sex['sex'])
         centre_circ = fitted_circumference(fit, centre_cm)
         thinnest = min(fitted_circumference(fit, lo + (hi - lo) * k / 64) for k in range(65))
     else:
@@ -2303,14 +2403,14 @@ def main(argv=None):
     }
     if body is not None and upper_arm:
         params['makehuman'] = {
-            'build': {'sex': args.mh_sex, 'muscle': args.mh_muscle, 'weight': args.mh_weight,
+            'build': {**sex, 'muscle': args.mh_muscle, 'weight': args.mh_weight,
                       'age_years': 25, 'targets': body.pop('targets')},
             **body,
         }
     elif body is not None:
         params['makehuman'] = {
             'side': args.side,
-            'build': {'sex': args.mh_sex, 'muscle': args.mh_muscle, 'weight': args.mh_weight,
+            'build': {**sex, 'muscle': args.mh_muscle, 'weight': args.mh_weight,
                       'age_years': 25, 'targets': body.pop('targets')},
             'pose': {'elbow_straightened_deg': round(body.pop('bend_deg'), 1),
                      'supinated_deg': round(abs(body.pop('twist_deg')), 1),

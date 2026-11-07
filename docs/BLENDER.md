@@ -14,9 +14,11 @@ on the forearm instead.
 
 The arm is either a smooth parametric tube (the default) or, with `--body makehuman`, a
 real body from MakeHuman's CC0 data, fitted to your measurements: the upper arm with
-its shoulder and torso, or the forearm with its wrist and hand. The MakeHuman body needs
-a copy of MakeHuman's repository on the Mac: see [A real arm: MakeHuman](#a-real-arm-makehuman).
-The skin is one of a few tone presets or an exact colour: see [Skin tone](#skin-tone).
+its shoulder and torso, or the forearm with its wrist and hand. The MakeHuman body is
+female or male, drawn at random on each run unless you choose (see [Body sex](#body-sex)),
+and needs a copy of MakeHuman's repository on the Mac: see
+[A real arm: MakeHuman](#a-real-arm-makehuman). The skin is one of a few tone presets or
+an exact colour: see [Skin tone](#skin-tone).
 
 ## Install Blender
 
@@ -68,8 +70,8 @@ commit them.
 | `--wrist-cm` / `--elbow-cm` / `--length-cm` | 17 / 26 / 25 | Forearm: round the wrist at its narrowest; round the widest point just below the elbow; wrist crease to elbow crease. |
 | `--centre-cm` | half-way | Where the design's centre sits: cm above the elbow crease (upper arm) or from the wrist (forearm). |
 | `--design-up` | `shoulder` (upper arm), `elbow` (forearm) | Which end the top of the image points to: the upper arm's `shoulder` or `elbow`, the forearm's `elbow` or `wrist`. |
-| `--skin-tone` | `light-warm-brown` | A [skin tone preset](#skin-tone). |
-| `--skin-rgb` | none | An exact skin colour instead, as sRGB `R,G,B` (0–255), e.g. `170,132,95`. `--skin '#aa845f'` (hex) also works. |
+| `--skin-tone` | `warm-brown` | A [skin tone preset](#skin-tone). |
+| `--skin-rgb` | none | An exact skin colour instead, as sRGB `R,G,B` (0–255), e.g. `154,118,84`. `--skin '#9a7654'` (hex) also works. |
 | `--ink` | `healed` | `healed` (settled under the skin) or `fresh` (crisp, just inked). See below. |
 | `--ink-spread-mm` | 0.15 | Healed only: how far lines have spread into the skin, in mm (a Gaussian sigma). |
 | `--ink-strength` | 0.92 | How dark solid black is: 1 is pure black; lower lets a little skin through. |
@@ -78,7 +80,12 @@ commit them.
 | `--views` | three, see below | Upper arm: any of `outer,front-three-quarter,back-three-quarter,front`. Forearm: any of `top,three-quarter,side`. |
 | `--body` | `parametric` | `parametric` (a smooth tapered tube) or `makehuman` (a real body). |
 | `--makehuman-data` | none | MakeHuman checkout (its root or its `makehuman/data` folder). Required with `--body makehuman`. |
-| `--mh-sex` / `--mh-muscle` / `--mh-weight` | 0.5 / 0.5 / 0.5 | MakeHuman only: MakeHuman's build sliders, 0 to 1 (sex: 0 female, 1 male). The fit to your measurements still sets the size; these change the shape. |
+| `--mh-sex` | `random` | MakeHuman only: `random` draws a fully female or a fully male body, with even odds, from `--seed`. A number from 0 (female) to 1 (male) sets it instead; MakeHuman's own default is 0.5. See [Body sex](#body-sex). |
+| `--seed` | a fresh one | MakeHuman only: the seed for `--mh-sex random`. Without it a fresh seed is drawn, printed and recorded in `params.json`, so `--seed` with that number renders the same body again. |
+| `--mh-muscle` / `--mh-weight` | 0.5 / 0.5 | MakeHuman only: MakeHuman's build sliders, 0 to 1. Never random. |
+
+The fit to your measurements sets the arm's size whatever the build; sex, muscle and
+weight change its shape.
 
 A measurement for the other placement (say `--wrist-cm` on the upper arm) is an error,
 not silently ignored.
@@ -99,8 +106,8 @@ there. The forearm keeps `top` (straight at the design), `three-quarter` and `si
 |---|---|---|
 | `light-peach` | 201, 157, 128 | The default until Nov 2026 (`#c99d80`). |
 | `light-warm-tan` | 184, 143, 104 | |
-| `light-warm-brown` | 170, 132, 95 | **The default.** Light, slightly brown, warm. |
-| `warm-brown` | 154, 118, 84 | |
+| `light-warm-brown` | 170, 132, 95 | Light, slightly brown, warm. |
+| `warm-brown` | 154, 118, 84 | **The default** (`#9a7654`). Warm, a step deeper. |
 | `medium-brown` | 128, 95, 66 | |
 | `deep-brown` | 80, 58, 42 | |
 
@@ -114,11 +121,15 @@ before it travels far under the surface, the short wavelengths most, so each cha
 scattering distance shrinks with the skin's lightness, blue fastest: the glow is warmer
 and shallower, not the pink translucency of the earlier material. Melanin also masks
 blood, so the faint blotchy redness in the base colour is milder. `light-peach` gets
-exactly the earlier settings, so `--placement forearm --skin-tone light-peach` renders
-pixel-identical to the previous version of the script (checked for the parametric
-forearm on Blender 4.0.2 and bpy 5.2.3, healed and fresh, and for the MakeHuman forearm
-on bpy 5.2.3). `params.json` → `skin` records
-the tone, its sRGB and the subsurface settings used.
+exactly the earlier settings. `params.json` → `skin` records the tone, its sRGB and the
+subsurface settings used.
+
+**Earlier renders stay reproducible** if you name the earlier defaults. `--placement
+forearm --skin-tone light-peach` renders pixel-identical to the versions before the
+presets; on the MakeHuman forearm add `--mh-sex 0.5`, now that the sex is random by
+default. The upper arm's previous defaults are `--skin-tone light-warm-brown --mh-sex
+0.5`. Checked in Nov 2026: the parametric forearm on Blender 4.0.2 and bpy 5.2.3,
+healed and fresh, and both MakeHuman placements on bpy 5.2.3.
 
 Skin detail is still the procedural pores and mottling. MakeHuman's repository has no
 skin textures to borrow: its `data/skins` holds only the default material, which points
@@ -281,13 +292,39 @@ data.
 
 ### The build
 
-Both placements start from the base mesh plus MakeHuman's macro targets for a 25-year-old
-with MakeHuman's defaults (sex, muscle and weight all 0.5; an even mix of its three
-ethnicities). `--mh-sex`, `--mh-muscle` and `--mh-weight` move the blend. Height and
-proportions stay at their centre, where no target applies. Only the `body` group is
-used: helper geometry (clothes helpers, joint markers) is left out. Two levels of
-Catmull-Clark subdivision are applied to the mesh, and everything after that (fit,
-mapping, measuring) is done on the subdivided mesh, which is what's rendered.
+Both placements start from the base mesh plus MakeHuman's macro targets for a 25-year-old,
+female or male (see below), with muscle and weight at MakeHuman's defaults (0.5) and an
+even mix of its three ethnicities. `--mh-sex`, `--mh-muscle` and `--mh-weight` move the
+blend. Height and proportions stay at their centre, where no target applies. Only the
+`body` group is used: helper geometry (clothes helpers, joint markers) is left out. Two
+levels of Catmull-Clark subdivision are applied to the mesh, and everything after that
+(fit, mapping, measuring) is done on the subdivided mesh, which is what's rendered.
+
+### Body sex
+
+MakeHuman's gender slider runs from 0 to 1. Its own description, in
+`modifiers/modeling_modifiers_desc.json` (`macrodetails/Gender`), says "min is female,
+max is male", and the targets are named the same way: at 0 only the `*-female-young`
+targets apply, at 1 only the `*-male-young` ones. MakeHuman's default, 0.5, is an even
+blend of the two.
+
+By default (`--mh-sex random`) each run draws a fully female (0) or a fully male (1) body,
+with even odds, from a seed. Pass `--seed N` to choose the seed. Without it, a fresh one
+is drawn and printed, for example:
+
+```text
+[render-on-body] body: male (drawn at random with --seed 42; pass it to render this body again)
+```
+
+`params.json` → `makehuman.build` records `sex` (the value used), `sex_random` and `seed`,
+so any render can be repeated. Every view of a run shows the same body: it's built once.
+The draw is `random.Random(seed).random()`, the one sequence Python promises to keep across
+versions, so a seed draws the same body in Blender 4.0 and in bpy 5.2. For example,
+`--seed 42` draws a male body and `--seed 192` a female one.
+
+A number instead (`--mh-sex 0.5`, say) sets the slider directly, and the seed isn't used.
+Only sex is drawn at random: muscle and weight stay as given. The parametric arm has no
+sex and ignores both arguments.
 
 ### How the upper arm is built
 
@@ -309,7 +346,8 @@ mapping, measuring) is done on the subdivided mesh, which is what's rendered.
    the arm and over the shoulder, faces 45° up and out (only the upper arm and shoulder
    bones' skin counts, so the neck and head don't). The body is scaled evenly so that
    point is `--upper-arm-length-cm` above the elbow crease (the elbow joint's level).
-   The default body measures 30.75 cm, so 32 cm scales it by 1.04.
+   The female body measures 28.84 cm, so 32 cm scales it by 1.11; the male body 32.44 cm
+   (by 0.99); the in-between body (`--mh-sex 0.5`) 30.75 cm (by 1.04).
 5. **Fit.** The arm is sliced across every 2.5 mm, using the arm's own skin (where its
    bone weights are at least half), so a slice beside the torso doesn't count the
    torso. The above-elbow measurement goes an eighth of the way up from the elbow crease
@@ -318,8 +356,11 @@ mapping, measuring) is done on the subdivided mesh, which is what's rendered.
    the way up into the armpit. Each section is scaled about its centre by a factor
    linear between the two, as on the forearm; below the elbow station the elbow and
    forearm are scaled as a whole. The arm's bone weights fade the fit out into the
-   shoulder, so the torso keeps its shape. With the defaults (26 / 30 cm), the fitted arm
-   measures **26.0 cm** above the elbow and **29.97 cm** round the biceps.
+   shoulder, so the torso keeps its shape. With the default measurements (26 / 30 cm),
+   the fitted arm measures **26.0 cm** above the elbow and **29.94 cm** round the biceps
+   on the female body, **26.0** and **30.0 cm** on the male body, and 26.0 and 29.97 cm
+   on the in-between one. Before fitting, MakeHuman's female arm is 24.9 / 28.68 cm round
+   and its male arm 26.97 / 30.19 cm.
 
 **Why lower the arm rather than aim the camera along it.** With the A-pose kept, a
 camera square on to the outside of the arm looks down from 42° above the horizontal, and
@@ -347,10 +388,10 @@ views, because the skin it bends most (the armpit) faces away from them.
    the wrist on the default arm). Each section is scaled about its own centre, by a
    factor that changes linearly between those two. So both circumferences come out as
    measured, and the forearm keeps MakeHuman's muscle shape between them. The hand is
-   scaled as a whole with the wrist, so it keeps its proportions. The default MakeHuman
-   forearm is slender (13.8 cm round the wrist), so the defaults scale it up by 23% at
-   the wrist and 9% at the forearm's widest. The fitted arm measures **17.0 cm** round
-   the wrist and **26.02 cm** at its widest.
+   scaled as a whole with the wrist, so it keeps its proportions. The in-between
+   MakeHuman forearm (`--mh-sex 0.5`) is slender (13.8 cm round the wrist), so the
+   default measurements scale it up by 23% at the wrist and 9% at the forearm's widest.
+   The fitted arm measures **17.0 cm** round the wrist and **26.02 cm** at its widest.
 
 The forearm is framed from 12 cm past the wrist (the palm and the thumb) to just past
 the elbow, so it appears smaller in the frame than the parametric forearm. To compare
@@ -386,34 +427,39 @@ The upper arm needs two more rules:
   bones carry at least half the weight. Elsewhere (the shoulder cap, the armpit, the
   torso, the forearm) the skin stays bare, and a design that reaches there is cut off,
   with a warning.
-- **Above the armpit.** About 19.5 cm above the elbow crease the arm's own skin stops
-  going all the way round: it joins the torso. There the arc is measured along the
-  arm's skin that is there, its open section closed with a straight chord across the
-  armpit, far from the top line. The sections' centres would be pulled aside by the
-  armpit, so on the upper arm they all lie on one straight axis, fitted to the centres of
-  the sections between 15% and 55% of the way up, and the top line is straight.
+- **Above the armpit.** About 19.5 cm above the elbow crease (on the in-between body)
+  the arm's own skin stops going all the way round: it joins the torso. There the arc
+  is measured along the arm's skin that is there, its open section closed with a
+  straight chord across the armpit, far from the top line. The sections' centres would
+  be pulled aside by the armpit, so on the upper arm they all lie on one straight axis,
+  fitted to the centres of the sections between 15% and 55% of the way up, and the top
+  line is straight.
 
-**Measured.** On the default upper arm, a 12 cm design measures **12.0, 12.0 and 12.01
-cm** round the arm at its elbow end, middle and shoulder end, and **12.0 cm** along it;
-an 18 cm design measures **18.0, 18.0 and 18.06 cm** round and **18.0 cm** along (and
-wraps 216°, so it carries a warning). Triangle by triangle, a 12 cm design keeps its
-width round the arm to within −0.3% and +0.8% (1st to 99th percentile), an 18 cm design
-to within −0.6% and +1.4%. Along the arm the skin is about 1.3% longer than the axial
-distance on average, and up to 5–7%, where the arm swells into the armpit. A 12 cm
-design's horizontal and vertical lines are off square by up to about 12° (19° for 18
-cm) where the arm widens fastest, just below the armpit.
+**Measured.** On the default upper arm, a 12 cm design measures **12.0, 12.01 and 12.03
+cm** round the arm at its elbow end, middle and shoulder end on the female body, **12.0
+cm** at all three on the male body, and **12.0 cm** along it on both (Nov 2026, bpy
+5.2.3 and Blender 4.0.2 alike). The rest of this paragraph was measured on the
+in-between body (`--mh-sex 0.5`), where a 12 cm design measures 12.0, 12.0 and 12.01 cm
+round and 12.0 cm along, and an 18 cm design measures **18.0, 18.0 and 18.06 cm** round
+and **18.0 cm** along (and wraps 216°, so it carries a warning). Triangle by triangle, a
+12 cm design keeps its width round the arm to within −0.3% and +0.8% (1st to 99th
+percentile), an 18 cm design to within −0.6% and +1.4%. Along the arm the skin is about
+1.3% longer than the axial distance on average, and up to 5–7%, where the arm swells
+into the armpit. A 12 cm design's horizontal and vertical lines are off square by up to
+about 12° (19° for 18 cm) where the arm widens fastest, just below the armpit.
 
-On the default forearm, a 12 cm design measures 12.0, 12.0 and 12.01 cm round the arm
-and 12.0 cm along; an 18 cm design 18.0 cm at all three heights and along. Its width
-round the arm holds to within 0.4% everywhere, and its lines are off square by up to
-about 12° (16° for 18 cm) where the forearm tapers fastest. The parametric arm does the
-same, by up to about 7°. All of this comes from the arc-and-axis coordinates on a
-tapered limb, not from MakeHuman.
+On the in-between MakeHuman forearm (`--mh-sex 0.5`), a 12 cm design measures 12.0, 12.0
+and 12.01 cm round the arm and 12.0 cm along; an 18 cm design 18.0 cm at all three
+heights and along. Its width round the arm holds to within 0.4% everywhere, and its
+lines are off square by up to about 12° (16° for 18 cm) where the forearm tapers
+fastest. The parametric arm does the same, by up to about 7°. All of this comes from the
+arc-and-axis coordinates on a tapered limb, not from MakeHuman.
 
 ### What comes out
 
-`params.json` gains a `makehuman` block: the build (slider values and the targets
-blended), the pose and the fit. On the upper arm, the pose records the rest pose's and
+`params.json` gains a `makehuman` block: the build (the sex used, whether it was drawn at
+random and from which seed, the other slider values and the targets blended), the pose
+and the fit. On the upper arm, the pose records the rest pose's and
 the rendered arm's angles, and the block records the scale, the height of the shoulder
 joint and of the rest pose's shoulder top, and how far up the arm the upper arm's skin
 reaches. On the forearm, it records the degrees straightened and supinated, MakeHuman's
@@ -441,16 +487,17 @@ Building and fitting takes about a second for the forearm and 1.5 s for the whol
   to reach the front of the armpit is cut off there, with a warning. Showing the inside
   of the arm needs it raised.
 - **The top of the upper arm.** The design may go only where the upper arm's bones carry
-  at least half the weight. Above the armpit that skin narrows: about 24 cm above the
-  elbow crease it reaches only about 7 cm round towards the back of the arm. A wide
-  design with ink in its upper back corner meets that edge: a few triangles along it
-  are stretched, and beyond it the design is cut off. (The demo mandala's corners are
-  blank.)
+  at least half the weight. Above the armpit that skin narrows: on the in-between body,
+  about 24 cm above the elbow crease it reaches only about 7 cm round towards the back
+  of the arm. A wide design with ink in its upper back corner meets that edge: a few
+  triangles along it are stretched, and beyond it the design is cut off. (The demo
+  mandala's corners are blank.)
 - **Skin.** The mesh has real shape, but no veins, tendons, hair or creases beyond the
   mesh's own. The skin is the procedural material in a preset or exact tone, with no
   texture detail.
 - The ethnicity mix is fixed at even thirds and the age at 25. Height and proportions
-  aren't used, because the fit sets the size.
+  aren't used, because the fit sets the size. A random body is fully female or fully
+  male; an in-between body needs a number for `--mh-sex`.
 - Only the left arm. MakeHuman's mesh is symmetric, so a right arm is a mirrored copy
   of the same data.
 - Not run on macOS yet: run in Linux with Blender 4.0.2 and the bpy 5.2.3 build.
@@ -463,10 +510,11 @@ Building and fitting takes about a second for the forearm and 1.5 s for the whol
 The maths runs in plain Python, without Blender: the taper, ellipse and cm → UV; the
 healed-ink blur and colour; skin tone presets, exact sRGB and the subsurface settings;
 measuring a design on a sliced mesh; and for the MakeHuman body, reading OBJ and target
-files, blending macro targets, posing the forearm and lowering the arms, the upper arm's
-frame and the top of the shoulder, arc length round a cross-section (against polygons,
-circles, ellipses and a folded outline), open sections above the armpit, and the
-per-vertex fit and mapping on synthetic tubes, with the fit fading into a torso:
+files, drawing the body's sex from a seed, blending macro targets, posing the forearm
+and lowering the arms, the upper arm's frame and the top of the shoulder, arc length
+round a cross-section (against polygons, circles, ellipses and a folded outline), open
+sections above the armpit, and the per-vertex fit and mapping on synthetic tubes, with
+the fit fading into a torso:
 
 ```sh
 python3 -m unittest discover -s scripts/blender

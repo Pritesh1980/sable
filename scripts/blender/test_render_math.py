@@ -509,6 +509,81 @@ class MakeHumanMacros(unittest.TestCase):
                                'maxmuscle-averageweight.target': 0.25})
         self.assertAlmostEqual(sum(w for k, w in t.items() if 'universal' not in k), 1.0)
 
+    def test_sex_zero_is_female_and_one_is_male(self):
+        # MakeHuman's convention (modifiers/modeling_modifiers_desc.json, Gender:
+        # "min is female, max is male"), and its target names follow it.
+        female, male = rob.macro_targets(sex=0.0), rob.macro_targets(sex=1.0)
+        self.assertTrue(female and all('-female-' in k for k in female))
+        self.assertTrue(male and all('-male-' in k for k in male))
+
+
+class BodySex(unittest.TestCase):
+    """--mh-sex random: a fully female or fully male body, drawn from a seed."""
+
+    def test_the_same_seed_gives_the_same_body(self):
+        for seed in range(200):
+            self.assertEqual(rob.body_sex('random', seed), rob.body_sex('random', seed))
+
+    def test_a_seed_keeps_its_draw(self):
+        # Python guarantees random.Random(seed).random() across versions, so a
+        # seed recorded in params.json renders the same body again later, in
+        # Blender 4.0 (Python 3.12) or bpy 5.2 (3.13) alike.
+        draws = {0: 1.0, 1: 0.0, 2: 1.0, 3: 0.0, 4: 0.0, 5: 1.0, 42: 1.0, 192: 0.0}
+        self.assertEqual({seed: rob.body_sex('random', seed) for seed in draws}, draws)
+
+    def test_random_is_always_exactly_female_or_male(self):
+        for seed in range(500):
+            sex = rob.body_sex('random', seed)
+            self.assertIsInstance(sex, float)
+            self.assertIn(sex, (0.0, 1.0))
+
+    def test_random_is_roughly_balanced(self):
+        draws = [rob.body_sex('random', seed) for seed in range(4000)]
+        self.assertTrue(0.45 < sum(draws) / len(draws) < 0.55)
+        big = [rob.body_sex('random', seed) for seed in range(10**9, 10**9 + 1000)]
+        self.assertTrue(0.43 < sum(big) / len(big) < 0.57)
+
+    def test_random_is_spelt_any_case(self):
+        self.assertEqual(rob.body_sex(' Random ', 42), rob.body_sex('random', 42))
+
+    def test_a_number_passes_through_and_ignores_the_seed(self):
+        for value, want in ((0.5, 0.5), (0, 0.0), (1, 1.0), ('0.25', 0.25), (' 1 ', 1.0)):
+            for seed in (None, 7):
+                sex = rob.body_sex(value, seed)
+                self.assertIsInstance(sex, float)
+                self.assertEqual(sex, want)
+
+    def test_out_of_range_or_non_numeric_input_errors_clearly(self):
+        for bad in (1.5, -0.1, '2', 'banana', '', None, float('nan'), 'inf', True, [0.5]):
+            with self.assertRaisesRegex(ValueError, r"0 \(female\) to 1 \(male\), or 'random'"):
+                rob.body_sex(bad, 7)
+
+    def test_random_needs_a_whole_number_seed(self):
+        for bad in (None, 1.5, '7', -1, True):
+            with self.assertRaisesRegex(ValueError, 'seed'):
+                rob.body_sex('random', bad)
+
+    def test_a_run_records_its_seed_its_sex_and_whether_it_was_random(self):
+        self.assertEqual(rob.sex_for_run('random', 192),
+                         {'sex': 0.0, 'sex_random': True, 'seed': 192})
+        self.assertEqual(rob.sex_for_run(0.5, None),
+                         {'sex': 0.5, 'sex_random': False, 'seed': None})
+        self.assertEqual(rob.sex_for_run('1', 42), {'sex': 1.0, 'sex_random': False, 'seed': 42})
+
+    def test_a_random_run_without_a_seed_gets_a_fresh_one(self):
+        runs = [rob.sex_for_run('random') for _ in range(20)]
+        for run in runs:
+            self.assertTrue(run['sex_random'])
+            self.assertIsInstance(run['seed'], int)
+            self.assertTrue(0 <= run['seed'] < rob.SEED_LIMIT)
+            self.assertEqual(run['sex'], rob.body_sex('random', run['seed']))
+        self.assertGreater(len({run['seed'] for run in runs}), 1)
+
+    def test_sex_labels(self):
+        self.assertEqual(rob.sex_label(0.0), 'female')
+        self.assertEqual(rob.sex_label(1.0), 'male')
+        self.assertEqual(rob.sex_label(0.5), '0.5 (0 female, 1 male)')
+
 
 def _bent_arm(bend_deg=45.0):
     """A toy left arm in decimetres: upper arm down -Y to the elbow at the
@@ -852,6 +927,19 @@ class BodyArgs(unittest.TestCase):
             rob.parse_args(self.BASE + ['--body', 'makehuman', '--makehuman-data', '/mh',
                                         '--mh-sex', '1.5'])
 
+    def test_sex_is_random_by_default_with_an_optional_seed(self):
+        args = rob.parse_args(self.BASE)
+        self.assertEqual((args.mh_sex, args.seed), ('random', None))
+        self.assertEqual((args.mh_muscle, args.mh_weight), (0.5, 0.5))  # not randomised
+        args = rob.parse_args(self.BASE + ['--mh-sex', 'random', '--seed', '42'])
+        self.assertEqual((args.mh_sex, args.seed), ('random', 42))
+        self.assertEqual(rob.parse_args(self.BASE + ['--mh-sex', '0.5']).mh_sex, 0.5)
+        self.assertEqual(rob.parse_args(self.BASE + ['--seed', '0']).seed, 0)
+        for bad in (['--mh-sex', 'banana'], ['--mh-sex', '-0.1'], ['--mh-sex', 'nan'],
+                    ['--seed', '-1'], ['--seed', '1.5'], ['--seed', 'abc']):
+            with self.assertRaises(SystemExit):
+                rob.parse_args(self.BASE + bad)
+
     def test_framing_includes_the_hand_only_for_the_makehuman_arm(self):
         # (centre, half-height) along the arm, cm from the wrist
         self.assertEqual(rob.camera_frame('parametric', 25.0), (12.5, 14.0))
@@ -871,7 +959,7 @@ class SkinTone(unittest.TestCase):
     BASE = ['--', '--image', 'a.png', '--width-cm', '12', '--out', 'r']
 
     def test_presets_are_neutral_names_ordered_light_to_deep(self):
-        self.assertEqual(rob.DEFAULT_SKIN_TONE, 'light-warm-brown')
+        self.assertEqual(rob.DEFAULT_SKIN_TONE, 'warm-brown')
         self.assertIn(rob.DEFAULT_SKIN_TONE, rob.SKIN_TONES)
         self.assertEqual(rob.SKIN_TONES['light-peach'], (201, 157, 128))  # the earlier default
         self.assertGreaterEqual(len(rob.SKIN_TONES), 4)
@@ -882,15 +970,23 @@ class SkinTone(unittest.TestCase):
         lum = [rob.luminance(rob.srgb8_to_linear(rgb)) for rgb in rob.SKIN_TONES.values()]
         self.assertEqual(lum, sorted(lum, reverse=True))
 
-    def test_the_default_is_browner_and_warmer_than_the_old_peach(self):
+    def test_light_warm_brown_is_browner_and_warmer_than_the_old_peach(self):
         (r, g, b), (r0, g0, b0) = rob.SKIN_TONES['light-warm-brown'], rob.SKIN_TONES['light-peach']
         self.assertLess(rob.luminance(_lin('light-warm-brown')), rob.luminance(_lin('light-peach')))
         self.assertGreater(g / b, g0 / b0)  # more yellow: warm, not pink
         self.assertLessEqual(r / g, r0 / g0 + 0.02)  # no redder than the peach
-        # The comparison's neighbours sit either side of it.
+
+    def test_the_default_is_warm_brown_one_step_deeper_than_light_warm_brown(self):
+        self.assertEqual(rob.SKIN_TONES[rob.DEFAULT_SKIN_TONE], (154, 118, 84))
+        self.assertEqual(rob.srgb8_to_linear(rob.SKIN_TONES['warm-brown']),
+                         rob.srgb_hex_to_linear('#9a7654'))
+        self.assertLess(rob.luminance(_lin('warm-brown')), rob.luminance(_lin('light-warm-brown')))
+        (_, g, b), (_, g0, b0) = rob.SKIN_TONES['warm-brown'], rob.SKIN_TONES['light-peach']
+        self.assertGreater(g / b, g0 / b0)  # warm, not pink
+        # Its neighbours, a step lighter and a step deeper, sit either side of it.
         names = list(rob.SKIN_TONES)
-        at = names.index('light-warm-brown')
-        self.assertEqual(names[at - 1:at + 2], ['light-warm-tan', 'light-warm-brown', 'warm-brown'])
+        at = names.index('warm-brown')
+        self.assertEqual(names[at - 1:at + 2], ['light-warm-brown', 'warm-brown', 'medium-brown'])
 
     def test_srgb8_to_linear_agrees_with_the_hex_form(self):
         self.assertEqual(rob.srgb8_to_linear((201, 157, 128)), rob.srgb_hex_to_linear('#c99d80'))
@@ -928,8 +1024,8 @@ class SkinTone(unittest.TestCase):
 
     def test_args_pick_a_preset_an_exact_rgb_or_the_legacy_hex(self):
         args = rob.parse_args(self.BASE)
-        self.assertEqual(args.skin_tone, 'light-warm-brown')
-        self.assertEqual(args.skin_rgb, rob.SKIN_TONES['light-warm-brown'])
+        self.assertEqual(args.skin_tone, 'warm-brown')
+        self.assertEqual(args.skin_rgb, rob.SKIN_TONES['warm-brown'])
         self.assertEqual(rob.parse_args(self.BASE + ['--skin-tone', 'light-peach']).skin_rgb,
                          (201, 157, 128))
         args = rob.parse_args(self.BASE + ['--skin-rgb', '180,140,100'])
