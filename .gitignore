@@ -90,3 +90,6 @@ artifacts/
 /server/.env
 /server/.env.local
 /server/.data/
+
+# Python bytecode from scripts/blender (Blender desktop tooling).
+__pycache__/
