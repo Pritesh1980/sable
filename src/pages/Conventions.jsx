@@ -59,10 +59,12 @@ function PastEditionNote({ convention }) {
 
 // Days from a listings site rather than the show itself: worth checking
 // before booking travel.
+const UNCONFIRMED_DATE_NOTE = 'Dates from a listings site — not yet confirmed by the show.'
+
 function UnconfirmedNote() {
   return (
     <p className="text-[0.6875rem] font-mono text-cream-muted/60 tracking-wide mt-1">
-      Dates from a listings site — not yet confirmed by the show.
+      {UNCONFIRMED_DATE_NOTE}
     </p>
   )
 }
@@ -517,11 +519,15 @@ export default function Conventions({
       onAddCalendar: (edition) => {
         const handles = artists.filter((a) => edition.attendingArtistIds.includes(a.id) && a.handle)
           .map((a) => `@${a.handle}`)
-        const description = [edition.url, handles.length ? `Seeing: ${handles.join(', ')}` : ''].filter(Boolean).join('\n')
+        const description = [
+          edition.unconfirmed ? UNCONFIRMED_DATE_NOTE : '',
+          edition.url,
+          handles.length ? `Seeing: ${handles.join(', ')}` : '',
+        ].filter(Boolean).join('\n')
         downloadCalendar(buildIcs([{
           title: edition.name, location: edition.location,
           startDate: edition.startDate, endDate: edition.endDate, description,
-        }]), `sable-${edition.id}-${edition.year}.ics`)
+        }], { idFactory: () => `sable-${edition.id}-${edition.year}` }), `sable-${edition.id}-${edition.year}.ics`)
       },
       artists,
       attendingIds: view.attendingArtistIds,

@@ -35,4 +35,10 @@ describe('buildIcs', () => {
     expect(() => buildIcs([{ ...event, startDate: null }], fixed)).toThrow()
     expect(() => buildIcs([{ ...event, startDate: '2027-02-30' }], fixed)).toThrow()
   })
+
+  it('rejects null timed starts instead of exporting a 1970 event', () => {
+    expect(() => buildIcs([{
+      title: 'Session', startAt: null, endAt: '2027-03-13T10:00:00Z',
+    }], fixed)).toThrow('Invalid calendar time range')
+  })
 })

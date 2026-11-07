@@ -21,7 +21,9 @@ on its card. It downloads an all-day `.ics` event for the year shown, including 
 venue, the show's web address (when known), and any saved artists you marked as
 attending that edition. Month-only *(TBC)* dates and past editions have no button.
 The file is made on your device; Sable does not get access to your calendar. Check
-unconfirmed dates with the show before making travel plans. On an installed iPhone
+unconfirmed dates with the show before making travel plans; the exported event carries
+the same warning. Exporting the same edition again uses the same calendar event ID.
+On an installed iPhone
 PWA, the Calendar hand-off still needs checking on a real phone.
 
 **Mark who's going.** Each card has a *Your artists attending* line — tap **Edit** to toggle

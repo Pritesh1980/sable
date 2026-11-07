@@ -181,6 +181,32 @@ describe('Conventions editions', () => {
     expect(card.queryByRole('button', { name: 'Add to calendar' })).toBeNull()
   })
 
+  it('keeps an edition UID when its saved attendees change on re-export', () => {
+    const downloadCalendar = vi.fn()
+    const first = renderConventions({
+      downloadCalendar,
+      conventionOverrides: { 'uk-tattoo-fest@2027': ['zoia.ink'] },
+    })
+    fireEvent.click(cardFor(localConv).getByRole('button', { name: 'Add to calendar' }))
+    first.unmount()
+    renderConventions({
+      downloadCalendar,
+      conventionOverrides: { 'uk-tattoo-fest@2027': ['oscarakermo'] },
+    })
+    fireEvent.click(cardFor(localConv).getByRole('button', { name: 'Add to calendar' }))
+    const [firstIcs, secondIcs] = downloadCalendar.mock.calls.map(([ics]) => ics)
+    expect(firstIcs).toContain('Seeing: @zoia.ink')
+    expect(secondIcs).toContain('Seeing: @oscarakermo')
+    expect(firstIcs.match(/^UID:.+$/m)?.[0]).toBe(secondIcs.match(/^UID:.+$/m)?.[0])
+  })
+
+  it('carries the unconfirmed-date warning into the calendar event', () => {
+    const downloadCalendar = vi.fn()
+    renderConventions({ downloadCalendar })
+    fireEvent.click(cardFor(localConv).getByRole('button', { name: 'Add to calendar' }))
+    expect(downloadCalendar.mock.calls[0][0]).toContain('not yet confirmed by the show')
+  })
+
   it('omits the action for a TBC edition without known days', () => {
     renderConventions()
     expect(cardFor(bigLondonShow).queryByRole('button', { name: 'Add to calendar' })).toBeNull()

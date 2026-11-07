@@ -56,6 +56,9 @@ export function buildIcs(events, { now = new Date(), idFactory = randomId } = {}
       start = `DTSTART;VALUE=DATE:${dateValue(first)}`
       end = `DTEND;VALUE=DATE:${dateValue(last)}`
     } else {
+      if ([event.startAt, event.endAt].some((value) => !(value instanceof Date || typeof value === 'string'))) {
+        throw new Error('Invalid calendar time range')
+      }
       const first = new Date(event.startAt)
       const last = new Date(event.endAt)
       if (Number.isNaN(first.getTime()) || Number.isNaN(last.getTime()) || last <= first) throw new Error('Invalid calendar time range')
