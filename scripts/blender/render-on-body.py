@@ -1539,6 +1539,28 @@ def _fraction(text):
     return value
 
 
+LABEL_CHARS = frozenset('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-')
+
+
+def _label(text):
+    if not text or text[0] == '.' or not set(text) <= LABEL_CHARS:
+        raise argparse.ArgumentTypeError(
+            f'must be a plain file name (letters, digits, . _ -), got {text!r}')
+    return text
+
+
+def view_filename(view, label):
+    """A view's PNG: ``outer.png``, or ``koi-12cm-outer.png`` with ``--label``,
+    so renders of several sizes stay apart once they leave their folders."""
+    return f'{label}-{view}.png' if label else f'{view}.png'
+
+
+def params_filename(label):
+    """``params.json``, or ``koi-12cm-params.json`` with ``--label``, so runs of
+    several sizes can share one folder."""
+    return f'{label}-params.json' if label else 'params.json'
+
+
 def _views(text):
     views = [v.strip() for v in text.split(',') if v.strip()]
     if not views:
@@ -1645,6 +1667,9 @@ def parse_args(argv):
                           'inner front,front-three-quarter); forearm: '
                         + ','.join(VIEWS) + '; either: ' + CLOSE_UP
                         + ' (framed on the design; in every default)')
+    p.add_argument('--label', type=_label, default=None,
+                   help='prefix for the view files and params.json (koi-12cm gives '
+                        'koi-12cm-outer.png and koi-12cm-params.json)')
     args = p.parse_args(own)
     place = args.placement
     if args.side is None:
@@ -2498,7 +2523,7 @@ def main(argv=None):
         at, away = (close_target, close_dist) if view == CLOSE_UP else (target, dist)
         cam.location = tuple(t + away * c for t, c in zip(at, d))
         cam.rotation_euler = _look_at(Matrix, Vector, cam.location, at)
-        path = os.path.join(out_dir, f'{view}.png')
+        path = os.path.join(out_dir, view_filename(view, args.label))
         scene.render.filepath = path
         start = time.perf_counter()
         bpy.ops.render.render(write_still=True)
@@ -2556,7 +2581,7 @@ def main(argv=None):
                      'scale': round(body.pop('scale'), 4)},
             **body,
         }
-    with open(os.path.join(out_dir, 'params.json'), 'w', encoding='utf-8') as fh:
+    with open(os.path.join(out_dir, params_filename(args.label)), 'w', encoding='utf-8') as fh:
         json.dump(params, fh, indent=2)
         fh.write('\n')
     for w in warnings:
