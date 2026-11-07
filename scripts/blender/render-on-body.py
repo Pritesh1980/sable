@@ -27,6 +27,7 @@ without Blender: ``python3 -m unittest discover -s scripts/blender``.
 """
 
 import argparse
+import atexit
 import bisect
 import json
 import math
@@ -34,6 +35,7 @@ import os
 import random
 import secrets
 import sys
+import tempfile
 import time
 
 # --------------------------------------------------------------------------
@@ -64,6 +66,24 @@ def circumference_at(t, wrist_cm, elbow_cm):
     Beyond the measured section the arm continues as a straight tube, so the
     renders can crop the ends out of frame."""
     return wrist_cm + (elbow_cm - wrist_cm) * ease_profile(t)
+
+
+#: Upper-arm tape positions, as fractions of elbow crease → top of shoulder:
+#: above the elbow an eighth of the way up, round the biceps half-way.
+ABOVE_ELBOW_AT = 0.125
+BICEPS_AT = 0.5
+
+
+def taper_t(y_cm, length_cm, placement='forearm'):
+    """Taper fraction (for ``circumference_at``) at ``y_cm`` along the limb.
+
+    The forearm's measurements are taken at its two ends. The upper arm's are
+    taken at fixed tape positions, so the profile runs from the above-elbow
+    measurement there to the biceps measurement half-way up, then holds."""
+    if placement != 'upper-arm':
+        return y_cm / length_cm
+    lo, hi = ABOVE_ELBOW_AT * length_cm, BICEPS_AT * length_cm
+    return (y_cm - lo) / (hi - lo)
 
 
 def aspect_at(t, narrow=WRIST_ASPECT, wide=ELBOW_ASPECT):
@@ -186,6 +206,28 @@ def frame_distance(half_extent, focal_mm, sensor_mm):
     return half_extent * focal_mm / (sensor_mm / 2)
 
 
+#: Room round the design in the close-up, and the render's width / height.
+CLOSE_UP_MARGIN = 1.3
+FRAME_ASPECT = 2 / 3
+
+
+def close_up_half_height(width_cm, height_cm, circumference_cm):
+    """Half the close-up's frame height, in cm: the design's height, or the
+    chord its width spans seen square on (the arm's whole width once it wraps
+    past half-way) fitted to the narrower 2:3 frame, whichever needs more,
+    with a margin."""
+    r = circumference_cm / (2 * math.pi)
+    angle = width_cm / r  # radians of arm the design wraps
+    chord = 2 * r * math.sin(angle / 2) if angle < math.pi else 2 * r
+    return CLOSE_UP_MARGIN * max(height_cm / 2, chord / (2 * FRAME_ASPECT))
+
+
+def close_up_distance(half_extent, circumference, focal_mm, sensor_mm):
+    """Camera distance from the arm's axis that frames ``half_extent`` at the
+    skin, which is the arm's radius nearer the camera (any one unit)."""
+    return frame_distance(half_extent, focal_mm, sensor_mm) + circumference / (2 * math.pi)
+
+
 # --------------------------------------------------------------------------
 # Healed ink. The design is turned into a transmittance texture (1 = bare
 # skin, 0 = solid ink, linear light) before rendering; the shader then lays a
@@ -300,6 +342,41 @@ def skin_rim(plane, w, h):
     for y in range(1, h - 1):
         out[y * w] = out[y * w + w - 1] = 1.0
     return out
+
+
+#: --background: what the image's paper is. Sable's own concept cards are light
+#: lines on near-black, where the ink is the light part; auto reads the border.
+BACKGROUNDS = ('auto', 'light', 'dark')
+
+
+def is_dark_background(pixels, w, h):
+    """True when most of the image's outermost ring is dark (median sRGB
+    luminance below 0.5). Transparent pixels count as bare skin, which is light.
+    ``pixels`` are flat RGBA with straight alpha, as ``Image.pixels`` gives."""
+    ring = [i for i in range(w)] + [(h - 1) * w + i for i in range(w)]
+    ring += [y * w + x for y in range(1, h - 1) for x in (0, w - 1)]
+    lums = sorted(pixels[4 * i + 3] * luminance(pixels[4 * i:4 * i + 3])
+                  + (1.0 - pixels[4 * i + 3]) for i in ring)
+    return lums[len(lums) // 2] < 0.5
+
+
+def invert_lightness(pixels):
+    """Flat RGBA with HSL lightness flipped and hue, chroma and alpha kept:
+    each channel moves by 1 − max − min, so a cream line on a black card
+    becomes a dark line on white paper and a red stays the same red."""
+    out = list(pixels)
+    for i in range(0, len(out), 4):
+        r, g, b = out[i:i + 3]
+        d = 1.0 - max(r, g, b) - min(r, g, b)
+        out[i:i + 3] = (r + d, g + d, b + d)
+    return out
+
+
+def flip_for_background(background, pixels, w, h):
+    """Whether to flip the image (``invert_lightness``) before inking it."""
+    if background == 'auto':
+        return is_dark_background(pixels, w, h)
+    return background == 'dark'
 
 
 def ink_planes(pixels, white_point):
@@ -1370,12 +1447,16 @@ UPPER_ARM_VIEW_ANGLES = {
 }
 #: Where each side's design line is, in the same degrees round the arm.
 UPPER_ARM_SIDE_DEG = {'outer': 0.0, 'inner': 90.0}
-PLACEMENT_VIEWS = {'forearm': VIEWS, 'upper-arm': tuple(UPPER_ARM_VIEW_ANGLES)}
+#: A view of either placement: square on to the design, framed on it, so lines
+#: finer than a pixel of the arm views (about 0.44 mm) read at their weight.
+CLOSE_UP = 'close-up'
+PLACEMENT_VIEWS = {'forearm': VIEWS + (CLOSE_UP,),
+                   'upper-arm': tuple(UPPER_ARM_VIEW_ANGLES) + (CLOSE_UP,)}
 DEFAULT_SIDE = {'forearm': 'inner', 'upper-arm': 'outer'}
 DEFAULT_VIEWS = {
-    ('forearm', 'inner'): VIEWS, ('forearm', 'outer'): VIEWS,
-    ('upper-arm', 'outer'): ('outer', 'front-three-quarter', 'back-three-quarter'),
-    ('upper-arm', 'inner'): ('front', 'front-three-quarter'),
+    ('forearm', 'inner'): VIEWS + (CLOSE_UP,), ('forearm', 'outer'): VIEWS + (CLOSE_UP,),
+    ('upper-arm', 'outer'): ('outer', 'front-three-quarter', 'back-three-quarter', CLOSE_UP),
+    ('upper-arm', 'inner'): ('front', 'front-three-quarter', CLOSE_UP),
 }
 #: Each placement's tape measurements, narrow end, wide end, then length,
 #: with their defaults in cm.
@@ -1410,16 +1491,27 @@ def arm_profile(args):
 def view_angles(placement, side, view):
     """(degrees round the arm from the design's line towards +x, tilt) of a
     view. On the upper arm a view is a place round the body, so it is the
-    same place whichever side carries the design."""
+    same place whichever side carries the design. The close-up faces the
+    design line."""
+    if view == CLOSE_UP:
+        return 0.0, 0.0
     if placement == 'forearm':
         return VIEW_ANGLES[view]
     around, tilt = UPPER_ARM_VIEW_ANGLES[view]
     return UPPER_ARM_SIDE_DEG[side] - around, tilt
 
 
+def _finite(text):
+    """A float that is a real number: argparse's float takes 'nan' and 'inf'."""
+    value = float(text)
+    if not math.isfinite(value):
+        raise argparse.ArgumentTypeError(f'must be a finite number, got {text}')
+    return value
+
+
 def _positive(kind):
     def check(text):
-        value = kind(text)
+        value = _finite(text) if kind is float else kind(text)
         if value <= 0:
             raise argparse.ArgumentTypeError(f'must be positive, got {text}')
         return value
@@ -1427,21 +1519,21 @@ def _positive(kind):
 
 
 def _non_negative(text):
-    value = float(text)
+    value = _finite(text)
     if value < 0:
         raise argparse.ArgumentTypeError(f'must not be negative, got {text}')
     return value
 
 
 def _unit(text):
-    value = float(text)
+    value = _finite(text)
     if not 0 < value <= 1:
         raise argparse.ArgumentTypeError(f'must be in (0, 1], got {text}')
     return value
 
 
 def _fraction(text):
-    value = float(text)
+    value = _finite(text)
     if not 0 <= value <= 1:
         raise argparse.ArgumentTypeError(f'must be in [0, 1], got {text}')
     return value
@@ -1520,7 +1612,7 @@ def parse_args(argv):
                    help='forearm: circumference just below the elbow (default 26)')
     p.add_argument('--length-cm', type=_positive(float),
                    help='forearm: wrist to elbow (default 25)')
-    p.add_argument('--centre-cm', type=float, default=None,
+    p.add_argument('--centre-cm', type=_finite, default=None,
                    help='design centre, measured from the elbow crease (upper arm) or the '
                         'wrist (forearm); default: half-way')
     p.add_argument('--design-up', choices=('shoulder', 'elbow', 'wrist'), default=None,
@@ -1538,6 +1630,10 @@ def parse_args(argv):
                    help='healed ink only: how far lines have spread into the skin (Gaussian sigma)')
     p.add_argument('--ink-strength', type=_unit, default=0.92,
                    help='how dark solid black is: 1 = pure black; lower lets a little skin through')
+    p.add_argument('--background', choices=BACKGROUNDS, default='auto',
+                   help='the image\'s paper: light (dark ink on white), dark (light lines on '
+                        'black, like Sable\'s concept cards: flipped before inking) or auto '
+                        '(read from the border)')
     p.add_argument('--white-point', type=_unit, default=0.9,
                    help='sRGB level at or above which the image counts as bare skin (off-white paper)')
     p.add_argument('--samples', type=_positive(int), default=64)
@@ -1547,7 +1643,8 @@ def parse_args(argv):
                    help='comma-separated views; upper arm: ' + ','.join(UPPER_ARM_VIEW_ANGLES)
                         + ' (default outer,front-three-quarter,back-three-quarter; with --side '
                           'inner front,front-three-quarter); forearm: '
-                        + ','.join(VIEWS))
+                        + ','.join(VIEWS) + '; either: ' + CLOSE_UP
+                        + ' (framed on the design; in every default)')
     args = p.parse_args(own)
     place = args.placement
     if args.side is None:
@@ -1741,7 +1838,7 @@ def build_arm(bpy, args, height_cm, centre_cm, up):
     n = RING_VERTS
     verts, ring_info = [], []
     for y in rings:
-        t = y / L
+        t = taper_t(y, L, args.placement)
         circ = circumference_at(t, narrow_cm, wide_cm)
         a, b = semi_axes_for(circ, aspect_at(t, *aspects))
         pts = ring_points(a, b, n)
@@ -1899,8 +1996,8 @@ def build_makehuman_arm(bpy, args, width_cm, height_cm, centre_cm, up, *, sex):
 #: half-way, round the biceps (the usual mid-upper-arm site). Fixed places,
 #: not the narrowest and widest: MakeHuman's upper arm narrows all the way
 #: down into the elbow and widens all the way up into the armpit.
-MH_ABOVE_ELBOW_AT = 0.125
-MH_BICEPS_AT = 0.5
+MH_ABOVE_ELBOW_AT = ABOVE_ELBOW_AT
+MH_BICEPS_AT = BICEPS_AT
 #: The upper arm's straight axis is fitted to its sections' centres between
 #: these fractions, clear of the elbow and of the armpit.
 MH_AXIS_RANGE = (0.15, 0.55)
@@ -2257,6 +2354,39 @@ def configure_render(bpy, args):
     return denoiser, f'{view.view_transform} / {view.look}'
 
 
+def _remove_quietly(path):
+    try:
+        os.remove(path)
+    except OSError:
+        pass
+
+
+def flip_image_for_background(image, background):
+    """Flip a dark-background image in place (see ``flip_for_background``) so
+    that both ink paths read dark ink on light paper. True when flipped."""
+    from array import array  # noqa: PLC0415
+
+    w, h = image.size
+    pixels = array('f', bytes(16 * w * h))
+    image.pixels.foreach_get(pixels)
+    if not flip_for_background(background, pixels, w, h):
+        return False
+    image.pixels.foreach_set(array('f', invert_lightness(pixels)))
+    # Save the flip and point the image at it: Image.copy() (the healed path's
+    # downscale) re-reads the file and would drop an in-memory edit.
+    fd, path = tempfile.mkstemp(prefix='sable-flipped-', suffix='.png')
+    os.close(fd)
+    atexit.register(_remove_quietly, path)
+    image.filepath_raw = path
+    image.file_format = 'PNG'
+    image.save()
+    image.reload()
+    print('[render-on-body] dark background: lightness flipped so the light lines are the ink'
+          + (' (--background light keeps it as it is)' if background == 'auto' else ''),
+          flush=True)
+    return True
+
+
 def main(argv=None):
     import bpy  # noqa: PLC0415 (only inside Blender)
     from mathutils import Matrix, Vector  # noqa: PLC0415
@@ -2275,6 +2405,7 @@ def main(argv=None):
     px_w, px_h = image.size
     if not px_w or not px_h:
         raise SystemExit(f'could not read image: {image_path}')
+    flipped = flip_image_for_background(image, args.background)
 
     narrow_cm, wide_cm, L = arm_profile(args)
     upper_arm = args.placement == 'upper-arm'
@@ -2294,8 +2425,9 @@ def main(argv=None):
         centre_circ = fitted_circumference(fit, centre_cm)
         thinnest = min(fitted_circumference(fit, lo + (hi - lo) * k / 64) for k in range(65))
     else:
-        centre_circ = circumference_at(centre_cm / L, narrow_cm, wide_cm)
-        thinnest = circumference_at(lo / L, narrow_cm, wide_cm)  # the taper only grows
+        centre_circ = circumference_at(taper_t(centre_cm, L, args.placement), narrow_cm, wide_cm)
+        # the taper only grows
+        thinnest = circumference_at(taper_t(lo, L, args.placement), narrow_cm, wide_cm)
     warnings = design_warnings(args.placement, width_cm=width_cm, lo=lo, hi=hi, length_cm=L,
                                thinnest_cm=thinnest, centre_cm_round=centre_circ)
 
@@ -2357,11 +2489,15 @@ def main(argv=None):
     denoiser, colour = configure_render(bpy, args)
 
     views = {}
+    close_half = close_up_half_height(width_cm, height_cm, centre_circ)
+    close_target = (0.0, centre_cm * CM, 0.0)  # the design's centre, on the axis
+    close_dist = close_up_distance(close_half * CM, centre_circ * CM, FOCAL_MM, SENSOR_MM)
     for view in args.views:
         around, tilt = view_angles(args.placement, args.side, view)
         d = _direction(around, tilt)
-        cam.location = tuple(t + dist * c for t, c in zip(target, d))
-        cam.rotation_euler = _look_at(Matrix, Vector, cam.location, target)
+        at, away = (close_target, close_dist) if view == CLOSE_UP else (target, dist)
+        cam.location = tuple(t + away * c for t, c in zip(at, d))
+        cam.rotation_euler = _look_at(Matrix, Vector, cam.location, at)
         path = os.path.join(out_dir, f'{view}.png')
         scene.render.filepath = path
         start = time.perf_counter()
@@ -2392,11 +2528,13 @@ def main(argv=None):
         'ink': ink,
         'ink_strength': args.ink_strength,
         'white_point': args.white_point,
+        'background': {'setting': args.background, 'flipped': flipped},
         'render': {
             'blender': bpy.app.version_string, 'engine': 'CYCLES', 'device': 'CPU',
             'samples': args.samples, 'denoiser': denoiser, 'colour': colour,
             'resolution': [scene.render.resolution_x, scene.render.resolution_y],
             'lens_mm': FOCAL_MM, 'camera_distance_cm': round(dist / CM, 1),
+            'close_up_frame_cm': round(2 * close_half, 1),
         },
         'views': views,
         'warnings': warnings,

@@ -22,7 +22,9 @@ an exact colour: see [Skin tone](#skin-tone).
 
 ## Install Blender
 
-Download Blender from blender.org (or `brew install --cask blender`). The script runs
+Download Blender from blender.org (or `brew install --cask blender`). On an Intel Mac
+that gives **4.5 LTS**, the last release for Intel: Blender 5 is Apple silicon only.
+The script runs
 headless, with no window, through the app's own binary:
 
 ```sh
@@ -30,16 +32,20 @@ BLENDER=/Applications/Blender.app/Contents/MacOS/Blender
 "$BLENDER" --version
 ```
 
-It has been run headless with Blender 4.0.2 (Ubuntu's package) and 5.2.3 LTS (the
-official `bpy` build). Any 4.x or 5.x should work.
+It has been run headless with Blender 4.0.2 (Ubuntu's package), 4.5.15 LTS (macOS,
+Intel) and 5.2.3 LTS (the official `bpy` build). Any 4.x or 5.x should work.
 
 ## Render a concept
 
 1. **Get the image out of Sable.** On the concept (or a saved result), choose **Refine
    this → Export source image**, which saves it as a full-size PNG. This works in every
    build, the demo included, and needs a connection only if the image isn't stored on
-   this device. Move the file to the Mac (AirDrop is fine). Black linework on white paper works best: white
-   means bare skin, and colour multiplies over the skin like ink. Transparent PNGs work too.
+   this device. Move the file to the Mac (AirDrop is fine). Dark linework on white paper is
+   what the script inks: white means bare skin, and colour multiplies over the skin like
+   ink. Transparent PNGs work too. Sable's own concept cards are the other way round,
+   light lines on near-black; the script spots a dark background from the image's border
+   and flips its lightness (keeping colours' hue) before inking, so they work as they
+   are. `--background light|dark` overrides the guess.
 2. **Measure your upper arm** in cm, arm relaxed at your side: from the top of the
    shoulder (the bony point at its outer edge) down to the elbow crease; round the arm
    half-way between the two, over the biceps; and round the arm just above the elbow,
@@ -75,9 +81,10 @@ commit them.
 | `--ink` | `healed` | `healed` (settled under the skin) or `fresh` (crisp, just inked). See below. |
 | `--ink-spread-mm` | 0.15 | Healed only: how far lines have spread into the skin, in mm (a Gaussian sigma). |
 | `--ink-strength` | 0.92 | How dark solid black is: 1 is pure black; lower lets a little skin through. |
+| `--background` | `auto` | The image's paper: `light` (dark ink on white), `dark` (light lines on black, like Sable's concept cards, flipped before inking) or `auto` (read from the border). |
 | `--white-point` | 0.9 | Paper at or above this sRGB level counts as bare skin, so off-white scans don't tint the arm. |
 | `--samples` / `--size` | 64 / 1024 | Render quality; `--size` is the long edge. |
-| `--views` | three, see below | Upper arm: any of `outer,front-three-quarter,back-three-quarter,front`. Forearm: any of `top,three-quarter,side`. |
+| `--views` | see below | Upper arm: any of `outer,front-three-quarter,back-three-quarter,front`. Forearm: any of `top,three-quarter,side`. Either: `close-up`. |
 | `--body` | `parametric` | `parametric` (a smooth tapered tube) or `makehuman` (a real body). |
 | `--makehuman-data` | none | MakeHuman checkout (its root or its `makehuman/data` folder). Required with `--body makehuman`. |
 | `--mh-sex` | `random` | MakeHuman only: `random` draws a fully female or a fully male body, with even odds, from `--seed`. A number from 0 (female) to 1 (male) sets it instead; MakeHuman's own default is 0.5. See [Body sex](#body-sex). |
@@ -97,6 +104,14 @@ and `front` looks straight at the front of the arm. The defaults are `outer` and
 three-quarter views; with `--side inner`, `front` and `front-three-quarter`. With the
 arm hanging at the side, the chest hides the inside of the arm, so no view looks from
 there. The forearm keeps `top` (straight at the design), `three-quarter` and `side`.
+
+Every default also ends with `close-up`: square on to the design and framed on it, with
+30% to spare. The arm views frame the whole limb (about 45 cm of it on the MakeHuman
+upper arm, so a pixel is about 0.44 mm of skin), and fine linework is thinner than a
+pixel there: it renders faint, as it would in a photo from that far. The close-up is
+about 2.5 times nearer for a 12 cm design, so the lines read at their weight. Its frame
+height is in `params.json` (`render.close_up_frame_cm`). The arm views stay framed by
+the arm alone, so two designs on one arm still compare like for like.
 
 ## Skin tone
 
@@ -165,8 +180,9 @@ gigabytes of memory.
 
 ## What comes out
 
-- One PNG per view (`outer.png`, `front-three-quarter.png`, `back-three-quarter.png` by
-  default; `top.png`, `three-quarter.png` and `side.png` on the forearm), in 2:3
+- One PNG per view (`outer.png`, `front-three-quarter.png`, `back-three-quarter.png` and
+  `close-up.png` by default; `top.png`, `three-quarter.png`, `side.png` and
+  `close-up.png` on the forearm), in 2:3
   portrait like Sable's cards.
 - `params.json` records the inputs, the arm's circumference under the design, how far
   round the arm the design wraps (in degrees), the skin, the ink settings, render
@@ -209,22 +225,31 @@ PNGs to the iPhone first), because device-local builds don't sync.
 To tweak a scene by chat instead of re-running the script, connect an MCP client
 (Claude Code or Claude Desktop) to Blender:
 
-- **Official:** the Blender Foundation's Blender Lab MCP server
-  (`projects.blender.org/lab/blender_mcp`, documented at `blender.org/lab/mcp-server`).
-  It is reported to need Blender 5.1 or newer plus its add-on.
-- **Community:** `blender-mcp` by Siddharth Ahuja (`github.com/ahujasid/blender-mcp`),
-  renamed *MCP for Blender* in September 2026. It is a Blender add-on plus an MCP server
-  that the client launches.
+- **Official:** the Blender Lab MCP server (`blender.org/lab/mcp-server`, source at
+  `projects.blender.org/lab/blender_mcp`). It needs **Blender 5.1 or newer** and its
+  add-on, installed from the Blender Lab extensions repository (dragging the link into
+  Blender twice: once for the repository, once for the add-on). The server comes as an
+  `.mcpb` bundle for clients that take one, or from source. **Not usable on an Intel
+  Mac:** Blender 5 runs on Apple silicon only, and 4.5 LTS is the last Intel build.
+- **Community:** *MCP for Blender* by Siddharth Ahuja (`github.com/ahujasid/mcp-for-blender`,
+  formerly `blender-mcp`; MIT; not affiliated with the Blender Foundation). It needs
+  Blender 3.0 or newer, so it runs on 4.5 LTS. With [uv](https://docs.astral.sh/uv/)
+  installed: `claude mcp add blender uvx mcp-for-blender`, then
+  `uvx mcp-for-blender install-addon` and enable **Interface: MCP for Blender** in
+  Edit → Preferences → Add-ons. The add-on listens on `localhost:9876`. Its README calls
+  telemetry opt-in, but an anonymous usage record (tool names, timings, versions, OS) is
+  sent by default; set `DISABLE_TELEMETRY=true` in the server's environment to stop it.
+  The README also offers a `curl … | sh` installer: prefer the steps above.
 
-These details come from secondary sources: blender.org could not be reached when this
-was written (Nov 2026). Check both projects before installing, and follow each one's
-README for current install steps; they change often.
+Checked against both projects' pages in Nov 2026; follow each README for current
+install steps, as they change often.
 
-**Both can run arbitrary Python inside Blender**, so they can reach anything Blender can:
-your files and the network. Keep them local (never expose their port beyond
-`localhost`) and connect only clients you trust. Don't open `.blend` files from
-untrusted sources: a `.blend` can carry scripts. Keep **Auto Run Python Scripts** off
-(Preferences → Save & Load).
+**Both run arbitrary Python inside Blender**, so they can reach anything Blender can:
+your files and the network. Blender Lab's own page warns that its server runs
+LLM-generated code "without any guards" and suggests a virtual machine. Keep them local
+(never expose the port beyond `localhost`) and connect only clients you trust. Don't
+open `.blend` files from untrusted sources: a `.blend` can carry scripts. Keep **Auto
+Run Python Scripts** off (Preferences → Save & Load).
 
 ## A real arm: MakeHuman
 
@@ -500,7 +525,6 @@ Building and fitting takes about a second for the forearm and 1.5 s for the whol
   male; an in-between body needs a number for `--mh-sex`.
 - Only the left arm. MakeHuman's mesh is symmetric, so a right arm is a mirrored copy
   of the same data.
-- Not run on macOS yet: run in Linux with Blender 4.0.2 and the bpy 5.2.3 build.
 - At the default 1024 px a millimetre of skin is about 2.3 px on the upper arm, so the
   0.15 mm healed spread is barely visible. It shows at `--size 2048`.
 - Other placements (shoulder blade, calf) need their own cut of the mesh.
