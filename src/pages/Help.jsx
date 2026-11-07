@@ -84,6 +84,7 @@ const SECTIONS = [
     steps: [
       'Drawer → Radar lists conventions, nearest to Milton Keynes first, with dates, distance and a link to each event.',
       'Each card opens on the next edition of the show. Tap a year under the dates to switch: attendance, the artist index and the winners all belong to that year, and an earlier edition is kept as a record of who was there.',
+      'For an upcoming edition with known days, tap Add to calendar to download an all-day .ics event with the venue, show link and the saved artists you marked as attending that year. TBC dates and past editions have no calendar button. Check unconfirmed dates with the show before travel.',
       'Dates a show hasn’t confirmed yet say so ("not yet confirmed by the show", or the usual month with TBC), so check the show’s site before booking travel. Once the latest edition is over, the card says "This edition has passed".',
       'On each convention card, tap Edit under "Your artists attending" to toggle which of your saved artists are appearing there.',
       'Where an artist is attending a convention, you will see it on their detail card and on the Pipeline page.',

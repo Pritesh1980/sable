@@ -160,6 +160,31 @@ describe('Conventions editions', () => {
     expect(cardFor(freeze).getByText(/not yet confirmed/i)).toBeInTheDocument()
     expect(cardFor(bigLondonShow).queryByText(/not yet confirmed/i)).toBeNull()
   })
+
+  it('downloads the visible upcoming edition with its own attendees, not last year’s', () => {
+    const downloadCalendar = vi.fn()
+    renderConventions({
+      downloadCalendar,
+      conventionOverrides: { 'uk-tattoo-fest@2026': ['zoia.ink'], 'uk-tattoo-fest@2027': ['oscarakermo'] },
+    })
+    const card = cardFor(localConv)
+    fireEvent.click(card.getByRole('button', { name: 'Add to calendar' }))
+    expect(downloadCalendar).toHaveBeenCalledTimes(1)
+    const [ics, filename] = downloadCalendar.mock.calls[0]
+    expect(filename).toBe('sable-uk-tattoo-fest-2027.ics')
+    expect(ics).toContain('DTSTART;VALUE=DATE:20270313')
+    expect(ics).toContain('DTEND;VALUE=DATE:20270315')
+    expect(ics).toContain('Seeing: @oscarakermo')
+    expect(ics).not.toContain('zoia.ink')
+    expect(ics).toContain('https://www.uktattoofest.co.uk/')
+    fireEvent.click(card.getByRole('button', { name: /2026/ }))
+    expect(card.queryByRole('button', { name: 'Add to calendar' })).toBeNull()
+  })
+
+  it('omits the action for a TBC edition without known days', () => {
+    renderConventions()
+    expect(cardFor(bigLondonShow).queryByRole('button', { name: 'Add to calendar' })).toBeNull()
+  })
 })
 
 // The Big London Tattoo Show publishes ~500 artists; the index makes that list
