@@ -424,5 +424,423 @@ class Args(unittest.TestCase):
             rob.parse_args(['--', '--image', 'a.png'])
 
 
+class MakeHumanFiles(unittest.TestCase):
+    """Reading MakeHuman's CC0 data files with our own parsers (#192)."""
+
+    OBJ = """# This is a mesh file
+# basemesh hm08
+v 0 0 0
+v 1.5 0 0
+v 1 1 0
+v 0 1 0
+v 5 5 5
+vt 0.1 0.2
+g body
+s off
+f 1/1 2/1 3/1 4/1
+g helper-tights
+f 2 3 5
+g body
+f 1 3 4
+"""
+
+    def test_obj_vertices_and_faces_by_group(self):
+        verts, groups = rob.parse_obj(self.OBJ.splitlines())
+        self.assertEqual(len(verts), 5)
+        self.assertEqual(verts[1], (1.5, 0.0, 0.0))
+        # 0-based indices, texture indices dropped, a repeated group name appends
+        self.assertEqual(groups['body'], [(0, 1, 2, 3), (0, 2, 3)])
+        self.assertEqual(groups['helper-tights'], [(1, 2, 4)])
+
+    def test_target_offsets_skip_comments_and_blank_lines(self):
+        lines = ['# This is a target file for MakeHuman', '#', '', '3 .5 -1 0.25', '0 0 0 -.125']
+        self.assertEqual(rob.parse_target(lines), [(3, (0.5, -1.0, 0.25)), (0, (0.0, 0.0, -0.125))])
+
+    def test_targets_add_weighted_offsets(self):
+        verts = [(0.0, 0.0, 0.0), (1.0, 1.0, 1.0)]
+        moved = rob.apply_targets(verts, [(0.5, [(1, (2.0, 0.0, -2.0))]),
+                                          (0.25, [(0, (4.0, 4.0, 4.0)), (1, (4.0, 0.0, 0.0))])])
+        self.assertEqual(moved, [(1.0, 1.0, 1.0), (3.0, 1.0, 0.0)])
+        self.assertEqual(verts[1], (1.0, 1.0, 1.0))  # the base is not modified
+
+    def test_data_dir_accepts_a_checkout_root_or_its_data_folder(self):
+        import os
+        import tempfile
+        with tempfile.TemporaryDirectory() as root:
+            data = os.path.join(root, 'makehuman', 'data')
+            os.makedirs(os.path.join(data, '3dobjs'))
+            open(os.path.join(data, '3dobjs', 'base.obj'), 'w').close()
+            self.assertEqual(rob.makehuman_data_dir(root), data)
+            self.assertEqual(rob.makehuman_data_dir(data), data)
+            self.assertEqual(rob.makehuman_data_dir(os.path.join(root, 'makehuman')), data)
+            with self.assertRaises(FileNotFoundError):
+                rob.makehuman_data_dir(os.path.join(root, 'elsewhere'))
+
+
+class MakeHumanMacros(unittest.TestCase):
+    """MakeHuman's macro sliders blend targets named by sex, age, muscle and weight."""
+
+    def test_three_way_slider(self):
+        self.assertEqual(rob.three_way(0.5), {'min': 0.0, 'average': 1.0, 'max': 0.0})
+        self.assertEqual(rob.three_way(0.0), {'min': 1.0, 'average': 0.0, 'max': 0.0})
+        self.assertEqual(rob.three_way(1.0), {'min': 0.0, 'average': 0.0, 'max': 1.0})
+        self.assertEqual(rob.three_way(0.25), {'min': 0.5, 'average': 0.5, 'max': 0.0})
+
+    def test_default_build_is_an_even_blend_of_young_adults(self):
+        t = rob.macro_targets()
+        ethnic = {k: w for k, w in t.items() if not k.startswith('macrodetails/universal-')}
+        self.assertEqual(len(ethnic), 6)  # three ethnicities x two sexes
+        self.assertAlmostEqual(sum(ethnic.values()), 1.0)
+        for w in ethnic.values():
+            self.assertAlmostEqual(w, 1 / 6)
+        self.assertIn('macrodetails/caucasian-female-young.target', ethnic)
+        self.assertEqual(
+            {k: w for k, w in t.items() if k.startswith('macrodetails/universal-')},
+            {'macrodetails/universal-female-young-averagemuscle-averageweight.target': 0.5,
+             'macrodetails/universal-male-young-averagemuscle-averageweight.target': 0.5})
+
+    def test_sex_muscle_and_weight_move_the_blend(self):
+        t = rob.macro_targets(sex=1.0, muscle=0.75, weight=0.25)
+        self.assertFalse([k for k in t if '-female-' in k])
+        uni = {k.split('universal-male-young-')[1]: w for k, w in t.items() if 'universal' in k}
+        self.assertEqual(uni, {'averagemuscle-minweight.target': 0.25,
+                               'averagemuscle-averageweight.target': 0.25,
+                               'maxmuscle-minweight.target': 0.25,
+                               'maxmuscle-averageweight.target': 0.25})
+        self.assertAlmostEqual(sum(w for k, w in t.items() if 'universal' not in k), 1.0)
+
+
+def _bent_arm(bend_deg=45.0):
+    """A toy left arm in decimetres: upper arm down -Y to the elbow at the
+    origin, forearm bent towards +Z, hand in the neutral (thumb-forward)
+    position with its palm facing -X, as MakeHuman's rest pose has it."""
+    b = math.radians(bend_deg)
+    fa = (0.0, -math.cos(b), math.sin(b))  # unit, elbow -> wrist
+    radial = (0.0, math.sin(b), math.cos(b))  # little finger -> index, perpendicular to fa
+    wrist = tuple(2.0 * c for c in fa)  # a 20 cm forearm
+
+    def at(base, *terms):
+        return tuple(base[i] + sum(k * v[i] for k, v in terms) for i in range(3))
+
+    joints = {
+        'upperarm': (0.0, 3.0, 0.0),
+        'elbow': (0.0, 0.0, 0.0),
+        'wrist': wrist,
+        'index': at(wrist, (0.5, fa), (0.2, radial)),
+        'little': at(wrist, (0.5, fa), (-0.2, radial)),
+    }
+    points = [
+        (0.0, 1.0, 0.0),                      # 0: upper arm, 10 cm above the elbow
+        at((0, 0, 0), (1.0, fa)),             # 1: mid-forearm on its axis
+        at(wrist, (0.3, (-1.0, 0.0, 0.0))),   # 2: palm side of the wrist
+        at(wrist, (0.3, radial)),             # 3: thumb side of the wrist
+        at((0, 0, 0), (1.0, fa), (0.3, (0.0, -math.sin(b), -math.cos(b)))),  # 4: ulnar mid-forearm
+    ]
+    lower = [0.0, 1.0, 1.0, 1.0, 1.0]
+    return points, lower, joints
+
+
+class MakeHumanPose(unittest.TestCase):
+    """The rest-pose arm is straightened at the elbow, turned palm up and laid
+    along +Y from the wrist like the parametric arm, inner forearm on top."""
+
+    def test_rotate_about_an_axis(self):
+        p = rob.rotate_about((2.0, 0.0, 5.0), (1.0, 0.0, 5.0), (0.0, 0.0, 1.0), math.pi / 2)
+        for got, want in zip(p, (1.0, 1.0, 5.0)):
+            self.assertAlmostEqual(got, want)
+
+    def test_signed_angle(self):
+        self.assertAlmostEqual(rob.signed_angle((1, 0, 0), (0, 1, 0), (0, 0, 1)), math.pi / 2)
+        self.assertAlmostEqual(rob.signed_angle((1, 0, 0), (0, -1, 0), (0, 0, 1)), -math.pi / 2)
+
+    def test_forearm_lies_along_y_from_the_wrist_at_the_requested_length(self):
+        points, lower, joints = _bent_arm()
+        out, info = rob.pose_forearm(points, lower, joints, length_cm=25.0)
+        self.assertAlmostEqual(info['bend_deg'], 45.0)
+        self.assertAlmostEqual(info['forearm_cm'], 20.0)
+        self.assertAlmostEqual(info['scale'], 25.0 / 20.0)
+        x, y, z = out[1]  # mid-forearm: on the axis, half-way
+        self.assertAlmostEqual(x, 0.0)
+        self.assertAlmostEqual(y, 12.5)
+        self.assertAlmostEqual(z, 0.0)
+        x, y, z = out[0]  # the upper arm is straight on past the elbow
+        self.assertAlmostEqual(x, 0.0)
+        self.assertAlmostEqual(y, 25.0 + 12.5)
+        self.assertAlmostEqual(z, 0.0)
+
+    def test_inner_forearm_faces_up_and_the_thumb_is_on_the_right(self):
+        points, lower, joints = _bent_arm()
+        out, info = rob.pose_forearm(points, lower, joints, length_cm=20.0)
+        self.assertAlmostEqual(abs(info['twist_deg']), 90.0)
+        palm, thumb, ulnar = out[2], out[3], out[4]
+        self.assertAlmostEqual(palm[2], 3.0)  # palm side of the wrist is +Z (camera side)
+        self.assertAlmostEqual(palm[0], 0.0)
+        self.assertAlmostEqual(thumb[0], 3.0)  # a left arm palm up: thumb towards +X, not mirrored
+        self.assertAlmostEqual(thumb[2], 0.0)
+        # Supination is spread along the forearm: half-way up, half the turn.
+        self.assertAlmostEqual(ulnar[1], 10.0)
+        self.assertAlmostEqual(ulnar[0], -3.0 * math.sin(math.pi / 4))
+        self.assertAlmostEqual(ulnar[2], -3.0 * math.cos(math.pi / 4))
+
+    def test_outer_forearm_turns_the_arm_over_without_mirroring(self):
+        points, lower, joints = _bent_arm()
+        out, _ = rob.pose_forearm(points, lower, joints, length_cm=20.0, side='outer')
+        self.assertAlmostEqual(out[2][2], -3.0)  # palm now underneath
+        self.assertAlmostEqual(out[3][0], -3.0)  # a rotation about Y, so the thumb swaps sides
+        with self.assertRaises(ValueError):
+            rob.pose_forearm(points, lower, joints, length_cm=20.0, side='front')
+
+
+def _regular_polygon(n, r, centre=(0.0, 0.0), clockwise=False):
+    """n points round a circle, starting on top (+z), going towards +x unless anticlockwise."""
+    sign = -1 if clockwise else 1
+    return [(centre[0] + sign * r * math.sin(2 * math.pi * k / n),
+             centre[1] + r * math.cos(2 * math.pi * k / n)) for k in range(n)]
+
+
+def _tube(ring, ys):
+    """Points and triangles (index triples) of a tube: one copy of the 2-D
+    ``ring`` (x, z) at each y."""
+    n = len(ring)
+    points = [(x, y, z) for y in ys for x, z in ring]
+    tris = []
+    for r in range(len(ys) - 1):
+        for k in range(n):
+            a, b = r * n + k, r * n + (k + 1) % n
+            c, d = b + n, a + n
+            tris += [(a, b, c), (a, c, d)]
+    return points, tris
+
+
+class Contours(unittest.TestCase):
+    """Arc length round a cross-section of an arbitrary mesh."""
+
+    def test_polygon_length(self):
+        self.assertAlmostEqual(rob.polygon_length([(0, 0), (3, 0), (3, 4)]), 12.0)
+        self.assertAlmostEqual(rob.polygon_length([(0, 0), (3, 0), (3, 4)], closed=False), 7.0)
+
+    def test_polygon_centroid_and_area(self):
+        area, (cx, cz) = rob.polygon_centroid([(1, 1), (3, 1), (3, 2), (1, 2)])
+        self.assertAlmostEqual(abs(area), 2.0)
+        self.assertAlmostEqual(cx, 2.0)
+        self.assertAlmostEqual(cz, 1.5)
+
+    def test_section_of_a_tube_is_one_closed_loop(self):
+        ring = _regular_polygon(32, 3.0)
+        points, tris = _tube(ring, [0.0, 1.0, 2.0])
+        loops = rob.section_loops(points, tris, axis=1, level=1.5)
+        self.assertEqual(len(loops), 1)
+        loop, closed = loops[0]
+        self.assertTrue(closed)
+        self.assertEqual(len(loop), 64)  # each quad's diagonal adds a point on the chord
+        self.assertAlmostEqual(rob.polygon_length([(p[0], p[2]) for p in loop]),
+                               rob.polygon_length(ring))
+
+    def test_two_tubes_give_two_loops(self):
+        p1, t1 = _tube(_regular_polygon(12, 1.0), [0.0, 2.0])
+        p2, t2 = _tube(_regular_polygon(12, 1.0, centre=(5.0, 0.0)), [0.0, 2.0])
+        t2 = [tuple(i + len(p1) for i in t) for t in t2]
+        loops = rob.section_loops(p1 + p2, t1 + t2, axis=1, level=1.0)
+        self.assertEqual(sorted(len(lp) for lp, closed in loops if closed), [24, 24])
+
+    def test_arc_round_a_polygon_counts_whole_sides_from_the_top(self):
+        n, r = 12, 2.0
+        side = 2 * r * math.sin(math.pi / n)
+        for clockwise in (False, True):  # either winding gives the same answer
+            table = rob.contour_table(_regular_polygon(n, r, (5.0, -1.0), clockwise), (5.0, -1.0))
+            self.assertAlmostEqual(table[2], n * side)
+            for k in (1, 3, 5):
+                theta = 2 * math.pi * k / n  # vertex k, towards +x
+                self.assertAlmostEqual(rob.arc_at(table, theta), k * side)
+                self.assertAlmostEqual(rob.arc_at(table, -theta), -k * side)
+
+    def test_arc_round_a_circle_is_radius_times_angle(self):
+        r = 21.5 / (2 * math.pi)
+        table = rob.contour_table(_regular_polygon(2048, r), (0.0, 0.0))
+        self.assertAlmostEqual(table[2], 21.5, places=4)
+        for theta in (0.1, 1.0, 2.5, -0.7, -3.0):
+            self.assertAlmostEqual(rob.arc_at(table, theta), r * theta, places=3)
+
+    def test_arc_round_an_ellipse_matches_its_arc_length(self):
+        a, b = rob.semi_axes_for(20.0, 1.35)
+        pts = rob.ring_points(a, b, 1024)
+        table = rob.contour_table([(x, z) for x, z, _ in pts], (0.0, 0.0))
+        self.assertAlmostEqual(table[2], 20.0, places=3)
+        for x, z, arc in pts[::37]:
+            self.assertAlmostEqual(rob.arc_at(table, math.atan2(x, z)), arc, places=3)
+
+    def test_the_seam_is_half_way_round_from_the_top_line(self):
+        # A lopsided section (wider on +x): the underside seam is half the
+        # perimeter round from the top either way, so a design up to the full
+        # circumference fits without being cut early on the narrow side.
+        loop = [(0.0, 1.0), (3.0, 1.0), (3.0, -1.0), (0.0, -1.0), (-1.0, -1.0), (-1.0, 1.0)]
+        table = rob.contour_table(loop, (0.5, 0.0))
+        self.assertAlmostEqual(table[2], 12.0)
+        self.assertAlmostEqual(rob.arc_at(table, math.atan2(2.5, 1.0)), 2.5)  # (3, 1)
+        self.assertAlmostEqual(rob.arc_at(table, math.atan2(-1.5, 1.0)), -1.5)  # (-1, 1)
+        # (2, -1) is 2.5 + 2 + 1 = 5.5 round on the +x side, still under half (6);
+        # (1, -1) would be 6.5 that way, so it is -5.5 the other way, although
+        # both are on the +x side of the centre: the seam is not straight down.
+        self.assertAlmostEqual(rob.arc_at(table, math.atan2(1.5, -1.0)), 5.5)
+        self.assertAlmostEqual(rob.arc_at(table, math.atan2(0.5, -1.0)), -5.5)
+        self.assertAlmostEqual(rob.arc_at(table, math.atan2(-0.5, -1.0)), -4.5)  # (0, -1)
+
+
+class ForearmMapping(unittest.TestCase):
+    """Per-vertex true-size mapping on an arbitrary arm mesh: position along
+    the arm is the axial coordinate, round it the arc from the top line."""
+
+    def test_design_uv_from_cm(self):
+        kw = dict(width_cm=12.0, height_cm=10.0, centre_cm=12.5)
+        self.assertEqual(rob.design_uv_cm(0.0, 12.5, **kw), (0.5, 0.5))
+        u, v = rob.design_uv_cm(6.0, 17.5, **kw)
+        self.assertAlmostEqual(u, 1.0)
+        self.assertAlmostEqual(v, 1.0)
+        u, v = rob.design_uv_cm(6.0, 17.5, up='wrist', **kw)  # rotated, not mirrored
+        self.assertAlmostEqual(u, 0.0)
+        self.assertAlmostEqual(v, 0.0)
+        with self.assertRaises(ValueError):
+            rob.design_uv_cm(0.0, 0.0, up='sideways', **kw)
+
+    def test_design_uv_cm_agrees_with_the_parametric_mapping(self):
+        circ = 21.5
+        for arc, y in ((0.0, 12.5), (4.0, 9.0), (-5.5, 16.0)):
+            for up in ('elbow', 'wrist'):
+                want = rob.design_uv(0.5 + arc / circ, y / 25.0, circumference_cm=circ,
+                                     length_cm=25.0, width_cm=12.0, height_cm=12.0,
+                                     centre_cm=12.5, up=up)
+                got = rob.design_uv_cm(arc, y, width_cm=12.0, height_cm=12.0, centre_cm=12.5, up=up)
+                self.assertAlmostEqual(got[0], want[0])
+                self.assertAlmostEqual(got[1], want[1])
+
+    def test_scale_profile_is_linear_between_stations_and_flat_beyond(self):
+        self.assertAlmostEqual(rob.scale_at(5.0, (2.0, 1.1), (20.0, 0.9)), 1.1 - 0.2 * 3 / 18)
+        self.assertEqual(rob.scale_at(-4.0, (2.0, 1.1), (20.0, 0.9)), 1.1)
+        self.assertEqual(rob.scale_at(30.0, (2.0, 1.1), (20.0, 0.9)), 0.9)
+
+    def test_corner_arcs_unwrap_across_the_underside_seam(self):
+        self.assertEqual(rob.unwrap_seam([9.5, -9.6, 9.8], 20.0), [9.5, 10.4, 9.8])
+        self.assertEqual(rob.unwrap_seam([1.0, -1.0, 0.5], 20.0), [1.0, -1.0, 0.5])
+
+    def _check_vertex_arcs(self, ring_pts, perimeter):
+        # ring_pts: (x, z, arc) evenly spaced, starting on the top line
+        ys = [i * 0.5 for i in range(21)]  # 10 cm of tube
+        points, tris = _tube([(x, z) for x, z, _ in ring_pts], ys)
+        stations = rob.arm_stations(points, tris, 0.0, 10.0, 0.25)
+        n = len(ring_pts)
+        for vi in range(0, len(points), 7):
+            arc, perim = rob.surface_coords(stations, points[vi])
+            want = ring_pts[vi % n][2]
+            if abs(abs(want) - perimeter / 2) > 0.01:  # either sign at the seam itself
+                self.assertAlmostEqual(arc, want, places=2)
+            self.assertAlmostEqual(perim, perimeter, delta=0.01)
+
+    def test_vertex_arcs_on_a_cylinder(self):
+        r = 3.0
+        ring = rob.ring_points(r, r, 96)
+        self._check_vertex_arcs(ring, 96 * 2 * r * math.sin(math.pi / 96))
+
+    def test_vertex_arcs_on_an_ellipse(self):
+        a, b = rob.semi_axes_for(19.0, 1.3)
+        ring = rob.ring_points(a, b, 128)
+        self._check_vertex_arcs(ring, rob.polygon_length([(x, z) for x, z, _ in ring]))
+
+    def test_fit_and_map_hits_the_measured_circumferences_and_true_size(self):
+        # An elliptical tube 18 cm round, refitted to 16 cm at y=2 and 22 cm at y=8;
+        # a 10 cm design must then cover 10 cm of skin round the arm at every height.
+        a, b = rob.semi_axes_for(18.0, 1.3)
+        ring = rob.ring_points(a, b, 128)
+        points, tris = _tube([(x, z) for x, z, _ in ring], [i * 0.25 for i in range(41)])
+        fit = rob.fit_and_map(points, tris, wrist=(2.0, 16.0), elbow=(8.0, 22.0), step=0.25)
+        new = fit['points']
+        self.assertEqual(len(new), len(points))
+        self.assertAlmostEqual(fit['scale'][0][1], 16.0 / fit['before_cm'][0], places=6)
+        mtris = []
+        for t in tris:
+            arcs = rob.unwrap_seam([fit['arcs'][i] for i in t],
+                                   min(fit['perimeters'][i] for i in t))
+            mtris.append(tuple((new[i], rob.design_uv_cm(arc, new[i][1], width_cm=10.0,
+                                                          height_cm=6.0, centre_cm=5.0))
+                               for i, arc in zip(t, arcs)))
+        for y, want in ((2.0, 16.0), (8.0, 22.0), (5.0, 19.0)):
+            whole, _, _ = rob.measure_slice(mtris, 1, y, {})
+            self.assertAlmostEqual(whole, want, delta=0.02)
+        m = rob.measure_design(mtris, height_cm=6.0, centre_cm=5.0)
+        for spot in m['width_round_arm'].values():
+            self.assertAlmostEqual(spot['width_cm'], 10.0, delta=0.02)
+        self.assertAlmostEqual(m['length_along_arm_cm'], 6.0, delta=0.01)
+
+    def test_elbow_station_can_be_the_widest_point_in_a_range(self):
+        # A tube that bulges at y = 6: the elbow measurement belongs there.
+        base, tris = _tube(_regular_polygon(48, 1.0), [i * 0.5 for i in range(21)])
+        points = [((3.0 - abs(y - 6.0) * 0.2) * x, y, (3.0 - abs(y - 6.0) * 0.2) * z)
+                  for x, y, z in base]
+        fit = rob.fit_and_map(points, tris, wrist=(1.0, 15.0), elbow=((4.0, 9.0), 20.0),
+                              step=0.25)
+        self.assertAlmostEqual(fit['scale'][1][0], 6.0)
+
+    def test_wrist_station_can_be_the_narrowest_point_in_a_range(self):
+        base, tris = _tube(_regular_polygon(48, 1.0), [i * 0.5 for i in range(21)])
+        points = [((2.0 + abs(y - 3.0) * 0.2) * x, y, (2.0 + abs(y - 3.0) * 0.2) * z)
+                  for x, y, z in base]
+        fit = rob.fit_and_map(points, tris, wrist=((0.0, 5.0), 15.0), elbow=(9.0, 20.0),
+                              step=0.25)
+        self.assertAlmostEqual(fit['scale'][0][0], 3.0)
+
+    def test_the_hand_scales_as_a_whole_with_the_wrist(self):
+        # Past the wrist station the arm is scaled about it in all three
+        # directions, so the hand keeps its proportions.
+        ring = _regular_polygon(32, 2.0)
+        points, tris = _tube(ring, [i * 0.5 for i in range(-8, 21)])
+        fit = rob.fit_and_map(points, tris, wrist=(0.0, 2.0 * rob.polygon_length(ring)),
+                              elbow=(8.0, 2.0 * rob.polygon_length(ring)), step=0.25)
+        x, y, z = fit['points'][0]  # (0, -4, 2): the first ring's top
+        self.assertAlmostEqual(y, -8.0)
+        self.assertAlmostEqual(z, 4.0)
+
+    def test_a_hand_off_the_arm_axis_is_scaled_about_one_point(self):
+        # Sections below the wrist drift sideways (as a hand's do); scaling each
+        # about its own centre would shear the hand. Every vector within the
+        # hand must scale by the same factor.
+        ring = _regular_polygon(32, 2.0)
+        points, tris = _tube(ring, [i * 0.5 for i in range(-8, 21)])
+        points = [(x - 0.5 * min(y, 0.0), y, z) for x, y, z in points]
+        fit = rob.fit_and_map(points, tris, wrist=(0.0, 3.0 * rob.polygon_length(ring)),
+                              elbow=(8.0, rob.polygon_length(ring)), step=0.25)
+        a, b = 0, 32 * 4 + 7  # a top vertex at y = -4 and another at y = -2
+        before = rob._sub(points[b], points[a])
+        after = rob._sub(fit['points'][b], fit['points'][a])
+        for got, want in zip(after, before):
+            self.assertAlmostEqual(got, 3.0 * want, places=6)
+
+
+class BodyArgs(unittest.TestCase):
+    BASE = ['--', '--image', 'a.png', '--width-cm', '12', '--out', 'r']
+
+    def test_parametric_is_the_default_body(self):
+        args = rob.parse_args(self.BASE)
+        self.assertEqual(args.body, 'parametric')
+        self.assertEqual(args.side, 'inner')
+
+    def test_makehuman_needs_its_data_folder(self):
+        with self.assertRaises(SystemExit):
+            rob.parse_args(self.BASE + ['--body', 'makehuman'])
+        args = rob.parse_args(self.BASE + ['--body', 'makehuman', '--makehuman-data', '/mh',
+                                           '--side', 'outer', '--mh-sex', '0',
+                                           '--mh-muscle', '0.8'])
+        self.assertEqual((args.body, args.makehuman_data, args.side), ('makehuman', '/mh', 'outer'))
+        self.assertEqual((args.mh_sex, args.mh_muscle, args.mh_weight), (0.0, 0.8, 0.5))
+        with self.assertRaises(SystemExit):
+            rob.parse_args(self.BASE + ['--body', 'makehuman', '--makehuman-data', '/mh',
+                                        '--mh-sex', '1.5'])
+
+    def test_framing_includes_the_hand_only_for_the_makehuman_arm(self):
+        # (centre, half-height) along the arm, cm from the wrist
+        self.assertEqual(rob.camera_frame('parametric', 25.0), (12.5, 14.0))
+        centre, half = rob.camera_frame('makehuman', 25.0)
+        self.assertLess(centre - half, -8.0)  # the palm is in frame
+        self.assertAlmostEqual(centre + half, 26.5)
+
+
 if __name__ == '__main__':
     unittest.main()

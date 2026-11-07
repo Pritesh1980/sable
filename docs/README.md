@@ -92,8 +92,9 @@ records, not activation instructions. The shared guide screenshots use fictional
 
 ## Desktop tools (on the Mac)
 
-- **[On-body renders with Blender](BLENDER.md)** — wrap a concept round a 3D forearm at a
-  true size in cm, render three angles, and import them back as results.
+- **[On-body renders with Blender](BLENDER.md)** — wrap a concept round a 3D forearm (a
+  smooth tube, or MakeHuman's real arm with its hand) at a true size in cm, render three
+  angles, and import them back as results.
 
 ---
 
