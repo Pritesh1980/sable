@@ -6,6 +6,7 @@ import { parseLineupHash } from '../data/lineupGrabber'
 import { mergeWinnerEntries, winnerKey } from '../data/winners'
 import { deletePhoto, newPhotoId, putPhoto, withPhotoId, withoutPhotoId } from '../data/winnerPhotos'
 import { createArtist } from '../data/artists'
+import { buildIcs, requestCalendarDownload } from '../data/calendar'
 import ConventionLineup from '../components/ConventionLineup'
 import ConventionWinners from '../components/ConventionWinners'
 import Logo from '../components/Logo'
@@ -58,10 +59,12 @@ function PastEditionNote({ convention }) {
 
 // Days from a listings site rather than the show itself: worth checking
 // before booking travel.
+const UNCONFIRMED_DATE_NOTE = 'Dates from a listings site — not yet confirmed by the show.'
+
 function UnconfirmedNote() {
   return (
     <p className="text-[0.6875rem] font-mono text-cream-muted/60 tracking-wide mt-1">
-      Dates from a listings site — not yet confirmed by the show.
+      {UNCONFIRMED_DATE_NOTE}
     </p>
   )
 }
@@ -112,6 +115,21 @@ function EditionPicker({ convention, onPick }) {
 
 function artistLabel(a) {
   return a.name || `@${a.handle}`
+}
+
+function CalendarAction({ convention, current, past, onAddCalendar }) {
+  if (!current || past || !convention.startDate || !convention.endDate) return null
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        onClick={() => onAddCalendar(convention)}
+        className="inline-flex items-center min-h-11 px-3 text-[0.6875rem] font-mono text-accent tracking-widest uppercase border border-accent/40 rounded-xs hover:border-accent hover:text-accent-hover transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      >
+        Add to calendar
+      </button>
+    </div>
+  )
 }
 
 // Lets you record which of your saved artists are appearing at a convention.
@@ -175,7 +193,7 @@ function AttendeesEditor({ artists, attendingIds, onToggle, record = false }) {
   )
 }
 
-function HeroCard({ convention, past, current, onPickYear, artists, attendingIds, onToggle, lineupProps, winnerProps }) {
+function HeroCard({ convention, past, current, onPickYear, onAddCalendar, artists, attendingIds, onToggle, lineupProps, winnerProps }) {
   return (
     <div id={`convention-${convention.id}`} className="bg-gradient-to-br from-accent/10 to-ink-card border border-accent/40 rounded-xs p-6 animate-slide-up">
       <div className="flex items-start gap-4">
@@ -203,6 +221,7 @@ function HeroCard({ convention, past, current, onPickYear, artists, attendingIds
           More info →
         </a>
       )}
+      <CalendarAction convention={convention} current={current} past={past} onAddCalendar={onAddCalendar} />
       <AttendeesEditor key={`att-${convention.editionKey}`} artists={artists} attendingIds={attendingIds} onToggle={onToggle} record={!current} />
       <ConventionLineup
         key={`lineup-${convention.editionKey}`}
@@ -222,7 +241,7 @@ function HeroCard({ convention, past, current, onPickYear, artists, attendingIds
   )
 }
 
-function ConventionCard({ convention, past, current, onPickYear, artists, attendingIds, onToggle, lineupProps, winnerProps }) {
+function ConventionCard({ convention, past, current, onPickYear, onAddCalendar, artists, attendingIds, onToggle, lineupProps, winnerProps }) {
   return (
     <div
       id={`convention-${convention.id}`}
@@ -262,6 +281,7 @@ function ConventionCard({ convention, past, current, onPickYear, artists, attend
           More info →
         </a>
       )}
+      <CalendarAction convention={convention} current={current} past={past} onAddCalendar={onAddCalendar} />
       <AttendeesEditor key={`att-${convention.editionKey}`} artists={artists} attendingIds={attendingIds} onToggle={onToggle} record={!current} />
       <ConventionLineup
         key={`lineup-${convention.editionKey}`}
@@ -290,6 +310,7 @@ export default function Conventions({
   setConventionLineups = () => {},
   conventionWinners = {},
   setConventionWinners = () => {},
+  downloadCalendar = requestCalendarDownload,
   // Injected by tests; the app always renders against the real clock.
   now = new Date(),
 }) {
@@ -495,6 +516,19 @@ export default function Conventions({
       current: view.editionKey === c.editionKey,
       past: isPastEdition(view, now),
       onPickYear: (year) => setYears((prev) => ({ ...prev, [c.id]: year })),
+      onAddCalendar: (edition) => {
+        const handles = artists.filter((a) => edition.attendingArtistIds.includes(a.id) && a.handle)
+          .map((a) => `@${a.handle}`)
+        const description = [
+          edition.unconfirmed ? UNCONFIRMED_DATE_NOTE : '',
+          edition.url,
+          handles.length ? `Seeing: ${handles.join(', ')}` : '',
+        ].filter(Boolean).join('\n')
+        downloadCalendar(buildIcs([{
+          title: edition.name, location: edition.location,
+          startDate: edition.startDate, endDate: edition.endDate, description,
+        }], { idFactory: () => `sable-${edition.id}-${edition.year}` }), `sable-${edition.id}-${edition.year}.ics`)
+      },
       artists,
       attendingIds: view.attendingArtistIds,
       onToggle: (artistId) => toggle(view.editionKey, artistId),
