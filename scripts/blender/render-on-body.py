@@ -1,16 +1,19 @@
-"""Render a Sable concept image onto a 3D forearm at true size (#192).
+"""Render a Sable concept image onto a 3D arm at true size (#192).
 
 Run headless with Blender (Sable itself never calls Blender):
 
     blender -b -P scripts/blender/render-on-body.py -- \
         --image concept.png --width-cm 12 --out renders/
 
-Builds a forearm, wraps the design onto the top of it at a true printed width
-(``--width-cm`` of skin, measured around the curve), lights it softly against a
-near-black backdrop and renders three angles plus a ``params.json``. The arm is
-a tapered, slightly elliptical tube by default (``--body parametric``), or
-MakeHuman's CC0 forearm with its wrist and hand (``--body makehuman
---makehuman-data DIR``), fitted to the same measurements and mapped per vertex.
+Builds an upper arm (``--placement upper-arm``, the default) or a forearm,
+wraps the design onto it at a true printed width (``--width-cm`` of skin,
+measured around the curve), lights it softly against a near-black backdrop
+and renders three angles plus a ``params.json``. The arm is a tapered,
+slightly elliptical tube by default (``--body parametric``), or MakeHuman's
+CC0 body (``--body makehuman --makehuman-data DIR``): its upper arm, shoulder
+and torso with the arm lowered from the rest pose, or its forearm with the
+wrist and hand, fitted to the same measurements and mapped per vertex. The
+skin is a preset tone (``--skin-tone``) or an exact sRGB (``--skin-rgb``).
 The ink looks healed by default (``--ink healed``: spread a
 fraction of a millimetre, a cool settled black under the skin); ``--ink fresh``
 is the crisp just-inked look. ``params.json`` records the design's size as
@@ -60,9 +63,10 @@ def circumference_at(t, wrist_cm, elbow_cm):
     return wrist_cm + (elbow_cm - wrist_cm) * ease_profile(t)
 
 
-def aspect_at(t):
-    """Cross-section width/thickness ratio along the arm."""
-    return WRIST_ASPECT + (ELBOW_ASPECT - WRIST_ASPECT) * ease_profile(t)
+def aspect_at(t, narrow=WRIST_ASPECT, wide=ELBOW_ASPECT):
+    """Cross-section width/thickness ratio along the arm, from ``narrow`` at
+    the narrow end (t = 0) to ``wide`` at the wide end (t = 1)."""
+    return narrow + (wide - narrow) * ease_profile(t)
 
 
 def ellipse_perimeter(a, b):
@@ -127,12 +131,23 @@ def design_uv(u_main, v_main, *, circumference_cm, length_cm, width_cm, height_c
     seam) and ``v_main`` along it (0 = wrist, 1 = elbow). The U scale is
     derived from the circumference *at that point*, so every row of the design
     covers exactly ``width_cm`` of skin however much the arm tapers under it.
-    ``up`` is which end of the arm the top of the image points to."""
+    ``up`` is which end of the arm the top of the image points to: ``'+y'``
+    (the forearm's ``'elbow'``) or ``'-y'`` (``'wrist'``)."""
     du = (u_main - 0.5) * circumference_cm / width_cm
     dv = (v_main * length_cm - centre_cm) / height_cm
-    if up == 'elbow':
+    return _oriented(du, dv, up)
+
+
+#: ``up`` values meaning the top of the image points along +y or -y. The
+#: forearm's names are kept: its +y end is the elbow.
+UP_PLUS_Y = ('+y', 'elbow')
+UP_MINUS_Y = ('-y', 'wrist')
+
+
+def _oriented(du, dv, up):
+    if up in UP_PLUS_Y:
         return 0.5 + du, 0.5 + dv
-    if up == 'wrist':  # rotate 180°, never mirror
+    if up in UP_MINUS_Y:  # rotate 180°, never mirror
         return 0.5 - du, 0.5 - dv
     raise ValueError(f'unknown design orientation: {up!r}')
 
@@ -148,6 +163,19 @@ def srgb_hex_to_linear(hex_colour):
     if len(h) != 6:
         raise ValueError(f'expected #rrggbb, got {hex_colour!r}')
     return tuple(srgb_to_linear(int(h[i:i + 2], 16) / 255) for i in (0, 2, 4))
+
+
+def hex_to_srgb8(hex_colour):
+    """'#rrggbb' → (r, g, b) whole numbers 0..255."""
+    h = hex_colour.lstrip('#')
+    if len(h) != 6:
+        raise ValueError(f'expected #rrggbb, got {hex_colour!r}')
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def srgb8_to_linear(rgb):
+    """(r, g, b) sRGB whole numbers 0..255 → linear RGB floats."""
+    return tuple(srgb_to_linear(c / 255) for c in rgb)
 
 
 def frame_distance(half_extent, focal_mm, sensor_mm):
@@ -327,6 +355,61 @@ def healed_ink_floor(skin_linear, ink_strength, tint=HEALED_TINT):
 
 
 # --------------------------------------------------------------------------
+# Skin tone. The presets are base colours (sRGB 0..255) picked by eye under
+# this script's lights and colour transform, named for how they look and
+# ordered light to deep. They are not a calibrated skin-tone scale.
+# --------------------------------------------------------------------------
+
+SKIN_TONES = {
+    'light-peach': (201, 157, 128),  # the default until Nov 2026 (#c99d80)
+    'light-warm-tan': (184, 143, 104),
+    'light-warm-brown': (170, 132, 95),
+    'warm-brown': (154, 118, 84),
+    'medium-brown': (128, 95, 66),
+    'deep-brown': (80, 58, 42),
+}
+DEFAULT_SKIN_TONE = 'light-warm-brown'
+#: The tone the subsurface settings below were tuned on.
+SKIN_REFERENCE = SKIN_TONES['light-peach']
+#: Subsurface scattering distance per channel (× SUBSURFACE_SCALE_M) and the
+#: blotchy redness mixed into the base colour, both for the reference tone.
+SUBSURFACE_RADIUS = (1.0, 0.4, 0.22)
+SKIN_FLUSH = (1.0, 0.86, 0.84)
+#: How fast each channel's scattering distance shrinks as skin gets browner:
+#: melanin absorbs short wavelengths most, so blue shrinks fastest.
+SUBSURFACE_MELANIN = (0.25, 0.5, 0.75)
+
+
+def parse_skin_rgb(text):
+    """'R,G,B' (sRGB whole numbers 0..255) → (r, g, b)."""
+    parts = [p.strip() for p in text.split(',')]
+    if len(parts) != 3 or not all(p.isdigit() for p in parts):
+        raise ValueError(f'expected R,G,B as whole numbers 0-255, got {text!r}')
+    rgb = tuple(int(p) for p in parts)
+    if max(rgb) > 255:
+        raise ValueError(f'each of R,G,B must be 0-255, got {text!r}')
+    return rgb
+
+
+def skin_subsurface(skin_linear):
+    """The subsurface look for a skin's base colour (linear RGB).
+
+    ``lightness`` is the skin's luminance relative to the reference tone. In
+    browner skin more melanin absorbs light before it travels far under the
+    surface, the short wavelengths most: every channel's ``radius`` shrinks,
+    blue fastest, so the glow is warmer and shallower rather than the pink
+    translucency of lighter skin. Melanin also masks blood, so the blotchy
+    ``flush`` (a multiplier on the base colour) is milder. The reference tone
+    gets the reference settings exactly; lighter tones keep its redness."""
+    k = luminance(skin_linear) / luminance(srgb8_to_linear(SKIN_REFERENCE))
+    k = min(1.5, max(0.1, k))
+    radius = tuple(r * k ** p for r, p in zip(SUBSURFACE_RADIUS, SUBSURFACE_MELANIN))
+    m = min(1.0, k) ** 0.5
+    flush = tuple(1 - (1 - f) * m for f in SKIN_FLUSH)
+    return {'lightness': k, 'radius': radius, 'flush': flush}
+
+
+# --------------------------------------------------------------------------
 # Measuring true size on a triangle mesh: slice it with a plane and keep the
 # part of the cross-section where the design's UV is inside the image.
 # --------------------------------------------------------------------------
@@ -393,19 +476,26 @@ def measure_slice(tris, axis, level, ranges):
     return total, lo, hi
 
 
-def measure_design(tris, *, height_cm, centre_cm):
+#: Names for measure_design: the limb's -y end, its +y end, and where y starts.
+MEASURE_ENDS = {'forearm': ('wrist_end', 'elbow_end', 'at_cm_from_wrist'),
+                'upper-arm': ('elbow_end', 'shoulder_end', 'at_cm_from_elbow')}
+
+
+def measure_design(tris, *, height_cm, centre_cm, placement='forearm'):
     """How much skin the design covers on the arm as rendered.
 
     ``tris`` are ``((x, y, z) in cm, (u, v) design UV)`` corners, with the arm
-    along +Y from the wrist and its top line at x = 0, z > 0. The width round
-    the arm is sliced across the arm near the design's wrist end, middle and
-    elbow end; the length is the design's extent along the arm on the top line
-    (u is out of range on the underside, so that line drops out)."""
+    along +Y from the wrist (the elbow, for the upper arm) and its top line at
+    x = 0, z > 0. The width round the arm is sliced across the arm near the
+    design's two ends and middle; the length is the design's extent along the
+    arm on the top line (u is out of range on the underside, so that line
+    drops out)."""
+    low, high, key = MEASURE_ENDS[placement]
     widths = {}
-    for name, f in (('wrist_end', -0.7), ('middle', 0.0), ('elbow_end', 0.7)):
+    for name, f in ((low, -0.7), ('middle', 0.0), (high, 0.7)):
         y = centre_cm + f * height_cm / 2
         width, _, _ = measure_slice(tris, 1, y, {0: (0.0, 1.0)})
-        widths[name] = {'at_cm_from_wrist': round(y, 2), 'width_cm': round(width, 2)}
+        widths[name] = {key: round(y, 2), 'width_cm': round(width, 2)}
     _, lo, hi = measure_slice(tris, 0, 0.0, {0: (0.0, 1.0), 1: (0.0, 1.0)})
     along = round(hi[1] - lo[1], 2) if lo else 0.0
     return {'width_round_arm': widths, 'length_along_arm_cm': along}
@@ -434,11 +524,11 @@ MH_JOINTS = {
 MH_UPPER_ARM_BONES = ('upperarm01.L', 'upperarm02.L')
 
 
-def is_lower_arm_bone(name):
+def is_lower_arm_bone(name, side='L'):
     """Bones that move with the forearm when the elbow bends: the two
-    forearm (twist) bones, the wrist and the whole left hand."""
-    return name in ('lowerarm01.L', 'lowerarm02.L', 'wrist.L') or (
-        name.endswith('.L') and name.startswith(('metacarpal', 'finger')))
+    forearm (twist) bones, the wrist and the whole hand (left by default)."""
+    return name in (f'lowerarm01.{side}', f'lowerarm02.{side}', f'wrist.{side}') or (
+        name.endswith('.' + side) and name.startswith(('metacarpal', 'finger')))
 
 
 def parse_obj(lines):
@@ -697,8 +787,25 @@ def section_loops(points, tris, axis, level):
     return loops
 
 
+def longest_loop_length(points, tris, axis, level):
+    """Length of the longest closed loop where the plane cuts these
+    triangles, or 0. Given only the arm's triangles, that is the arm's
+    circumference even where the same plane also cuts the torso."""
+    lengths = [polygon_length(lp) for lp, closed in section_loops(points, tris, axis, level)
+               if closed and len(lp) > 2]
+    return max(lengths, default=0.0)
+
+
 def _wrap_angle(d):
     return (d + math.pi) % (2 * math.pi) - math.pi
+
+
+def winding(loop, centre):
+    """Total angle a closed 2-D loop turns round ``centre`` (±2π if it goes
+    round it once, about 0 if the centre is outside)."""
+    cx, cz = centre
+    ang = [math.atan2(x - cx, z - cz) for x, z in loop]
+    return sum(_wrap_angle(b - a) for a, b in zip(ang, ang[1:] + ang[:1]))
 
 
 def contour_table(loop, centre):
@@ -728,10 +835,13 @@ def contour_table(loop, centre):
         raise ValueError('the section does not go round its centre')
     pts = [best] + [loop[(start + k) % n] for k in range(1, n + 1)] + [best]
     thetas, arcs = [0.0], [0.0]
-    prev = 0.0
+    prev = turned = 0.0
     for p, q in zip(pts, pts[1:]):
         a = math.atan2(q[0] - cx, q[1] - cz)
-        thetas.append(max(thetas[-1], thetas[-1] + _wrap_angle(a - prev)))
+        # Where the outline folds back (it turns the other way round the
+        # centre for a while), the angle holds until it is passed again.
+        turned += _wrap_angle(a - prev)
+        thetas.append(max(thetas[-1], turned))
         arcs.append(arcs[-1] + math.dist(p, q))
         prev = a
     return thetas, arcs, arcs[-1], pts, centre
@@ -758,10 +868,31 @@ def arc_at(table, theta):
     return s if s <= perimeter / 2 else s - perimeter
 
 
-def arm_stations(points, tris, y_from, y_to, step):
+def fit_line(xs, ys):
+    """Least-squares ``(a, b)`` of y = a + b·x."""
+    n = len(xs)
+    mx, my = sum(xs) / n, sum(ys) / n
+    sxx = sum((x - mx) ** 2 for x in xs)
+    b = 0.0 if sxx == 0 else sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / sxx
+    return my - b * mx, b
+
+
+def arm_stations(points, tris, y_from, y_to, step, *, open_ends=False, axis_range=None):
     """Cross-sections across the arm (planes of constant y) every ``step`` cm.
     Where a plane cuts several loops (fingers), the longest is the arm; where
-    it cuts none, the nearest section stands in."""
+    it cuts none, the nearest section stands in. Each section's centre is its
+    centroid, and its top line is the ray from there towards +z.
+
+    With ``open_ends``, a plane that cuts only open pieces (above the armpit,
+    where the arm's skin joins the torso) uses the longest piece, closed by a
+    straight chord, about the nearest closed section's centre: arcs from the
+    top line then follow the skin that is there. Its "perimeter" includes the
+    chord, so it only moves the underside seam, far from the top line.
+
+    With ``axis_range`` (lo, hi), every centre lies instead on one straight
+    line, fitted to the centroids of the closed sections between lo and hi:
+    the axis of a limb that is straight, so its top line is straight too
+    where bulges (the armpit) would pull the centroids aside."""
     n = max(1, int(round((y_to - y_from) / step)))
     buckets = [[] for _ in range(n + 1)]
     for tri in tris:
@@ -770,21 +901,44 @@ def arm_stations(points, tris, y_from, y_to, step):
         hi = math.ceil((max(ys) - y_from) / step)
         for k in range(max(lo, 0), min(hi, n) + 1):
             buckets[k].append(tri)
-    found = []
+    mains, pieces = {}, {}
     for k in range(n + 1):
-        y = y_from + k * step
-        loops = [[(p[0], p[2]) for p in lp]
-                 for lp, closed in section_loops(points, buckets[k], 1, y)
-                 if closed and len(lp) > 2]
-        if not loops:
-            found.append(None)
-            continue
-        main = max(loops, key=polygon_length)
-        _, centre = polygon_centroid(main)
-        found.append({'y': y, 'centre': centre, 'table': contour_table(main, centre)})
-    have = [k for k, s in enumerate(found) if s]
-    if not have:
+        cuts = section_loops(points, buckets[k], 1, y_from + k * step)
+        loops = [[(p[0], p[2]) for p in lp] for lp, closed in cuts if closed and len(lp) > 2]
+        chains = [[(p[0], p[2]) for p in lp] for lp, closed in cuts if not closed and len(lp) > 2]
+        if loops:
+            mains[k] = max(loops, key=polygon_length)
+        elif open_ends and chains:
+            pieces[k] = max(chains, key=lambda c: polygon_length(c, closed=False))
+    if not mains:
         raise ValueError('the mesh has no closed cross-section in that range')
+    centroids = {k: polygon_centroid(loop)[1] for k, loop in mains.items()}
+    axis = None
+    if axis_range:
+        ks = [k for k in mains if axis_range[0] <= y_from + k * step <= axis_range[1]]
+        if len(ks) >= 2:
+            ys = [y_from + k * step for k in ks]
+            axis = [fit_line(ys, [centroids[k][c] for k in ks]) for c in (0, 1)]
+
+    def centre_for(k):
+        if axis is None:
+            return centroids[min(mains, key=lambda j: abs(j - k))]
+        y = y_from + k * step
+        return tuple(a + b * y for a, b in axis)
+
+    found = [None] * (n + 1)
+    for k, loop in mains.items():
+        centre = centre_for(k)
+        if axis is not None and abs(winding(loop, centre)) < math.pi:
+            centre = centroids[k]  # the axis misses this section: keep its own centre
+        found[k] = {'y': y_from + k * step, 'centre': centre, 'table': contour_table(loop, centre)}
+    for k, chain in pieces.items():
+        centre = centre_for(k)
+        if abs(winding(chain, centre)) < math.pi:  # doesn't go round the arm's axis
+            continue
+        found[k] = {'y': y_from + k * step, 'centre': centre,
+                    'table': contour_table(chain, centre), 'open': True}
+    have = sorted(mains)
     stations = [s or found[min(have, key=lambda j, k=k: abs(j - k))] for k, s in enumerate(found)]
     return {'from': y_from, 'step': step, 'list': stations}
 
@@ -856,31 +1010,34 @@ def unwrap_seam(arcs, perimeter):
 def design_uv_cm(arc_cm, y_cm, *, width_cm, height_cm, centre_cm, up='elbow'):
     """The design texture's UV at a point ``arc_cm`` round the arm from the
     top line and ``y_cm`` along it from the wrist: ``design_uv`` in skin cm."""
-    du = arc_cm / width_cm
-    dv = (y_cm - centre_cm) / height_cm
-    if up == 'elbow':
-        return 0.5 + du, 0.5 + dv
-    if up == 'wrist':  # rotate 180°, never mirror
-        return 0.5 - du, 0.5 - dv
-    raise ValueError(f'unknown design orientation: {up!r}')
+    return _oriented(arc_cm / width_cm, (y_cm - centre_cm) / height_cm, up)
 
 
-def fit_and_map(points, tris, *, wrist, elbow, step, y_range=None):
+def fit_and_map(points, tris, *, wrist, elbow, step, y_range=None, share=None, mapped=None,
+                open_ends=False, axis_range=None):
     """Fit an arm mesh to measured circumferences, and find every vertex's
     place on the skin in cm.
 
-    ``wrist`` and ``elbow`` are ``(y, circumference_cm)``. Either y may be a
-    ``(lo, hi)`` range instead: the narrowest section in it for the wrist, the
-    widest for the elbow, which is where a tape measure goes. Sections are
-    scaled about their centres by a factor linear in y between the two, so
-    both circumferences come out as measured while the mesh keeps its own
-    shape between them. Past the elbow the factor stays level; past the wrist
-    the hand is scaled as a whole (along the arm too) by the wrist's factor,
-    so it keeps its proportions. Each vertex's arc round the arm is found
-    before scaling and scales with it."""
+    ``wrist`` and ``elbow`` are ``(y, circumference_cm)``: the narrow and the
+    wide measurement (on the upper arm, just above the elbow and round the
+    biceps). Either y may be a ``(lo, hi)`` range instead: the narrowest
+    section in it for the wrist, the widest for the elbow, which is where a
+    tape measure goes. Sections are scaled about their centres by a factor
+    linear in y between the two, so both circumferences come out as measured
+    while the mesh keeps its own shape between them. Past the elbow the
+    factor stays level; past the wrist the hand is scaled as a whole (along
+    the arm too) by the wrist's factor, so it keeps its proportions. Each
+    vertex's arc round the arm is found before scaling and scales with it.
+
+    Only ``tris`` (the arm's own triangles) are sliced into sections. When the
+    mesh is a whole body, ``share`` (0..1 per point, the arm's bone weights)
+    fades the fit out into the shoulder and leaves the torso as it is, and
+    ``mapped`` says which points need an arc (the rest get None).
+    ``open_ends`` and ``axis_range`` go to ``arm_stations``."""
     ys = [p[1] for p in points]
     lo, hi = y_range or (min(ys), max(ys))
-    stations = arm_stations(points, tris, lo, hi, step)
+    stations = arm_stations(points, tris, lo, hi, step, open_ends=open_ends,
+                            axis_range=axis_range)
     y_w, cm_w = wrist
     y_e, cm_e = elbow
     if isinstance(y_w, tuple):
@@ -891,13 +1048,24 @@ def fit_and_map(points, tris, *, wrist, elbow, step, y_range=None):
     scale = ((y_w, cm_w / before[0]), (y_e, cm_e / before[1]))
     wrist_centre = centre_at(stations, y_w)
     new, arcs, perimeters = [], [], []
-    for x, y, z in points:
-        arc, perimeter = surface_coords(stations, (x, y, z))
+    for i, (x, y, z) in enumerate(points):
+        w = 1.0 if share is None else min(1.0, share[i])
+        if mapped is None or mapped[i]:
+            arc, perimeter = surface_coords(stations, (x, y, z))
+        else:
+            arc = perimeter = None
+        if w <= 0.0:
+            new.append((x, y, z))
+            arcs.append(arc)
+            perimeters.append(perimeter)
+            continue
         s = scale_at(y, *scale)
+        if w < 1.0:
+            s = 1.0 + (s - 1.0) * w
         cx, cz = centre_at(stations, y) if y >= y_w else wrist_centre
         new.append((cx + s * (x - cx), y if y >= y_w else y_w + s * (y - y_w), cz + s * (z - cz)))
-        arcs.append(s * arc)
-        perimeters.append(s * perimeter)
+        arcs.append(None if arc is None else s * arc)
+        perimeters.append(None if perimeter is None else s * perimeter)
     return {'points': new, 'arcs': arcs, 'perimeters': perimeters, 'scale': scale,
             'before_cm': before, 'stations': stations}
 
@@ -907,14 +1075,10 @@ def fitted_circumference(fit, y):
     return perimeter_at(fit['stations'], y) * scale_at(y, *fit['scale'])
 
 
-def load_makehuman_forearm(data_dir, *, length_cm, side='inner', sex=0.5, muscle=0.5,
-                           weight=0.5, past_elbow_cm=8.0):
-    """MakeHuman's left forearm with its wrist and hand, posed by
-    ``pose_forearm``, as a cage of points (cm) and faces (MakeHuman's own
-    quads). Reads base.obj's ``body`` group only (no helper geometry), the
-    macro targets for the build, and the default skeleton's joints and
-    weights. Keeps every face of the forearm and hand, and of the upper arm up
-    to ``past_elbow_cm`` beyond the elbow joint."""
+def read_makehuman(data_dir, sex=0.5, muscle=0.5, weight=0.5):
+    """MakeHuman's base mesh with the macro targets for this build applied,
+    its default skeleton and the skeleton's weights: ``(verts, groups,
+    skeleton, weights, targets)``."""
     def read(*parts):
         return open(os.path.join(data_dir, *parts), encoding='utf-8')
 
@@ -928,12 +1092,27 @@ def load_makehuman_forearm(data_dir, *, length_cm, side='inner', sex=0.5, muscle
     verts = apply_targets(verts, targets)
     with read('rigs', 'default.mhskel') as fh:
         skeleton = json.load(fh)
-    joints = {}
-    for key, name in MH_JOINTS.items():
-        idx = skeleton['joints'][name]
-        joints[key] = tuple(sum(verts[i][c] for i in idx) / len(idx) for c in range(3))
     with read('rigs', 'default_weights.mhw') as fh:
         weights = json.load(fh)['weights']
+    return verts, groups, skeleton, weights, wanted
+
+
+def joint_at(verts, skeleton, name):
+    """A skeleton joint: the centre of its helper cube's vertices."""
+    idx = skeleton['joints'][name]
+    return tuple(sum(verts[i][c] for i in idx) / len(idx) for c in range(3))
+
+
+def load_makehuman_forearm(data_dir, *, length_cm, side='inner', sex=0.5, muscle=0.5,
+                           weight=0.5, past_elbow_cm=8.0):
+    """MakeHuman's left forearm with its wrist and hand, posed by
+    ``pose_forearm``, as a cage of points (cm) and faces (MakeHuman's own
+    quads). Reads base.obj's ``body`` group only (no helper geometry), the
+    macro targets for the build, and the default skeleton's joints and
+    weights. Keeps every face of the forearm and hand, and of the upper arm up
+    to ``past_elbow_cm`` beyond the elbow joint."""
+    verts, groups, skeleton, weights, wanted = read_makehuman(data_dir, sex, muscle, weight)
+    joints = {key: joint_at(verts, skeleton, name) for key, name in MH_JOINTS.items()}
     lower, arm = {}, {}
     for bone, pairs in weights.items():
         is_lower = is_lower_arm_bone(bone)
@@ -957,11 +1136,209 @@ def load_makehuman_forearm(data_dir, *, length_cm, side='inner', sex=0.5, muscle
     return [at[i] for i in keep], [tuple(index[i] for i in f) for f in faces], info
 
 
+# The upper arm (--placement upper-arm --body makehuman): the whole body is
+# kept, so the shoulder joins the torso as it really does and the camera's crop
+# is the only edge. MakeHuman's rest pose is an A-pose (arms about 42° out from
+# the sides, elbows bent about 43°); both arms are lowered to hang beside the
+# body, which is how an outer upper arm is photographed.
+
+#: How far out from the side the arms hang, and how bent the elbows stay. The
+#: right arm, never in view, hangs straighter so its hand stays behind the
+#: hips in the outer view.
+MH_ARM_ABDUCTION_DEG = 12.0
+MH_ELBOW_BEND_DEG = 20.0
+MH_RIGHT_ELBOW_BEND_DEG = 5.0
+#: Joints of each arm as named in rigs/default.mhskel ("{s}" is L or R).
+MH_ARM_JOINTS = {'shoulder': 'upperarm01.{s}____head', 'elbow': 'lowerarm01.{s}____head',
+                 'wrist': 'wrist.{s}____head'}
+
+
+def pose_arm_down(points, arm, lower, joints, *, abduction_deg, elbow_bend_deg):
+    """Lower one of MakeHuman's A-posed arms to hang beside the body.
+
+    First the elbow is relaxed to ``elbow_bend_deg``: each vertex turns about
+    the elbow by its ``lower`` share (the forearm and hand bones' weights) of
+    the change. Then the arm is turned down about the shoulder joint, in the
+    plane of the arm and the vertical, until the upper arm is
+    ``abduction_deg`` from vertical: each vertex by its ``arm`` share (the
+    upper arm, forearm and hand bones' weights), so the turn fades out across
+    the shoulder into the torso, which stays put. Works for either arm.
+    Returns ``(points, joints after posing, info)``."""
+    sh, el, wr = joints['shoulder'], joints['elbow'], joints['wrist']
+    ua = _normalised(_sub(el, sh))
+    fa = _normalised(_sub(wr, el))
+    bend = math.acos(max(-1.0, min(1.0, _dot(ua, fa))))
+    out = list(points)
+    relax = bend - math.radians(elbow_bend_deg)
+    if bend > 1e-9 and relax:
+        hinge = _normalised(_cross(fa, ua))
+        out = [rotate_about(p, el, hinge, min(1.0, w) * relax) if w else p
+               for p, w in zip(out, lower)]
+        wr = rotate_about(wr, el, hinge, relax)
+    down = (0.0, -1.0, 0.0)
+    abduction = math.acos(max(-1.0, min(1.0, _dot(ua, down))))
+    turn = abduction - math.radians(abduction_deg)
+    if abduction > 1e-9 and turn:
+        axis = _normalised(_cross(ua, down))
+        out = [rotate_about(p, sh, axis, min(1.0, w) * turn) if w else p
+               for p, w in zip(out, arm)]
+        el, wr = rotate_about(el, sh, axis, turn), rotate_about(wr, sh, axis, turn)
+    return out, {'shoulder': sh, 'elbow': el, 'wrist': wr}, {
+        'rest_abduction_deg': math.degrees(abduction), 'rest_bend_deg': math.degrees(bend),
+        'abduction_deg': abduction_deg, 'elbow_bend_deg': elbow_bend_deg}
+
+
+def upper_arm_frame(shoulder, elbow, side):
+    """``(origin, (x, y, z))`` axes laid on MakeHuman's left upper arm: the
+    elbow joint at the origin, +y up the arm to the shoulder joint, +z out of
+    the side that carries the design (``outer``: the outside of the arm, the
+    body's +X; ``inner``: the front of the arm over the biceps, the body's +Z),
+    and x = y × z, so the frame is a rotation of the body, never a mirror."""
+    if side not in SIDES:
+        raise ValueError(f'unknown side: {side!r}')
+    y = _normalised(_sub(shoulder, elbow))
+    ref = (1.0, 0.0, 0.0) if side == 'outer' else (0.0, 0.0, 1.0)
+    z = _normalised(_sub(ref, _scaled(y, _dot(ref, y))))
+    return elbow, (_cross(y, z), y, z)
+
+
+def to_frame(points, origin, axes, k=1.0):
+    """Points in a frame's coordinates, scaled by ``k``."""
+    return [tuple(k * _dot(_sub(p, origin), axis) for axis in axes) for p in points]
+
+
+def shoulder_top_y(points, share, lateral):
+    """Height up the arm (y) of the top of the shoulder: where the outline,
+    coming up the outside of the arm and over the shoulder, faces 45° up and
+    out (the point furthest that way). Only points with ``share`` of at least
+    half count, so the neck and head, though higher, don't."""
+    n = _normalised((lateral[0], lateral[1] + 1.0, lateral[2]))
+    best = max((p for p, w in zip(points, share) if w >= 0.5), key=lambda p: _dot(p, n))
+    return best[1]
+
+
+def load_makehuman_upper_arm(data_dir, *, length_cm, side='outer', sex=0.5, muscle=0.5,
+                             weight=0.5, abduction_deg=MH_ARM_ABDUCTION_DEG,
+                             elbow_bend_deg=MH_ELBOW_BEND_DEG):
+    """MakeHuman's whole body (the ``body`` group), both arms lowered by
+    ``pose_arm_down``, in cm in the left upper arm's frame
+    (``upper_arm_frame``), scaled evenly so that the top of the shoulder
+    (``shoulder_top_y``) is ``length_cm`` up the arm from the elbow joint.
+
+    Returns ``(points, faces, shares, info)``. ``shares`` are per point, from
+    the left arm's weights: ``arm`` (upper arm, forearm and hand), which the
+    fit fades with, and ``upper`` (the upper arm alone), the skin the design
+    may go on."""
+    verts, groups, skeleton, weights, wanted = read_makehuman(data_dir, sex, muscle, weight)
+    faces = groups['body']
+    used = sorted({i for f in faces for i in f})
+    index = {old: new for new, old in enumerate(used)}
+    points = [verts[i] for i in used]
+    info = {'targets': {rel: round(w, 4) for rel, w in wanted}}
+    for s in ('R', 'L'):
+        arm, lower, upper, top = ([0.0] * len(used) for _ in range(4))
+        for bone, pairs in weights.items():
+            is_lower = is_lower_arm_bone(bone, s)
+            is_upper = bone in (f'upperarm01.{s}', f'upperarm02.{s}')
+            is_shoulder = bone == f'shoulder01.{s}'
+            if not (is_lower or is_upper or is_shoulder):
+                continue
+            for i, w in pairs:
+                k = index.get(i)
+                if k is None:
+                    continue
+                if is_lower or is_upper:
+                    arm[k] += w
+                lower[k] += w if is_lower else 0.0
+                upper[k] += w if is_upper else 0.0
+                top[k] += w if (is_upper or is_shoulder) else 0.0
+        joints = {key: joint_at(verts, skeleton, name.format(s=s))
+                  for key, name in MH_ARM_JOINTS.items()}
+        points, posed, pose = pose_arm_down(
+            points, arm, lower, joints, abduction_deg=abduction_deg,
+            elbow_bend_deg=elbow_bend_deg if s == 'L' else MH_RIGHT_ELBOW_BEND_DEG)
+    origin, axes = upper_arm_frame(posed['shoulder'], posed['elbow'], side)
+    points = to_frame(points, origin, axes, DM)
+    lateral = (0.0, 0.0, 1.0) if side == 'outer' else (1.0, 0.0, 0.0)
+    top_y = shoulder_top_y(points, top, lateral)
+    scale = length_cm / top_y
+    points = [tuple(scale * c for c in p) for p in points]
+    joint_cm = DM * math.dist(posed['shoulder'], posed['elbow'])
+    info.update({
+        'pose': {k: round(v, 1) for k, v in pose.items()},
+        'shoulder_joint_cm': round(joint_cm * scale, 2),
+        'rest_shoulder_top_cm': round(top_y, 2), 'scale': round(scale, 4),
+        'cage_vertices': len(points), 'cage_faces': len(faces)})
+    shares = {'arm': [min(1.0, w) for w in arm], 'upper': [min(1.0, w) for w in upper]}
+    return points, [tuple(index[i] for i in f) for f in faces], shares, info
+
+
 # --------------------------------------------------------------------------
 # Arguments
 # --------------------------------------------------------------------------
 
+PLACEMENTS = ('upper-arm', 'forearm')
+#: The forearm's views: (degrees round the arm from the design's line
+#: towards +x, tilt along the arm towards the wrist).
 VIEWS = ('top', 'three-quarter', 'side')
+VIEW_ANGLES = {'top': (0.0, 0.0), 'three-quarter': (42.0, 28.0), 'side': (80.0, 6.0)}
+#: The upper arm's views, named for where the camera stands: (degrees round
+#: the arm from its outside towards the front, tilt along the arm towards
+#: the elbow, so negative is a little from above). With the arm down, the
+#: chest hides the inside of the arm, so no view looks from there.
+UPPER_ARM_VIEW_ANGLES = {
+    'outer': (0.0, 0.0),
+    'front-three-quarter': (45.0, -10.0),
+    'back-three-quarter': (-45.0, -10.0),
+    'front': (90.0, 0.0),
+}
+#: Where each side's design line is, in the same degrees round the arm.
+UPPER_ARM_SIDE_DEG = {'outer': 0.0, 'inner': 90.0}
+PLACEMENT_VIEWS = {'forearm': VIEWS, 'upper-arm': tuple(UPPER_ARM_VIEW_ANGLES)}
+DEFAULT_SIDE = {'forearm': 'inner', 'upper-arm': 'outer'}
+DEFAULT_VIEWS = {
+    ('forearm', 'inner'): VIEWS, ('forearm', 'outer'): VIEWS,
+    ('upper-arm', 'outer'): ('outer', 'front-three-quarter', 'back-three-quarter'),
+    ('upper-arm', 'inner'): ('front', 'front-three-quarter'),
+}
+#: Each placement's tape measurements, narrow end, wide end, then length,
+#: with their defaults in cm.
+MEASUREMENTS = {
+    'forearm': (('wrist_cm', 17.0), ('elbow_cm', 26.0), ('length_cm', 25.0)),
+    'upper-arm': (('above_elbow_cm', 26.0), ('biceps_cm', 30.0), ('upper_arm_length_cm', 32.0)),
+}
+#: Each placement's (+y end, -y end): y runs from the wrist (forearm) or the
+#: elbow crease (upper arm) towards the body.
+LIMB_ENDS = {'forearm': ('elbow', 'wrist'), 'upper-arm': ('shoulder', 'elbow')}
+
+
+def limb_up(placement, end):
+    """'+y' or '-y': the direction along the limb that ``end`` (the end the
+    top of the image points to) lies in."""
+    plus, minus = LIMB_ENDS[placement]
+    if end == plus:
+        return '+y'
+    if end == minus:
+        return '-y'
+    raise ValueError(f'--design-up {end} is not an end of the {placement}')
+
+
+def arm_profile(args):
+    """(narrow circumference, wide circumference, length) in cm for the
+    placement: wrist, below the elbow and wrist to elbow on the forearm; just
+    above the elbow, round the biceps and the top of the shoulder to the
+    elbow crease on the upper arm."""
+    return tuple(getattr(args, name) for name, _ in MEASUREMENTS[args.placement])
+
+
+def view_angles(placement, side, view):
+    """(degrees round the arm from the design's line towards +x, tilt) of a
+    view. On the upper arm a view is a place round the body, so it is the
+    same place whichever side carries the design."""
+    if placement == 'forearm':
+        return VIEW_ANGLES[view]
+    around, tilt = UPPER_ARM_VIEW_ANGLES[view]
+    return UPPER_ARM_SIDE_DEG[side] - around, tilt
 
 
 def _positive(kind):
@@ -996,10 +1373,16 @@ def _fraction(text):
 
 def _views(text):
     views = [v.strip() for v in text.split(',') if v.strip()]
-    bad = [v for v in views if v not in VIEWS]
-    if bad or not views:
-        raise argparse.ArgumentTypeError(f'views must be from {",".join(VIEWS)}')
+    if not views:
+        raise argparse.ArgumentTypeError('name at least one view')
     return views
+
+
+def _skin_rgb(text):
+    try:
+        return parse_skin_rgb(text)
+    except ValueError as err:
+        raise argparse.ArgumentTypeError(str(err)) from None
 
 
 def parse_args(argv):
@@ -1008,33 +1391,52 @@ def parse_args(argv):
     own = argv[argv.index('--') + 1:] if '--' in argv else argv
     p = argparse.ArgumentParser(
         prog='blender -b -P render-on-body.py --',
-        description='Render a concept image on a 3D forearm at true size.')
+        description='Render a concept image on a 3D arm at true size.')
     p.add_argument('--image', required=True, help='design PNG/JPEG/WebP; white = no ink')
     p.add_argument('--width-cm', type=_positive(float), required=True,
                    help='printed width on the skin, measured around the curve')
     p.add_argument('--out', required=True, help='output directory (created if missing)')
-    p.add_argument('--placement', choices=('forearm',), default='forearm',
-                   help='body part (only the forearm so far)')
+    p.add_argument('--placement', choices=PLACEMENTS, default='upper-arm',
+                   help='body part: the upper arm (default) or the forearm')
     p.add_argument('--body', choices=BODIES, default='parametric',
-                   help='parametric: a smooth tapered tube; makehuman: MakeHuman\'s CC0 arm '
-                        'with wrist and hand (needs --makehuman-data)')
+                   help='parametric: a smooth tapered tube; makehuman: MakeHuman\'s CC0 body '
+                        '(needs --makehuman-data)')
     p.add_argument('--makehuman-data', metavar='DIR',
                    help='a MakeHuman checkout (or its makehuman/data folder), for --body makehuman')
-    p.add_argument('--side', choices=SIDES, default='inner',
-                   help='makehuman: which side of the forearm faces up and carries the design')
+    p.add_argument('--side', choices=SIDES, default=None,
+                   help='which side carries the design: upper arm outer (default; the outside '
+                        'of the arm) or inner (the front, over the biceps); forearm inner '
+                        '(default; palm side) or outer (makehuman only)')
     p.add_argument('--mh-sex', type=_fraction, default=0.5,
                    help='makehuman: 0 female ... 1 male (MakeHuman\'s default 0.5)')
     p.add_argument('--mh-muscle', type=_fraction, default=0.5, help='makehuman: muscle 0..1')
     p.add_argument('--mh-weight', type=_fraction, default=0.5, help='makehuman: weight 0..1')
-    p.add_argument('--wrist-cm', type=_positive(float), default=17.0, help='wrist circumference')
-    p.add_argument('--elbow-cm', type=_positive(float), default=26.0,
-                   help='forearm circumference just below the elbow')
-    p.add_argument('--length-cm', type=_positive(float), default=25.0, help='wrist to elbow')
+    p.add_argument('--above-elbow-cm', type=_positive(float),
+                   help='upper arm: circumference just above the elbow, an eighth of the way '
+                        'up to the shoulder (default 26)')
+    p.add_argument('--biceps-cm', type=_positive(float),
+                   help='upper arm: circumference half-way between the top of the shoulder and '
+                        'the elbow crease, round the biceps, arm relaxed (default 30)')
+    p.add_argument('--upper-arm-length-cm', type=_positive(float),
+                   help='upper arm: top of the shoulder to the elbow crease (default 32)')
+    p.add_argument('--wrist-cm', type=_positive(float),
+                   help='forearm: wrist circumference (default 17)')
+    p.add_argument('--elbow-cm', type=_positive(float),
+                   help='forearm: circumference just below the elbow (default 26)')
+    p.add_argument('--length-cm', type=_positive(float),
+                   help='forearm: wrist to elbow (default 25)')
     p.add_argument('--centre-cm', type=float, default=None,
-                   help='design centre, measured from the wrist (default: mid-forearm)')
-    p.add_argument('--design-up', choices=('elbow', 'wrist'), default='elbow',
-                   help='which end the top of the image points to')
-    p.add_argument('--skin', default='#c99d80', help='skin tone as #rrggbb (sRGB)')
+                   help='design centre, measured from the elbow crease (upper arm) or the '
+                        'wrist (forearm); default: half-way')
+    p.add_argument('--design-up', choices=('shoulder', 'elbow', 'wrist'), default=None,
+                   help='which end the top of the image points to (default: the end nearer '
+                        'the body: shoulder on the upper arm, elbow on the forearm)')
+    skin = p.add_mutually_exclusive_group()
+    skin.add_argument('--skin-tone', choices=tuple(SKIN_TONES),
+                      help=f'skin tone preset (default {DEFAULT_SKIN_TONE})')
+    skin.add_argument('--skin-rgb', type=_skin_rgb, metavar='R,G,B',
+                      help='exact skin colour, sRGB 0-255, e.g. 186,142,104')
+    skin.add_argument('--skin', metavar='#RRGGBB', help='exact skin colour as hex sRGB')
     p.add_argument('--ink', choices=INKS, default='healed',
                    help='healed: settled under the skin (soft, cool black); fresh: crisp, just inked')
     p.add_argument('--ink-spread-mm', type=_non_negative, default=HEALED_SPREAD_MM,
@@ -1046,33 +1448,112 @@ def parse_args(argv):
     p.add_argument('--samples', type=_positive(int), default=64)
     p.add_argument('--size', type=_positive(int), default=1024,
                    help='long edge in px; renders are 2:3 portrait like Sable cards')
-    p.add_argument('--views', type=_views, default=list(VIEWS),
-                   help='comma-separated subset of ' + ','.join(VIEWS))
+    p.add_argument('--views', type=_views, default=None,
+                   help='comma-separated views; upper arm: ' + ','.join(UPPER_ARM_VIEW_ANGLES)
+                        + ' (default outer,front-three-quarter,back-three-quarter; with --side '
+                          'inner front,front-three-quarter); forearm: '
+                        + ','.join(VIEWS))
     args = p.parse_args(own)
-    try:
-        srgb_hex_to_linear(args.skin)
-    except ValueError as err:
-        p.error(str(err))
+    place = args.placement
+    if args.side is None:
+        args.side = DEFAULT_SIDE[place]
+    for placement, items in MEASUREMENTS.items():
+        for name, default in items:
+            if placement == place:
+                if getattr(args, name) is None:
+                    setattr(args, name, default)
+            elif getattr(args, name) is not None:
+                p.error(f'--{name.replace("_", "-")} is for --placement {placement}')
+    if args.views is None:
+        args.views = list(DEFAULT_VIEWS[place, args.side])
+    bad = [v for v in args.views if v not in PLACEMENT_VIEWS[place]]
+    if bad:
+        p.error(f'--placement {place} views are {",".join(PLACEMENT_VIEWS[place])} '
+                f'(not {",".join(bad)})')
+    if args.design_up is None:
+        args.design_up = LIMB_ENDS[place][0]
+    elif args.design_up not in LIMB_ENDS[place]:
+        p.error(f'--design-up for the {place} is {" or ".join(LIMB_ENDS[place])}')
+    if args.skin is not None:
+        try:
+            args.skin_rgb = hex_to_srgb8(args.skin)
+        except ValueError as err:
+            p.error(str(err))
+    elif args.skin_rgb is None:
+        args.skin_tone = args.skin_tone or DEFAULT_SKIN_TONE
+        args.skin_rgb = SKIN_TONES[args.skin_tone]
     if args.body == 'makehuman' and not args.makehuman_data:
         p.error('--body makehuman needs --makehuman-data '
                 '(a MakeHuman checkout; see docs/BLENDER.md)')
     return args
 
 
-#: How much of the hand the MakeHuman arm's framing takes in, past the wrist
-#: joint: the palm and the knuckles.
+#: How much of the hand the MakeHuman forearm's framing takes in, past the
+#: wrist joint: the palm and the knuckles.
 MH_HAND_FRAME_CM = 12.0
+#: The MakeHuman upper arm's framing: this much forearm below the elbow joint
+#: and this much above the top of the shoulder.
+MH_FOREARM_FRAME_CM = 9.0
+MH_SHOULDER_FRAME_CM = 4.0
 
 
-def camera_frame(body, length_cm):
+def camera_frame(body, length_cm, placement='forearm'):
     """(centre, half-height) of what the camera frames along the arm, in cm
-    from the wrist. It depends only on the arm, so two designs on one arm
-    compare like for like. The parametric arm has no hand, so it is framed
-    wrist to elbow; the MakeHuman arm takes in the hand as well."""
+    from the wrist (the elbow crease on the upper arm). It depends only on the
+    arm, so two designs on one arm compare like for like. The parametric arm
+    is framed end to end; the MakeHuman forearm takes in the hand as well,
+    and the MakeHuman upper arm a little forearm and the top of the
+    shoulder."""
     if body == 'makehuman':
-        lo, hi = -MH_HAND_FRAME_CM, length_cm + 1.5
+        if placement == 'upper-arm':
+            lo, hi = -MH_FOREARM_FRAME_CM, length_cm + MH_SHOULDER_FRAME_CM
+        else:
+            lo, hi = -MH_HAND_FRAME_CM, length_cm + 1.5
         return (lo + hi) / 2, (hi - lo) / 2
     return length_cm / 2, length_cm / 2 + 1.5
+
+
+def measured_warnings(measured, *, width_cm, height_cm, check_width=True, check_length=True):
+    """Where the design as measured on the rendered arm (``measure_design``)
+    is more than 2% off its size: most likely it runs off the skin it may go
+    on (past the upper arm's skin into the armpit, say) and is cut off there.
+    Skip a check when ``design_warnings`` has already explained it."""
+    out = []
+    if check_width:
+        for name, spot in measured['width_round_arm'].items():
+            got = spot['width_cm']
+            if abs(got - width_cm) > 0.02 * width_cm:
+                where = name.replace('_', ' ')
+                out.append(f'the design measures {got:g} cm round the rendered arm at its '
+                           f'{where}, not {width_cm:g} cm: part of it is cut off there')
+    along = measured['length_along_arm_cm']
+    if check_length and abs(along - height_cm) > 0.02 * height_cm:
+        out.append(f'the design measures {along:g} cm along the rendered arm, not '
+                   f'{height_cm:.2f} cm: part of it is cut off')
+    return out
+
+
+def design_warnings(placement, *, width_cm, lo, hi, length_cm, thinnest_cm, centre_cm_round):
+    """What to know before trusting the render: the design is
+    wider than the arm somewhere (clipped at the underside), wraps more than
+    half way round (no one view shows all of it), or runs past the ends of
+    the limb. ``lo``/``hi`` are its ends along the limb, in cm from its
+    narrow end."""
+    out = []
+    if width_cm > thinnest_cm:
+        out.append(f'design is {width_cm:g} cm wide but the arm is only {thinnest_cm:.1f} cm '
+                   'round under part of it; the overlap is clipped at the underside')
+    elif width_cm > centre_cm_round / 2:
+        out.append(f'design wraps {360 * width_cm / centre_cm_round:.0f}° round the arm, more '
+                   'than half way: no single view shows all of it')
+    if lo < 0 or hi > length_cm:
+        if placement == 'upper-arm':
+            out.append(f'design runs from {lo:.1f} to {hi:.1f} cm above the elbow crease on a '
+                       f'{length_cm:g} cm upper arm, past the elbow or the top of the shoulder')
+        else:
+            out.append(f'design runs from {lo:.1f} to {hi:.1f} cm along a {length_cm:g} cm '
+                       'forearm, past the wrist or elbow')
+    return out
 
 
 # --------------------------------------------------------------------------
@@ -1087,9 +1568,28 @@ FOCAL_MM = 85.0
 SENSOR_MM = 36.0
 BACKDROP = '#0e0d0b'  # Sable's ink-black
 BACKDROP_STRENGTH = 3.0  # AgX's toe crushes darks: 3 is what displays as #0e0d0b
+#: The forearm's lights: (name, degrees round the arm from the design's line
+#: towards +x, tilt towards the wrist, distance m, size m, watts, colour).
+FOREARM_LIGHTS = (('Key', -50, 22, 0.9, 0.45, 16.0, (1.0, 0.95, 0.88)),
+                  ('Fill', 60, -5, 1.2, 1.2, 3.0, (0.86, 0.92, 1.0)),
+                  ('Rim', 125, -30, 0.8, 0.4, 5.0, (1.0, 0.95, 0.9)))
+#: The upper arm's, placed round the body like its views (degrees from the
+#: outside of the arm towards the front; negative tilt is from above): a warm
+#: key from the front and above, a cool fill from behind, and a rim from
+#: behind and above that edges the arm against the torso.
+UPPER_ARM_LIGHTS = (('Key', 50, -25, 0.9, 0.7, 16.0, (1.0, 0.95, 0.88)),
+                    ('Fill', -60, 5, 1.2, 1.2, 3.0, (0.86, 0.92, 1.0)),
+                    ('Rim', -120, 10, 0.9, 0.8, 3.0, (1.0, 0.95, 0.9)))
 
-# (around the arm from the top, tilt along the arm towards the wrist), degrees
-VIEW_ANGLES = {'top': (0.0, 0.0), 'three-quarter': (42.0, 28.0), 'side': (80.0, 6.0)}
+
+def skin_params(args):
+    """The skin as recorded in params.json."""
+    rgb = args.skin_rgb
+    sss = skin_subsurface(srgb8_to_linear(rgb))
+    return {'tone': args.skin_tone or 'custom', 'srgb': list(rgb),
+            'hex': '#{:02x}{:02x}{:02x}'.format(*rgb),
+            'subsurface_radius': [round(c, 3) for c in sss['radius']],
+            'flush': [round(c, 3) for c in sss['flush']]}
 
 
 def _socket(sockets, name, kind=None):
@@ -1126,8 +1626,18 @@ def _mix(nodes, links, blend, a, b, factor=1.0, clamp=False):
     return _socket(node.outputs, 'Result', 'RGBA')
 
 
-def build_arm(bpy, args, height_cm, centre_cm):
-    L = args.length_cm
+#: The parametric upper arm's cross-section, width (front to back) over
+#: thickness (outside to inside): flattened just above the elbow, where the
+#: arm is widest across its epicondyles, and slightly deep round the biceps.
+UPPER_ARM_ASPECTS = (0.92, 1.06)
+
+
+def build_arm(bpy, args, height_cm, centre_cm, up):
+    """The parametric arm: a tube from the narrow measurement at y = 0 to the
+    wide one at y = length, slightly elliptical, its ends carried on straight
+    out of frame."""
+    narrow_cm, wide_cm, L = arm_profile(args)
+    aspects = UPPER_ARM_ASPECTS if args.placement == 'upper-arm' else (WRIST_ASPECT, ELBOW_ASPECT)
     rings = []
     y = -EXTEND_CM
     while y <= L + EXTEND_CM + 1e-9:
@@ -1137,8 +1647,8 @@ def build_arm(bpy, args, height_cm, centre_cm):
     verts, ring_info = [], []
     for y in rings:
         t = y / L
-        circ = circumference_at(t, args.wrist_cm, args.elbow_cm)
-        a, b = semi_axes_for(circ, aspect_at(t))
+        circ = circumference_at(t, narrow_cm, wide_cm)
+        a, b = semi_axes_for(circ, aspect_at(t, *aspects))
         pts = ring_points(a, b, n)
         ring_info.append((circ, [arc for _, _, arc in pts]))
         verts.extend(((x * CM, y * CM, z * CM) for x, z, _ in pts))
@@ -1170,7 +1680,7 @@ def build_arm(bpy, args, height_cm, centre_cm):
             main_uv.extend((u_m, v_m))
             design_uvs.extend(design_uv(
                 u_m, v_m, circumference_cm=circ, length_cm=L, width_cm=args.width_cm,
-                height_cm=height_cm, centre_cm=centre_cm, up=args.design_up))
+                height_cm=height_cm, centre_cm=centre_cm, up=up))
     main.data.foreach_set('uv', main_uv)
     design.data.foreach_set('uv', design_uvs)
     mesh.polygons.foreach_set('use_smooth', [True] * len(mesh.polygons))
@@ -1194,7 +1704,49 @@ MH_WRIST_RANGE = (0.0, 0.2)
 MH_ELBOW_RANGE = (0.55, 0.85)
 
 
-def build_makehuman_arm(bpy, args, width_cm, height_cm, centre_cm):
+def subdivided_cage(bpy, cage, faces, name, shares=None):
+    """MakeHuman's cage (points in cm, quads) smoothed by ``MH_SUBDIVISIONS``
+    applied Catmull-Clark levels: ``(mesh, points in cm, triangles, shares)``.
+    ``shares`` ({name: one value per cage point}) are carried through the
+    subdivision as point attributes, interpolated like the points."""
+    from array import array  # noqa: PLC0415
+
+    cage_mesh = bpy.data.meshes.new(name + ' cage')
+    cage_mesh.from_pydata([tuple(c * CM for c in p) for p in cage], [], faces)
+    cage_mesh.update()
+    for key, values in (shares or {}).items():
+        attribute = cage_mesh.attributes.new(key, 'FLOAT', 'POINT')
+        attribute.data.foreach_set('value', array('f', values))
+    cage_obj = bpy.data.objects.new(name + ' cage', cage_mesh)
+    bpy.context.collection.objects.link(cage_obj)
+    sub = cage_obj.modifiers.new('Subdivision', 'SUBSURF')
+    sub.levels = sub.render_levels = MH_SUBDIVISIONS
+    bpy.context.view_layer.update()
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    mesh = bpy.data.meshes.new_from_object(cage_obj.evaluated_get(depsgraph))
+    mesh.name = name
+    bpy.data.objects.remove(cage_obj)
+    bpy.data.meshes.remove(cage_mesh)
+
+    nv = len(mesh.vertices)
+    co = array('f', bytes(12 * nv))
+    mesh.vertices.foreach_get('co', co)
+    points = [(co[i] / CM, co[i + 1] / CM, co[i + 2] / CM) for i in range(0, 3 * nv, 3)]
+    mesh.calc_loop_triangles()
+    nt = len(mesh.loop_triangles)
+    tri_verts = array('i', bytes(12 * nt))
+    mesh.loop_triangles.foreach_get('vertices', tri_verts)
+    tris = [tuple(tri_verts[i:i + 3]) for i in range(0, 3 * nt, 3)]
+    out = {}
+    for key in shares or {}:
+        values = array('f', bytes(4 * nv))
+        mesh.attributes[key].data.foreach_get('value', values)
+        mesh.attributes.remove(mesh.attributes[key])
+        out[key] = values
+    return mesh, points, tris, out
+
+
+def build_makehuman_arm(bpy, args, width_cm, height_cm, centre_cm, up):
     """MakeHuman's forearm and hand, fitted to the measurements, with the
     design mapped per vertex at true size (``fit_and_map``)."""
     from array import array  # noqa: PLC0415
@@ -1205,29 +1757,8 @@ def build_makehuman_arm(bpy, args, width_cm, height_cm, centre_cm):
     cage, faces, info = load_makehuman_forearm(
         data, length_cm=L, side=args.side, sex=args.mh_sex, muscle=args.mh_muscle,
         weight=args.mh_weight, past_elbow_cm=EXTEND_CM)
-    cage_mesh = bpy.data.meshes.new('Forearm cage')
-    cage_mesh.from_pydata([tuple(c * CM for c in p) for p in cage], [], faces)
-    cage_mesh.update()
-    cage_obj = bpy.data.objects.new('Forearm cage', cage_mesh)
-    bpy.context.collection.objects.link(cage_obj)
-    sub = cage_obj.modifiers.new('Subdivision', 'SUBSURF')
-    sub.levels = sub.render_levels = MH_SUBDIVISIONS
-    bpy.context.view_layer.update()
-    depsgraph = bpy.context.evaluated_depsgraph_get()
-    mesh = bpy.data.meshes.new_from_object(cage_obj.evaluated_get(depsgraph))
-    mesh.name = 'Forearm'
-    bpy.data.objects.remove(cage_obj)
-    bpy.data.meshes.remove(cage_mesh)
-
+    mesh, points, tris, _ = subdivided_cage(bpy, cage, faces, 'Forearm')
     nv, nl, npoly = len(mesh.vertices), len(mesh.loops), len(mesh.polygons)
-    co = array('f', bytes(12 * nv))
-    mesh.vertices.foreach_get('co', co)
-    points = [(co[i] / CM, co[i + 1] / CM, co[i + 2] / CM) for i in range(0, 3 * nv, 3)]
-    mesh.calc_loop_triangles()
-    nt = len(mesh.loop_triangles)
-    tri_verts = array('i', bytes(12 * nt))
-    mesh.loop_triangles.foreach_get('vertices', tri_verts)
-    tris = [tuple(tri_verts[i:i + 3]) for i in range(0, 3 * nt, 3)]
     fit = fit_and_map(points, tris, step=MH_STATION_STEP_CM, y_range=(-3.0, L + EXTEND_CM - 2),
                       wrist=(tuple(f * L for f in MH_WRIST_RANGE), args.wrist_cm),
                       elbow=(tuple(f * L for f in MH_ELBOW_RANGE), args.elbow_cm))
@@ -1247,7 +1778,7 @@ def build_makehuman_arm(bpy, args, width_cm, height_cm, centre_cm):
         for k, (v, arc) in enumerate(zip(corners, corner_arcs)):
             uv[2 * (first + k)], uv[2 * (first + k) + 1] = design_uv_cm(
                 arc, new[v][1], width_cm=width_cm, height_cm=height_cm, centre_cm=centre_cm,
-                up=args.design_up)
+                up=up)
     mesh.uv_layers.new(name='Design').data.foreach_set('uv', uv)
     mesh.polygons.foreach_set('use_smooth', [True] * npoly)
     mesh.update()
@@ -1264,6 +1795,96 @@ def build_makehuman_arm(bpy, args, width_cm, height_cm, centre_cm):
         'seconds': round(time.perf_counter() - start, 1),
     })
     print(f'[render-on-body] makehuman arm: {nv} vertices, fitted and mapped '
+          f'({info["seconds"]}s)', flush=True)
+    return obj, fit, info
+
+
+#: Where the tape measure goes on the upper arm, as fractions of the way from
+#: the elbow crease to the top of the shoulder: just above the elbow, and
+#: half-way, round the biceps (the usual mid-upper-arm site). Fixed places,
+#: not the narrowest and widest: MakeHuman's upper arm narrows all the way
+#: down into the elbow and widens all the way up into the armpit.
+MH_ABOVE_ELBOW_AT = 0.125
+MH_BICEPS_AT = 0.5
+#: The upper arm's straight axis is fitted to its sections' centres between
+#: these fractions, clear of the elbow and of the armpit.
+MH_AXIS_RANGE = (0.15, 0.55)
+#: Design UV for skin the design may not go on (outside the image: bare skin).
+NO_DESIGN_UV = (-1.0, -1.0)
+
+
+def build_makehuman_upper_arm(bpy, args, width_cm, height_cm, centre_cm, up):
+    """MakeHuman's whole body with the arms lowered, its left upper arm
+    fitted to the measurements, and the design mapped per vertex at true size
+    onto the upper arm's skin only (``fit_and_map``). Returns ``(object, fit,
+    info)``; ``info['fit']`` carries the circumferences measured on the
+    rendered mesh."""
+    from array import array  # noqa: PLC0415
+
+    L = args.upper_arm_length_cm
+    start = time.perf_counter()
+    data = makehuman_data_dir(os.path.expanduser(args.makehuman_data))
+    cage, faces, shares, info = load_makehuman_upper_arm(
+        data, length_cm=L, side=args.side, sex=args.mh_sex, muscle=args.mh_muscle,
+        weight=args.mh_weight)
+    mesh, points, tris, shares = subdivided_cage(bpy, cage, faces, 'Body', shares)
+    arm, upper = shares['arm'], shares['upper']
+    nv, nl, npoly = len(mesh.vertices), len(mesh.loops), len(mesh.polygons)
+    loop_verts = array('i', bytes(4 * nl))
+    mesh.loops.foreach_get('vertex_index', loop_verts)
+    starts, totals = array('i', bytes(4 * npoly)), array('i', bytes(4 * npoly))
+    mesh.polygons.foreach_get('loop_start', starts)
+    mesh.polygons.foreach_get('loop_total', totals)
+    # The arm's own triangles are what's sliced into sections; the design
+    # goes only on faces of the upper arm (its bones' weights at least half).
+    arm_tris = [t for t in tris if min(arm[i] for i in t) >= 0.5]
+    on_upper = [min(upper[v] for v in loop_verts[first:first + total]) >= 0.5
+                for first, total in zip(starts, totals)]
+    mapped = bytearray(nv)
+    for inside, first, total in zip(on_upper, starts, totals):
+        if inside:
+            for v in loop_verts[first:first + total]:
+                mapped[v] = 1
+    fit = fit_and_map(points, arm_tris, step=MH_STATION_STEP_CM, y_range=(-3.0, L),
+                      wrist=(MH_ABOVE_ELBOW_AT * L, args.above_elbow_cm),
+                      elbow=(MH_BICEPS_AT * L, args.biceps_cm),
+                      share=arm, mapped=mapped, open_ends=True,
+                      axis_range=tuple(f * L for f in MH_AXIS_RANGE))
+    new = fit['points']
+    mesh.vertices.foreach_set('co', array('f', [c * CM for p in new for c in p]))
+
+    uv = array('f', NO_DESIGN_UV) * nl
+    arcs, perimeters = fit['arcs'], fit['perimeters']
+    for inside, first, total in zip(on_upper, starts, totals):
+        if not inside:
+            continue
+        corners = loop_verts[first:first + total]
+        corner_arcs = unwrap_seam([arcs[v] for v in corners], min(perimeters[v] for v in corners))
+        for k, (v, arc) in enumerate(zip(corners, corner_arcs)):
+            uv[2 * (first + k)], uv[2 * (first + k) + 1] = design_uv_cm(
+                arc, new[v][1], width_cm=width_cm, height_cm=height_cm, centre_cm=centre_cm,
+                up=up)
+    mesh.uv_layers.new(name='Design').data.foreach_set('uv', uv)
+    mesh.polygons.foreach_set('use_smooth', [True] * npoly)
+    mesh.update()
+
+    obj = bpy.data.objects.new('Body', mesh)
+    bpy.context.collection.objects.link(obj)
+    upper_ys = [new[v][1] for v in range(nv) if mapped[v]]
+    stations = {}
+    for name, (y, s), target, before in zip(
+            ('above_elbow', 'biceps'), fit['scale'], (args.above_elbow_cm, args.biceps_cm),
+            fit['before_cm']):
+        stations[name] = {
+            'at_cm_from_elbow': round(y, 2), 'target_cm': target,
+            'makehuman_cm': round(before, 2), 'scale': round(s, 4),
+            'measured_cm': round(longest_loop_length(new, arm_tris, 1, y), 2)}
+    info.update({
+        'data': data, 'subdivisions': MH_SUBDIVISIONS, 'vertices': nv,
+        'upper_arm_skin_cm': [round(min(upper_ys), 1), round(max(upper_ys), 1)],
+        'fit': stations, 'seconds': round(time.perf_counter() - start, 1),
+    })
+    print(f'[render-on-body] makehuman upper arm: {nv} vertices, fitted and mapped '
           f'({info["seconds"]}s)', flush=True)
     return obj, fit, info
 
@@ -1363,8 +1984,9 @@ def skin_material(bpy, args, image, healed_image=None):
         links.new(tex_n.outputs['Fac'], rng.inputs['Value'])
         return rng.outputs['Result']
 
-    tone = srgb_hex_to_linear(args.skin)
-    flushed = tuple(c * f for c, f in zip(tone, (1.0, 0.86, 0.84)))
+    tone = srgb8_to_linear(args.skin_rgb)
+    subsurface = skin_subsurface(tone)
+    flushed = tuple(c * f for c, f in zip(tone, subsurface['flush']))
     skin = _mix(nodes, links, 'MIX', tone, flushed, factor=noise(14.0, 2.0, -0.4, 0.7))
     skin = _mix(nodes, links, 'MULTIPLY', skin, (1.0, 1.0, 1.0))
     links.new(noise(18.0, 3.0, 0.9, 1.06), _socket(skin.node.inputs, 'B', 'RGBA'))
@@ -1378,7 +2000,7 @@ def skin_material(bpy, args, image, healed_image=None):
         # skin·T + floor·(1 − T), with T the ink's transmittance.
         ink = _mix(nodes, links, 'MIX', ink, (1.0, 1.0, 1.0),
                    factor=noise(1800.0, 3.0, -2 * HEALED_PATCHINESS, 2 * HEALED_PATCHINESS))
-        floor = healed_ink_floor(srgb_hex_to_linear(args.skin), args.ink_strength)
+        floor = healed_ink_floor(tone, args.ink_strength)
         covered = _vector_math(nodes, links, 'SUBTRACT', (1.0, 1.0, 1.0), ink)
         inked = _vector_math(nodes, links, 'ADD',
                              _vector_math(nodes, links, 'MULTIPLY', skin, ink),
@@ -1401,7 +2023,7 @@ def skin_material(bpy, args, image, healed_image=None):
     bsdf.inputs['Roughness'].default_value = 0.48
     sss = _first_socket(bsdf.inputs, 'Subsurface Weight', 'Subsurface')  # 4.x, 3.x
     sss.default_value = 0.35 if sss.name == 'Subsurface Weight' else 0.08
-    bsdf.inputs['Subsurface Radius'].default_value = (1.0, 0.4, 0.22)
+    bsdf.inputs['Subsurface Radius'].default_value = subsurface['radius']
     scale = _first_socket(bsdf.inputs, 'Subsurface Scale')
     if scale is not None:
         scale.default_value = 0.003  # metres: a few mm of light bleed in red
@@ -1449,8 +2071,12 @@ def design_triangles(bpy, obj):
             sub.levels = viewport_levels
     pts = [(co[i] / CM, co[i + 1] / CM, co[i + 2] / CM) for i in range(0, 3 * nv, 3)]
     uvs = [(uv[i], uv[i + 1]) for i in range(0, 2 * nl, 2)]
-    return [tuple((pts[tri_verts[i + c]], uvs[tri_loops[i + c]]) for c in range(3))
-            for i in range(0, 3 * nt, 3)]
+    out = []
+    for i in range(0, 3 * nt, 3):
+        tri = tuple((pts[tri_verts[i + c]], uvs[tri_loops[i + c]]) for c in range(3))
+        if any(corner_uv != NO_DESIGN_UV for _, corner_uv in tri):  # skin the design can't reach
+            out.append(tri)
+    return out
 
 
 def _look_at(Matrix, Vector, eye, target, up=(0.0, 1.0, 0.0)):
@@ -1555,33 +2181,30 @@ def main(argv=None):
     if not px_w or not px_h:
         raise SystemExit(f'could not read image: {image_path}')
 
-    L = args.length_cm
+    narrow_cm, wide_cm, L = arm_profile(args)
+    upper_arm = args.placement == 'upper-arm'
+    up = limb_up(args.placement, args.design_up)
     width_cm, height_cm = design_size_cm(args.width_cm, px_w, px_h)
     centre_cm = L / 2 if args.centre_cm is None else args.centre_cm
     lo, hi = centre_cm - height_cm / 2, centre_cm + height_cm / 2
     arm = body = None
     if args.body == 'makehuman':
-        arm, fit, body = build_makehuman_arm(bpy, args, width_cm, height_cm, centre_cm)
+        build = build_makehuman_upper_arm if upper_arm else build_makehuman_arm
+        arm, fit, body = build(bpy, args, width_cm, height_cm, centre_cm, up)
         centre_circ = fitted_circumference(fit, centre_cm)
         thinnest = min(fitted_circumference(fit, lo + (hi - lo) * k / 64) for k in range(65))
     else:
-        centre_circ = circumference_at(centre_cm / L, args.wrist_cm, args.elbow_cm)
-        thinnest = circumference_at(lo / L, args.wrist_cm, args.elbow_cm)  # the taper only grows
-
-    warnings = []
-    if width_cm > thinnest:
-        warnings.append(f'design is {width_cm:g} cm wide but the arm is only {thinnest:.1f} cm '
-                        'round under part of it; the overlap is clipped at the underside')
-    if lo < 0 or hi > L:
-        warnings.append(f'design runs from {lo:.1f} to {hi:.1f} cm along a {L:g} cm forearm, '
-                        'past the wrist or elbow')
+        centre_circ = circumference_at(centre_cm / L, narrow_cm, wide_cm)
+        thinnest = circumference_at(lo / L, narrow_cm, wide_cm)  # the taper only grows
+    warnings = design_warnings(args.placement, width_cm=width_cm, lo=lo, hi=hi, length_cm=L,
+                               thinnest_cm=thinnest, centre_cm_round=centre_circ)
 
     ink = {'mode': args.ink, 'strength': args.ink_strength}
     healed_image = None
     if args.ink == 'healed':
         start = time.perf_counter()
         healed_image, sigma_px = healed_ink_image(bpy, image, args, width_cm)
-        floor = healed_ink_floor(srgb_hex_to_linear(args.skin), args.ink_strength)
+        floor = healed_ink_floor(srgb8_to_linear(args.skin_rgb), args.ink_strength)
         ink.update({
             'texture_px': list(healed_image.size),
             'spread_mm': args.ink_spread_mm, 'spread_px': round(sigma_px, 2),
@@ -1597,29 +2220,30 @@ def main(argv=None):
     # No ground plane: a shadow catcher doubled the render time for a shadow
     # that barely registers on near-black.
     if arm is None:
-        arm = build_arm(bpy, args, height_cm, centre_cm)
+        arm = build_arm(bpy, args, height_cm, centre_cm, up)
     arm.data.materials.append(skin_material(bpy, args, image, healed_image))
 
     start = time.perf_counter()
     triangles = design_triangles(bpy, arm)
-    measured = measure_design(triangles, height_cm=height_cm, centre_cm=centre_cm)
+    measured = measure_design(triangles, height_cm=height_cm, centre_cm=centre_cm,
+                              placement=args.placement)
     measured['seconds'] = round(time.perf_counter() - start, 1)
-    if body is not None:  # the fitted circumferences, measured on the arm as rendered
+    if body is not None and not upper_arm:  # the fitted circumferences, measured as rendered
         for station in body['fit'].values():
             whole, _, _ = measure_slice(triangles, 1, station['at_cm_from_wrist'], {})
             station['measured_cm'] = round(whole, 2)
-    middle = measured['width_round_arm']['middle']['width_cm']
-    if width_cm <= thinnest and abs(middle - width_cm) > 0.02 * width_cm:
-        warnings.append(f'the design measures {middle:g} cm round the rendered arm, '
-                        f'not {width_cm:g} cm')
+    warnings += measured_warnings(measured, width_cm=width_cm, height_cm=height_cm,
+                                  check_width=width_cm <= thinnest,
+                                  check_length=0 <= lo and hi <= L)
 
-    frame_centre, frame_half = camera_frame(args.body, L)
+    frame_centre, frame_half = camera_frame(args.body, L, args.placement)
     target = (0.0, frame_centre * CM, 0.0)  # on the arm's axis
     half_extent = frame_half * CM
     dist = frame_distance(half_extent, FOCAL_MM, SENSOR_MM)
-    add_light(bpy, Matrix, Vector, 'Key', target, -50, 22, 0.9, 0.45, 16.0, (1.0, 0.95, 0.88))
-    add_light(bpy, Matrix, Vector, 'Fill', target, 60, -5, 1.2, 1.2, 3.0, (0.86, 0.92, 1.0))
-    add_light(bpy, Matrix, Vector, 'Rim', target, 125, -30, 0.8, 0.4, 5.0, (1.0, 0.95, 0.9))
+    for name, around, tilt, *rest in UPPER_ARM_LIGHTS if upper_arm else FOREARM_LIGHTS:
+        if upper_arm:
+            around = UPPER_ARM_SIDE_DEG[args.side] - around
+        add_light(bpy, Matrix, Vector, name, target, around, tilt, *rest)
 
     cam_data = bpy.data.cameras.new('Camera')
     cam_data.lens = FOCAL_MM
@@ -1634,7 +2258,7 @@ def main(argv=None):
 
     views = {}
     for view in args.views:
-        around, tilt = VIEW_ANGLES[view]
+        around, tilt = view_angles(args.placement, args.side, view)
         d = _direction(around, tilt)
         cam.location = tuple(t + dist * c for t, c in zip(target, d))
         cam.rotation_euler = _look_at(Matrix, Vector, cam.location, target)
@@ -1651,17 +2275,20 @@ def main(argv=None):
         'image': image_path,
         'image_px': [px_w, px_h],
         'design_cm': {'width': width_cm, 'height': round(height_cm, 2),
-                      'centre_from_wrist': centre_cm, 'up': args.design_up},
+                      ('centre_from_elbow_crease' if upper_arm else 'centre_from_wrist'): centre_cm,
+                      'up': args.design_up},
         'placement': args.placement,
+        'side': args.side,
         'body': args.body,
-        'arm_cm': {'wrist': args.wrist_cm, 'elbow': args.elbow_cm, 'length': L},
+        'arm_cm': {name[:-3]: value for (name, _), value in
+                   zip(MEASUREMENTS[args.placement], (narrow_cm, wide_cm, L))},
         'at_design_centre': {
             'circumference_cm': round(centre_circ, 2),
             'u_span': round(uv_span_for_width(width_cm, centre_circ), 4),
             'wraps_degrees': round(360 * uv_span_for_width(width_cm, centre_circ), 1),
         },
         'measured_cm': measured,
-        'skin': args.skin,
+        'skin': skin_params(args),
         'ink': ink,
         'ink_strength': args.ink_strength,
         'white_point': args.white_point,
@@ -1674,7 +2301,13 @@ def main(argv=None):
         'views': views,
         'warnings': warnings,
     }
-    if body is not None:
+    if body is not None and upper_arm:
+        params['makehuman'] = {
+            'build': {'sex': args.mh_sex, 'muscle': args.mh_muscle, 'weight': args.mh_weight,
+                      'age_years': 25, 'targets': body.pop('targets')},
+            **body,
+        }
+    elif body is not None:
         params['makehuman'] = {
             'side': args.side,
             'build': {'sex': args.mh_sex, 'muscle': args.mh_muscle, 'weight': args.mh_weight,

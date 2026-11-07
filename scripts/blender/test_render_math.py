@@ -386,7 +386,7 @@ class Measure(unittest.TestCase):
 class Args(unittest.TestCase):
     def test_reads_only_args_after_double_dash(self):
         args = rob.parse_args(['blender', '-b', '-P', 'x.py', '--', '--image', 'a.png',
-                               '--width-cm', '12', '--out', 'renders'])
+                               '--width-cm', '12', '--out', 'renders', '--placement', 'forearm'])
         self.assertEqual(args.image, 'a.png')
         self.assertEqual(args.width_cm, 12)
         self.assertEqual((args.wrist_cm, args.elbow_cm, args.length_cm), (17, 26, 25))
@@ -412,9 +412,9 @@ class Args(unittest.TestCase):
             rob.parse_args(['--', '--image', 'a.png', '--width-cm', '12', '--out', 'r',
                             '--wrist-cm', '-1'])
 
-    def test_placement_is_forearm_until_another_body_part_exists(self):
+    def test_placement_defaults_to_the_upper_arm_and_the_forearm_still_works(self):
         base = ['--', '--image', 'a.png', '--width-cm', '12', '--out', 'r']
-        self.assertEqual(rob.parse_args(base).placement, 'forearm')
+        self.assertEqual(rob.parse_args(base).placement, 'upper-arm')
         self.assertEqual(rob.parse_args(base + ['--placement', 'forearm']).placement, 'forearm')
         with self.assertRaises(SystemExit):
             rob.parse_args(base + ['--placement', 'shoulder'])
@@ -669,6 +669,23 @@ class Contours(unittest.TestCase):
         for x, z, arc in pts[::37]:
             self.assertAlmostEqual(rob.arc_at(table, math.atan2(x, z)), arc, places=3)
 
+    def test_a_fold_in_the_section_does_not_shift_the_angles_after_it(self):
+        # A circle with a fold at 90°: the outline runs out to 82° and back.
+        # Rays beyond the fold must still meet the circle where they really do.
+        r = 2.0
+        loop = [(r * math.sin(math.radians(d)), r * math.cos(math.radians(d)))
+                for d in range(0, 360, 5)]
+        at90 = 90 // 5
+        loop.insert(at90 + 1, (2.6 * math.sin(math.radians(82)), 2.6 * math.cos(math.radians(82))))
+        table = rob.contour_table(loop, (0.0, 0.0))
+        at150 = loop.index(min(loop, key=lambda p: math.dist(p, (r * math.sin(math.radians(150)),
+                                                               r * math.cos(math.radians(150))))))
+        want = rob.polygon_length(loop[:at150 + 1], closed=False)
+        self.assertAlmostEqual(rob.arc_at(table, math.radians(150)), want, places=6)
+        back_to_330 = [loop[0]] + loop[:-7:-1]
+        self.assertAlmostEqual(rob.arc_at(table, math.radians(-30)),
+                               -rob.polygon_length(back_to_330, closed=False), places=6)
+
     def test_the_seam_is_half_way_round_from_the_top_line(self):
         # A lopsided section (wider on +x): the underside seam is half the
         # perimeter round from the top either way, so a design up to the full
@@ -820,7 +837,8 @@ class BodyArgs(unittest.TestCase):
     def test_parametric_is_the_default_body(self):
         args = rob.parse_args(self.BASE)
         self.assertEqual(args.body, 'parametric')
-        self.assertEqual(args.side, 'inner')
+        self.assertEqual(args.side, 'outer')  # the upper arm's classic spot
+        self.assertEqual(rob.parse_args(self.BASE + ['--placement', 'forearm']).side, 'inner')
 
     def test_makehuman_needs_its_data_folder(self):
         with self.assertRaises(SystemExit):
@@ -837,9 +855,426 @@ class BodyArgs(unittest.TestCase):
     def test_framing_includes_the_hand_only_for_the_makehuman_arm(self):
         # (centre, half-height) along the arm, cm from the wrist
         self.assertEqual(rob.camera_frame('parametric', 25.0), (12.5, 14.0))
+        self.assertEqual(rob.camera_frame('parametric', 25.0, 'forearm'), (12.5, 14.0))
         centre, half = rob.camera_frame('makehuman', 25.0)
         self.assertLess(centre - half, -8.0)  # the palm is in frame
         self.assertAlmostEqual(centre + half, 26.5)
+
+
+def _lin(name):
+    return rob.srgb8_to_linear(rob.SKIN_TONES[name])
+
+
+class SkinTone(unittest.TestCase):
+    """Skin tone presets, exact sRGB, and the subsurface look that goes with them."""
+
+    BASE = ['--', '--image', 'a.png', '--width-cm', '12', '--out', 'r']
+
+    def test_presets_are_neutral_names_ordered_light_to_deep(self):
+        self.assertEqual(rob.DEFAULT_SKIN_TONE, 'light-warm-brown')
+        self.assertIn(rob.DEFAULT_SKIN_TONE, rob.SKIN_TONES)
+        self.assertEqual(rob.SKIN_TONES['light-peach'], (201, 157, 128))  # the earlier default
+        self.assertGreaterEqual(len(rob.SKIN_TONES), 4)
+        for name, rgb in rob.SKIN_TONES.items():
+            self.assertRegex(name, r'^[a-z]+(-[a-z]+)*$')
+            self.assertEqual(len(rgb), 3)
+            self.assertTrue(all(isinstance(c, int) and 0 <= c <= 255 for c in rgb))
+        lum = [rob.luminance(rob.srgb8_to_linear(rgb)) for rgb in rob.SKIN_TONES.values()]
+        self.assertEqual(lum, sorted(lum, reverse=True))
+
+    def test_the_default_is_browner_and_warmer_than_the_old_peach(self):
+        (r, g, b), (r0, g0, b0) = rob.SKIN_TONES['light-warm-brown'], rob.SKIN_TONES['light-peach']
+        self.assertLess(rob.luminance(_lin('light-warm-brown')), rob.luminance(_lin('light-peach')))
+        self.assertGreater(g / b, g0 / b0)  # more yellow: warm, not pink
+        self.assertLessEqual(r / g, r0 / g0 + 0.02)  # no redder than the peach
+        # The comparison's neighbours sit either side of it.
+        names = list(rob.SKIN_TONES)
+        at = names.index('light-warm-brown')
+        self.assertEqual(names[at - 1:at + 2], ['light-warm-tan', 'light-warm-brown', 'warm-brown'])
+
+    def test_srgb8_to_linear_agrees_with_the_hex_form(self):
+        self.assertEqual(rob.srgb8_to_linear((201, 157, 128)), rob.srgb_hex_to_linear('#c99d80'))
+        self.assertEqual(rob.srgb8_to_linear((0, 255, 0)), (0.0, 1.0, 0.0))
+        self.assertAlmostEqual(rob.srgb8_to_linear((128, 128, 128))[1], 0.2158605, places=6)
+
+    def test_parse_skin_rgb(self):
+        self.assertEqual(rob.parse_skin_rgb('201,157,128'), (201, 157, 128))
+        self.assertEqual(rob.parse_skin_rgb(' 190 , 150, 110 '), (190, 150, 110))
+        for bad in ('256,0,0', '1,2', '1,2,3,4', 'a,b,c', '-1,0,0', '1.5,2,3', ''):
+            with self.assertRaises(ValueError):
+                rob.parse_skin_rgb(bad)
+
+    def test_the_old_tone_keeps_the_old_subsurface_exactly(self):
+        sss = rob.skin_subsurface(_lin('light-peach'))
+        self.assertEqual(sss['radius'], (1.0, 0.4, 0.22))
+        self.assertEqual(sss['flush'], (1.0, 0.86, 0.84))
+
+    def test_browner_skin_scatters_less_far_and_shows_less_redness(self):
+        old = rob.skin_subsurface(_lin('light-peach'))
+        new = rob.skin_subsurface(_lin('light-warm-brown'))
+        for a, b in zip(new['radius'], old['radius']):
+            self.assertLess(a, b)
+        r, g, b = new['radius']
+        self.assertGreater(r, g)
+        self.assertGreater(g, b)
+        # Melanin takes more of the short wavelengths: blue shrinks most.
+        self.assertLess(b / r, old['radius'][2] / old['radius'][0])
+        self.assertEqual(new['flush'][0], 1.0)
+        self.assertGreater(new['flush'][1], old['flush'][1])  # milder red blotches
+        self.assertGreater(new['flush'][2], old['flush'][2])
+        deep = rob.skin_subsurface(_lin('deep-brown'))
+        self.assertLess(deep['radius'][0], r)
+        self.assertGreater(deep['radius'][2], 0)
+
+    def test_args_pick_a_preset_an_exact_rgb_or_the_legacy_hex(self):
+        args = rob.parse_args(self.BASE)
+        self.assertEqual(args.skin_tone, 'light-warm-brown')
+        self.assertEqual(args.skin_rgb, rob.SKIN_TONES['light-warm-brown'])
+        self.assertEqual(rob.parse_args(self.BASE + ['--skin-tone', 'light-peach']).skin_rgb,
+                         (201, 157, 128))
+        args = rob.parse_args(self.BASE + ['--skin-rgb', '180,140,100'])
+        self.assertEqual((args.skin_tone, args.skin_rgb), (None, (180, 140, 100)))
+        self.assertEqual(rob.parse_args(self.BASE + ['--skin', '#c99d80']).skin_rgb,
+                         (201, 157, 128))
+        for bad in (['--skin-tone', 'beige'], ['--skin-rgb', '300,0,0'], ['--skin', 'c99d8'],
+                    ['--skin-tone', 'light-peach', '--skin-rgb', '1,2,3']):
+            with self.assertRaises(SystemExit):
+                rob.parse_args(self.BASE + bad)
+
+
+class UpperArmArgs(unittest.TestCase):
+    BASE = ['--', '--image', 'a.png', '--width-cm', '12', '--out', 'r']
+
+    def test_upper_arm_measurements_have_adult_defaults(self):
+        args = rob.parse_args(self.BASE)
+        self.assertEqual((args.above_elbow_cm, args.biceps_cm, args.upper_arm_length_cm),
+                         (26, 30, 32))
+        self.assertIsNone(args.wrist_cm)
+        self.assertEqual(rob.arm_profile(args), (26, 30, 32))
+        fore = rob.parse_args(self.BASE + ['--placement', 'forearm'])
+        self.assertEqual(rob.arm_profile(fore), (17, 26, 25))
+        self.assertIsNone(fore.biceps_cm)
+        args = rob.parse_args(self.BASE + ['--biceps-cm', '33', '--above-elbow-cm', '26',
+                                           '--upper-arm-length-cm', '34'])
+        self.assertEqual(rob.arm_profile(args), (26, 33, 34))
+
+    def test_measurements_must_belong_to_the_placement(self):
+        with self.assertRaises(SystemExit):
+            rob.parse_args(self.BASE + ['--wrist-cm', '16'])
+        with self.assertRaises(SystemExit):
+            rob.parse_args(self.BASE + ['--placement', 'forearm', '--biceps-cm', '31'])
+        with self.assertRaises(SystemExit):
+            rob.parse_args(self.BASE + ['--biceps-cm', '0'])
+
+    def test_views_default_per_placement_and_side(self):
+        self.assertEqual(rob.parse_args(self.BASE).views,
+                         ['outer', 'front-three-quarter', 'back-three-quarter'])
+        self.assertEqual(rob.parse_args(self.BASE + ['--side', 'inner']).views,
+                         ['front', 'front-three-quarter'])
+        self.assertEqual(rob.parse_args(self.BASE + ['--placement', 'forearm']).views,
+                         ['top', 'three-quarter', 'side'])
+        self.assertEqual(rob.parse_args(self.BASE + ['--views', 'outer,front']).views,
+                         ['outer', 'front'])
+        with self.assertRaises(SystemExit):
+            rob.parse_args(self.BASE + ['--views', 'top'])
+        with self.assertRaises(SystemExit):
+            rob.parse_args(self.BASE + ['--placement', 'forearm', '--views', 'outer'])
+
+    def test_design_up_points_to_the_shoulder_by_default(self):
+        args = rob.parse_args(self.BASE)
+        self.assertEqual(args.design_up, 'shoulder')
+        self.assertEqual(rob.limb_up(args.placement, args.design_up), '+y')
+        args = rob.parse_args(self.BASE + ['--design-up', 'elbow'])
+        self.assertEqual(rob.limb_up(args.placement, args.design_up), '-y')
+        fore = rob.parse_args(self.BASE + ['--placement', 'forearm'])
+        self.assertEqual(fore.design_up, 'elbow')
+        self.assertEqual(rob.limb_up('forearm', 'elbow'), '+y')
+        self.assertEqual(rob.limb_up('forearm', 'wrist'), '-y')
+        with self.assertRaises(SystemExit):
+            rob.parse_args(self.BASE + ['--design-up', 'wrist'])
+        with self.assertRaises(SystemExit):
+            rob.parse_args(self.BASE + ['--placement', 'forearm', '--design-up', 'shoulder'])
+
+    def test_design_uv_takes_plus_or_minus_y(self):
+        kw = dict(width_cm=12.0, height_cm=10.0, centre_cm=12.5)
+        self.assertEqual(rob.design_uv_cm(6.0, 17.5, up='+y', **kw),
+                         rob.design_uv_cm(6.0, 17.5, up='elbow', **kw))
+        self.assertEqual(rob.design_uv_cm(6.0, 17.5, up='-y', **kw),
+                         rob.design_uv_cm(6.0, 17.5, up='wrist', **kw))
+
+
+def _a_posed_arm(side=1):
+    """A toy arm in decimetres, posed as MakeHuman's rest pose: the upper arm
+    out 42° from vertical in the frontal plane, the elbow bent 43° forward
+    (+Z). ``side`` 1 is the left arm (+X), -1 its mirror image, the right."""
+    a, b = math.radians(42.0), math.radians(43.0)
+    shoulder = (side * 1.7, 5.0, 0.0)
+    d = (side * math.sin(a), -math.cos(a), 0.0)
+    elbow = tuple(s + 2.4 * c for s, c in zip(shoulder, d))
+    fa = tuple(math.cos(b) * c + math.sin(b) * f for c, f in zip(d, (0.0, 0.0, 1.0)))
+    wrist = tuple(e + 2.5 * c for e, c in zip(elbow, fa))
+    points = [
+        (side * 0.5, 3.0, 0.0),                                  # 0: torso
+        tuple(s + 1.2 * c for s, c in zip(shoulder, d)),          # 1: mid upper arm
+        tuple(e + 1.25 * c for e, c in zip(elbow, fa)),           # 2: mid forearm
+        tuple(s + 0.8 * c for s, c in zip(shoulder, d)),          # 3: half-weight, by the shoulder
+    ]
+    arm = [0.0, 1.0, 1.0, 0.5]
+    lower = [0.0, 0.0, 1.0, 0.0]
+    return points, arm, lower, {'shoulder': shoulder, 'elbow': elbow, 'wrist': wrist}
+
+
+def _angle_deg(u, v):
+    return math.degrees(math.acos(max(-1.0, min(1.0, rob._dot(rob._normalised(u),
+                                                               rob._normalised(v))))))
+
+
+class UpperArmPose(unittest.TestCase):
+    """MakeHuman's A-pose arm is lowered by a weighted turn about the shoulder
+    and its elbow relaxed, so the upper arm hangs as it does in a photo."""
+
+    def test_the_arm_is_lowered_and_the_elbow_relaxed(self):
+        points, arm, lower, joints = _a_posed_arm()
+        out, posed, info = rob.pose_arm_down(points, arm, lower, joints, abduction_deg=12.0,
+                                             elbow_bend_deg=15.0)
+        self.assertAlmostEqual(info['rest_abduction_deg'], 42.0)
+        self.assertAlmostEqual(info['rest_bend_deg'], 43.0)
+        sh, el, wr = posed['shoulder'], posed['elbow'], posed['wrist']
+        self.assertEqual(sh, joints['shoulder'])
+        upper = rob._sub(el, sh)
+        self.assertAlmostEqual(_angle_deg(upper, (0.0, -1.0, 0.0)), 12.0)
+        self.assertAlmostEqual(math.sqrt(rob._dot(upper, upper)), 2.4)
+        self.assertGreater(el[0], sh[0])  # still out to the side, not across the body
+        self.assertAlmostEqual(el[2], 0.0)  # in the frontal plane
+        self.assertAlmostEqual(_angle_deg(rob._sub(wr, el), upper), 15.0)
+        self.assertGreater(wr[2], el[2])  # the forearm still bends forwards
+        self.assertEqual(out[0], points[0])  # the torso stays put
+        for got, want in zip(out[1], (s + 1.2 * c / 2.4 for s, c in zip(sh, upper))):
+            self.assertAlmostEqual(got, want)
+        for got, want in zip(out[2], (e + 1.25 * c for e, c in
+                                      zip(el, rob._normalised(rob._sub(wr, el))))):
+            self.assertAlmostEqual(got, want)
+        # Half the arm's weight: half the turn (42 - 12 = 30°, so 15°).
+        self.assertAlmostEqual(_angle_deg(rob._sub(out[3], sh), (0.0, -1.0, 0.0)), 42.0 - 15.0)
+
+    def test_the_right_arm_is_lowered_as_a_mirror_image(self):
+        points, arm, lower, joints = _a_posed_arm(side=-1)
+        out, posed, _ = rob.pose_arm_down(points, arm, lower, joints, abduction_deg=12.0,
+                                          elbow_bend_deg=15.0)
+        sh, el, wr = posed['shoulder'], posed['elbow'], posed['wrist']
+        self.assertLess(el[0], sh[0])
+        self.assertAlmostEqual(_angle_deg(rob._sub(el, sh), (0.0, -1.0, 0.0)), 12.0)
+        self.assertGreater(wr[2], el[2])
+
+
+class UpperArmFrame(unittest.TestCase):
+    SH = (1.7, 5.0, 0.0)
+    EL = (1.7 + 2.4 * math.sin(math.radians(12)), 5.0 - 2.4 * math.cos(math.radians(12)), 0.0)
+
+    def _axes(self, side):
+        origin, (x, y, z) = rob.upper_arm_frame(self.SH, self.EL, side)
+        self.assertEqual(origin, self.EL)
+        for got, want in zip(y, rob._normalised(rob._sub(self.SH, self.EL))):
+            self.assertAlmostEqual(got, want)
+        self.assertAlmostEqual(rob._dot(rob._cross(x, y), z), 1.0)  # right-handed: never mirrored
+        for a, b in ((x, y), (y, z), (z, x)):
+            self.assertAlmostEqual(rob._dot(a, b), 0.0)
+        return x, y, z
+
+    def test_outer_side_faces_the_camera_with_the_back_on_the_right(self):
+        x, _, z = self._axes('outer')
+        self.assertGreater(z[0], 0.95)  # lateral: the left arm's outside is +X
+        self.assertAlmostEqual(x[2], -1.0)  # +x is the back of the body
+
+    def test_inner_side_is_the_front_of_the_arm(self):
+        x, _, z = self._axes('inner')
+        self.assertAlmostEqual(z[2], 1.0)  # the biceps faces forward
+        self.assertGreater(x[0], 0.95)  # +x is the outside of the arm
+        with self.assertRaises(ValueError):
+            rob.upper_arm_frame(self.SH, self.EL, 'top')
+
+    def test_to_frame_puts_the_elbow_at_the_origin_and_the_shoulder_up_y(self):
+        origin, axes = rob.upper_arm_frame(self.SH, self.EL, 'outer')
+        el, sh = rob.to_frame([self.EL, self.SH], origin, axes, 10.0)
+        for c in el:
+            self.assertAlmostEqual(c, 0.0)
+        self.assertAlmostEqual(sh[0], 0.0)
+        self.assertAlmostEqual(sh[1], 24.0)
+        self.assertAlmostEqual(sh[2], 0.0)
+
+    def test_shoulder_top_is_where_the_outline_faces_up_and_out(self):
+        # A round shoulder (radius 5 about y = 20 in the y-z plane), a trapezius
+        # sloping gently towards the neck, and a head that is higher still but
+        # not part of the arm (share 0).
+        pts, share = [], []
+        for k in range(181):
+            t = math.radians(k)
+            pts.append((0.0, 20.0 + 5.0 * math.cos(t), 5.0 * math.sin(t)))
+            share.append(1.0)
+        pts += [(0.0, 25.0 + 0.3 * k, -k) for k in range(1, 12)]
+        share += [1.0] * 11
+        pts.append((0.0, 45.0, -15.0))
+        share.append(0.0)
+        y = rob.shoulder_top_y(pts, share, lateral=(0.0, 0.0, 1.0))
+        self.assertAlmostEqual(y, 20.0 + 5.0 / math.sqrt(2), places=2)
+
+
+class UpperArmViews(unittest.TestCase):
+    def test_view_angles_are_set_by_the_body_not_the_design(self):
+        self.assertEqual(rob.view_angles('upper-arm', 'outer', 'outer'), (0.0, 0.0))
+        around, tilt = rob.view_angles('upper-arm', 'outer', 'back-three-quarter')
+        self.assertEqual(around, 45.0)  # towards +x, the back
+        self.assertLess(tilt, 0.0)  # a little from above: the shoulder end
+        self.assertEqual(rob.view_angles('upper-arm', 'outer', 'front-three-quarter')[0], -45.0)
+        self.assertEqual(rob.view_angles('upper-arm', 'inner', 'front'), (0.0, 0.0))
+        self.assertEqual(rob.view_angles('upper-arm', 'inner', 'front-three-quarter')[0], 45.0)
+        self.assertNotIn('inner-three-quarter', rob.UPPER_ARM_VIEW_ANGLES)  # the chest hides it
+        self.assertEqual(rob.view_angles('upper-arm', 'outer', 'front')[0], -90.0)
+        self.assertEqual(rob.view_angles('forearm', 'inner', 'three-quarter'), (42.0, 28.0))
+        self.assertEqual(rob.view_angles('forearm', 'outer', 'top'), (0.0, 0.0))
+
+    def test_upper_arm_framing_takes_in_the_elbow_and_the_shoulder(self):
+        centre, half = rob.camera_frame('makehuman', 32.0, 'upper-arm')
+        self.assertLess(centre - half, -4.0)  # a little forearm
+        self.assertGreater(centre - half, -10.0)
+        self.assertGreater(centre + half, 33.0)  # over the top of the shoulder
+        self.assertEqual(rob.camera_frame('parametric', 32.0, 'upper-arm'), (16.0, 17.5))
+
+    def test_aspect_at_takes_the_two_ends(self):
+        self.assertEqual(rob.aspect_at(0.3), rob.aspect_at(0.3, rob.WRIST_ASPECT, rob.ELBOW_ASPECT))
+        self.assertAlmostEqual(rob.aspect_at(0.0, 1.05, 1.15), 1.05)
+        self.assertAlmostEqual(rob.aspect_at(1.0, 1.05, 1.15), 1.15)
+
+
+class UpperArmMeasure(unittest.TestCase):
+    def test_measure_design_names_the_ends_of_the_upper_arm(self):
+        # A design 12 cm round and 12 cm along, centred 6 cm up the arm.
+        tris = [tuple((p, (u, p[1] / 12.0)) for p, (u, _) in tri)
+                for tri in _cylinder(5.0, 30.0, 256, 12.0)]
+        m = rob.measure_design(tris, height_cm=12.0, centre_cm=6.0, placement='upper-arm')
+        self.assertEqual(list(m['width_round_arm']), ['elbow_end', 'middle', 'shoulder_end'])
+        self.assertEqual(m['width_round_arm']['elbow_end']['at_cm_from_elbow'], 1.8)
+        for spot in m['width_round_arm'].values():
+            self.assertAlmostEqual(spot['width_cm'], 12.0, places=1)
+        self.assertAlmostEqual(m['length_along_arm_cm'], 12.0, places=2)
+
+    def test_longest_loop_is_the_arm_not_the_torso_slice(self):
+        p1, t1 = _tube(_regular_polygon(48, 1.0), [0.0, 2.0])
+        p2, t2 = _tube(_regular_polygon(48, 3.0, centre=(8.0, 0.0)), [0.0, 2.0])
+        t2 = [tuple(i + len(p1) for i in t) for t in t2]
+        both = rob.longest_loop_length(p1 + p2, t1 + t2, axis=1, level=1.0)
+        self.assertAlmostEqual(both, rob.polygon_length(_regular_polygon(48, 3.0)))
+        arm_only = rob.longest_loop_length(p1 + p2, t1, axis=1, level=1.0)
+        self.assertAlmostEqual(arm_only, rob.polygon_length(_regular_polygon(48, 1.0)))
+        self.assertEqual(rob.longest_loop_length(p1, t1, axis=1, level=5.0), 0.0)
+
+    def test_fit_leaves_the_torso_alone_and_blends_into_it(self):
+        # An arm tube refitted from 18 cm to 20 cm round, beside a "torso" point
+        # (share 0) and a point half-way into the shoulder (share 0.5).
+        a, b = rob.semi_axes_for(18.0, 1.0)
+        ring = rob.ring_points(a, b, 128)
+        points, tris = _tube([(x, z) for x, z, _ in ring], [i * 0.25 for i in range(41)])
+        n = len(points)
+        top = points[40 * 128]  # the top line at y = 10
+        points = points + [(-20.0, 5.0, 0.0), (0.0, 9.0, top[2])]
+        share = [1.0] * n + [0.0, 0.5]
+        mapped = [True] * n + [False, False]
+        fit = rob.fit_and_map(points, tris, wrist=(2.0, 20.0), elbow=(8.0, 20.0), step=0.25,
+                              share=share, mapped=mapped)
+        k = 20.0 / fit['before_cm'][0]
+        self.assertEqual(fit['points'][n], (-20.0, 5.0, 0.0))
+        self.assertIsNone(fit['arcs'][n])
+        cz = rob.centre_at(fit['stations'], 9.0)[1]
+        self.assertAlmostEqual(fit['points'][n + 1][2] - cz, (1 + (k - 1) / 2) * (top[2] - cz))
+        self.assertAlmostEqual(fit['points'][0][2], k * points[0][2])
+        self.assertAlmostEqual(fit['arcs'][1], k * ring[1][2], places=2)
+        # Without share/mapped the fit is unchanged (the forearm path).
+        plain = rob.fit_and_map(points[:n], tris, wrist=(2.0, 20.0), elbow=(8.0, 20.0), step=0.25)
+        self.assertEqual(plain['points'], fit['points'][:n])
+        self.assertEqual(plain['arcs'], fit['arcs'][:n])
+
+
+class AboveTheArmpit(unittest.TestCase):
+    """Above the armpit the arm's own skin no longer goes all the way round:
+    the arc is measured along the part that does, from the top line."""
+
+    def _flaring_tube_open_above(self, y_open):
+        # A circular tube whose radius grows above y = 5, with its underside
+        # (z < -1.5) missing above y_open, as the arm's skin is where it joins
+        # the torso.
+        ring = _regular_polygon(96, 1.0)
+        ys = [i * 0.25 for i in range(41)]
+        points, tris = _tube(ring, ys)
+        points = [(x * (3.0 + 0.3 * max(0.0, y - 5.0)), y, z * (3.0 + 0.3 * max(0.0, y - 5.0)))
+                  for x, y, z in points]
+        tris = [t for t in tris if not (min(points[i][1] for i in t) >= y_open
+                                        and sum(points[i][2] for i in t) / 3 < -1.5)]
+        return points, tris
+
+    def test_arcs_above_the_armpit_follow_the_skin_that_is_there(self):
+        points, tris = self._flaring_tube_open_above(6.0)
+        stations = rob.arm_stations(points, tris, 0.0, 10.0, 0.25, open_ends=True)
+        for vi in (96 * 32 + 8, 96 * 36 + 16, 96 * 38 + 88):  # y = 8, 9, 9.5
+            x, y, z = points[vi]
+            r = 3.0 + 0.3 * (y - 5.0)
+            theta = math.atan2(x, z)
+            arc, _ = rob.surface_coords(stations, (x, y, z))
+            self.assertAlmostEqual(arc, r * theta, delta=0.01 * r)
+        # A lump on one side near the top shifts those sections' centroids;
+        # a straight axis fitted lower down keeps the top line straight.
+        lumpy = [(x + (0.8 if (y > 4.0 and x > 2.0) else 0.0), y, z) for x, y, z in points]
+        free = rob.arm_stations(lumpy, tris, 0.0, 10.0, 0.25, open_ends=True)
+        fixed = rob.arm_stations(lumpy, tris, 0.0, 10.0, 0.25, open_ends=True,
+                                 axis_range=(0.5, 4.0))
+        self.assertGreater(abs(rob.centre_at(free, 5.0)[0]), 0.05)
+        for y in (1.0, 5.0, 8.0):
+            self.assertAlmostEqual(rob.centre_at(fixed, y)[0], 0.0, places=6)
+            self.assertAlmostEqual(rob.centre_at(fixed, y)[1], 0.0, places=6)
+        # Without open ends the nearest closed section stands in, which is narrower.
+        closed_only = rob.arm_stations(points, tris, 0.0, 10.0, 0.25)
+        x, y, z = points[96 * 36 + 16]
+        arc, _ = rob.surface_coords(closed_only, (x, y, z))
+        self.assertLess(arc, 0.9 * (3.0 + 0.3 * (y - 5.0)) * math.atan2(x, z))
+
+
+class Warnings(unittest.TestCase):
+    def test_wrapping_past_half_way_is_flagged(self):
+        w = rob.design_warnings('upper-arm', width_cm=18.0, lo=7.0, hi=25.0, length_cm=32.0,
+                                thinnest_cm=27.0, centre_cm_round=30.0)
+        self.assertEqual(len(w), 1)
+        self.assertIn('216', w[0])  # degrees round the arm
+        self.assertIn('half', w[0])
+        self.assertEqual(rob.design_warnings('upper-arm', width_cm=12.0, lo=10.0, hi=22.0,
+                                             length_cm=32.0, thinnest_cm=27.0,
+                                             centre_cm_round=30.0), [])
+
+    def test_measured_size_off_by_more_than_two_percent_is_flagged(self):
+        def measured(shoulder_end=12.0, along=12.0):
+            return {'width_round_arm': {'elbow_end': {'width_cm': 12.0},
+                                        'middle': {'width_cm': 11.99},
+                                        'shoulder_end': {'width_cm': shoulder_end}},
+                    'length_along_arm_cm': along}
+
+        self.assertEqual(rob.measured_warnings(measured(), width_cm=12.0, height_cm=12.0), [])
+        w = rob.measured_warnings(measured(shoulder_end=11.02), width_cm=12.0, height_cm=12.0)
+        self.assertEqual(len(w), 1)
+        self.assertIn('11.02 cm round the rendered arm at its shoulder end', w[0])
+        w = rob.measured_warnings(measured(along=11.0), width_cm=12.0, height_cm=12.0)
+        self.assertEqual(len(w), 1)
+        self.assertIn('11 cm along', w[0])
+        # A design wider than the arm, or past its ends, is warned about already.
+        self.assertEqual(rob.measured_warnings(measured(shoulder_end=11.02, along=11.0),
+                                               width_cm=12.0, height_cm=12.0,
+                                               check_width=False, check_length=False), [])
+
+    def test_too_wide_and_past_the_ends(self):
+        w = rob.design_warnings('upper-arm', width_cm=28.0, lo=-1.0, hi=33.0, length_cm=32.0,
+                                thinnest_cm=25.0, centre_cm_round=30.0)
+        self.assertTrue(any('clipped at the underside' in x for x in w))
+        self.assertTrue(any('past the elbow or the top of the shoulder' in x for x in w))
+        w = rob.design_warnings('forearm', width_cm=12.0, lo=-1.0, hi=13.0, length_cm=25.0,
+                                thinnest_cm=17.0, centre_cm_round=21.0)
+        self.assertTrue(any('past the wrist or elbow' in x for x in w))
 
 
 if __name__ == '__main__':
