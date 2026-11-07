@@ -8,8 +8,12 @@ Run headless with Blender (Sable itself never calls Blender):
 Builds a tapered, slightly elliptical forearm, wraps the design onto the top of
 it at a true printed width (``--width-cm`` of skin, measured around the curve),
 lights it softly against a near-black backdrop and renders three angles plus a
-``params.json``. Everything after ``--`` is this script's own arguments; see
-``--help`` (``blender -b -P render-on-body.py -- --help``) and docs/BLENDER.md.
+``params.json``. The ink looks healed by default (``--ink healed``: spread a
+fraction of a millimetre, a cool settled black under the skin); ``--ink fresh``
+is the crisp just-inked look. ``params.json`` records the design's size as
+measured on the rendered mesh. Everything after ``--`` is this script's own
+arguments; see ``--help`` (``blender -b -P render-on-body.py -- --help``) and
+docs/BLENDER.md.
 
 The maths at the top of this file is plain Python so it can be unit tested
 without Blender: ``python3 -m unittest discover -s scripts/blender``.
@@ -148,6 +152,262 @@ def frame_distance(half_extent, focal_mm, sensor_mm):
 
 
 # --------------------------------------------------------------------------
+# Healed ink. The design is turned into a transmittance texture (1 = bare
+# skin, 0 = solid ink, linear light) before rendering; the shader then lays a
+# cool healed black under the skin. Pure Python, so it runs in Blender builds
+# without numpy (Ubuntu's) and can be tested without Blender.
+# --------------------------------------------------------------------------
+
+INKS = ('healed', 'fresh')
+#: Gaussian sigma of a healed line's spread into the dermis, in mm of skin.
+HEALED_SPREAD_MM = 0.15
+#: Transmittance healed ink regains: solid black lets 2% more skin through,
+#: which reads as about a fifth lighter than fresh black.
+HEALED_DENSITY_LOSS = 0.02
+#: How far coloured ink fades towards grey as it settles under the skin.
+HEALED_DESATURATE = 0.25
+#: Hue of solid healed black seen through the skin above it, as relative
+#: linear RGB: a slightly blue-green black rather than fresh ink's warm brown.
+HEALED_TINT = (0.80, 0.98, 1.12)
+#: Rec. 709 luminance weights (Blender's linear working space).
+REC709 = (0.2126, 0.7152, 0.0722)
+#: Below this many texture pixels a blur is invisible; skip it.
+MIN_SIGMA_PX = 0.25
+
+
+def luminance(rgb):
+    r, g, b = rgb
+    return REC709[0] * r + REC709[1] * g + REC709[2] * b
+
+
+#: Longest edge the healed texture is prepared at. A 12 cm design fills about
+#: 900 px of a 2048 px render, so more is invisible, and plain-Python planes
+#: cost ~32 bytes a value (a 4096 px image would need over 1.5 GB).
+HEALED_MAX_PX = 2048
+
+
+def fit_within(w, h, max_px):
+    """(w, h) scaled down, keeping the aspect ratio, so neither exceeds ``max_px``."""
+    scale = min(1.0, max_px / max(w, h))
+    return max(1, round(w * scale)), max(1, round(h * scale))
+
+
+def px_per_cm(px, cm):
+    """Print resolution: texture pixels per cm of skin."""
+    if px <= 0 or cm <= 0:
+        raise ValueError('pixels and cm must be positive')
+    return px / cm
+
+
+def spread_sigma_px(spread_mm, ppc):
+    """A spread of ``spread_mm`` of skin, in texture pixels at ``ppc`` px/cm.
+    The same image printed larger has fewer px per cm, so the same physical
+    spread is fewer pixels: the blur stays a fixed size on the skin."""
+    if spread_mm < 0:
+        raise ValueError('spread must not be negative')
+    return spread_mm / 10 * ppc
+
+
+def gaussian_kernel(sigma_px):
+    """Normalised 1-D Gaussian taps out to 3 sigma (``[1.0]`` = no blur)."""
+    if sigma_px < MIN_SIGMA_PX:
+        return [1.0]
+    r = math.ceil(3 * sigma_px)
+    taps = [math.exp(-(i * i) / (2 * sigma_px * sigma_px)) for i in range(-r, r + 1)]
+    total = sum(taps)
+    return [t / total for t in taps]
+
+
+def blur_plane(values, w, h, kernel, pad=1.0):
+    """Separable blur of one ``w``×``h`` channel (row-major, flat). Outside the
+    image is ``pad`` (bare skin), so ink at the border fades rather than
+    gaining ink from beyond it. Blank rows (all ``pad``) are skipped: most of a
+    line drawing is paper."""
+    r = len(kernel) // 2
+    if r == 0:
+        return list(values)
+    edge = [pad] * r
+    rows, blank = [], []
+    for y in range(h):
+        row = list(values[y * w:(y + 1) * w])
+        is_blank = min(row) == pad == max(row)
+        blank.append(is_blank)
+        if not is_blank:
+            padded = edge + row + edge
+            acc = [0.0] * w
+            for k, weight in enumerate(kernel):
+                acc = [a + weight * s for a, s in zip(acc, padded[k:k + w])]
+            row = acc
+        rows.append(row)
+    pad_row = [pad] * w
+    out = []
+    for y in range(h):
+        if all(blank[j] for j in range(max(0, y - r), min(h, y + r + 1))):
+            out.extend(pad_row)
+            continue
+        acc = [0.0] * w
+        for k, weight in enumerate(kernel):
+            j = y - r + k
+            src = rows[j] if 0 <= j < h else pad_row
+            acc = [a + weight * s for a, s in zip(acc, src)]
+        out.extend(acc)
+    return out
+
+
+def skin_rim(plane, w, h):
+    """A copy of the plane with its outermost pixels set to bare skin (1).
+    The healed texture is extended past its edges rather than clipped
+    (clipping a float texture darkens its border), so the rim is what the
+    rest of the arm shows."""
+    out = list(plane)
+    out[:w] = [1.0] * w
+    out[(h - 1) * w:] = [1.0] * w
+    for y in range(1, h - 1):
+        out[y * w] = out[y * w + w - 1] = 1.0
+    return out
+
+
+def ink_planes(pixels, white_point):
+    """Flat RGBA pixels (sRGB values, straight alpha, as Blender's
+    ``Image.pixels`` gives a PNG) → linear transmittance planes (r, g, b),
+    exactly as the fresh shader reads the design: levels against the white
+    point, then transparency is bare skin."""
+    wp = srgb_to_linear(white_point)
+    cache = {}
+
+    def level(c):
+        v = cache.get(c)
+        if v is None:
+            v = cache[c] = min(1.0, srgb_to_linear(c) / wp)
+        return v
+
+    alpha = pixels[3::4]
+    return tuple([a * level(c) + (1.0 - a) for c, a in zip(pixels[ch::4], alpha)]
+                 for ch in range(3))
+
+
+def heal_planes(r, g, b, *, density_loss=HEALED_DENSITY_LOSS, desaturate=HEALED_DESATURATE):
+    """Transmittance planes as healed ink: colour fades towards its own
+    luminance, then every channel regains ``density_loss`` of the way to
+    bare skin."""
+    kr, kg, kb = REC709
+    lum = [kr * x + kg * y + kb * z for x, y, z in zip(r, g, b)]
+
+    def heal(plane):
+        out = []
+        for c, y in zip(plane, lum):
+            c = c + (y - c) * desaturate
+            out.append(_clamp01(c + (1.0 - c) * density_loss))
+        return out
+
+    return heal(r), heal(g), heal(b)
+
+
+def healed_transmittance(rgb, *, density_loss=HEALED_DENSITY_LOSS, desaturate=HEALED_DESATURATE):
+    """One linear transmittance colour as healed ink (see ``heal_planes``)."""
+    planes = heal_planes(*([c] for c in rgb), density_loss=density_loss, desaturate=desaturate)
+    return tuple(p[0] for p in planes)
+
+
+def healed_ink_floor(skin_linear, ink_strength, tint=HEALED_TINT):
+    """Colour of solid healed black over this skin (linear RGB).
+
+    Fresh ink over skin is the skin's own colour, darkened (a warm brown on
+    light skin). Healed pigment sits under the epidermis, which scatters some
+    light back before it reaches the ink, so solid black reads as a cool,
+    slightly blue-green black instead. Same luminance as fresh black at this
+    ``ink_strength``; only the hue moves."""
+    y = luminance(skin_linear) * (1 - ink_strength)
+    ty = luminance(tint)
+    return tuple(y * t / ty for t in tint)
+
+
+# --------------------------------------------------------------------------
+# Measuring true size on a triangle mesh: slice it with a plane and keep the
+# part of the cross-section where the design's UV is inside the image.
+# --------------------------------------------------------------------------
+
+
+def _lerp(p, q, t):
+    return tuple(a + (b - a) * t for a, b in zip(p, q))
+
+
+def slice_triangle(tri, axis, level):
+    """Cut a triangle of ``(point, attrs)`` corners with the plane
+    ``point[axis] == level``. Returns the two ends ``((p, a), (q, b))`` with
+    attributes interpolated, or None. A corner on the plane counts as above
+    it, so an edge lying in the plane belongs to exactly one triangle."""
+    above = [p[axis] >= level for p, _ in tri]
+    if all(above) or not any(above):
+        return None
+    ends = []
+    for i in range(3):
+        j = (i + 1) % 3
+        if above[i] != above[j]:
+            (p, a), (q, b) = tri[i], tri[j]
+            t = (level - p[axis]) / (q[axis] - p[axis])
+            ends.append((_lerp(p, q, t), _lerp(a, b, t)))
+    return ends[0], ends[1]
+
+
+def clip_segment(seg, ranges):
+    """The part of a segment whose (linearly interpolated) attributes satisfy
+    ``{index: (lo, hi)}``, or None."""
+    (p, a), (q, b) = seg
+    t0, t1 = 0.0, 1.0
+    for i, (lo, hi) in ranges.items():
+        da = b[i] - a[i]
+        if da == 0:
+            if not lo <= a[i] <= hi:
+                return None
+            continue
+        ta, tb = sorted(((lo - a[i]) / da, (hi - a[i]) / da))
+        t0, t1 = max(t0, ta), min(t1, tb)
+        if t0 > t1:
+            return None
+    if t0 == 0.0 and t1 == 1.0:
+        return seg
+    return (_lerp(p, q, t0), _lerp(a, b, t0)), (_lerp(p, q, t1), _lerp(a, b, t1))
+
+
+def measure_slice(tris, axis, level, ranges):
+    """Slice ``tris`` at ``point[axis] == level`` and measure the part whose
+    attributes are within ``ranges``: ``(length, min corner, max corner)``,
+    or ``(0.0, None, None)`` if nothing is in range. Faces across a UV seam
+    carry out-of-range attributes, so they drop out without special cases."""
+    total, lo, hi = 0.0, None, None
+    for tri in tris:
+        seg = slice_triangle(tri, axis, level)
+        seg = seg and clip_segment(seg, ranges)
+        if not seg:
+            continue
+        (p, _), (q, _) = seg
+        total += math.dist(p, q)
+        for pt in (p, q):
+            lo = pt if lo is None else tuple(map(min, lo, pt))
+            hi = pt if hi is None else tuple(map(max, hi, pt))
+    return total, lo, hi
+
+
+def measure_design(tris, *, height_cm, centre_cm):
+    """How much skin the design covers on the arm as rendered.
+
+    ``tris`` are ``((x, y, z) in cm, (u, v) design UV)`` corners, with the arm
+    along +Y from the wrist and its top line at x = 0, z > 0. The width round
+    the arm is sliced across the arm near the design's wrist end, middle and
+    elbow end; the length is the design's extent along the arm on the top line
+    (u is out of range on the underside, so that line drops out)."""
+    widths = {}
+    for name, f in (('wrist_end', -0.7), ('middle', 0.0), ('elbow_end', 0.7)):
+        y = centre_cm + f * height_cm / 2
+        width, _, _ = measure_slice(tris, 1, y, {0: (0.0, 1.0)})
+        widths[name] = {'at_cm_from_wrist': round(y, 2), 'width_cm': round(width, 2)}
+    _, lo, hi = measure_slice(tris, 0, 0.0, {0: (0.0, 1.0), 1: (0.0, 1.0)})
+    along = round(hi[1] - lo[1], 2) if lo else 0.0
+    return {'width_round_arm': widths, 'length_along_arm_cm': along}
+
+
+# --------------------------------------------------------------------------
 # Arguments
 # --------------------------------------------------------------------------
 
@@ -161,6 +421,13 @@ def _positive(kind):
             raise argparse.ArgumentTypeError(f'must be positive, got {text}')
         return value
     return check
+
+
+def _non_negative(text):
+    value = float(text)
+    if value < 0:
+        raise argparse.ArgumentTypeError(f'must not be negative, got {text}')
+    return value
 
 
 def _unit(text):
@@ -200,8 +467,12 @@ def parse_args(argv):
     p.add_argument('--design-up', choices=('elbow', 'wrist'), default='elbow',
                    help='which end the top of the image points to')
     p.add_argument('--skin', default='#c99d80', help='skin tone as #rrggbb (sRGB)')
+    p.add_argument('--ink', choices=INKS, default='healed',
+                   help='healed: settled under the skin (soft, cool black); fresh: crisp, just inked')
+    p.add_argument('--ink-spread-mm', type=_non_negative, default=HEALED_SPREAD_MM,
+                   help='healed ink only: how far lines have spread into the skin (Gaussian sigma)')
     p.add_argument('--ink-strength', type=_unit, default=0.92,
-                   help='1 = pure multiply; lower lets a little skin through solid black')
+                   help='how dark solid black is: 1 = pure black; lower lets a little skin through')
     p.add_argument('--white-point', type=_unit, default=0.9,
                    help='sRGB level at or above which the image counts as bare skin (off-white paper)')
     p.add_argument('--samples', type=_positive(int), default=64)
@@ -326,7 +597,59 @@ def build_arm(bpy, args, height_cm, centre_cm):
     return obj
 
 
-def skin_material(bpy, args, image):
+#: Healed ink: pigment settles unevenly, so about half the ink is lifted
+#: towards bare skin in sub-millimetre patches, typically by up to this much;
+#: and the skin's soft sheen shows over the ink.
+HEALED_PATCHINESS = 0.10
+HEALED_SHEEN = 0.25
+
+
+def healed_ink_image(bpy, image, args, width_cm):
+    """The design as a healed-ink transmittance texture (linear, Non-Color):
+    levels as the fresh shader, a Gaussian spread of ``--ink-spread-mm`` of skin
+    at this print size, then colour fade and density loss. Large images are
+    prepared at ``HEALED_MAX_PX``."""
+    from array import array  # noqa: PLC0415
+
+    w, h = fit_within(*image.size, HEALED_MAX_PX)
+    n = w * h
+    src = array('f', bytes(16 * n))
+    if (w, h) == tuple(image.size):
+        image.pixels.foreach_get(src)
+    else:
+        smaller = image.copy()
+        smaller.scale(w, h)
+        smaller.pixels.foreach_get(src)
+        bpy.data.images.remove(smaller)
+    planes = ink_planes(src, args.white_point)
+    sigma = spread_sigma_px(args.ink_spread_mm, px_per_cm(w, width_cm))
+    kernel = gaussian_kernel(sigma)
+    planes = heal_planes(*(blur_plane(p, w, h, kernel) for p in planes))
+    planes = [skin_rim(p, w, h) for p in planes]
+    out = array('f', bytes(16 * n))
+    for ch, plane in enumerate(planes):
+        out[ch::4] = array('f', plane)
+    out[3::4] = array('f', [1.0]) * n
+    healed = bpy.data.images.new('Healed ink', w, h, alpha=True, float_buffer=True)
+    healed.colorspace_settings.name = 'Non-Color'
+    healed.pixels.foreach_set(out)
+    healed.update()
+    return healed, sigma
+
+
+def _vector_math(nodes, links, operation, a, b):
+    """Per-channel maths on colours. ``a``/``b`` are sockets or RGB tuples."""
+    node = nodes.new('ShaderNodeVectorMath')
+    node.operation = operation
+    for sock, value in zip(node.inputs, (a, b)):
+        if isinstance(value, tuple):
+            sock.default_value = value
+        else:
+            links.new(value, sock)
+    return node.outputs['Vector']
+
+
+def skin_material(bpy, args, image, healed_image=None):
     mat = bpy.data.materials.new('Skin with ink')
     if mat.node_tree is None:  # Blender < 5 (use_nodes is deprecated from 5.0)
         mat.use_nodes = True
@@ -336,18 +659,23 @@ def skin_material(bpy, args, image):
     bsdf = nodes.new('ShaderNodeBsdfPrincipled')
     links.new(bsdf.outputs['BSDF'], out.inputs['Surface'])
 
-    # Design: Design UV → image (clipped: nothing outside it) → levels → ink colour.
+    # Design: Design UV → image. Nothing outside it: the fresh image is clipped
+    # (transparent), the healed texture extends its bare-skin rim.
     uv = nodes.new('ShaderNodeUVMap')
     uv.uv_map = 'Design'
     tex = nodes.new('ShaderNodeTexImage')
-    tex.image = image
-    tex.extension = 'CLIP'
+    tex.image = image if healed_image is None else healed_image
+    tex.extension = 'CLIP' if healed_image is None else 'EXTEND'
     tex.interpolation = 'Cubic'
     links.new(uv.outputs['UV'], tex.inputs['Vector'])
-    wp = srgb_to_linear(args.white_point)  # chosen on screen values; the shader is linear
-    levelled = _mix(nodes, links, 'DIVIDE', tex.outputs['Color'], (wp, wp, wp), clamp=True)
+    if healed_image is None:
+        # Fresh: levels in the shader (the white point is chosen on screen values).
+        wp = srgb_to_linear(args.white_point)
+        design = _mix(nodes, links, 'DIVIDE', tex.outputs['Color'], (wp, wp, wp), clamp=True)
+    else:
+        design = tex.outputs['Color']  # already levelled, spread and faded
     # Transparent pixels (and everything outside the clipped image) are bare skin.
-    ink = _mix(nodes, links, 'MIX', (1.0, 1.0, 1.0), levelled, factor=tex.outputs['Alpha'])
+    ink = _mix(nodes, links, 'MIX', (1.0, 1.0, 1.0), design, factor=tex.outputs['Alpha'])
 
     # Skin: base tone, gentle mottling, faint blotchy redness, fine pore bump.
     # Noise scales are per metre (object space): 18 ≈ 5 cm patches, 450 ≈ 2 mm.
@@ -370,7 +698,23 @@ def skin_material(bpy, args, image):
     skin = _mix(nodes, links, 'MULTIPLY', skin, (1.0, 1.0, 1.0))
     links.new(noise(18.0, 3.0, 0.9, 1.06), _socket(skin.node.inputs, 'B', 'RGBA'))
 
-    inked = _mix(nodes, links, 'MULTIPLY', skin, ink, factor=args.ink_strength)
+    if healed_image is None:
+        # Fresh: the design multiplied straight onto the skin.
+        inked = _mix(nodes, links, 'MULTIPLY', skin, ink, factor=args.ink_strength)
+    else:
+        # Healed: pigment settles a little unevenly, and what lies under solid
+        # ink is a cool healed black, not darkened skin. Per channel:
+        # skin·T + floor·(1 − T), with T the ink's transmittance.
+        ink = _mix(nodes, links, 'MIX', ink, (1.0, 1.0, 1.0),
+                   factor=noise(1800.0, 3.0, -2 * HEALED_PATCHINESS, 2 * HEALED_PATCHINESS))
+        floor = healed_ink_floor(srgb_hex_to_linear(args.skin), args.ink_strength)
+        covered = _vector_math(nodes, links, 'SUBTRACT', (1.0, 1.0, 1.0), ink)
+        inked = _vector_math(nodes, links, 'ADD',
+                             _vector_math(nodes, links, 'MULTIPLY', skin, ink),
+                             _vector_math(nodes, links, 'MULTIPLY', floor, covered))
+        sheen = _first_socket(bsdf.inputs, 'Sheen Weight', 'Sheen')  # 4.x+, 3.x
+        if sheen is not None:  # a soft microfibre glow that lies over ink and skin alike
+            sheen.default_value = HEALED_SHEEN
     links.new(inked, bsdf.inputs['Base Color'])
 
     pores = nodes.new('ShaderNodeTexNoise')
@@ -401,6 +745,41 @@ def skin_material(bpy, args, image):
         except TypeError:
             continue
     return mat
+
+
+def design_triangles(bpy, obj):
+    """The arm as rendered (render-level subdivision), as ``measure_design``
+    triangles: corners of ((x, y, z) in cm, design UV)."""
+    from array import array  # noqa: PLC0415
+
+    sub = obj.modifiers.get('Subdivision')
+    viewport_levels = sub.levels if sub else None
+    if sub:
+        sub.levels = sub.render_levels
+    try:
+        bpy.context.view_layer.update()
+        evaluated = obj.evaluated_get(bpy.context.evaluated_depsgraph_get())
+        mesh = evaluated.to_mesh()
+        try:
+            mesh.calc_loop_triangles()
+            nv, nt, nl = len(mesh.vertices), len(mesh.loop_triangles), len(mesh.loops)
+            co = array('f', bytes(12 * nv))
+            mesh.vertices.foreach_get('co', co)
+            tri_verts = array('i', bytes(12 * nt))
+            mesh.loop_triangles.foreach_get('vertices', tri_verts)
+            tri_loops = array('i', bytes(12 * nt))
+            mesh.loop_triangles.foreach_get('loops', tri_loops)
+            uv = array('f', bytes(8 * nl))
+            mesh.uv_layers['Design'].data.foreach_get('uv', uv)
+        finally:
+            evaluated.to_mesh_clear()
+    finally:
+        if sub:
+            sub.levels = viewport_levels
+    pts = [(co[i] / CM, co[i + 1] / CM, co[i + 2] / CM) for i in range(0, 3 * nv, 3)]
+    uvs = [(uv[i], uv[i + 1]) for i in range(0, 2 * nl, 2)]
+    return [tuple((pts[tri_verts[i + c]], uvs[tri_loops[i + c]]) for c in range(3))
+            for i in range(0, 3 * nt, 3)]
 
 
 def _look_at(Matrix, Vector, eye, target, up=(0.0, 1.0, 0.0)):
@@ -520,10 +899,37 @@ def main(argv=None):
         warnings.append(f'design runs from {lo:.1f} to {hi:.1f} cm along a {L:g} cm forearm, '
                         'past the wrist or elbow')
 
+    ink = {'mode': args.ink, 'strength': args.ink_strength}
+    healed_image = None
+    if args.ink == 'healed':
+        start = time.perf_counter()
+        healed_image, sigma_px = healed_ink_image(bpy, image, args, width_cm)
+        floor = healed_ink_floor(srgb_hex_to_linear(args.skin), args.ink_strength)
+        ink.update({
+            'texture_px': list(healed_image.size),
+            'spread_mm': args.ink_spread_mm, 'spread_px': round(sigma_px, 2),
+            'blurred': len(gaussian_kernel(sigma_px)) > 1,
+            'density_loss': HEALED_DENSITY_LOSS, 'desaturate': HEALED_DESATURATE,
+            'patchiness': HEALED_PATCHINESS, 'sheen': HEALED_SHEEN,
+            'solid_black_linear': [round(c, 4) for c in floor],
+            'prepare_seconds': round(time.perf_counter() - start, 1),
+        })
+        print(f'[render-on-body] healed ink: {sigma_px:.2f} px spread '
+              f'({ink["prepare_seconds"]}s)', flush=True)
+
     # No ground plane: a shadow catcher doubled the render time for a shadow
     # that barely registers on near-black.
     arm = build_arm(bpy, args, height_cm, centre_cm)
-    arm.data.materials.append(skin_material(bpy, args, image))
+    arm.data.materials.append(skin_material(bpy, args, image, healed_image))
+
+    start = time.perf_counter()
+    measured = measure_design(design_triangles(bpy, arm), height_cm=height_cm,
+                              centre_cm=centre_cm)
+    measured['seconds'] = round(time.perf_counter() - start, 1)
+    middle = measured['width_round_arm']['middle']['width_cm']
+    if width_cm <= thinnest and abs(middle - width_cm) > 0.02 * width_cm:
+        warnings.append(f'the design measures {middle:g} cm round the rendered arm, '
+                        f'not {width_cm:g} cm')
 
     target = (0.0, L / 2 * CM, 0.0)  # on the arm's axis, mid-forearm
     half_extent = (L / 2 + 1.5) * CM
@@ -570,7 +976,9 @@ def main(argv=None):
             'u_span': round(uv_span_for_width(width_cm, centre_circ), 4),
             'wraps_degrees': round(360 * uv_span_for_width(width_cm, centre_circ), 1),
         },
+        'measured_cm': measured,
         'skin': args.skin,
+        'ink': ink,
         'ink_strength': args.ink_strength,
         'white_point': args.white_point,
         'render': {
