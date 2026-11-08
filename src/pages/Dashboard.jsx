@@ -4,6 +4,7 @@ import TagPill from '../components/TagPill'
 import HowItWorksStrip from '../components/HowItWorksStrip'
 import Top5Hero from '../components/Top5Hero'
 import ArtistImage from '../components/ArtistImage'
+import NearbySoon from '../components/NearbySoon'
 import { IDEA_STATUSES } from '../data/brief'
 import { buildDashboardSummary, buildMatchRationale, buildPipelineSummary, matchArtistsForIdea } from '../data/planning'
 import { moveIntoTop5, moveOutOfTop5 } from '../data/ranking'
@@ -154,6 +155,11 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
         ) : (
           <p className="text-cream-muted/90 text-sm font-body">No artists marked contact next yet.</p>
         )}
+      </Panel>
+
+      {/* Guest spots by saved artists coming up near Milton Keynes (#183) */}
+      <Panel title="Nearby soon">
+        <NearbySoon artists={artists} />
       </Panel>
 
       <Panel title="Idea matches" action={<Link to="/brief" className="text-xs font-mono text-accent tracking-widest uppercase">Ideas</Link>}>

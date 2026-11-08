@@ -4,6 +4,7 @@ import ArtistImage from './ArtistImage'
 import PhotoTile from './PhotoTile'
 import GeneratedArtworkNotice from './GeneratedArtworkNotice'
 import SimilarArtists from './SimilarArtists'
+import GuestSpots from './GuestSpots'
 import { STYLE_TAGS, DEFAULT_STUDIOS } from '../data/artists'
 import { uploadImages } from '../hooks/useImageUpload'
 import { useAuth } from '../context/useAuth'
@@ -400,6 +401,13 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
               </ul>
             </div>
           )}
+
+          {/* Guest spots (#183): saves straight away, patching only this field
+              against the latest record, like photos (#79). */}
+          <GuestSpots
+            spots={artist.guestSpots || []}
+            onChange={(update) => onSave(identityRef.current.id, identityRef.current.generation, (current) => ({ ...current, guestSpots: update(current.guestSpots || []) }))}
+          />
 
           {/* Notes */}
           <div className="mb-10">

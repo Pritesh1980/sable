@@ -70,7 +70,7 @@ with Reorder **off** — that is the view people arrive in.
    |---|---|
    | `/` | `wall.png` (desktop), `wall-mobile.png` (phone), `wall-viewer.png` (desktop, viewer open with HUD visible), `drawer.png` (desktop, ⋯ open) |
    | `/pipeline` | `dashboard.png`, `dashboard-desktop.png` |
-   | `/gallery` | `gallery-filmstrip.png`, `gallery-grid.png`, `gallery-grid-desktop.png`, `gallery-compare.png`, `gallery-stylewall.png`, `artist-detail.png`, `ranking-swipe.png` |
+   | `/gallery` | `gallery-filmstrip.png`, `gallery-grid.png`, `gallery-grid-desktop.png`, `gallery-compare.png`, `gallery-stylewall.png`, `artist-detail.png`, `guest-spots.png` (`?artist=vesper_noctis`, seeded London trip), `ranking-swipe.png` |
    | `/gallery?mode=manage` | `manage-list.png`, `manage-artist-expanded.png` |
    | `/brief` | `brief-list.png`, `brief-idea-editor.png` |
    | `/brief?tab=boards` | `boards-list.png`, `board-editor.png` |

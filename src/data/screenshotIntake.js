@@ -8,6 +8,7 @@
 import { STYLE_TAGS, PLACEMENTS } from './artists'
 import { GEMINI_TEXT_MODEL } from './discovery'
 import { parseArtworkBox } from './screenshotCrop'
+import { buildGuestSpotPrompt, parseGuestSpotResponse, todayIso } from './guestSpots'
 
 export function buildIntakePrompt() {
   return [
@@ -137,4 +138,10 @@ export async function analyzeScreenshotWithGemini(apiKey, dataUrl) {
 
 export async function analyzeIdeaImageWithGemini(apiKey, dataUrl) {
   return parseIdeaResponse(await geminiVision(apiKey, dataUrl, buildIdeaPrompt()))
+}
+
+// Guest spot mode (#183): an announcement screenshot → suggested spots. The
+// caller shows them for review; nothing here saves anything.
+export async function analyzeGuestSpotImageWithGemini(apiKey, dataUrl, today = todayIso()) {
+  return parseGuestSpotResponse(await geminiVision(apiKey, dataUrl, buildGuestSpotPrompt(today)))
 }

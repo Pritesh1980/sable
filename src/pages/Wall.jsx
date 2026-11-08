@@ -9,6 +9,7 @@ import ConsiderShelf from '../components/ConsiderShelf'
 import DiscoverMore from '../components/DiscoverMore'
 import RankRail from '../components/RankRail'
 import RankBoard from '../components/RankBoard'
+import NearbySoon from '../components/NearbySoon'
 import { SUGGESTED_ARTISTS } from '../data/suggestions'
 import { discoverArtistsWithGemini } from '../data/discovery'
 import { uploadImages } from '../hooks/useImageUpload'
@@ -197,6 +198,10 @@ export default function Wall({ artists = [], ideas = [], setArtists = () => {}, 
           onOpenBoard={() => setRankBoardOpen(true)}
         />
       )}
+
+      {/* A saved artist working near Milton Keynes soon (#183). Renders nothing
+          when there isn't one, so the wall is unchanged for most visits. */}
+      {!viewerOpen && <NearbySoon artists={artists} compact className="px-4 border-b border-v2-hairline" />}
 
       {items.length > 0 && (
         <ConsiderShelf

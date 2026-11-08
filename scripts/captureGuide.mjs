@@ -92,6 +92,10 @@ try {
       await page.getByRole('button', { name: 'Grid view', exact: true }).click()
       await page.getByText('Mora Vane', { exact: true }).first().click()
       await capture(page, 'artist-detail')
+      // Guest spots (#183): the demo seeds a London trip for Vesper Ash.
+      await page.goto('/gallery?artist=vesper_noctis')
+      await page.getByText('Guest spots', { exact: true }).evaluate((el) => el.scrollIntoView({ block: 'start' }))
+      await capture(page, 'guest-spots')
       await page.goto('/gallery')
       await page.getByRole('button', { name: /Rank/, exact: false }).first().click()
       await capture(page, 'ranking-swipe')
