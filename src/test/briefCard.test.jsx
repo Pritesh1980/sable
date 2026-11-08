@@ -328,9 +328,15 @@ describe('collectBriefCardPhotos & shareOrDownloadBriefCard', () => {
 
     try {
       const download = vi.fn()
+      const workingCanvas = {
+        width: 0,
+        height: 0,
+        getContext: () => fakeCtx,
+        toBlob: (cb) => cb(new Blob(['png'], { type: 'image/png' })),
+      }
       await exportBriefCardImage(
         { title: 'Font wait check', images: [] },
-        { download, nav: {} },
+        { createCanvas: () => workingCanvas, download, nav: {} },
       )
       expect(fontsResolved).toBe(true)
       expect(download).toHaveBeenCalledTimes(1)
@@ -354,6 +360,81 @@ describe('collectBriefCardPhotos & shareOrDownloadBriefCard', () => {
         delete document.fonts
       }
     }
+  })
+})
+
+describe('brief card review fixes (#198)', () => {
+  function makeFakeCtx() {
+    return {
+      fillStyle: '', strokeStyle: '', lineWidth: 1, font: '', textBaseline: 'top',
+      fillRect: vi.fn(), strokeRect: vi.fn(), fillText: vi.fn(), drawImage: vi.fn(),
+      save: vi.fn(), restore: vi.fn(), beginPath: vi.fn(), rect: vi.fn(), clip: vi.fn(),
+      moveTo: vi.fn(), lineTo: vi.fn(), stroke: vi.fn(),
+      measureText: (t) => ({ width: t.length * 12 }),
+    }
+  }
+
+  it('falls back to download when share is refused (iOS activation expired)', async () => {
+    const blob = new Blob(['png'], { type: 'image/png' })
+    const download = vi.fn()
+    const share = vi.fn(async () => {
+      throw Object.assign(new Error('Activation expired'), { name: 'NotAllowedError' })
+    })
+    const result = await shareOrDownloadBriefCard(blob, 'sable-brief-x.png', {
+      nav: { canShare: () => true, share },
+      download,
+    })
+    expect(result.method).toBe('download')
+    expect(download).toHaveBeenCalledWith(blob, 'sable-brief-x.png')
+  })
+
+  it('rejects instead of exporting a 1×1 placeholder when the canvas has no 2D context', async () => {
+    const download = vi.fn()
+    const noContextCanvas = { width: 0, height: 0, getContext: () => null, toBlob: vi.fn() }
+    await expect(
+      exportBriefCardImage(
+        { title: 'No context', images: [] },
+        { createCanvas: () => noContextCanvas, download, nav: {} },
+      ),
+    ).rejects.toThrow(/canvas/i)
+    expect(download).not.toHaveBeenCalled()
+  })
+
+  it('explicitly loads the card font faces before measuring', async () => {
+    const origFonts = document.fonts
+    const loaded = []
+    Object.defineProperty(document, 'fonts', {
+      configurable: true,
+      value: { ready: Promise.resolve(), load: vi.fn(async (spec) => { loaded.push(spec); return [] }) },
+    })
+    try {
+      const ctx = makeFakeCtx()
+      const canvas = {
+        width: 0, height: 0, getContext: () => ctx,
+        toBlob: (cb) => cb(new Blob(['png'], { type: 'image/png' })),
+      }
+      await exportBriefCardImage(
+        { title: 'Fonts', images: [] },
+        { createCanvas: () => canvas, download: vi.fn(), nav: {} },
+      )
+      expect(loaded.some((s) => /600 .*Playfair Display/.test(s))).toBe(true)
+      expect(loaded.some((s) => /DM Sans/.test(s))).toBe(true)
+      expect(loaded.some((s) => /DM Mono/.test(s))).toBe(true)
+    } finally {
+      Object.defineProperty(document, 'fonts', { configurable: true, value: origFonts })
+    }
+  })
+
+  it('keeps the skipped-web-images notice off the exported card', () => {
+    const ctx = makeFakeCtx()
+    const canvas = { width: 0, height: 0, getContext: () => ctx }
+    const layout = layoutBriefCard(
+      { title: 'Notice', images: ['https://example.com/a.jpg', 'https://example.com/b.jpg'] },
+      { skippedWebCount: 2 },
+    )
+    drawBriefCardOnCanvas(canvas, layout, [])
+    const texts = ctx.fillText.mock.calls.map((c) => c[0])
+    expect(texts.some((t) => /not included/i.test(t))).toBe(false)
   })
 })
 
@@ -386,9 +467,24 @@ describe('IdeaModal Share as image button', () => {
     expect(shareBtn).toBeInTheDocument()
     expect(shareBtn).not.toBeDisabled()
 
-    fireEvent.click(shareBtn)
-    await waitFor(() => {
-      expect(screen.getByText(/2 web images not included/i)).toBeInTheDocument()
-    })
+    // jsdom has no 2D canvas; stub one so the export succeeds rather than erroring.
+    const ctx = {
+      fillRect: vi.fn(), strokeRect: vi.fn(), fillText: vi.fn(), drawImage: vi.fn(),
+      save: vi.fn(), restore: vi.fn(), beginPath: vi.fn(), rect: vi.fn(), clip: vi.fn(),
+      moveTo: vi.fn(), lineTo: vi.fn(), stroke: vi.fn(),
+      measureText: (t) => ({ width: t.length * 12 }),
+    }
+    const getContext = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx)
+    const toBlob = vi.spyOn(HTMLCanvasElement.prototype, 'toBlob')
+      .mockImplementation((cb) => cb(new Blob(['png'], { type: 'image/png' })))
+    try {
+      fireEvent.click(shareBtn)
+      await waitFor(() => {
+        expect(screen.getByText(/2 web images not included/i)).toBeInTheDocument()
+      })
+    } finally {
+      getContext.mockRestore()
+      toBlob.mockRestore()
+    }
   })
 })

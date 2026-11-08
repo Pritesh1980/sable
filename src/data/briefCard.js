@@ -425,7 +425,7 @@ export function layoutBriefCard(
   let slots = []
   if (count > 0) {
     const remainingHeight = Math.max(120, footer.box.y - sectionGap - cursorY)
-    const gridHeight = Math.min(remainingHeight, Math.max(targetPhotoHeight, remainingHeight))
+    const gridHeight = remainingHeight
     photosBox = {
       x: padX,
       y: cursorY,
@@ -642,7 +642,7 @@ export function drawBriefCardOnCanvas(canvas, layout, photos = []) {
     ctx.strokeRect(slot.x, slot.y, slot.width, slot.height)
   }
 
-  // Footer hairline + brand / skipped notice
+  // Footer hairline + brand (the skipped-web notice stays in the editor, not on the card)
   const footerLineY = footer.box.y - 14
   ctx.strokeStyle = theme.border
   ctx.lineWidth = 1
@@ -653,26 +653,35 @@ export function drawBriefCardOnCanvas(canvas, layout, photos = []) {
 
   ctx.font = `400 ${footer.fontSize}px ${fonts.mono}`
   ctx.fillStyle = theme.muted
-  if (footer.notice) {
-    ctx.fillText(footer.notice, footer.box.x, footer.box.y)
-  }
   const brandWidth = ctx.measureText ? ctx.measureText(footer.brand).width : footer.brand.length * footer.fontSize * 0.6
   ctx.fillText(footer.brand, footer.box.x + footer.box.width - brandWidth, footer.box.y)
 
   return true
 }
 
-// 1×1 fallback PNG bytes for headless unit test environments without a 2D canvas implementation.
-const FALLBACK_PNG_BYTES = new Uint8Array([
-  137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82,
-  0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0,
-  0, 0, 13, 73, 68, 65, 84, 120, 156, 99, 248, 15, 4, 0, 9, 251,
-  3, 253, 160, 90, 207, 203, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130,
-])
+// document.fonts.ready only waits for faces already in use; the card's title weight
+// may never have rendered, so ask for each face it draws with before measuring.
+async function loadBriefCardFonts(fonts) {
+  const faces = typeof document === 'undefined' ? undefined : document.fonts
+  if (!faces) return
+  if (typeof faces.load === 'function') {
+    await Promise.allSettled([
+      `600 64px ${fonts.display}`,
+      `400 28px ${fonts.body}`,
+      `400 20px ${fonts.mono}`,
+      `500 20px ${fonts.mono}`,
+    ].map((spec) => faces.load(spec)))
+  }
+  try {
+    await faces.ready
+  } catch {
+    // Proceed with fallback fonts if font loading rejects
+  }
+}
 
 function canvasToPngBlob(canvas, hasContext) {
   if (!hasContext) {
-    return Promise.resolve(new Blob([FALLBACK_PNG_BYTES], { type: 'image/png' }))
+    return Promise.reject(new Error('Canvas 2D context is unavailable'))
   }
   return new Promise((resolve, reject) => {
     if (typeof canvas?.toBlob !== 'function') {
@@ -754,7 +763,7 @@ export async function shareOrDownloadBriefCard(
         if (error?.name === 'AbortError') {
           return { method: 'aborted', filename }
         }
-        throw error
+        // NotAllowedError etc.: the PNG is ready, so hand it over as a download.
       }
     }
   }
@@ -780,13 +789,7 @@ export async function exportBriefCardImage(
     download,
   } = {},
 ) {
-  if (typeof document !== 'undefined' && document.fonts && 'ready' in document.fonts) {
-    try {
-      await document.fonts.ready
-    } catch {
-      // Proceed with fallback fonts if font loading rejects
-    }
-  }
+  await loadBriefCardFonts(fonts)
 
   const { photos, skippedWebCount, skippedNotice } = await collectBriefCardPhotos(idea?.images, {
     loadImage,
