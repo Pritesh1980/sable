@@ -41,8 +41,11 @@ As soon as an idea has style tags, the editor shows **matching artists**, ranked
 many tags overlap, their shortlist status and their rank. **Tap an artist to link them**
 to the idea. (Before any tags are set, you'll see lighter *suggestions* instead.)
 
-When you're ready to share, tap **Copy brief** — a clean, formatted summary of the idea
-and its linked artists goes to your clipboard, ready to paste to an artist.
+When you're ready to share, tap **Share as image** to export a 1080×1350 brief card (up to
+four uploaded reference photos, title, placement, style tags, description and linked
+artists) ready for an Instagram DM — on iPhone it opens the share sheet, and on desktop it
+downloads the PNG (pasted external web image links are skipped so the card stays local). Or
+tap **Copy brief** to put a formatted plain-text summary on your clipboard.
 
 ---
 
