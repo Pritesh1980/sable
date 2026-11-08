@@ -9,6 +9,7 @@ import ReliefStlDrawer from '../components/ReliefStlDrawer'
 import GeneratedArtworkNotice from '../components/GeneratedArtworkNotice'
 import { STYLE_TAGS, PLACEMENTS } from '../data/artists'
 import { IDEA_STATUSES, matchArtistsToIdea } from '../data/brief'
+import { exportBriefCardImage } from '../data/briefCard'
 import { buildIdeaBrief } from '../data/export'
 import { compressImages } from '../hooks/useImageUpload'
 import { stageImageRefs, withStagedImages } from '../data/imageStaging'
@@ -85,6 +86,8 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
   const touch = (field) => touchedRef.current.add(field)
   const [newImage, setNewImage] = useState('')
   const [copied, setCopied] = useState(false)
+  const [sharingImage, setSharingImage] = useState(false)
+  const [shareNote, setShareNote] = useState('')
   const [uploading, setUploading] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
   const [analyzeNote, setAnalyzeNote] = useState('')
@@ -276,20 +279,44 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
     setTimeout(() => setCopied(false), 1600)
   }
 
+  async function shareBriefImage() {
+    if (!draft.title.trim() || sharingImage) return
+    setSharingImage(true)
+    setShareNote('')
+    try {
+      const result = await exportBriefCardImage(draft, { artists })
+      if (result.skippedNotice) {
+        setShareNote(result.skippedNotice)
+      }
+    } catch (error) {
+      console.error('[tattoo] brief card export failed:', error)
+      setShareNote('Could not create brief image.')
+    } finally {
+      setSharingImage(false)
+    }
+  }
+
   return (
     <>
     <div className="fixed inset-0 z-50 bg-ink-black flex flex-col animate-fade-in overflow-y-auto">
       <div className="px-5 pt-safe-top pt-6 pb-4 border-b border-ink-border sticky top-0 bg-ink-black z-10">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <button onClick={onClose} className="text-cream-muted hover:text-cream text-sm tracking-widest uppercase">
             ← Back
           </button>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap items-center justify-end gap-x-3 sm:gap-x-4 gap-y-1">
             {!isNew && (
               <button onClick={() => { onDelete(idea.id); onClose() }} className="text-accent/60 hover:text-accent text-sm transition-colors">
                 Delete
               </button>
             )}
+            <button
+              onClick={shareBriefImage}
+              disabled={!draft.title.trim() || sharingImage}
+              className="text-cream-muted hover:text-cream disabled:opacity-30 text-sm transition-colors"
+            >
+              {sharingImage ? 'Sharing…' : 'Share as image'}
+            </button>
             <button
               onClick={copyBrief}
               disabled={!draft.title.trim()}
@@ -302,6 +329,11 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
             </button>
           </div>
         </div>
+        {shareNote && (
+          <p role="status" className="font-mono text-xs text-cream-muted/80 mt-2">
+            {shareNote}
+          </p>
+        )}
         <GeneratedArtworkNotice images={images} className="mt-2" />
       </div>
 
