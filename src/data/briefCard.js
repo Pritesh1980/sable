@@ -780,7 +780,7 @@ export async function exportBriefCardImage(
     download,
   } = {},
 ) {
-  if (typeof document !== 'undefined' && document.fonts?.ready) {
+  if (typeof document !== 'undefined' && document.fonts && 'ready' in document.fonts) {
     try {
       await document.fonts.ready
     } catch {
