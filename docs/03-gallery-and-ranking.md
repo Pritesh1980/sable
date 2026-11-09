@@ -67,6 +67,32 @@ opens their detail.
 
 ![Artist detail](../public/guide/artist-detail.png)
 
+### Guest spots
+
+Many artists travel, and announce it on Instagram ("London 12–14 Feb, DM to book"). Under
+**Guest spots** on the artist detail, tap **+ Add guest spot** and enter the city, the
+studio, the dates (picking **From** fills an empty **To**), a link to the announcement and
+any notes, such as when books open. It saves straight away. Each spot shows its distance
+from Milton Keynes. London areas such as Hackney or Shoreditch count as London, and "Area,
+City" works too. A place Sable doesn't know shows *distance unknown* (it never guesses), and
+won't appear in Nearby soon, so the form says so while you type. Upcoming spots are listed first; earlier ones fold away under
+**Past**. **Edit** and **Remove** sit on each one.
+
+![Guest spots on an artist's detail](../public/guide/guest-spots.png)
+
+With a Gemini key set (Concepts → AI setup), **From a screenshot** reads an announcement
+for you. Choose the screenshot, then tap **Read dates**: that tap is the only point the image
+is sent. Each city it finds appears as a suggestion, with any booking note it could read
+("Books open 1 Mar, DM to book"), and the screenshot stays on screen to check against.
+**Review** fills the form so you can check it before **Save**, and **Dismiss** drops one.
+Nothing is saved until you do.
+
+Spots by your saved artists in the next 90 days and within reach show up as **Nearby
+soon** on the Pipeline page (100 miles by default; the **Within** menu changes it, and this
+device remembers your choice), with their notes, and as a single line on the Home Wall (the
+soonest one, then **+N more** for the rest) when there is one. Tapping one opens the artist
+at their Guest spots. Artists you've marked *pass* are left out.
+
 ### Similar ink
 
 Below the style tags, the detail view can show the three artists in your collection

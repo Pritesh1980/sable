@@ -16,6 +16,7 @@
 import { backend } from '../backend'
 import { nowStamp } from '../backend/sync'
 import { DEMO_ARTWORK } from './demoArtwork'
+import { addDaysIso, todayIso } from './guestSpots'
 
 // `demo: true` is the ownership proof: localAuth.signIn writes only { user },
 // so no login — even with this exact email — can produce a marked session.
@@ -39,7 +40,8 @@ export const DEMO_INTRO_KEY = 'tattoo_demo_intro_dismissed'
 // converging stored data on the canonical form rather than fixing a break.
 // v4: realistic synthetic portfolios, new immutable image URLs and matching ideas.
 // v5: favourites-first order; reset the sample collections on returning demos.
-export const DEMO_SEED_VERSION = 5
+// v6: guest spots (#183), dated from the seed day.
+export const DEMO_SEED_VERSION = 6
 
 // Base-relative, deliberately. seedDemoData writes these straight into
 // localStorage, so prefixing BASE_URL here would freeze the build's base into
@@ -93,6 +95,24 @@ export const DEMO_IDEAS = [
   },
 ]
 
+// Guest spots (#183) are dated from the day the demo is seeded, so there is
+// always one coming up: a London trip inside the default radius, a Manchester
+// one just outside it, an abroad one with no known distance and a past one.
+// Fictional studios, like the artists.
+function demoGuestSpots(today) {
+  const spot = (id, city, studio, from, to, notes = '') => ({
+    id, city, studio, startDate: addDaysIso(today, from), endDate: addDaysIso(today, to), source: '', notes,
+  })
+  return {
+    vesper_noctis: [spot('demo-gs-1', 'London', 'Hollow Ward', 18, 20, 'Books open a month before. DM to book.')],
+    'mora.blackfern': [
+      spot('demo-gs-2', 'Manchester', 'Glasshouse Ink', 40, 41),
+      spot('demo-gs-3', 'Leeds', 'Cinder Room', -60, -59),
+    ],
+    hexen_atlas: [spot('demo-gs-4', 'Lisbon', '', 25, 27)],
+  }
+}
+
 function write(storage, key, value) {
   storage.setItem(key, JSON.stringify(value))
 }
@@ -101,7 +121,8 @@ function write(storage, key, value) {
 // session + offline caches + the local backend's simulated remote rows.
 export function seedDemoData(storage = localStorage) {
   const at = nowStamp()
-  const artists = DEMO_ARTISTS.map((a) => ({ ...a, updatedAt: at }))
+  const spots = demoGuestSpots(todayIso())
+  const artists = DEMO_ARTISTS.map((a) => ({ ...a, ...(spots[a.id] ? { guestSpots: spots[a.id] } : {}), updatedAt: at }))
   const ideas = DEMO_IDEAS.map((i) => ({ ...i, updatedAt: at }))
   write(storage, 'tattoo_local_session', DEMO_SESSION)
   write(storage, 'tattoo_artists_meta', artists)

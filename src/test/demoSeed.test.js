@@ -400,3 +400,19 @@ describe('watchForDemoReseed', () => {
     expect(reload.called).toBeUndefined()
   })
 })
+
+describe('demo guest spots (#183)', () => {
+  it('seeds guest spots dated from the seed day, so one is always nearby soon', async () => {
+    const { seedDemoData, DEMO_SEED_VERSION: version } = await import('../data/demoSeed')
+    const { nearbySoon, todayIso, normalizeGuestSpot } = await import('../data/guestSpots')
+    expect(version).toBeGreaterThanOrEqual(6)
+    const storage = new Map()
+    const fake = { setItem: (k, v) => storage.set(k, v), getItem: (k) => storage.get(k) ?? null }
+    seedDemoData(fake)
+    const artists = JSON.parse(storage.get('tattoo_artists_meta'))
+    const spots = artists.flatMap((a) => a.guestSpots || [])
+    expect(spots.length).toBeGreaterThan(0)
+    for (const spot of spots) expect(normalizeGuestSpot(spot)).toEqual(spot)
+    expect(nearbySoon(artists, { today: todayIso() }).length).toBeGreaterThan(0)
+  })
+})

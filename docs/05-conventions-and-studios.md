@@ -253,6 +253,9 @@ These two pages aren't islands — the connections surface throughout the app:
 - When an artist is attending a convention, you'll see it on their **detail card** and on
   the **dashboard**, and inside the **idea editor**'s artist matches.
 - A studio assignment in *Manage* is what places an artist on the *Studios* page.
+- A **guest spot** you add on an artist's detail card (a trip to another studio) shows its
+  distance from Milton Keynes, and the ones coming up nearby appear under **Nearby soon** on
+  the Pipeline page. See [Guest spots](03-gallery-and-ranking.md#guest-spots).
 
 ---
 
