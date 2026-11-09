@@ -19,7 +19,7 @@ test('reads a guest spot announcement, reviews it and shows it nearby soon', asy
   await page.route(/generativelanguage\.googleapis\.com/, async (route) => {
     const request = route.request()
     geminiCalls.push({ url: request.url(), key: request.headers()['x-goog-api-key'] })
-    const text = `Oxford | Lantern Studio | ${iso(10)} | ${iso(12)}\nLisbon | - | ${iso(30)} | ${iso(31)}`
+    const text = `Oxford | Lantern Studio | ${iso(10)} | ${iso(12)} | Books open Friday, DM to book\nLisbon | - | ${iso(30)} | ${iso(31)} | -`
     await route.fulfill({ json: { candidates: [{ content: { parts: [{ text }] } }] } })
   })
 
@@ -36,10 +36,12 @@ test('reads a guest spot announcement, reviews it and shows it nearby soon', asy
   expect(geminiCalls[0].url).not.toContain('key=')
   expect(geminiCalls[0].key).toBe('fictional-key')
   await expect(suggestions.getByText(/distance unknown/)).toBeVisible()
+  await expect(page.getByAltText('Announcement screenshot')).toBeVisible()
 
   await suggestions.getByRole('button', { name: 'Review Oxford' }).click()
   await expect(page.getByLabel('City')).toHaveValue('Oxford')
   await expect(page.getByText('45 mi from Milton Keynes')).toBeVisible()
+  await expect(page.getByLabel('Notes')).toHaveValue('Books open Friday, DM to book')
   await page.getByRole('button', { name: 'Save guest spot' }).click()
 
   const upcoming = page.getByRole('list', { name: 'Upcoming guest spots' })
@@ -55,4 +57,18 @@ test('reads a guest spot announcement, reviews it and shows it nearby soon', asy
   await expect(nearby.getByText('@ashgrove.tattoo')).toBeVisible()
   await expect(nearby.getByText('Vesper Ash')).toBeVisible() // seeded demo spot in London
   await expect(nearby.getByText('Lisbon')).toHaveCount(0)
+  await expect(nearby.getByText('Books open Friday, DM to book')).toBeVisible()
+
+  // Tapping a row lands on the artist's Guest spots, not the top of their photos.
+  await nearby.getByText('@ashgrove.tattoo').click()
+  await expect(page.getByRole('list', { name: 'Upcoming guest spots' }).getByText('Oxford')).toBeInViewport()
+
+  // Home: one line, however many spots are coming up.
+  await page.goto('/')
+  const strip = page.getByRole('link', { name: /Nearby soon/ })
+  await expect(strip).toBeVisible()
+  const box = await strip.boundingBox()
+  expect(box.height).toBeLessThan(60)
+  await expect(page.getByRole('link', { name: /^\+\d+ more$/ })).toHaveAttribute('href', /\/pipeline$/)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 })

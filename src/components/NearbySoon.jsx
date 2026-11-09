@@ -16,10 +16,12 @@ function readRadius() {
 
 const artistLabel = (artist) => artist?.name || `@${artist?.handle}`
 const milesLabel = (miles) => (miles === 0 ? 'local' : `${miles} mi`)
+// Lands on the artist's Guest spots section, not the top of their photos.
+const artistLink = (artist) => `/gallery?artist=${encodeURIComponent(artist.id)}#guest-spots`
 
 // Guest spots by saved artists coming up near Milton Keynes (#183). The full
-// version sits on Pipeline; `compact` is the one-line strip on Home, which
-// stays out of the way entirely when nothing is coming up.
+// version sits on Pipeline; `compact` is a single line on Home (the soonest
+// spot, then a count linking to Pipeline), and nothing at all when none is coming up.
 export default function NearbySoon({ artists = [], today = todayIso(), compact = false, className = '' }) {
   const [radiusMiles, setRadiusMiles] = useState(readRadius)
   const rows = nearbySoon(artists, { today, radiusMiles })
@@ -32,17 +34,17 @@ export default function NearbySoon({ artists = [], today = todayIso(), compact =
 
   if (compact) {
     if (rows.length === 0) return null
+    const [{ artist, spot, distanceMiles }] = rows
     return (
-      <ul aria-label="Guest spots nearby soon" className={`flex flex-wrap gap-x-4 gap-y-1 ${className}`}>
-        {rows.slice(0, 3).map(({ artist, spot, distanceMiles }) => (
-          <li key={`${artist.id}-${spot.id}`}>
-            <Link to={`/gallery?artist=${encodeURIComponent(artist.id)}`} className="inline-flex items-center min-h-11 font-mono text-[0.6875rem] tracking-wide text-cream-muted hover:text-cream">
-              <span className="text-accent uppercase tracking-widest mr-2">Nearby soon</span>
-              {artistLabel(artist)} · {spot.city} · {formatSpotDates(spot)} · {milesLabel(distanceMiles)}
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <div className={`flex items-center gap-3 min-w-0 font-mono text-[0.6875rem] tracking-wide ${className}`}>
+        <Link to={artistLink(artist)} className="flex items-center min-h-11 min-w-0 text-cream-muted hover:text-cream">
+          <span className="text-accent uppercase tracking-widest mr-2 shrink-0">Nearby soon</span>
+          <span className="truncate">{artistLabel(artist)} · {spot.city} · {formatSpotDates(spot)} · {milesLabel(distanceMiles)}</span>
+        </Link>
+        {rows.length > 1 && (
+          <Link to="/pipeline" className="flex items-center min-h-11 shrink-0 text-cream-muted/80 hover:text-cream">+{rows.length - 1} more</Link>
+        )}
+      </div>
     )
   }
 
@@ -68,7 +70,7 @@ export default function NearbySoon({ artists = [], today = todayIso(), compact =
           {rows.map(({ artist, spot, distanceMiles }) => (
             <li key={`${artist.id}-${spot.id}`}>
               <Link
-                to={`/gallery?artist=${encodeURIComponent(artist.id)}`}
+                to={artistLink(artist)}
                 className="flex items-start justify-between gap-3 p-3 bg-ink-card border border-ink-border rounded-xs hover:border-accent/50 transition-colors group"
               >
                 <div className="min-w-0">
@@ -77,6 +79,7 @@ export default function NearbySoon({ artists = [], today = todayIso(), compact =
                     <span>{spot.city}</span>{spot.studio && <span> · {spot.studio}</span>}
                   </p>
                   <p className="font-mono text-cream-muted/60 text-[0.625rem] tracking-widest mt-0.5">{formatSpotDates(spot)}</p>
+                  {spot.notes && <p className="font-body text-cream-muted/90 text-xs mt-1 line-clamp-2">{spot.notes}</p>}
                 </div>
                 <span className="font-mono text-[0.625rem] text-cream-muted/60 shrink-0 mt-0.5">{milesLabel(distanceMiles)}</span>
               </Link>

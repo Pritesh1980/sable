@@ -8,7 +8,7 @@ import { todayIso } from '../data/guestSpots'
 const TODAY = '2027-01-15'
 const ARTISTS = [
   { id: 'a1', handle: 'vesper_noctis', name: 'Vesper Ash', status: 'shortlisted', rank: 1, tags: [], guestSpots: [
-    { id: 's1', city: 'London', studio: 'Black Iris', startDate: '2027-02-12', endDate: '2027-02-14' },
+    { id: 's1', city: 'London', studio: 'Black Iris', startDate: '2027-02-12', endDate: '2027-02-14', notes: 'DM to book' },
     { id: 's2', city: 'Manchester', studio: '', startDate: '2027-02-20', endDate: '2027-02-21' },
   ] },
   { id: 'a2', handle: 'mora.blackfern', status: 'researching', rank: 2, tags: [], guestSpots: [
@@ -32,7 +32,8 @@ describe('NearbySoon', () => {
     expect(rows[0]).toHaveTextContent('London')
     expect(rows[0]).toHaveTextContent('12–14 Feb 2027')
     expect(rows[0]).toHaveTextContent('55 mi')
-    expect(within(rows[0]).getByRole('link')).toHaveAttribute('href', '/gallery?artist=a1')
+    expect(within(rows[0]).getByRole('link')).toHaveAttribute('href', '/gallery?artist=a1#guest-spots')
+    expect(rows[0]).toHaveTextContent('DM to book')
   })
 
   it('widens to the chosen radius and remembers it on this device', () => {
@@ -45,6 +46,19 @@ describe('NearbySoon', () => {
   it('shows a short empty state', () => {
     renderPanel({ artists: [] })
     expect(screen.getByText(/No guest spots within 100 mi/i)).toBeInTheDocument()
+  })
+
+  it('compact mode is one line: the soonest spot, then a count linking to Pipeline', () => {
+    localStorage.setItem('tattoo_nearby_radius', '200')
+    renderPanel({ compact: true })
+    const links = screen.getAllByRole('link')
+    expect(links).toHaveLength(2)
+    expect(links[0]).toHaveTextContent('Vesper Ash')
+    expect(links[0]).toHaveTextContent('London')
+    expect(links[0]).toHaveAttribute('href', '/gallery?artist=a1#guest-spots')
+    expect(links[1]).toHaveTextContent('+1 more')
+    expect(links[1]).toHaveAttribute('href', '/pipeline')
+    expect(screen.getAllByText(/Nearby soon/i)).toHaveLength(1)
   })
 
   it('renders nothing in compact mode when there is nothing nearby', () => {

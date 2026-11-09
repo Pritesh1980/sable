@@ -10,6 +10,7 @@ import { normalizeArtistStatus } from './planning'
 export const NEARBY_DAYS = 90
 export const NEARBY_RADIUS_MILES = 100
 export const MAX_SCREENSHOT_SPOTS = 10
+const MAX_SCREENSHOT_NOTES = 200
 
 const LIMITS = { city: 60, studio: 80, source: 300, notes: 500 }
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -117,10 +118,11 @@ export function buildGuestSpotPrompt(today = todayIso()) {
     '- the city (just the city name, e.g. London)',
     '- the studio, if one is named',
     '- the first and last day, as YYYY-MM-DD. If the year is not shown, use the next time those dates come round on or after today.',
+    '- how and when to book, in a few words, if shown (e.g. "Books open 1 Mar, DM to book")',
     'Use ONLY what is visible. Never guess a city or a date that is not shown.',
     'Reply with one line per city and no other text, in this format:',
-    'city | studio | start | end',
-    "Use '-' for a studio you cannot see. Leave out any city whose dates you cannot read.",
+    'city | studio | start | end | booking',
+    "Use '-' for a studio or booking you cannot see. Leave out any city whose dates you cannot read.",
   ].join('\n')
 }
 
@@ -130,21 +132,28 @@ function isPlausibleCity(city) {
   return /^[\p{L}][\p{L} .'’-]*$/u.test(city) && city.split(' ').length <= 4
 }
 
-// → suggestions [{ city, studio, startDate, endDate }] for the owner to review;
-// never saved directly. Exactly four fields per line, ISO dates only.
+// → suggestions [{ city, studio, startDate, endDate, notes }] for the owner to
+// review; never saved directly. Four or five fields per line (the booking note
+// is optional), ISO dates only. Notes are shown as plain text, capped short.
 export function parseGuestSpotResponse(text = '') {
   const spots = []
   for (const raw of String(text).split('\n')) {
     if (spots.length >= MAX_SCREENSHOT_SPOTS) break
     const parts = raw.split('|').map((p) => p.trim())
-    if (parts.length !== 4) continue
+    if (parts.length !== 4 && parts.length !== 5) continue
     if (parts[0].toLowerCase() === 'city') continue // format header echoed back
     const clean = (s) => (s === '-' ? '' : s)
     const city = cleanText(clean(parts[0]), LIMITS.city)
     const [startDate, endDate] = [parts[2], parts[3]]
     if (!city || !isPlausibleCity(city)) continue
     if (!isIsoDate(startDate) || !isIsoDate(endDate) || endDate < startDate) continue
-    spots.push({ city, studio: cleanText(clean(parts[1]), LIMITS.studio), startDate, endDate })
+    spots.push({
+      city,
+      studio: cleanText(clean(parts[1]), LIMITS.studio),
+      startDate,
+      endDate,
+      notes: cleanText(clean(parts[4] ?? ''), MAX_SCREENSHOT_NOTES),
+    })
   }
   return spots
 }

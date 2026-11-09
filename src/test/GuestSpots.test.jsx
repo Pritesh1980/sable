@@ -109,3 +109,76 @@ describe('GuestSpots', () => {
     expect(await screen.findByText(/couldn't find any dates/i)).toBeInTheDocument()
   })
 })
+
+describe('GuestSpots review fixes (codex + agy)', () => {
+  const pick = () => fireEvent.change(screen.getByLabelText('Guest spot screenshot'), {
+    target: { files: [new File(['x'], 'a.png', { type: 'image/png' })] },
+  })
+  const THREE = [
+    { city: 'London', studio: '', startDate: '2027-04-02', endDate: '2027-04-04', notes: '' },
+    { city: 'Bristol', studio: '', startDate: '2027-05-10', endDate: '2027-05-11', notes: 'Books open 1 Mar, DM' },
+    { city: 'Oxford', studio: '', startDate: '2027-06-01', endDate: '2027-06-02', notes: '' },
+  ]
+
+  async function readThree(extra = {}) {
+    localStorage.setItem('gemini_api_key', 'test-key')
+    const utils = setup({ spots: [], analyze: vi.fn(async () => THREE), toDataUrl: vi.fn(async () => 'data:image/png;base64,AAAA'), ...extra })
+    pick()
+    fireEvent.click(await screen.findByRole('button', { name: 'Read dates' }))
+    await screen.findByRole('list', { name: 'Suggested guest spots' })
+    return utils
+  }
+  const suggestionCities = () => within(screen.getByRole('list', { name: 'Suggested guest spots' }))
+    .getAllByRole('listitem').map((li) => li.textContent)
+
+  it('saving a reviewed suggestion removes that one, even after dismissing an earlier one', async () => {
+    const { latest } = await readThree()
+    fireEvent.click(screen.getByRole('button', { name: 'Review Bristol' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss London' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save guest spot' }))
+    expect(latest().map((s) => s.city)).toEqual(['Bristol'])
+    const left = suggestionCities()
+    expect(left).toHaveLength(1)
+    expect(left[0]).toMatch(/Oxford/)
+  })
+
+  it('keeps the screenshot picker disabled while a read is in flight', async () => {
+    localStorage.setItem('gemini_api_key', 'test-key')
+    let finish
+    const analyze = vi.fn(() => new Promise((resolve) => { finish = resolve }))
+    setup({ spots: [], analyze, toDataUrl: vi.fn(async () => 'data:image/png;base64,AAAA') })
+    pick()
+    fireEvent.click(await screen.findByRole('button', { name: 'Read dates' }))
+    expect(screen.getByLabelText('Guest spot screenshot')).toBeDisabled()
+    finish([])
+    await waitFor(() => expect(screen.getByLabelText('Guest spot screenshot')).not.toBeDisabled())
+  })
+
+  it('keeps the screenshot in view while suggestions are reviewed, and carries the booking note', async () => {
+    await readThree()
+    expect(screen.getByAltText('Announcement screenshot')).toHaveAttribute('src', 'data:image/png;base64,AAAA')
+    fireEvent.click(screen.getByRole('button', { name: 'Review Bristol' }))
+    expect(screen.getByLabelText('Notes')).toHaveValue('Books open 1 Mar, DM')
+    const list = screen.getByRole('list', { name: 'Suggested guest spots' })
+    const city = screen.getByLabelText('City')
+    // The form opens with the suggestions, not up above them.
+    expect(list.compareDocumentPosition(city) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('fills an empty To from From, and keeps To from going before it', () => {
+    setup({ spots: [] })
+    fireEvent.click(screen.getByRole('button', { name: '+ Add guest spot' }))
+    fireEvent.change(screen.getByLabelText('From'), { target: { value: '2027-08-14' } })
+    expect(screen.getByLabelText('To')).toHaveValue('2027-08-14')
+    expect(screen.getByLabelText('To')).toHaveAttribute('min', '2027-08-14')
+  })
+
+  it('warns when a city has no known distance, so it will not show as nearby', () => {
+    setup({ spots: [] })
+    fireEvent.click(screen.getByRole('button', { name: '+ Add guest spot' }))
+    fireEvent.change(screen.getByLabelText('City'), { target: { value: 'Atlantis' } })
+    expect(screen.getByText(/won’t appear in Nearby soon/i)).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('City'), { target: { value: 'Hackney' } })
+    expect(screen.getByText('55 mi from Milton Keynes')).toBeInTheDocument()
+  })
+})

@@ -7,6 +7,13 @@ export const UK_PLACES = [
   { city: 'Northampton', distanceMiles: 20 },
   { city: 'Bedford', distanceMiles: 20 },
   { city: 'Luton', distanceMiles: 25 },
+  { city: 'Aylesbury', distanceMiles: 20 },
+  { city: 'Hemel Hempstead', distanceMiles: 30 },
+  { city: 'St Albans', distanceMiles: 35 },
+  { city: 'High Wycombe', distanceMiles: 35 },
+  { city: 'Stevenage', distanceMiles: 35 },
+  { city: 'Watford', distanceMiles: 40 },
+  { city: 'Leamington Spa', distanceMiles: 45 },
   { city: 'Oxford', distanceMiles: 45 },
   { city: 'Coventry', distanceMiles: 45 },
   { city: 'Birmingham', distanceMiles: 50 },
@@ -33,6 +40,7 @@ export const UK_PLACES = [
   { city: 'Norwich', distanceMiles: 115 },
   { city: 'Sheffield', distanceMiles: 120 },
   { city: 'Canterbury', distanceMiles: 125 },
+  { city: 'Margate', distanceMiles: 130 },
   { city: 'Manchester', distanceMiles: 130 },
   { city: 'Bournemouth', distanceMiles: 130 },
   { city: 'Swansea', distanceMiles: 150 },
@@ -47,19 +55,37 @@ export const UK_PLACES = [
   { city: 'Glasgow', distanceMiles: 360 },
 ]
 
-const BY_NAME = new Map(UK_PLACES.map((p) => [p.city.toLowerCase(), p.distanceMiles]))
-const COUNTRY_SUFFIXES = ['uk', 'united kingdom', 'england', 'scotland', 'wales', 'gb']
+// London areas where studios cluster. Announcements often name the area, not
+// the city ("Hackney · 14–16 Feb"), and a guest spot there is a London trip.
+export const LONDON_AREAS = [
+  'Hackney', 'Shoreditch', 'Dalston', 'Camden', 'Islington', 'Soho', 'Brixton',
+  'Peckham', 'Walthamstow', 'Stoke Newington', 'Bethnal Green', 'Whitechapel',
+  'Clapham', 'Croydon', 'Kingston', 'Greenwich', 'Deptford', 'Covent Garden',
+  'Notting Hill', 'Kentish Town', 'Bermondsey', 'Hoxton',
+]
 
-function placeKey(city) {
-  let name = String(city ?? '').trim().toLowerCase().replaceAll(/\s+/g, ' ')
-  const comma = name.lastIndexOf(',')
-  if (comma !== -1 && COUNTRY_SUFFIXES.includes(name.slice(comma + 1).trim())) {
-    name = name.slice(0, comma).trim()
-  }
-  return name
+const LONDON = UK_PLACES.find((p) => p.city === 'London').distanceMiles
+const BY_NAME = new Map([
+  ...UK_PLACES.map((p) => [p.city.toLowerCase(), p.distanceMiles]),
+  ...LONDON_AREAS.map((area) => [area.toLowerCase(), LONDON]),
+])
+const COUNTRY_SUFFIXES = new Set(['uk', 'united kingdom', 'england', 'scotland', 'wales', 'gb'])
+
+// "Shoreditch, London, England, UK" → ['shoreditch', 'london']
+function placeParts(city) {
+  const parts = String(city ?? '').toLowerCase().split(',')
+    .map((part) => part.trim().replaceAll(/\s+/g, ' '))
+    .filter(Boolean)
+  while (parts.length > 1 && COUNTRY_SUFFIXES.has(parts.at(-1))) parts.pop()
+  return parts
 }
 
+// Whole name first, then the last part ("Northern Quarter, Manchester").
 export function distanceFromMiltonKeynes(city) {
-  const key = placeKey(city)
-  return key && BY_NAME.has(key) ? BY_NAME.get(key) : null
+  const parts = placeParts(city)
+  if (parts.length === 0) return null
+  const whole = parts.join(', ')
+  if (BY_NAME.has(whole)) return BY_NAME.get(whole)
+  const last = parts.at(-1)
+  return parts.length > 1 && BY_NAME.has(last) ? BY_NAME.get(last) : null
 }
