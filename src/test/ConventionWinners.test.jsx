@@ -113,7 +113,7 @@ describe('ConventionWinners — the board', () => {
     const row = screen.getByTestId('winner-row-kubalizmus')
     fireEvent.click(within(row).getByRole('button', { name: /^add$/i }))
     expect(onAddArtist).toHaveBeenCalledWith(
-      expect.objectContaining({ handle: 'kubalizmus', note: expect.stringMatching(/best colour/i) })
+      expect.objectContaining({ handle: 'kubalizmus', notes: expect.stringMatching(/best colour/i) })
     )
   })
 

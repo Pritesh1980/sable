@@ -121,7 +121,8 @@ describe('Conventions page — winners section', () => {
     const row = card.getByTestId('winner-row-kubalizmus')
     fireEvent.click(within(row).getByRole('button', { name: /^add$/i }))
 
-    expect(setArtists).toHaveBeenCalled()
+    const added = setArtists.mock.calls[0][0](artists).at(-1)
+    expect(added).toMatchObject({ handle: 'kubalizmus', notes: `Won Best Colour 1st at ${localConv.name} 2027.` })
     expect(setConventionOverrides).toHaveBeenCalled()
   })
 

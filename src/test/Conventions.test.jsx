@@ -249,7 +249,10 @@ describe('Conventions artist index', () => {
 
     const nextArtists = setArtists.mock.calls[0][0](artists)
     expect(nextArtists).toHaveLength(3)
-    expect(nextArtists[2]).toMatchObject({ id: 'kubalizmus', handle: 'kubalizmus', name: 'Martin Kubala', status: 'researching' })
+    expect(nextArtists[2]).toMatchObject({
+      id: 'kubalizmus', handle: 'kubalizmus', name: 'Martin Kubala', status: 'researching',
+      notes: 'Spotted in the Brighton Tattoo Convention 2027 line-up.',
+    })
     expect(setConventionOverrides.mock.calls[0][0]({})['brighton@2027']).toEqual(['kubalizmus'])
   })
 

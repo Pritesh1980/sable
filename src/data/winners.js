@@ -484,6 +484,6 @@ export function winnerArtistDraft(entry, conventionName = '') {
     status: 'researching',
     styleNote: '',
     images: [],
-    note: award ? `Won ${award}${where}.` : `Competition winner${where}.`,
+    notes: award ? `Won ${award}${where}.` : `Competition winner${where}.`,
   }
 }

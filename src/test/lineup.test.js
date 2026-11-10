@@ -7,6 +7,7 @@ import {
   filterLineup,
   groupLineup,
   lineupCounts,
+  lineupArtistDraft,
   MAX_LINEUP_ENTRIES,
 } from '../data/lineup'
 
@@ -212,5 +213,17 @@ describe('lineupCounts', () => {
       artists
     )
     expect(lineupCounts(indexed)).toEqual({ total: 2, saved: 1, fresh: 1 })
+  })
+})
+
+describe('lineupArtistDraft', () => {
+  it('says which line-up the artist was spotted in, as the artist record\'s notes', () => {
+    const draft = lineupArtistDraft({ name: 'Martin Kubala', handle: 'kubalizmus', note: 'Booth 12' }, 'Brighton Tattoo Convention 2027')
+    expect(draft).toMatchObject({ handle: 'kubalizmus', name: 'Martin Kubala', tags: [], status: 'researching' })
+    expect(draft.notes).toBe('Spotted in the Brighton Tattoo Convention 2027 line-up.')
+  })
+
+  it('has no notes when it does not know the show', () => {
+    expect(lineupArtistDraft({ name: '', handle: 'x', note: '' }).notes).toBe('')
   })
 })
