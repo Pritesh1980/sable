@@ -646,8 +646,26 @@ The view is framed on the tattoo, not the limb: it opens close enough that the d
 fills about 70% of the height, follows the design as it is resized or moved, and turns
 the arm so a design moved round it stays facing you. **Whole arm** steps back to judge
 scale. Framing the whole arm by default left a 12 cm design as a few faint marks on a
-lot of skin, which is the wrong subject for this app. The demo designs lead with solid
-blackwork for the same reason; the fine-line fern is there to show how thin lines hold up.
+lot of skin, which is the wrong subject for this app.
+
+The lab's designs are Sable's own demo tattoos (the hourglass, the tiger, the koi). Those
+are generated *photographs*, with the ink already on an arm, so each was lifted off its
+photo first:
+
+```sh
+"$BLENDER" -b -P scripts/blender/extract-design.py -- \
+  --image public/images/demo/vesper_noctis/hourglass-v4.webp \
+  --crop 280,205,730,1215 --out public/models/designs/hourglass.webp
+```
+
+Ink multiplies the light coming off skin, so dividing the photo by the bare skin under it
+leaves the design on white paper, shading and colour included, with the first arm's
+lighting divided out. The bare skin is a smooth surface fitted through the un-inked parts
+of the crop. Crops used: hourglass `280,205,730,1215`, tiger `190,190,830,1280`
+(`ashgrove.tattoo/tiger`), koi `300,215,740,1320` (`hexen_atlas/koi`). This is for Sable's
+own fictional demo images: run on an artist's photo, the result is their design. Two of
+the simple line cards (serpent, fern) are in the list too, to show flat blackwork and how
+thin lines hold up.
 
 The export does the hard part so the phone doesn't have to. Each vertex stores where it is
 on the skin: its distance round the arm in cm, and the arm's circumference there. The
@@ -659,6 +677,7 @@ skin, measured round the curve, the same definition `--width-cm` uses.
 | File | Role |
 |---|---|
 | `scripts/blender/export-arm-gltf.py` | The export. Its helpers are unit tested without Blender (`test_export_arm.py`). |
+| `scripts/blender/extract-design.py` | Lifts a tattoo off a demo photo as a flat design (`test_extract_design.py`, which needs numpy: run it under Blender's Python). |
 | `src/data/placement3d.js` | Pure maths: clamping, pinch, what the camera frames, the dark-card flip. |
 | `src/components/ArmPlacement3D.jsx` | The three.js view. A lazy chunk. |
 | `src/pages/PlacementLab.jsx` | The lab page. |
@@ -690,6 +709,10 @@ nobody has held one yet.
 - Saving a snapshot as a concept variant, and opening the view from a real concept.
 - The forearm, and the inner side of the upper arm (the export is `side='outer'`).
 - Your own measurements: the model is fitted to the default averages.
+- Skin near the elbow and over the shoulder: a design can sit between 1.7 and 25 cm above
+  the elbow, the range the export reports as cleanly mapped, so a tall piece is narrowed
+  to fit (the hourglass opens at 10.4 cm wide, not 12).
+- Extracted designs keep a faint tint along some crop edges.
 - Offline: `models/` is not in the service worker's precache list.
 - The healed-ink look is a cool black floor only, with none of the spread or patchiness
   the Blender renders have.

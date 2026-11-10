@@ -69,6 +69,32 @@ class CornerSurface(unittest.TestCase):
         self.assertEqual([a for a, _ in out], [14.5, 15.4, 14.9])
 
 
+class SkinFloor(unittest.TestCase):
+    def test_is_just_above_the_highest_unmapped_arm_vertex_below_mid_arm(self):
+        # y, arm share, mapped
+        ys = [-2.0, 3.0, 6.5, 9.0, 20.0, 28.0]
+        arm = [1.0, 1.0, 1.0, 1.0, 1.0, 0.2]
+        arcs = [None, None, None, 0.0, 0.0, None]
+        self.assertEqual(ex.skin_floor(ys, arm, arcs, mid=16.0), 6.6)
+
+    def test_ignores_the_torso_and_the_shoulder(self):
+        ys = [5.0, 30.0, 9.0]
+        arm = [0.1, 1.0, 1.0]  # a torso vertex beside the arm; an unmapped shoulder vertex
+        arcs = [None, None, 0.0]
+        self.assertEqual(ex.skin_floor(ys, arm, arcs, mid=16.0, fallback=0.0), 0.0)
+
+
+class SkinCeiling(unittest.TestCase):
+    def test_is_just_below_the_lowest_unmapped_vertex_on_the_outside_of_the_shoulder(self):
+        ys = [10.0, 22.0, 27.3, 29.0, 31.0]
+        zs = [4.0, -3.0, 4.0, 3.0, 2.0]  # the 22 cm one is the armpit, on the inside
+        arcs = [0.0, None, None, None, 0.0]
+        self.assertEqual(ex.skin_ceiling(ys, zs, arcs, mid=16.0, fallback=31.4), 27.2)
+
+    def test_falls_back_when_the_outside_is_mapped_all_the_way_up(self):
+        self.assertEqual(ex.skin_ceiling([10.0, 30.0], [4.0, 4.0], [0.0, 0.0], mid=16.0, fallback=31.4), 31.4)
+
+
 class PerimeterTable(unittest.TestCase):
     def test_samples_every_cm_across_the_skin(self):
         table = ex.perimeter_table(lambda y: 26.0 + y / 10, 2.0, 4.5)

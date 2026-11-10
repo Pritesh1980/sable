@@ -12,13 +12,14 @@ const MODEL_URL = `${base}models/arm-upper.glb`
 const META_URL = `${base}models/arm-upper.json`
 
 // Fictional demo designs only (light lines on near-black, like concept cards).
-// Bold pieces first: the view has to show ink, and blackwork shows most.
+// Sable's own fictional demo tattoos, lifted off their photos as flat designs
+// (scripts/blender/extract-design.py), then two of the simple line cards.
 const DESIGNS = [
-  { label: 'Serpent', src: 'images/demo/ferrum_line/3.svg' },
-  { label: 'Dagger', src: 'images/demo/ferrum_line/1.svg' },
-  { label: 'Crescent', src: 'images/demo/vesper_noctis/3.svg' },
-  { label: 'Moon phases', src: 'images/demo/vesper_noctis/1.svg' },
-  { label: 'Fern (fine line)', src: 'images/demo/mora.blackfern/2.svg' },
+  { label: 'Ocean hourglass', src: 'models/designs/hourglass.webp' },
+  { label: 'Tiger portrait', src: 'models/designs/tiger.webp' },
+  { label: 'Koi and waves', src: 'models/designs/koi.webp' },
+  { label: 'Serpent (blackwork card)', src: 'images/demo/ferrum_line/3.svg' },
+  { label: 'Fern (fine-line card)', src: 'images/demo/mora.blackfern/2.svg' },
 ]
 
 const cm = (n) => `${n.toFixed(1)} cm`
@@ -46,7 +47,7 @@ export default function PlacementLab() {
   const [error, setError] = useState('')
   const [ready, setReady] = useState(false)
   const [design, setDesign] = useState(DESIGNS[0].src)
-  const [aspect, setAspect] = useState(760 / 600)
+  const [aspect, setAspect] = useState(1010 / 450)
   const [wanted, setWanted] = useState(DEFAULT_PLACEMENT)
   const [view, setView] = useState('design')
 

@@ -11,6 +11,8 @@ async function openLab(page) {
   await expect(page.getByText('Loading the arm…')).toHaveCount(0, { timeout: 20_000 })
   const view = page.getByTestId('arm-placement-3d')
   await expect(view.locator('canvas')).toBeVisible()
+  // A design of known shape (600 x 760), so the sizes below are exact.
+  await page.getByLabel('Design').selectOption({ label: 'Serpent (blackwork card)' })
   const box = await view.boundingBox()
   return { view, mid: [box.x + box.width / 2, box.y + box.height / 2] }
 }

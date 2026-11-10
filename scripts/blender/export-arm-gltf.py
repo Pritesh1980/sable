@@ -33,6 +33,7 @@ The helpers at the top are plain Python and unit tested without Blender:
 import argparse
 import importlib.util
 import json
+import math
 import os
 import struct
 import sys
@@ -86,6 +87,30 @@ def corner_surface(tri, arcs, perimeters):
     if max(corner_arcs) - min(corner_arcs) > turn / 2:
         corner_arcs = [round(a + turn, 6) if a < 0 else a for a in corner_arcs]
     return list(zip(corner_arcs, corner_perimeters))
+
+
+def skin_floor(ys, arm_shares, arcs, mid, fallback=0.0):
+    """The lowest height a design may reach: just above the highest vertex on
+    the arm, below ``mid``, that has no place on the mapped skin. The upper
+    arm's skin ends raggedly towards the elbow, where the forearm's bones take
+    over the weights, and a design hanging past it would be cut off."""
+    unmapped = [y for y, share, arc in zip(ys, arm_shares, arcs)
+                if arc is None and share >= 0.5 and y < mid]
+    if not unmapped:
+        return fallback
+    return math.floor(max(unmapped) * 10 + 1) / 10
+
+
+def skin_ceiling(ys, zs, arcs, mid, fallback):
+    """The highest a design may reach: just below the lowest exported vertex
+    on the outside of the arm (z > 0), above ``mid``, with no place on the
+    mapped skin. Over the shoulder the upper arm's weights give way to the
+    shoulder's in a ragged line; the armpit, lower down but on the inside,
+    doesn't count, since a design centred on the outside never gets there."""
+    unmapped = [y for y, z, arc in zip(ys, zs, arcs) if arc is None and z > 0 and y > mid]
+    if not unmapped:
+        return fallback
+    return math.ceil(min(unmapped) * 10 - 1) / 10
 
 
 def perimeter_table(circumference_at, lo, hi):
@@ -212,7 +237,9 @@ def main(argv=None):
     primitive = glb_json(glb)['meshes'][0]['primitives'][0]
     attributes = sorted(primitive.get('attributes', {}))
     skin_ys = [fitted[i][1] for i in used if mapped[i]]
-    lo, hi = min(skin_ys), max(skin_ys)
+    hi = skin_ceiling([fitted[i][1] for i in used], [fitted[i][2] for i in used],
+                      [arcs[i] for i in used], mid=L / 2, fallback=max(skin_ys))
+    lo = skin_floor([p[1] for p in fitted], arm, arcs, mid=L / 2, fallback=min(skin_ys))
     meta = {
         'generator': 'scripts/blender/export-arm-gltf.py',
         'source': 'MakeHuman base mesh and targets (CC0 1.0)',
