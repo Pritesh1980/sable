@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { clampPlacement, wrapShare, DEFAULT_PLACEMENT, MIN_WIDTH_CM } from '../data/placement3d'
 
@@ -24,19 +24,23 @@ const DESIGNS = [
 
 const cm = (n) => `${n.toFixed(1)} cm`
 
+// The label names the control and nothing else; the value is read out through
+// aria-valuetext ("12.0 cm", "outer arm"), not folded into the name.
 function Slider({ label, value, min, max, step, onChange, format }) {
+  const id = useId()
   return (
-    <label className="block font-v2-ui text-sm text-v2-muted">
-      <span className="flex items-baseline justify-between">
-        <span>{label}</span>
-        <span className="font-mono text-v2-cream">{format(value)}</span>
-      </span>
+    <div className="font-v2-ui text-sm text-v2-muted">
+      <div className="flex items-baseline justify-between">
+        <label htmlFor={id}>{label}</label>
+        <output htmlFor={id} className="font-mono text-v2-cream">{format(value)}</output>
+      </div>
       <input
-        type="range" min={min} max={max} step={step} value={value}
+        id={id} type="range" min={min} max={max} step={step} value={value}
+        aria-valuetext={format(value)}
         onChange={(e) => onChange(Number(e.target.value))}
         className="mt-1 h-11 w-full accent-v2-accent"
       />
-    </label>
+    </div>
   )
 }
 
