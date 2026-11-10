@@ -84,9 +84,10 @@ export function parseInstagramHandle(input = '') {
 }
 
 // Build a new user-added artist record, or null if the handle is already taken
-// (case-insensitive). Rank goes to the back of the queue.
+// (case-insensitive). Rank goes to the back of the queue. `notes` carries where
+// the artist was found when they come from a line-up or the winners board.
 export function createArtist(
-  { handle, name, tags = [], status = 'researching', styleNote = '', images = [] },
+  { handle, name, tags = [], status = 'researching', styleNote = '', images = [], notes = '' },
   existingArtists = []
 ) {
   const duplicate = existingArtists.some(
@@ -109,7 +110,7 @@ export function createArtist(
     rank: maxRank + 1,
     status,
     ...(styleNote ? { styleNote } : {}),
-    notes: '',
+    notes,
     studio: null,
   }
 }

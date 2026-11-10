@@ -167,7 +167,7 @@ describe('ConventionLineup — index', () => {
     const row = screen.getByTestId('lineup-row-kubalizmus')
     fireEvent.click(within(row).getByRole('button', { name: /^add$/i }))
     expect(onAddArtist).toHaveBeenCalledWith(
-      expect.objectContaining({ handle: 'kubalizmus', name: 'Martin Kubala' })
+      expect.objectContaining({ handle: 'kubalizmus', name: 'Martin Kubala', notes: expect.stringMatching(/line-up/i) })
     )
   })
 

@@ -131,9 +131,10 @@ sent anywhere — the list is parsed on the device.
 
 - **Search** by name, handle or the studio/country detail.
 - Filter to **In your gallery** (who you already follow is going) or **New to you**.
-- **Add** an artist straight to your gallery — they land as *researching* and are flagged
-  as attending that show in one tap. Style tags stay empty: the show's list says nothing
-  about style, so you tag them yourself once you've looked at their work.
+- **Add** an artist straight to your gallery — they land as *researching*, with the show
+  they were spotted at in their notes, and are flagged as attending that show in one tap.
+  Style tags stay empty: the show's list says nothing about style, so you tag them
+  yourself once you've looked at their work.
 - Tap **Attending?** on an artist you already have to flag them for that show — the same
   flag the *Your artists attending* line sets.
 

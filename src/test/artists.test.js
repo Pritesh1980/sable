@@ -169,3 +169,16 @@ describe('createArtist with tags and status', () => {
     expect(artist.status).toBe('researching')
   })
 })
+
+// Adding from a line-up or the winners board says where you found the artist.
+// That has to reach the record: it's what ArtistDetail shows under Notes.
+describe('createArtist notes', () => {
+  it('keeps the notes the draft carries', () => {
+    const artist = createArtist({ handle: 'kubalizmus', name: '', notes: 'Spotted in the Brighton line-up.' }, [])
+    expect(artist.notes).toBe('Spotted in the Brighton line-up.')
+  })
+
+  it('starts with empty notes when the draft has none', () => {
+    expect(createArtist({ handle: 'plain', name: '' }, []).notes).toBe('')
+  })
+})

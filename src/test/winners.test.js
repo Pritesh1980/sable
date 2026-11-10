@@ -341,8 +341,8 @@ describe('winnerArtistDraft', () => {
       'Big London Tattoo Show'
     )
     expect(draft).toMatchObject({ handle: 'oscarakermo', name: 'Oscar Akermo', status: 'researching' })
-    expect(draft.note).toContain('Best Black & Grey')
-    expect(draft.note).toContain('Big London Tattoo Show')
+    expect(draft.notes).toContain('Best Black & Grey')
+    expect(draft.notes).toContain('Big London Tattoo Show')
   })
 
   it('leaves tags empty — an award category is not a style tag', () => {

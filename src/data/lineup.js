@@ -227,6 +227,6 @@ export function lineupArtistDraft(entry, conventionName = '') {
     status: 'researching',
     styleNote: '',
     images: [],
-    note: conventionName ? `Spotted in the ${conventionName} line-up.` : '',
+    notes: conventionName ? `Spotted in the ${conventionName} line-up.` : '',
   }
 }
