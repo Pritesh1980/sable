@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useImperativeHandle, useRef } from 'react'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { createArmEngine, loadDesign } from '../lib/armPlacement'
@@ -8,13 +8,19 @@ import { createArmEngine, loadDesign } from '../lib/armPlacement'
 // main bundle; the scene itself is src/lib/armPlacement.js.
 export default function ArmPlacement3D({
   modelUrl, imageSrc, placement, perimeterCm, view = 'design',
-  onResize, onDesignSize, onReady, onError, spin = false,
+  onResize, onDesignSize, onReady, onError, spin = false, ref,
 }) {
   const mountRef = useRef(null)
   const engineRef = useRef(null)
   // One object the engine reads at call time, kept current without rebuilding
   // the scene when a handler's identity changes.
   const callbacks = useRef({})
+
+  // `ref.current.snapshot()`: the view as PNG bytes, framed on the design, or
+  // null when there is no scene (or nothing in it) to take a picture of.
+  useImperativeHandle(ref, () => ({
+    snapshot: () => engineRef.current?.snapshot() ?? null,
+  }), [])
 
   useEffect(() => {
     Object.assign(callbacks.current, { onResize, onDesignSize, onReady, onError })

@@ -91,6 +91,44 @@ export function designYaw({ centreCm, arcCm }, perimeterCm) {
   return (-2 * Math.PI * arcCm) / circumferenceAt(perimeterCm, centreCm)
 }
 
+// ---- The saved picture ------------------------------------------------------
+// A snapshot is kept as a concept variant, so it is always framed on the
+// design: close up even if the view had stepped back to the whole arm, and
+// with the ink facing the camera even if the arm had been turned away.
+
+// The most the arm may be turned from square-on in a saved picture (radians):
+// enough to show the design wrapping, never so far that it slides out of view.
+export const MAX_SNAPSHOT_TURN = 0.6
+
+// `turned` is the user's own drag, in radians, on top of the design's yaw.
+export function snapshotPose(placement, perimeterCm, turned = 0) {
+  const whole = 2 * Math.PI
+  const turn = turned - whole * Math.round(turned / whole) // shortest way round
+  return {
+    ...viewFrame(placement, 'design'),
+    yaw: designYaw(placement, perimeterCm),
+    turned: Math.min(MAX_SNAPSHOT_TURN, Math.max(-MAX_SNAPSHOT_TURN, turn)),
+  }
+}
+
+export const formatCm = (n) => `${n.toFixed(1)} cm`
+
+export function arcLabel(arcCm) {
+  if (arcCm === 0) return 'outer arm'
+  return `${formatCm(Math.abs(arcCm))} ${arcCm > 0 ? 'to the back' : 'to the front'}`
+}
+
+// What a saved snapshot is called, labelled the way the live try-on labels
+// its own: made on this device, so the provider is 'other', not an AI.
+export function snapshotVariant(label, { widthCm, heightCm, centreCm, arcCm }) {
+  return {
+    provider: 'other',
+    title: `On the arm, ${round1(widthCm)} cm`,
+    notes: `3D arm preview of ${label}. ${formatCm(widthCm)} wide × ${formatCm(heightCm)} tall, `
+      + `centred ${formatCm(centreCm)} above the elbow, ${arcLabel(arcCm)}.`,
+  }
+}
+
 // ---- Design image → ink ---------------------------------------------------
 // The shader multiplies skin by the texture, like ink: white is bare skin.
 // Sable's concept cards are the other way round (light lines on near-black),

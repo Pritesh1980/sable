@@ -9,7 +9,7 @@
 // design is therefore four uniforms and one texture read per pixel: no decal
 // geometry, no projection, nothing rebuilt while a finger moves.
 
-import { pinchWidth, toInkPixels, viewFrame, designYaw, WHOLE_ARM } from '../data/placement3d'
+import { pinchWidth, toInkPixels, viewFrame, designYaw, snapshotPose, WHOLE_ARM } from '../data/placement3d'
 
 const BACKDROP = 0x131110 // v2-ink
 const SKIN = 0x9a7654 // render-on-body.py's default tone, warm-brown
@@ -111,6 +111,17 @@ export function loadDesign(src, {
   })
 }
 
+// The bytes of a canvas.toDataURL('image/png') result, or null when the canvas
+// gave nothing back ("data:," for a zero-sized one).
+const PNG_PREFIX = 'data:image/png;base64,'
+function pngBytes(dataUrl) {
+  if (typeof dataUrl !== 'string' || !dataUrl.startsWith(PNG_PREFIX)) return null
+  const binary = atob(dataUrl.slice(PNG_PREFIX.length))
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i)
+  return bytes.length > 0 ? bytes : null
+}
+
 // `callbacks` is read at call time ({ onResize, onReady, onError }), so the
 // owner can swap handlers without rebuilding the scene.
 export function createArmEngine(THREE, GLTFLoader, mount, { modelUrl, callbacks = {} }) {
@@ -120,6 +131,7 @@ export function createArmEngine(THREE, GLTFLoader, mount, { modelUrl, callbacks 
   let geometry = null
   let texture = null
   let widthCm = 0
+  let placed = null // the last setPlacement: { placement, perimeterCm }
   let spin = false
   // `now` eases towards `goal`: what the camera frames, and how far the arm is
   // turned to keep the design facing it. `turned` is the user's own drag.
@@ -260,6 +272,7 @@ export function createArmEngine(THREE, GLTFLoader, mount, { modelUrl, callbacks 
     // Where the design sits, and what the camera should frame.
     setPlacement(placement, perimeterCm, view = 'design') {
       widthCm = placement.widthCm
+      placed = { placement, perimeterCm }
       material.uniforms.uPlace.value.set(
         placement.arcCm, placement.centreCm, placement.widthCm, placement.heightCm)
       goal = { ...viewFrame(placement, view), yaw: designYaw(placement, perimeterCm) }
@@ -276,6 +289,27 @@ export function createArmEngine(THREE, GLTFLoader, mount, { modelUrl, callbacks 
       invalidate()
     },
     setSpin(on) { spin = Boolean(on) },
+    // The picture to keep, as PNG bytes, or null when there is nothing to
+    // take one of yet. Always framed on the design (see snapshotPose), which
+    // may not be what the view is showing, so it draws its own frame and puts
+    // the view back. The renderer keeps no drawing buffer between frames
+    // (preserveDrawingBuffer is off), so the canvas is read in this same task,
+    // straight after the render.
+    snapshot() {
+      if (!geometry || !placed) return null
+      const live = { now, turned }
+      const { turned: turn, ...pose } = snapshotPose(placed.placement, placed.perimeterCm, turned)
+      now = pose
+      turned = turn
+      frameCamera()
+      renderer.render(scene, camera)
+      let dataUrl
+      try { dataUrl = canvas.toDataURL('image/png') } catch { dataUrl = '' }
+      now = live.now
+      turned = live.turned
+      invalidate()
+      return pngBytes(dataUrl)
+    },
     dispose() {
       disposed = true
       cancelAnimationFrame(frame)
