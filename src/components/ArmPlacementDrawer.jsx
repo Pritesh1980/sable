@@ -68,7 +68,7 @@ function ArmPlacementContent({ source, onSave, onClose }) {
         aria-modal="true"
         aria-label="On the arm in 3D"
         tabIndex={-1}
-        className="mx-auto flex h-full w-full max-w-3xl flex-col overflow-hidden bg-v2-ink text-v2-cream outline-hidden sm:rounded-xs sm:border sm:border-v2-hairline"
+        className="mx-auto flex h-full w-full max-w-3xl flex-col overflow-hidden bg-v2-ink text-v2-cream sm:rounded-xs sm:border sm:border-v2-hairline"
       >
         <header className="flex items-start justify-between gap-4 border-b border-v2-hairline px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <div className="min-w-0">
