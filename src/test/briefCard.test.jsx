@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import {
   BRIEF_CARD_WIDTH,
@@ -172,6 +172,16 @@ describe('layoutBriefCard', () => {
     }
   })
 
+  it('aligns both photos even if only one of them has a caption', () => {
+    const { photos } = layoutBriefCard({
+      title: 'Fern study',
+      images: [{ url: '/images/fern.png', note: 'Shape' }, { url: '/images/fronds.png' }],
+    })
+    const [first, second] = photos.slots
+    expect(first.imageHeight).toBeLessThan(first.height)
+    expect(first.imageHeight).toBe(second.imageHeight)
+  })
+
   it('fits placement, readable tags and a truthful overflow badge in two rows', () => {
     const measureText = (text, _font, size) => text.length * size * 0.6
     const { pills, pillsBox, description } = layoutBriefCard({
@@ -203,6 +213,17 @@ describe('layoutBriefCard', () => {
     expect(pills[0].label).toMatch(/…$/)
     expect(measureText(pills[0].label, '', pills[0].fontSize)).toBeLessThan(pills[0].width)
     expect(pills[1].label).toBe('FINE-LINE')
+  })
+
+  it('keeps a short style visible when the preceding style is too wide to fit beside the count', () => {
+    const measureText = (text, _font, size) => text.length * size * 0.6
+    const { pills } = layoutBriefCard({
+      placement: 'Shoulder '.repeat(12).trim(),
+      tags: ['Decorative botanical '.repeat(8).trim(), 'fine-line'],
+    }, { measureText })
+    expect(pills.map((pill) => pill.kind)).toEqual(['placement', 'tag', 'overflow'])
+    expect(pills[1].label).toBe('FINE-LINE')
+    expect(pills[2].label).toBe('+1')
   })
 
   it('wraps and truncates emoji without splitting surrogate pairs or ZWJ sequences', () => {
@@ -288,6 +309,18 @@ describe('collectBriefCardPhotos & shareOrDownloadBriefCard', () => {
     expect(result.photos).toHaveLength(1)
     expect(result.skippedWebCount).toBe(2)
     expect(result.skippedNotice).toBe('2 web images not included')
+  })
+
+  it('counts omitted local references consistently before and after the four rendered photos', async () => {
+    const broken = '/unreadable.png'
+    const photos = ['/first.png', '/second.png', '/third.png', '/fourth.png']
+    for (const images of [[broken, ...photos], [...photos, broken]]) {
+      const result = await collectBriefCardPhotos(images, {
+        loadImage: async (src) => src.endsWith(broken) ? null : { naturalWidth: 400, naturalHeight: 400 },
+      })
+      expect(result.photos).toHaveLength(4)
+      expect(result.overflowCount).toBe(1)
+    }
   })
 
   it('uses navigator.share({ files }) when navigator.canShare accepts files, and downloads otherwise', async () => {
@@ -519,7 +552,7 @@ describe('brief card review fixes (#198)', () => {
     expect(result.photoCount).toBe(4)
     expect(result.skippedWebCount).toBe(1)
     const texts = ctx.fillText.mock.calls.map(([text]) => text)
-    expect(texts).toContain('+2 more photos')
+    expect(texts).toContain('+3 more references')
     expect(texts).toContain('Keep the negative space')
     expect(texts).not.toContain('External note')
     expect(texts).not.toContain('Unreadable note')
@@ -579,12 +612,18 @@ describe('IdeaModal Share as image button', () => {
     const getContext = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx)
     const toBlob = vi.spyOn(HTMLCanvasElement.prototype, 'toBlob')
       .mockImplementation((cb) => cb(new Blob(['png'], { type: 'image/png' })))
+    const download = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
     try {
       fireEvent.click(shareBtn)
       await waitFor(() => {
         expect(screen.getByText(/2 web images not included/i)).toBeInTheDocument()
       })
+      const receipt = screen.getByRole('button', { name: /download (started|requested)/i })
+      expect(receipt).toHaveAttribute('aria-disabled', 'true')
+      await act(async () => fireEvent.click(receipt))
+      expect(download).toHaveBeenCalledTimes(1)
     } finally {
+      download.mockRestore()
       getContext.mockRestore()
       toBlob.mockRestore()
     }

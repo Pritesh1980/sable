@@ -285,7 +285,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
   }
 
   async function shareBriefImage() {
-    if (!draft.title.trim() || shareState === 'sharing') return
+    if (!draft.title.trim() || shareState !== 'idle') return
     setShareState('sharing')
     setShareNote('')
     try {
@@ -329,13 +329,14 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
           <button
             onClick={shareBriefImage}
             disabled={!draft.title.trim() || shareState === 'sharing'}
-            className="min-h-11 text-cream-muted hover:text-cream disabled:opacity-30 text-sm transition-colors"
+            aria-disabled={shareState === 'download' || undefined}
+            className="min-h-11 text-cream-muted hover:text-cream disabled:opacity-30 aria-disabled:cursor-default aria-disabled:text-cream text-sm transition-colors"
           >
-            {shareState === 'sharing' ? 'Sharing…' : shareState === 'download' ? 'Download started' : 'Share as image'}
+            {shareState === 'sharing' ? 'Sharing…' : shareState === 'download' ? 'Download requested' : 'Share as image'}
           </button>
         </div>
         <p role="status" className={shareNote ? 'font-mono text-xs text-cream-muted mt-1 mb-2' : 'sr-only'}>
-          {shareState === 'download' && <span className="sr-only">PNG download started. </span>}
+          {shareState === 'download' && <span className="sr-only">PNG download requested. </span>}
           {shareNote}
         </p>
         <GeneratedArtworkNotice images={images} className="mt-2" />

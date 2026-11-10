@@ -242,16 +242,27 @@ function layoutPills(items, { x, y, width, fontSize, gapX, gapY, measure }) {
   if (pills.length < items.length) {
     // Make room for the count in the last row. Re-measure if removing a tag
     // adds a digit to the count; keep the placement in the first row.
+    const firstHidden = pills.length
+    const makeBadge = (count) => makePill({ label: `+${count}`, kind: 'overflow' })
+    let badge = makeBadge(items.length - pills.length)
     while (true) {
-      const badge = makePill({ label: `+${items.length - pills.length}`, kind: 'overflow' })
       const last = pills.at(-1)
       nextX = last?.y === rowY ? last.x + last.width + gapX : x
-      if (nextX + badge.width <= right || nextX === x) {
-        pills.push({ ...badge, x: nextX, y: rowY })
-        break
-      }
+      if (nextX + badge.width <= right || nextX === x) break
       pills.pop()
+      badge = makeBadge(items.length - pills.length)
     }
+    // A long imported tag may have used the whole row. Keep any later short
+    // tags that still fit alongside the count rather than leaving it alone.
+    for (let i = firstHidden; i < items.length; i += 1) {
+      const pill = makePill(items[i])
+      const nextBadge = makeBadge(items.length - pills.length - 1)
+      if (nextX + pill.width + gapX + nextBadge.width > right) continue
+      pills.push({ ...pill, x: nextX, y: rowY })
+      nextX += pill.width + gapX
+      badge = nextBadge
+    }
+    pills.push({ ...badge, x: nextX, y: rowY })
   }
   return pills
 }
@@ -471,18 +482,26 @@ export function layoutBriefCard(
   const captionSize = Math.round(width * 0.026)
   const captionLineHeight = Math.round(captionSize * 1.24)
   const captionPad = Math.round(width * 0.015)
-  const slots = layoutPhotoSlots(photosBox, count, notes).map((slot) => {
+  const captionRows = new Map()
+  // The three-photo layout is asymmetric; its caption bands are independent.
+  const captionRow = (slot) => count === 3 ? slot.index : slot.y
+  const captionedSlots = layoutPhotoSlots(photosBox, count, notes).map((slot) => {
     const { lines } = wrapTextLines(slot.note, {
       maxWidth: slot.width - captionPad * 2,
       maxLines: 2,
       measure: (text) => measure(text, captionSize, fonts.body),
     })
-    const captionHeight = lines.length ? captionLineHeight * lines.length + captionPad * 2 : 0
+    const row = captionRow(slot)
+    captionRows.set(row, Math.max(captionRows.get(row) || 0, lines.length))
     return {
       ...slot,
-      imageHeight: slot.height - captionHeight,
       caption: { lines, fontSize: captionSize, lineHeight: captionLineHeight, pad: captionPad },
     }
+  })
+  const slots = captionedSlots.map((slot) => {
+    const lines = captionRows.get(captionRow(slot))
+    const captionHeight = lines ? captionLineHeight * lines + captionPad * 2 : 0
+    return { ...slot, imageHeight: slot.height - captionHeight }
   })
 
   return {
@@ -499,7 +518,7 @@ export function layoutBriefCard(
     photos: {
       box: photosBox,
       slots,
-      overflowLabel: extraPhotos > 0 ? `+${extraPhotos} more photo${extraPhotos === 1 ? '' : 's'}` : '',
+      overflowLabel: extraPhotos > 0 ? `+${extraPhotos} more reference${extraPhotos === 1 ? '' : 's'}` : '',
       overflowFontSize: captionSize,
       skippedWebCount: skippedWeb,
       skippedNotice,
@@ -573,13 +592,8 @@ export async function collectBriefCardPhotos(
   }
 
   const photos = []
-  let overflowCount = 0
   for (const candidate of candidates) {
-    if (photos.length >= MAX_BRIEF_CARD_PHOTOS) {
-      // Count remaining eligible references without resolving or fetching them.
-      overflowCount += 1
-      continue
-    }
+    if (photos.length >= MAX_BRIEF_CARD_PHOTOS) break
     let src = candidate.directSrc
     let release = () => {}
     if (!src) {
@@ -603,7 +617,9 @@ export async function collectBriefCardPhotos(
 
   return {
     photos,
-    overflowCount,
+    // Count omitted reference entries, not decoded photos. This keeps the
+    // number independent of decode order without fetching surplus images.
+    overflowCount: photos.length === MAX_BRIEF_CARD_PHOTOS ? candidates.length - photos.length : 0,
     skippedWebCount,
     skippedNotice: formatSkippedWebImagesNotice(skippedWebCount),
   }

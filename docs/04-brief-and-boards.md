@@ -47,8 +47,8 @@ and linked artists. The card shows up to four available reference photos, with s
 captions from their notes and a count of any extra references.
 External web image links are skipped; the editor tells you how many.
 
-The editor opens the system share sheet when available. Otherwise it starts a PNG download
-and briefly says **Download started**; check your downloads for the file. Use **Copy brief**
+The editor opens the system share sheet when available. Otherwise it requests a PNG download
+and briefly says **Download requested**; check your downloads for the file. Use **Copy brief**
 instead to put a formatted plain-text summary on your clipboard.
 
 ---

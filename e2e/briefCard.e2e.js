@@ -16,17 +16,18 @@ test('Share as image downloads a 1080×1350 PNG when file sharing is unavailable
     Object.defineProperty(navigator, 'canShare', { configurable: true, value: () => false })
   })
   await openIdeaWithPhoto(page)
-  const [download] = await Promise.all([
-    page.waitForEvent('download'),
-    page.getByRole('button', { name: 'Share as image' }).click(),
-  ])
+  const downloadEvent = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Share as image' }).click()
+  await expect(page.getByRole('button', { name: 'Download requested' })).toBeDisabled()
+  await expect(page.getByRole('status')).toHaveText('PNG download requested.')
+  const download = await downloadEvent
   expect(download.suggestedFilename()).toMatch(/^sable-brief-.+\.png$/)
   const chunks = []
   for await (const chunk of await download.createReadStream()) chunks.push(chunk)
   const { width, height } = readPngDimensions(Buffer.concat(chunks))
   expect(width).toBe(1080)
   expect(height).toBe(1350)
-  await expect(page.getByRole('status')).toHaveText('PNG download started.')
+  await expect(page.getByRole('button', { name: 'Share as image' })).toBeEnabled()
 })
 
 test('a 375px phone keeps Share and Copy in their own row away from Delete', async ({ page }) => {
