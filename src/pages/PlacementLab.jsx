@@ -12,10 +12,13 @@ const MODEL_URL = `${base}models/arm-upper.glb`
 const META_URL = `${base}models/arm-upper.json`
 
 // Fictional demo designs only (light lines on near-black, like concept cards).
+// Bold pieces first: the view has to show ink, and blackwork shows most.
 const DESIGNS = [
-  { label: 'Moth line study', src: 'images/demo/vesper_noctis/1.svg' },
-  { label: 'Fern spiral', src: 'images/demo/mora.blackfern/1.svg' },
-  { label: 'Atlas study', src: 'images/demo/hexen_atlas/1.svg' },
+  { label: 'Serpent', src: 'images/demo/ferrum_line/3.svg' },
+  { label: 'Dagger', src: 'images/demo/ferrum_line/1.svg' },
+  { label: 'Crescent', src: 'images/demo/vesper_noctis/3.svg' },
+  { label: 'Moon phases', src: 'images/demo/vesper_noctis/1.svg' },
+  { label: 'Fern (fine line)', src: 'images/demo/mora.blackfern/2.svg' },
 ]
 
 const cm = (n) => `${n.toFixed(1)} cm`
@@ -45,6 +48,7 @@ export default function PlacementLab() {
   const [design, setDesign] = useState(DESIGNS[0].src)
   const [aspect, setAspect] = useState(760 / 600)
   const [wanted, setWanted] = useState(DEFAULT_PLACEMENT)
+  const [view, setView] = useState('design')
 
   useEffect(() => {
     let cancelled = false
@@ -72,13 +76,15 @@ export default function PlacementLab() {
         Drag to turn the arm. Pinch to resize the design.
       </p>
 
-      <div className="relative mt-4 h-[52vh] min-h-[320px] overflow-hidden rounded-xs border border-v2-hairline">
+      <div className="relative mt-4 h-[56vh] min-h-[320px] overflow-hidden rounded-xs border border-v2-hairline">
         {placement && !error && (
           <Suspense fallback={null}>
             <ArmPlacement3D
               modelUrl={MODEL_URL}
               imageSrc={`${base}${design}`}
               placement={placement}
+              perimeterCm={arm.perimeterCm}
+              view={view}
               onResize={onResize}
               onDesignSize={onDesignSize}
               onReady={onReady}
@@ -86,6 +92,15 @@ export default function PlacementLab() {
               spin={spin}
             />
           </Suspense>
+        )}
+        {ready && !error && (
+          <button
+            type="button" aria-pressed={view === 'arm'}
+            onClick={() => setView((v) => (v === 'arm' ? 'design' : 'arm'))}
+            className="absolute bottom-2 right-2 min-h-11 rounded-xs border border-v2-hairline bg-v2-ink/80 px-3 font-v2-ui text-sm text-v2-cream backdrop-blur-xs"
+          >
+            {view === 'arm' ? 'Close up' : 'Whole arm'}
+          </button>
         )}
         {!ready && !error && (
           <p className="absolute inset-0 grid place-items-center font-v2-ui text-sm text-v2-muted" aria-busy="true">

@@ -642,6 +642,13 @@ renders use (same loader, same fit to 32 / 30 / 26 cm), cut down to the left arm
 per-vertex fade so the cut edges dissolve into the backdrop. MakeHuman's data is CC0, so
 the model can ship in the repo.
 
+The view is framed on the tattoo, not the limb: it opens close enough that the design
+fills about 70% of the height, follows the design as it is resized or moved, and turns
+the arm so a design moved round it stays facing you. **Whole arm** steps back to judge
+scale. Framing the whole arm by default left a 12 cm design as a few faint marks on a
+lot of skin, which is the wrong subject for this app. The demo designs lead with solid
+blackwork for the same reason; the fine-line fern is there to show how thin lines hold up.
+
 The export does the hard part so the phone doesn't have to. Each vertex stores where it is
 on the skin: its distance round the arm in cm, and the arm's circumference there. The
 browser then needs no decal geometry and no projection. A design is a texture read in a
@@ -652,10 +659,10 @@ skin, measured round the curve, the same definition `--width-cm` uses.
 | File | Role |
 |---|---|
 | `scripts/blender/export-arm-gltf.py` | The export. Its helpers are unit tested without Blender (`test_export_arm.py`). |
-| `src/data/placement3d.js` | Pure maths: clamping, pinch, the dark-card flip. |
+| `src/data/placement3d.js` | Pure maths: clamping, pinch, what the camera frames, the dark-card flip. |
 | `src/components/ArmPlacement3D.jsx` | The three.js view. A lazy chunk. |
 | `src/pages/PlacementLab.jsx` | The lab page. |
-| `e2e/placement3d.e2e.js` | Load, one-finger turn, pinch, and that the chunk stays out of other pages. |
+| `e2e/placement3d.e2e.js` | Load, one-finger turn, pinch, close up and whole arm, and that the chunk stays out of other pages. |
 
 ### What the spike measured (Nov 2026)
 

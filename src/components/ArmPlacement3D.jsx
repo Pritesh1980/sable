@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
-import { pinchWidth, toInkPixels } from '../data/placement3d'
+import { pinchWidth, toInkPixels, viewFrame, designYaw, WHOLE_ARM } from '../data/placement3d'
 
 // WebGL view of a design on a 3D upper arm at true size (#195 spike). Lazy-
 // loaded, so three.js and the glTF loader stay out of the main bundle.
@@ -17,6 +17,9 @@ const SKIN = 0x9a7654 // render-on-body.py's default tone, warm-brown
 const MAX_TEXTURE_PX = 1024
 const TILT_LIMIT = 0.45
 const DRAG_SPEED = 0.008
+const EASE = 0.18 // share of the way to the new framing covered each frame
+// Half the arm's width in metres, with room: the least the view shows across.
+const HALF_ARM_M = 0.075
 
 const VERTEX = /* glsl */ `
   attribute vec2 uv1;
@@ -103,7 +106,8 @@ function loadDesign(src) {
 }
 
 export default function ArmPlacement3D({
-  modelUrl, imageSrc, placement, onResize, onDesignSize, onReady, onError, spin = false,
+  modelUrl, imageSrc, placement, perimeterCm, view = 'design',
+  onResize, onDesignSize, onReady, onError, spin = false,
 }) {
   const mountRef = useRef(null)
   const sceneRef = useRef(null)
@@ -135,8 +139,9 @@ export default function ArmPlacement3D({
     const camera = new THREE.PerspectiveCamera(26, 1, 0.1, 10)
     const pivot = new THREE.Group()
     const tilt = new THREE.Group()
+    const lift = new THREE.Group() // slides the arm so the focus sits at the origin
+    pivot.add(lift)
     tilt.add(pivot)
-    pivot.rotation.y = -0.35 // a little towards the front, so the arm reads as round
     scene.add(tilt)
 
     const blank = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1)
@@ -153,8 +158,33 @@ export default function ArmPlacement3D({
     })
 
     const invalidate = () => { dirty = true }
-    const state = { renderer, material, blank, invalidate, texture: null, spin: false }
+    // `now` eases towards `goal`: what the camera frames, and how far the arm
+    // is turned to keep the design facing it. `turned` is the user's own drag,
+    // a little towards the front to start with so the arm reads as round.
+    const state = {
+      renderer, material, blank, invalidate, texture: null, spin: false,
+      goal: { ...WHOLE_ARM, yaw: 0 }, now: null, turned: -0.3,
+    }
     sceneRef.current = state
+
+    const frameCamera = () => {
+      const { focusCm, frameCm, yaw } = state.now
+      lift.position.y = -focusCm / 100
+      pivot.rotation.y = yaw + state.turned
+      // Fit the framed height, but never crop the arm's own width.
+      const half = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))
+      camera.position.set(0, 0, Math.max(frameCm / 200 / half, HALF_ARM_M / (half * camera.aspect)))
+    }
+    // Returns true while there is further to go.
+    const ease = () => {
+      if (!state.now) { state.now = { ...state.goal }; return false }
+      let moving = false
+      for (const key of ['focusCm', 'frameCm', 'yaw']) {
+        const gap = state.goal[key] - state.now[key]
+        if (Math.abs(gap) < 0.002) { state.now[key] = state.goal[key] } else { state.now[key] += gap * EASE; moving = true }
+      }
+      return moving
+    }
 
     const resize = () => {
       const width = mount.clientWidth || 320
@@ -163,11 +193,6 @@ export default function ArmPlacement3D({
       canvas.style.width = `${width}px`
       canvas.style.height = `${height}px`
       camera.aspect = width / height
-      // Frame the 50 cm of arm in the model, whatever the panel's shape.
-      const half = THREE.MathUtils.degToRad(camera.fov / 2)
-      const fitHeight = 0.27 / Math.tan(half)
-      const fitWidth = 0.13 / (Math.tan(half) * camera.aspect)
-      camera.position.set(0, 0, Math.max(fitHeight, fitWidth))
       camera.updateProjectionMatrix()
       invalidate()
     }
@@ -177,9 +202,10 @@ export default function ArmPlacement3D({
 
     const loop = () => {
       frame = requestAnimationFrame(loop)
-      if (state.spin) { pivot.rotation.y += 0.012; dirty = true }
+      if (state.spin) { state.turned += 0.012; dirty = true }
       if (!dirty) return
-      dirty = false
+      dirty = ease()
+      frameCamera()
       renderer.render(scene, camera)
     }
     frame = requestAnimationFrame(loop)
@@ -190,9 +216,7 @@ export default function ArmPlacement3D({
       gltf.scene.traverse((node) => { if (node.isMesh && !source) source = node })
       if (disposed || !source) { source?.geometry.dispose(); return }
       geometry = source.geometry
-      const mesh = new THREE.Mesh(geometry, material)
-      mesh.position.y = -0.105 // centre the exported span on the pivot
-      pivot.add(mesh)
+      lift.add(new THREE.Mesh(geometry, material))
       invalidate()
       callbacks.current.onReady?.({ triangles: geometry.index ? geometry.index.count / 3 : 0 })
     }, undefined, () => {
@@ -219,7 +243,7 @@ export default function ArmPlacement3D({
       if (pinch && pointers.size === 2) {
         callbacks.current.onResize?.(pinchWidth(pinch.widthCm, pinch.distance, spread()))
       } else if (pointers.size === 1) {
-        pivot.rotation.y += (next.x - last.x) * DRAG_SPEED
+        state.turned += (next.x - last.x) * DRAG_SPEED
         tilt.rotation.x = THREE.MathUtils.clamp(
           tilt.rotation.x + (next.y - last.y) * DRAG_SPEED * 0.5, -TILT_LIMIT, TILT_LIMIT)
         invalidate()
@@ -283,8 +307,9 @@ export default function ArmPlacement3D({
     if (!state) return
     state.material.uniforms.uPlace.value.set(
       placement.arcCm, placement.centreCm, placement.widthCm, placement.heightCm)
+    state.goal = { ...viewFrame(placement, view), yaw: designYaw(placement, perimeterCm) }
     state.invalidate()
-  }, [placement, modelUrl])
+  }, [placement, perimeterCm, view, modelUrl])
 
   useEffect(() => {
     if (sceneRef.current) sceneRef.current.spin = spin

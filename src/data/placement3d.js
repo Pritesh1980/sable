@@ -67,6 +67,30 @@ export function wrapShare({ widthCm, centreCm }, perimeterCm) {
   return round2(widthCm / circumferenceAt(perimeterCm, centreCm))
 }
 
+// ---- What the camera looks at ----------------------------------------------
+// Sable is about the tattoo, so the view is framed on the design and the arm
+// is its setting. 'arm' steps back to the whole limb, to judge scale.
+
+// The exported model spans about 54 cm, centred 10.5 cm above the elbow.
+export const WHOLE_ARM = { focusCm: 10.5, frameCm: 54 }
+const CLOSEST_FRAME_CM = 14
+const FRAME_MARGIN = 1.4
+
+// `focusCm`: the height above the elbow at the middle of the view.
+// `frameCm`: how much arm fits in the view, top to bottom.
+export function viewFrame({ widthCm, heightCm, centreCm }, mode = 'design') {
+  if (mode === 'arm') return WHOLE_ARM
+  // A wide design wraps away round the arm, so its width needs less room.
+  const frameCm = Math.max(CLOSEST_FRAME_CM, FRAME_MARGIN * Math.max(heightCm, 0.6 * widthCm))
+  return frameCm >= WHOLE_ARM.frameCm ? WHOLE_ARM : { focusCm: centreCm, frameCm: round2(frameCm) }
+}
+
+// How far to turn the arm (radians about its length) so the design's centre
+// faces the camera. Arc runs positive towards the back of the arm.
+export function designYaw({ centreCm, arcCm }, perimeterCm) {
+  return (-2 * Math.PI * arcCm) / circumferenceAt(perimeterCm, centreCm)
+}
+
 // ---- Design image → ink ---------------------------------------------------
 // The shader multiplies skin by the texture, like ink: white is bare skin.
 // Sable's concept cards are the other way round (light lines on near-black),

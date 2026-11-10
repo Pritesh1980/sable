@@ -25,6 +25,23 @@ test('the arm loads at true size and one finger turns it', async ({ page }) => {
   await expect(size(page)).toContainText('12.0 cm wide')
 })
 
+test('the view opens on the tattoo, and steps back to the whole arm on request', async ({ page }) => {
+  const { view } = await openLab(page)
+  const toggle = page.getByRole('button', { name: 'Whole arm' })
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+  // Let the opening framing settle before comparing pictures.
+  let closeUp = await view.locator('canvas').screenshot()
+  await expect.poll(async () => {
+    const next = await view.locator('canvas').screenshot()
+    const settled = next.equals(closeUp)
+    closeUp = next
+    return settled
+  }).toBe(true)
+  await toggle.tap()
+  await expect(page.getByRole('button', { name: 'Close up' })).toHaveAttribute('aria-pressed', 'true')
+  await expect.poll(async () => (await view.locator('canvas').screenshot()).equals(closeUp)).toBe(false)
+})
+
 test('a pinch resizes the design, in centimetres', async ({ page }) => {
   const { mid } = await openLab(page)
   const [x, y] = mid

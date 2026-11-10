@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   circumferenceAt, designSizeCm, clampPlacement, pinchWidth, wrapShare,
-  isDarkBackground, toInkPixels, MIN_WIDTH_CM, MAX_WRAP,
+  isDarkBackground, toInkPixels, MIN_WIDTH_CM, MAX_WRAP, viewFrame, designYaw, WHOLE_ARM,
 } from '../data/placement3d'
 
 const TABLE = [[0, 24], [10, 28], [20, 30], [31, 36]]
@@ -99,5 +99,40 @@ describe('toInkPixels', () => {
   it('turns transparency into bare skin', () => {
     const out = toInkPixels(px([0, 0, 0, 0], [0, 0, 0, 255]), 2, 1)
     expect([...out.slice(0, 4)]).toEqual([255, 255, 255, 255])
+  })
+})
+
+describe('viewFrame', () => {
+  const placed = { widthCm: 12, heightCm: 15.2, centreCm: 17, arcCm: 0 }
+  it('frames the design, not the limb: the tattoo fills most of the view', () => {
+    const { focusCm, frameCm } = viewFrame(placed, 'design')
+    expect(focusCm).toBe(17)
+    expect(placed.heightCm / frameCm).toBeGreaterThan(0.6)
+    expect(placed.heightCm / frameCm).toBeLessThan(0.8)
+  })
+  it('never closes in so far that the arm stops reading as an arm', () => {
+    const tiny = viewFrame({ ...placed, widthCm: 3, heightCm: 3.8 }, 'design')
+    expect(tiny.frameCm).toBe(14)
+  })
+  it('follows a wide design too', () => {
+    const wide = viewFrame({ ...placed, widthCm: 24, heightCm: 8 }, 'design')
+    expect(wide.frameCm).toBeGreaterThan(14)
+  })
+  it('never frames more than the whole arm', () => {
+    expect(viewFrame({ ...placed, heightCm: 60 }, 'design')).toEqual(WHOLE_ARM)
+  })
+  it('steps back to the whole arm on request', () => {
+    expect(viewFrame(placed, 'arm')).toEqual(WHOLE_ARM)
+  })
+})
+
+describe('designYaw', () => {
+  it('faces the camera square on when the design is on the outer arm', () => {
+    expect(designYaw({ centreCm: 20, arcCm: 0 }, TABLE)).toBeCloseTo(0)
+  })
+  it('turns the arm so a design moved round it stays in view', () => {
+    // 7.5 cm round a 30 cm arm is a quarter turn.
+    expect(designYaw({ centreCm: 20, arcCm: 7.5 }, TABLE)).toBeCloseTo(-Math.PI / 2)
+    expect(designYaw({ centreCm: 20, arcCm: -7.5 }, TABLE)).toBeCloseTo(Math.PI / 2)
   })
 })
