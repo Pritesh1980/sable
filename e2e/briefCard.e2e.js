@@ -16,16 +16,30 @@ test('Share as image downloads a 1080×1350 PNG when file sharing is unavailable
     Object.defineProperty(navigator, 'canShare', { configurable: true, value: () => false })
   })
   await openIdeaWithPhoto(page)
-  const [download] = await Promise.all([
-    page.waitForEvent('download'),
-    page.getByRole('button', { name: 'Share as image' }).click(),
-  ])
+  const downloadEvent = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Share as image' }).click()
+  await expect(page.getByRole('button', { name: 'Download requested' })).toBeDisabled()
+  await expect(page.getByRole('status')).toHaveText('PNG download requested.')
+  const download = await downloadEvent
   expect(download.suggestedFilename()).toMatch(/^sable-brief-.+\.png$/)
   const chunks = []
   for await (const chunk of await download.createReadStream()) chunks.push(chunk)
   const { width, height } = readPngDimensions(Buffer.concat(chunks))
   expect(width).toBe(1080)
   expect(height).toBe(1350)
+  await expect(page.getByRole('button', { name: 'Share as image' })).toBeEnabled()
+})
+
+test('a 375px phone keeps Share and Copy in their own row away from Delete', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 })
+  await openIdeaWithPhoto(page)
+  const copy = await page.getByRole('button', { name: 'Copy brief', exact: true }).boundingBox()
+  const share = await page.getByRole('button', { name: 'Share as image', exact: true }).boundingBox()
+  const remove = await page.getByRole('button', { name: 'Delete', exact: true }).boundingBox()
+  expect(copy.y).toBeCloseTo(share.y, 0)
+  expect(share.y).toBeGreaterThanOrEqual(remove.y + remove.height)
+  expect(share.height).toBeGreaterThanOrEqual(44)
+  expect(share.x + share.width).toBeLessThanOrEqual(375)
 })
 
 test('Share as image shares a 1080×1350 PNG file via navigator.share and skips web URLs', async ({ page }) => {

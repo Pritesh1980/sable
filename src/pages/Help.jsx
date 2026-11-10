@@ -74,7 +74,7 @@ const SECTIONS = [
       'An AI-generated imagery label stays visible in an idea or board editor when it shows a shipped demo image; a Board cover is labeled even if its linked ideas have no demo images.',
       'With a Gemini key set and a reference image uploaded, Fill idea from image drafts the title, description, tags and placement from the image — only fields you left empty are filled.',
       'As you add style tags, matching artists appear ranked by overlap, status and rank — tap to link them to the idea.',
-      'Use Share as image for a 1080×1350 brief card (up to four uploaded reference photos, title, placement, tags, description and linked artists, shared via the system share sheet or downloaded as a PNG; external web image links are skipped), or Copy brief to put a formatted text summary on your clipboard.',
+      'Use the sharing row below Back and Save. Share as image exports a 1080×1350 brief card with up to four available reference photos, short captions and a count of any extra references. External web image links are skipped. The system share sheet opens when available; otherwise the editor says Download requested and you can check your downloads for the PNG. Copy brief puts a formatted text summary on your clipboard.',
       'Switch to the Boards tab on the same page to group related ideas into a themed board, reorder them, and copy a board-level brief.',
     ],
   },

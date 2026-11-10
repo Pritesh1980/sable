@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import {
   BRIEF_CARD_WIDTH,
@@ -147,6 +147,85 @@ describe('layoutBriefCard', () => {
     }
   })
 
+  it('balances a short text-only brief between the masthead and footer', () => {
+    const layout = layoutBriefCard({ title: 'Fern study', description: 'Keep the fronds soft.' })
+    const withPhoto = layoutBriefCard({ title: 'Fern study', images: ['/images/fern.png'] })
+    const topGap = layout.title.box.y - layout.header.box.y - layout.header.box.height
+    const bottomGap = layout.footer.box.y - layout.description.box.y - layout.description.box.height
+    expect(Math.abs(topGap - bottomGap)).toBeLessThanOrEqual(2)
+    expect(layout.title.fontSize).toBeGreaterThan(withPhoto.title.fontSize)
+    expect(layout.description.fontSize).toBeGreaterThan(withPhoto.description.fontSize)
+  })
+
+  it('keeps two photo crops at or wider than 4:5 even on a short brief', () => {
+    const { photos } = layoutBriefCard({
+      title: 'Fern study',
+      images: [
+        { url: '/images/fern.png', note: 'Shape' },
+        { url: '/images/fronds.png', note: 'Shading' },
+      ],
+    })
+    expect(photos.slots).toHaveLength(2)
+    expect(photos.slots[0].y).toBe(photos.slots[1].y)
+    for (const slot of photos.slots) {
+      expect(slot.height / slot.width).toBeLessThanOrEqual(1.25)
+    }
+  })
+
+  it('aligns both photos even if only one of them has a caption', () => {
+    const { photos } = layoutBriefCard({
+      title: 'Fern study',
+      images: [{ url: '/images/fern.png', note: 'Shape' }, { url: '/images/fronds.png' }],
+    })
+    const [first, second] = photos.slots
+    expect(first.imageHeight).toBeLessThan(first.height)
+    expect(first.imageHeight).toBe(second.imageHeight)
+  })
+
+  it('fits placement, readable tags and a truthful overflow badge in two rows', () => {
+    const measureText = (text, _font, size) => text.length * size * 0.6
+    const { pills, pillsBox, description } = layoutBriefCard({
+      title: 'Fern study',
+      placement: 'inner forearm',
+      description: 'Keep the fronds soft.',
+      tags: ['dark-illustrative', 'fine-line', 'blackwork', 'surrealism', 'dark-fantasy',
+        'realism', ...Array.from({ length: 9 }, (_, i) => `extra imported style ${i + 1}`)],
+    }, { measureText })
+
+    expect(pills[0]).toMatchObject({ label: 'INNER FOREARM', kind: 'placement' })
+    expect(new Set(pills.map((p) => p.y)).size).toBe(2)
+    const visibleTags = pills.filter((p) => p.kind === 'tag')
+    expect(visibleTags.length).toBeGreaterThan(0)
+    expect(pills.at(-1).label).toBe(`+${15 - visibleTags.length}`)
+    for (const pill of pills) {
+      expect(pill.fontSize).toBeGreaterThanOrEqual(26)
+      expect(pill.x + pill.width).toBeLessThanOrEqual(pillsBox.x + pillsBox.width)
+      expect(pill.y + pill.height).toBeLessThan(description.box.y)
+    }
+  })
+
+  it('ellipsizes oversized placement labels within the pill', () => {
+    const measureText = (text, _font, size) => text.length * size * 0.6
+    const { pills } = layoutBriefCard({
+      placement: 'wrapping from the front of the shoulder round to the inside of the upper arm',
+      tags: ['fine-line'],
+    }, { measureText })
+    expect(pills[0].label).toMatch(/…$/)
+    expect(measureText(pills[0].label, '', pills[0].fontSize)).toBeLessThan(pills[0].width)
+    expect(pills[1].label).toBe('FINE-LINE')
+  })
+
+  it('keeps a short style visible when the preceding style is too wide to fit beside the count', () => {
+    const measureText = (text, _font, size) => text.length * size * 0.6
+    const { pills } = layoutBriefCard({
+      placement: 'Shoulder '.repeat(12).trim(),
+      tags: ['Decorative botanical '.repeat(8).trim(), 'fine-line'],
+    }, { measureText })
+    expect(pills.map((pill) => pill.kind)).toEqual(['placement', 'tag', 'overflow'])
+    expect(pills[1].label).toBe('FINE-LINE')
+    expect(pills[2].label).toBe('+1')
+  })
+
   it('wraps and truncates emoji without splitting surrogate pairs or ZWJ sequences', () => {
     const emojiTitle = '🐉✨ Celestial dragon & moon study 🌙🗡️👩‍🎨🖤🔥🐉✨🌙🗡️👩‍🎨🖤🔥🐉✨🌙🗡️👩‍🎨🖤🔥'
     const emojiDesc = 'Mood: 🌑🕯️🦇🦉🕸️ — keep the linework crisp ✍️ and avoid heavy fill around the wrist 🐉✨🌙🗡️👩‍🎨🖤 '.repeat(8)
@@ -186,6 +265,7 @@ describe('layoutBriefCard', () => {
     const layout = layoutBriefCard(
       {
         title: 'weight_check_title',
+        images: ['/images/demo/1.png'],
         linkedArtists: ['a1', 'a2', 'a3'],
       },
       {
@@ -229,6 +309,18 @@ describe('collectBriefCardPhotos & shareOrDownloadBriefCard', () => {
     expect(result.photos).toHaveLength(1)
     expect(result.skippedWebCount).toBe(2)
     expect(result.skippedNotice).toBe('2 web images not included')
+  })
+
+  it('counts omitted local references consistently before and after the four rendered photos', async () => {
+    const broken = '/unreadable.png'
+    const photos = ['/first.png', '/second.png', '/third.png', '/fourth.png']
+    for (const images of [[broken, ...photos], [...photos, broken]]) {
+      const result = await collectBriefCardPhotos(images, {
+        loadImage: async (src) => src.endsWith(broken) ? null : { naturalWidth: 400, naturalHeight: 400 },
+      })
+      expect(result.photos).toHaveLength(4)
+      expect(result.overflowCount).toBe(1)
+    }
   })
 
   it('uses navigator.share({ files }) when navigator.canShare accepts files, and downloads otherwise', async () => {
@@ -436,6 +528,49 @@ describe('brief card review fixes (#198)', () => {
     const texts = ctx.fillText.mock.calls.map((c) => c[0])
     expect(texts.some((t) => /not included/i.test(t))).toBe(false)
   })
+
+  it('draws notes beneath their own decoded photos and counts only the references beyond the limit', async () => {
+    const ctx = makeFakeCtx()
+    const canvas = {
+      getContext: () => ctx,
+      toBlob: (cb) => cb(new Blob(['png'], { type: 'image/png' })),
+    }
+    const images = [
+      { url: 'https://example.com/external.jpg', note: 'External note' },
+      { url: '/unreadable.png', note: 'Unreadable note' },
+      { url: '/first.png', note: 'Use this silhouette' },
+      { url: '/second.png', note: 'Soft shading '.repeat(14) },
+      { url: '/third.png', note: '   ' },
+      { url: '/fourth.png', note: 'Keep the negative space' },
+      { url: '/fifth.png', note: 'Not on card' },
+      { url: '/sixth.png' },
+    ]
+    const result = await exportBriefCardImage({ title: 'Fern study', images }, {
+      createCanvas: () => canvas, download: () => {}, nav: {},
+      loadImage: async (src) => src.endsWith('/unreadable.png') ? null : { naturalWidth: 400, naturalHeight: 400 },
+    })
+    expect(result.photoCount).toBe(4)
+    expect(result.skippedWebCount).toBe(1)
+    const texts = ctx.fillText.mock.calls.map(([text]) => text)
+    expect(texts).toContain('+3 more references')
+    expect(texts).toContain('Keep the negative space')
+    expect(texts).not.toContain('External note')
+    expect(texts).not.toContain('Unreadable note')
+    expect(texts).not.toContain('Not on card')
+    const firstPhoto = ctx.drawImage.mock.calls[0]
+    const firstCaption = ctx.fillText.mock.calls.find(([text]) => text === 'Use this silhouette')
+    expect(firstCaption).toBeDefined()
+    expect(firstCaption[1]).toBeGreaterThan(firstPhoto[5])
+    expect(firstCaption[2]).toBeGreaterThanOrEqual(firstPhoto[6] + firstPhoto[8])
+    const [, , , , , photoX, photoY, photoW, photoH] = ctx.drawImage.mock.calls[1]
+    const longCaption = ctx.fillText.mock.calls
+      .filter(([, x, y]) => x >= photoX && x < photoX + photoW &&
+        y >= photoY + photoH && y < result.layout.photos.slots[2].y)
+      .map(([text]) => text)
+    expect(longCaption).toHaveLength(2)
+    expect(longCaption[0]).toMatch(/^Soft shading/)
+    expect(longCaption.at(-1)).toMatch(/…$/)
+  })
 })
 
 describe('IdeaModal Share as image button', () => {
@@ -477,12 +612,18 @@ describe('IdeaModal Share as image button', () => {
     const getContext = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx)
     const toBlob = vi.spyOn(HTMLCanvasElement.prototype, 'toBlob')
       .mockImplementation((cb) => cb(new Blob(['png'], { type: 'image/png' })))
+    const download = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
     try {
       fireEvent.click(shareBtn)
       await waitFor(() => {
         expect(screen.getByText(/2 web images not included/i)).toBeInTheDocument()
       })
+      const receipt = screen.getByRole('button', { name: /download (started|requested)/i })
+      expect(receipt).toHaveAttribute('aria-disabled', 'true')
+      await act(async () => fireEvent.click(receipt))
+      expect(download).toHaveBeenCalledTimes(1)
     } finally {
+      download.mockRestore()
       getContext.mockRestore()
       toBlob.mockRestore()
     }

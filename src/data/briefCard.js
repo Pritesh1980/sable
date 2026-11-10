@@ -155,13 +155,12 @@ function formatArtistLine(idea, artists = []) {
   return `For ${labels.join(' · ')}${extra}`
 }
 
-function inferImageCounts(idea) {
-  const images = normalizeReferenceImages(idea?.images)
-  let readyCount = 0
+function inferCardPhotos(idea) {
+  const eligible = []
   let skippedWebCount = 0
-  for (const image of images) {
+  for (const image of normalizeReferenceImages(idea?.images)) {
     if (refKey(image)) {
-      readyCount += 1
+      eligible.push(image)
       continue
     }
     const resolved = resolveImageRef(image)
@@ -169,11 +168,13 @@ function inferImageCounts(idea) {
     if (!isSameOrigin(resolved.src)) {
       skippedWebCount += 1
     } else {
-      readyCount += 1
+      eligible.push(image)
     }
   }
   return {
-    photoCount: Math.min(MAX_BRIEF_CARD_PHOTOS, readyCount),
+    photoCount: Math.min(MAX_BRIEF_CARD_PHOTOS, eligible.length),
+    photoNotes: eligible.slice(0, MAX_BRIEF_CARD_PHOTOS).map(getImageNote),
+    overflowCount: Math.max(0, eligible.length - MAX_BRIEF_CARD_PHOTOS),
     skippedWebCount,
   }
 }
@@ -215,6 +216,57 @@ function layoutPhotoSlots(box, count, notes = []) {
   ]
 }
 
+function layoutPills(items, { x, y, width, fontSize, gapX, gapY, measure }) {
+  const height = Math.round(fontSize * 1.7)
+  const padX = Math.round(fontSize * 0.75)
+  const right = x + width
+  const makePill = (item) => {
+    const label = clampLineWithEllipsis(item.label, width - padX * 2, measure)
+    return { ...item, label, width: Math.ceil(measure(label) + padX * 2), height, fontSize, padX }
+  }
+
+  const pills = []
+  let rowY = y
+  let nextX = x
+  for (const item of items) {
+    const pill = makePill(item)
+    if (nextX > x && nextX + pill.width > right) {
+      if (rowY !== y) break
+      rowY += height + gapY
+      nextX = x
+    }
+    pills.push({ ...pill, x: nextX, y: rowY })
+    nextX += pill.width + gapX
+  }
+
+  if (pills.length < items.length) {
+    // Make room for the count in the last row. Re-measure if removing a tag
+    // adds a digit to the count; keep the placement in the first row.
+    const firstHidden = pills.length
+    const makeBadge = (count) => makePill({ label: `+${count}`, kind: 'overflow' })
+    let badge = makeBadge(items.length - pills.length)
+    while (true) {
+      const last = pills.at(-1)
+      nextX = last?.y === rowY ? last.x + last.width + gapX : x
+      if (nextX + badge.width <= right || nextX === x) break
+      pills.pop()
+      badge = makeBadge(items.length - pills.length)
+    }
+    // A long imported tag may have used the whole row. Keep any later short
+    // tags that still fit alongside the count rather than leaving it alone.
+    for (let i = firstHidden; i < items.length; i += 1) {
+      const pill = makePill(items[i])
+      const nextBadge = makeBadge(items.length - pills.length - 1)
+      if (nextX + pill.width + gapX + nextBadge.width > right) continue
+      pills.push({ ...pill, x: nextX, y: rowY })
+      nextX += pill.width + gapX
+      badge = nextBadge
+    }
+    pills.push({ ...badge, x: nextX, y: rowY })
+  }
+  return pills
+}
+
 /**
  * Pure layout for the 1080×1350 Instagram DM brief card (#180).
  * Returns concrete bounding boxes and wrapped text lines without touching DOM/canvas.
@@ -229,19 +281,20 @@ export function layoutBriefCard(
     photoCount,
     skippedWebCount,
     photoNotes,
+    overflowCount,
     measureText,
   } = {},
 ) {
-  const inferred = photoCount === undefined || skippedWebCount === undefined
-    ? inferImageCounts(idea)
+  const inferred = [photoCount, skippedWebCount, photoNotes, overflowCount].includes(undefined)
+    ? inferCardPhotos(idea)
     : null
   const count = Math.min(
     MAX_BRIEF_CARD_PHOTOS,
     Math.max(0, photoCount !== undefined ? photoCount : inferred.photoCount),
   )
   const skippedWeb = skippedWebCount !== undefined ? skippedWebCount : inferred.skippedWebCount
-  const normalizedImages = normalizeReferenceImages(idea?.images)
-  const notes = photoNotes || normalizedImages.slice(0, count).map((img) => getImageNote(img))
+  const notes = photoNotes ?? inferred.photoNotes
+  const extraPhotos = overflowCount ?? inferred.overflowCount
 
   const measure = (text, fontSize, fontFamily, opts = {}) => {
     if (typeof measureText === 'function') {
@@ -288,11 +341,13 @@ export function layoutBriefCard(
     },
   }
 
-  let cursorY = header.box.y + header.box.height + Math.round(height * 0.022)
+  const sectionGap = Math.round(height * 0.022)
+  const bodyTop = header.box.y + header.box.height + sectionGap
+  let cursorY = bodyTop
 
   // Title (display serif)
-  const titleFontSize = Math.round(width * 0.052) // 56px
-  const titleLineHeight = Math.round(titleFontSize * 1.18) // 66px
+  const titleFontSize = Math.round(width * (count === 0 ? 0.067 : 0.052))
+  const titleLineHeight = Math.round(titleFontSize * 1.18)
   const maxTitleLines = count > 0 ? 2 : 3
   const titleText = String(idea?.title ?? '').trim() || 'Untitled idea'
   const wrappedTitle = wrapTextLines(titleText, {
@@ -318,47 +373,28 @@ export function layoutBriefCard(
   cursorY = title.box.y + title.box.height + Math.round(height * 0.018)
 
   // Placement & style tag pills
-  const pillFontSize = Math.round(width * 0.0185) // 20px
-  const pillHeight = Math.round(pillFontSize * 2.1) // 42px
-  const pillPadX = Math.round(pillFontSize * 0.9)
-  const pillGapX = Math.round(width * 0.011)
-  const pillGapY = Math.round(height * 0.009)
-
   const rawPills = [
     ...(idea?.placement ? [{ label: String(idea.placement).toUpperCase(), kind: 'placement' }] : []),
     ...((idea?.tags || []).filter(Boolean).map((tag) => ({ label: String(tag).toUpperCase(), kind: 'tag' }))),
   ]
 
-  const pills = []
-  let pillX = padX
-  let pillY = cursorY
-  let pillRowBottom = cursorY
-
-  for (const item of rawPills) {
-    const textW = measure(item.label, pillFontSize, fonts.mono, { mono: true })
-    const boxW = Math.min(contentWidth, Math.ceil(textW + pillPadX * 2))
-    if (pillX > padX && pillX + boxW > padX + contentWidth) {
-      pillX = padX
-      pillY += pillHeight + pillGapY
-    }
-    pills.push({
-      label: item.label,
-      kind: item.kind,
-      x: pillX,
-      y: pillY,
-      width: boxW,
-      height: pillHeight,
-      fontSize: pillFontSize,
-    })
-    pillX += boxW + pillGapX
-    pillRowBottom = pillY + pillHeight
-  }
+  const pillFontSize = Math.round(width * 0.025)
+  const pills = layoutPills(rawPills, {
+    x: padX,
+    y: cursorY,
+    width: contentWidth,
+    fontSize: pillFontSize,
+    gapX: Math.round(width * 0.011),
+    gapY: Math.round(height * 0.009),
+    measure: (text) => measure(text, pillFontSize, fonts.mono, { mono: true }),
+  })
+  const lastPill = pills.at(-1)
 
   const pillsBox = {
     x: padX,
     y: cursorY,
     width: contentWidth,
-    height: pills.length > 0 ? pillRowBottom - cursorY : 0,
+    height: lastPill ? lastPill.y + lastPill.height - cursorY : 0,
   }
 
   if (pills.length > 0) {
@@ -382,15 +418,14 @@ export function layoutBriefCard(
   }
 
   // Reserve space for photos when count > 0
-  const sectionGap = Math.round(height * 0.022)
   const targetPhotoHeight = count === 0
     ? 0
     : count <= 2
       ? Math.round(height * 0.43)
       : Math.round(height * 0.46)
 
-  const descFontSize = Math.round(width * 0.026) // 28px
-  const descLineHeight = Math.round(descFontSize * 1.42) // 40px
+  const descFontSize = Math.round(width * (count === 0 ? 0.034 : 0.026))
+  const descLineHeight = Math.round(descFontSize * 1.42)
   const availableBeforeFooter = Math.max(0, footer.box.y - sectionGap - cursorY)
   const maxDescSpace = count > 0
     ? Math.max(descLineHeight * 2, availableBeforeFooter - targetPhotoHeight - sectionGap)
@@ -422,18 +457,52 @@ export function layoutBriefCard(
   }
 
   let photosBox = null
-  let slots = []
   if (count > 0) {
-    const remainingHeight = Math.max(120, footer.box.y - sectionGap - cursorY)
-    const gridHeight = remainingHeight
+    const remainingHeight = Math.max(0, footer.box.y - sectionGap - cursorY)
+    const halfWidth = Math.floor((contentWidth - Math.round(contentWidth * 0.02)) / 2)
+    const gridHeight = count === 2 ? Math.min(remainingHeight, Math.floor(halfWidth * 1.25)) : remainingHeight
     photosBox = {
       x: padX,
       y: cursorY,
       width: contentWidth,
       height: gridHeight,
     }
-    slots = layoutPhotoSlots(photosBox, count, notes)
   }
+
+  if (count === 0 || count === 2) {
+    // Centre the content between the masthead and footer when it does not
+    // use the whole card, without increasing crop just to fill the space.
+    const end = photosBox || (description.box.height ? description.box : lastPill ? pillsBox : title.box)
+    const offset = Math.max(0, Math.round((footerY - sectionGap - end.y - end.height) / 2))
+    for (const box of [title.box, pillsBox, description.box, photosBox, ...pills]) {
+      if (box) box.y += offset
+    }
+  }
+
+  const captionSize = Math.round(width * 0.026)
+  const captionLineHeight = Math.round(captionSize * 1.24)
+  const captionPad = Math.round(width * 0.015)
+  const captionRows = new Map()
+  // The three-photo layout is asymmetric; its caption bands are independent.
+  const captionRow = (slot) => count === 3 ? slot.index : slot.y
+  const captionedSlots = layoutPhotoSlots(photosBox, count, notes).map((slot) => {
+    const { lines } = wrapTextLines(slot.note, {
+      maxWidth: slot.width - captionPad * 2,
+      maxLines: 2,
+      measure: (text) => measure(text, captionSize, fonts.body),
+    })
+    const row = captionRow(slot)
+    captionRows.set(row, Math.max(captionRows.get(row) || 0, lines.length))
+    return {
+      ...slot,
+      caption: { lines, fontSize: captionSize, lineHeight: captionLineHeight, pad: captionPad },
+    }
+  })
+  const slots = captionedSlots.map((slot) => {
+    const lines = captionRows.get(captionRow(slot))
+    const captionHeight = lines ? captionLineHeight * lines + captionPad * 2 : 0
+    return { ...slot, imageHeight: slot.height - captionHeight }
+  })
 
   return {
     width,
@@ -449,6 +518,8 @@ export function layoutBriefCard(
     photos: {
       box: photosBox,
       slots,
+      overflowLabel: extraPhotos > 0 ? `+${extraPhotos} more reference${extraPhotos === 1 ? '' : 's'}` : '',
+      overflowFontSize: captionSize,
       skippedWebCount: skippedWeb,
       skippedNotice,
     },
@@ -546,6 +617,9 @@ export async function collectBriefCardPhotos(
 
   return {
     photos,
+    // Count omitted reference entries, not decoded photos. This keeps the
+    // number independent of decode order without fetching surplus images.
+    overflowCount: photos.length === MAX_BRIEF_CARD_PHOTOS ? candidates.length - photos.length : 0,
     skippedWebCount,
     skippedNotice: formatSkippedWebImagesNotice(skippedWebCount),
   }
@@ -616,10 +690,10 @@ export function drawBriefCardOnCanvas(canvas, layout, photos = []) {
     ctx.lineWidth = 1.5
     ctx.strokeRect(pill.x, pill.y, pill.width, pill.height)
 
-    ctx.fillStyle = pill.kind === 'placement' ? theme.cream : theme.muted
+    ctx.fillStyle = pill.kind === 'overflow' ? theme.muted : theme.cream
     ctx.font = `400 ${pill.fontSize}px ${fonts.mono}`
     const textY = pill.y + Math.round((pill.height - pill.fontSize) / 2)
-    ctx.fillText(pill.label, pill.x + Math.round(pill.fontSize * 0.9), textY)
+    ctx.fillText(pill.label, pill.x + pill.padX, textY)
   }
 
   // Description
@@ -635,7 +709,13 @@ export function drawBriefCardOnCanvas(canvas, layout, photos = []) {
     ctx.fillRect(slot.x, slot.y, slot.width, slot.height)
     const photo = photos[slot.index]
     if (photo?.element) {
-      drawCoverImage(ctx, photo.element, slot)
+      drawCoverImage(ctx, photo.element, { ...slot, height: slot.imageHeight })
+      const { lines, fontSize, lineHeight, pad } = slot.caption
+      ctx.fillStyle = theme.cream
+      ctx.font = `400 ${fontSize}px ${fonts.body}`
+      lines.forEach((line, index) => {
+        ctx.fillText(line, slot.x + pad, slot.y + slot.imageHeight + pad + index * lineHeight)
+      })
     }
     ctx.strokeStyle = theme.border
     ctx.lineWidth = 1.5
@@ -650,6 +730,12 @@ export function drawBriefCardOnCanvas(canvas, layout, photos = []) {
   ctx.moveTo(footer.box.x, footerLineY)
   ctx.lineTo(footer.box.x + footer.box.width, footerLineY)
   ctx.stroke()
+
+  if (layout.photos.overflowLabel) {
+    ctx.font = `400 ${layout.photos.overflowFontSize}px ${fonts.body}`
+    ctx.fillStyle = theme.cream
+    ctx.fillText(layout.photos.overflowLabel, footer.box.x, footer.box.y)
+  }
 
   ctx.font = `400 ${footer.fontSize}px ${fonts.mono}`
   ctx.fillStyle = theme.muted
@@ -791,7 +877,7 @@ export async function exportBriefCardImage(
 ) {
   await loadBriefCardFonts(fonts)
 
-  const { photos, skippedWebCount, skippedNotice } = await collectBriefCardPhotos(idea?.images, {
+  const { photos, overflowCount, skippedWebCount, skippedNotice } = await collectBriefCardPhotos(idea?.images, {
     loadImage,
     onlyReadyKeys,
   })
@@ -824,6 +910,7 @@ export async function exportBriefCardImage(
     photoCount: photos.length,
     skippedWebCount,
     photoNotes: photos.map((p) => p.note),
+    overflowCount,
     measureText,
   })
 
