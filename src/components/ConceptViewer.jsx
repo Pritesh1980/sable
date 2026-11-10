@@ -34,7 +34,7 @@ function pad2(n) {
   return String(n).padStart(2, '0')
 }
 
-function InfoPanel({ item, artists, concepts, onClose, onSaveTags, onAddVariant, onMarkBest, onDeleteVariant, onRateVariant, onMakeStl, onTryOnSkin, onRefine }) {
+function InfoPanel({ item, artists, concepts, onClose, onSaveTags, onAddVariant, onMarkBest, onDeleteVariant, onRateVariant, onMakeStl, onTryOnSkin, onViewOnArm, onRefine }) {
   const concept = item.concept
   const matched = (concept.tags || []).length && artists.length
     ? matchArtistsForIdea({ tags: concept.tags }, artists).slice(0, 3)
@@ -98,6 +98,7 @@ function InfoPanel({ item, artists, concepts, onClose, onSaveTags, onAddVariant,
         onRateVariant={onRateVariant}
         onMakeStl={onMakeStl}
         onTryOnSkin={onTryOnSkin}
+        onViewOnArm={onViewOnArm}
         onRefine={onRefine}
       />
     </aside>
@@ -136,6 +137,7 @@ export default function ConceptViewer({
   onRateVariant,
   onMakeStl,
   onTryOnSkin,
+  onViewOnArm,
   onRefine,
   onIndexChange,
 }) {
@@ -395,6 +397,7 @@ export default function ConceptViewer({
           onRateVariant={onRateVariant}
           onMakeStl={onMakeStl}
           onTryOnSkin={onTryOnSkin}
+          onViewOnArm={onViewOnArm}
           onRefine={onRefine}
         />
       )}

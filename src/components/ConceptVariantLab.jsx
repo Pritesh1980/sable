@@ -303,6 +303,7 @@ function VariantDetails({
   variant,
   onMakeStl,
   onTryOnSkin,
+  onViewOnArm,
   onMarkBest,
   onDeleteVariant,
   onRateVariant,
@@ -412,6 +413,22 @@ function VariantDetails({
                 Try on skin
               </button>
             )}
+            {imageUrl && onViewOnArm && (
+              <button
+                type="button"
+                aria-label={`View ${title} result for ${label} on the arm in 3D`}
+                onClick={() => onViewOnArm({
+                  conceptId,
+                  conceptLabel: label,
+                  variantId: variant.id,
+                  variantLabel: title,
+                  imageUrl,
+                })}
+                className="inline-flex min-h-11 items-center rounded-xs border border-accent/45 px-3 text-xs text-accent transition-colors hover:bg-accent/10"
+              >
+                View on arm in 3D
+              </button>
+            )}
             {!variant.isBest && (
               <button
                 type="button"
@@ -446,6 +463,7 @@ function VariantCard({
   onToggle,
   onMakeStl,
   onTryOnSkin,
+  onViewOnArm,
   onMarkBest,
   onDeleteVariant,
   onRateVariant,
@@ -508,6 +526,7 @@ function VariantCard({
             variant={variant}
             onMakeStl={onMakeStl}
             onTryOnSkin={onTryOnSkin}
+            onViewOnArm={onViewOnArm}
             onMarkBest={onMarkBest}
             onDeleteVariant={onDeleteVariant}
             onRateVariant={onRateVariant}
@@ -525,6 +544,7 @@ export default function ConceptVariantLab({
   onAddVariant,
   onMakeStl,
   onTryOnSkin,
+  onViewOnArm,
   onMarkBest,
   onDeleteVariant,
   onRateVariant,
@@ -606,6 +626,7 @@ export default function ConceptVariantLab({
               }}
               onMakeStl={onMakeStl}
               onTryOnSkin={onTryOnSkin}
+              onViewOnArm={onViewOnArm}
               onMarkBest={onMarkBest}
               onDeleteVariant={onDeleteVariant}
               onRateVariant={onRateVariant}
