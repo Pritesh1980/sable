@@ -679,7 +679,8 @@ skin, measured round the curve, the same definition `--width-cm` uses.
 | `scripts/blender/export-arm-gltf.py` | The export. Its helpers are unit tested without Blender (`test_export_arm.py`). |
 | `scripts/blender/extract-design.py` | Lifts a tattoo off a demo photo as a flat design (`test_extract_design.py`, which needs numpy: run it under Blender's Python). |
 | `src/data/placement3d.js` | Pure maths: clamping, pinch, what the camera frames, the dark-card flip. |
-| `src/components/ArmPlacement3D.jsx` | The three.js view. A lazy chunk. |
+| `src/lib/armPlacement.js` | The three.js scene: shader, camera, gestures. three.js is passed in, so it is unit tested against a mock (`armPlacement.spec.js`). |
+| `src/components/ArmPlacement3D.jsx` | The lazy chunk that imports three.js and drives the scene. |
 | `src/pages/PlacementLab.jsx` | The lab page. |
 | `e2e/placement3d.e2e.js` | Load, one-finger turn, pinch, close up and whole arm, and that the chunk stays out of other pages. |
 
