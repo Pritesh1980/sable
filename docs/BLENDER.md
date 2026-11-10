@@ -623,3 +623,97 @@ starts:
 ```sh
 python3 -m unittest discover -s scripts/blender
 ```
+
+## The arm inside Sable: 3D placement (spike)
+
+[#195](https://github.com/Pritesh1980/sable/issues/195) asks whether the same arm can
+live in the app, turned with a finger and resized with a pinch. The spike is at
+**`/lab/placement`** (not linked from the nav; demo designs only).
+
+Blender's part is one export, run again only when the arm itself should change:
+
+```sh
+"$BLENDER" -b -P scripts/blender/export-arm-gltf.py -- \
+  --makehuman-data ~/src/makehuman --out public/models
+```
+
+It writes `public/models/arm-upper.glb` and `arm-upper.json`. The mesh is the body the
+renders use (same loader, same fit to 32 / 30 / 26 cm), cut down to the left arm, with a
+per-vertex fade so the cut edges dissolve into the backdrop. MakeHuman's data is CC0, so
+the model can ship in the repo.
+
+The view is framed on the tattoo, not the limb: it opens close enough that the design
+fills about 70% of the height, follows the design as it is resized or moved, and turns
+the arm so a design moved round it stays facing you. **Whole arm** steps back to judge
+scale. Framing the whole arm by default left a 12 cm design as a few faint marks on a
+lot of skin, which is the wrong subject for this app.
+
+The lab's designs are Sable's own demo tattoos (the hourglass, the tiger, the koi). Those
+are generated *photographs*, with the ink already on an arm, so each was lifted off its
+photo first:
+
+```sh
+"$BLENDER" -b -P scripts/blender/extract-design.py -- \
+  --image public/images/demo/vesper_noctis/hourglass-v4.webp \
+  --crop 280,205,730,1215 --out public/models/designs/hourglass.webp
+```
+
+Ink multiplies the light coming off skin, so dividing the photo by the bare skin under it
+leaves the design on white paper, shading and colour included, with the first arm's
+lighting divided out. The bare skin is a smooth surface fitted through the un-inked parts
+of the crop. Crops used: hourglass `280,205,730,1215`, tiger `190,190,830,1280`
+(`ashgrove.tattoo/tiger`), koi `300,215,740,1320` (`hexen_atlas/koi`). This is for Sable's
+own fictional demo images: run on an artist's photo, the result is their design. Two of
+the simple line cards (serpent, fern) are in the list too, to show flat blackwork and how
+thin lines hold up.
+
+The export does the hard part so the phone doesn't have to. Each vertex stores where it is
+on the skin: its distance round the arm in cm, and the arm's circumference there. The
+browser then needs no decal geometry and no projection. A design is a texture read in a
+fragment shader, placed by four numbers (width, height, height above the elbow, distance
+round the arm), so resizing never rebuilds anything and the width is true centimetres of
+skin, measured round the curve, the same definition `--width-cm` uses.
+
+| File | Role |
+|---|---|
+| `scripts/blender/export-arm-gltf.py` | The export. Its helpers are unit tested without Blender (`test_export_arm.py`). |
+| `scripts/blender/extract-design.py` | Lifts a tattoo off a demo photo as a flat design (`test_extract_design.py`, which needs numpy: run it under Blender's Python). |
+| `src/data/placement3d.js` | Pure maths: clamping, pinch, what the camera frames, the dark-card flip. |
+| `src/lib/armPlacement.js` | The three.js scene: shader, camera, gestures. three.js is passed in, so it is unit tested against a mock (`armPlacement.spec.js`). |
+| `src/components/ArmPlacement3D.jsx` | The lazy chunk that imports three.js and drives the scene. |
+| `src/pages/PlacementLab.jsx` | The lab page. |
+| `e2e/placement3d.e2e.js` | Load, one-finger turn, pinch, close up and whole arm, and that the chunk stays out of other pages. |
+
+### What the spike measured (Nov 2026)
+
+| | Raw | Gzip |
+|---|---|---|
+| `arm-upper.glb` (2,091 vertices, 4,061 triangles) | 116 kB | 78 kB |
+| `ArmPlacement3D` chunk (view + glTF loader) | 53 kB | 16 kB |
+| `PlacementLab` chunk | 5 kB | 2 kB |
+| `three.module` (already shipped for the Home coverflow) | 736 kB | 184 kB |
+
+The main bundle is unchanged: nothing 3D loads until the lab page opens.
+
+**Draco was tried and dropped.** It shrinks the model to 17 kB, but three's Draco decoder
+is about 250 kB of extra files, so it costs more than it saves at this size. Two levels of
+subdivision (8,120 vertices, 436 kB) look no better on a phone than one.
+
+**Frame rate:** a steady 60 fps (16.7 ms median and 95th percentile) in Chromium emulating
+an iPhone 390 × 844 viewport, on this Mac's Intel UHD 630, including with the CPU
+throttled six times. That is an emulated phone on a laptop GPU, not an iPhone: the shader
+is one texture read and a few dot products per pixel, so a real phone should manage, but
+nobody has held one yet.
+
+### Not in the spike
+
+- Saving a snapshot as a concept variant, and opening the view from a real concept.
+- The forearm, and the inner side of the upper arm (the export is `side='outer'`).
+- Your own measurements: the model is fitted to the default averages.
+- Skin near the elbow and over the shoulder: a design can sit between 1.7 and 25 cm above
+  the elbow, the range the export reports as cleanly mapped, so a tall piece is narrowed
+  to fit (the hourglass opens at 10.4 cm wide, not 12).
+- Extracted designs keep a faint tint along some crop edges.
+- Offline: `models/` is not in the service worker's precache list.
+- The healed-ink look is a cool black floor only, with none of the spread or patchiness
+  the Blender renders have.

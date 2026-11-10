@@ -27,6 +27,7 @@ const Studios = lazy(() => import('./pages/Studios'))
 const Concepts = lazy(() => import('./pages/Concepts'))
 const Settings = lazy(() => import('./pages/Settings'))
 const Help = lazy(() => import('./pages/Help'))
+const PlacementLab = lazy(() => import('./pages/PlacementLab'))
 
 // Gate first so the data hooks only mount for a signed-in user. Keyed by that
 // user: every collection store under the shell belongs to one identity, so a
@@ -114,6 +115,8 @@ function AppShell() {
             <Route path="/concepts" element={<Concepts concepts={concepts} setConcepts={setConcepts} commitConcepts={commitConcepts} artists={artists} ideas={ideas} backupOwnerId={ownerId} onExportBackup={exportFullLibrary} backupRevision={backupRevision} ownerScope={backend.ownerScope} blobs={backend.blobs} relay={relay} journal={pendingImageJobs} />} />
             <Route path="/boards" element={<Navigate to="/brief?tab=boards" replace />} />
             <Route path="/help" element={<Help />} />
+            {/* #195 spike: unlinked lab page for the 3D placement view. */}
+            <Route path="/lab/placement" element={<PlacementLab />} />
             <Route
               path="/settings"
               element={(

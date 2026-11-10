@@ -1,0 +1,132 @@
+{
+ "generator": "scripts/blender/export-arm-gltf.py",
+ "source": "MakeHuman base mesh and targets (CC0 1.0)",
+ "frame": "metres; origin at the elbow joint; +y to the shoulder; +z out of the outer arm",
+ "attributes": {
+  "TEXCOORD_0": "(arc_cm, perimeter_cm); perimeter 0 = no design",
+  "TEXCOORD_1": "(fade, 0); 1 solid, 0 dissolved"
+ },
+ "measurements_cm": {
+  "upper_arm_length": 32.0,
+  "biceps": 30.0,
+  "above_elbow": 26.0
+ },
+ "mh_sex": 0.5,
+ "subdivisions": 1,
+ "draco": false,
+ "skin_cm": [
+  1.7,
+  25.0
+ ],
+ "perimeter_cm": [
+  [
+   1.7,
+   24.93
+  ],
+  [
+   2.7,
+   25.36
+  ],
+  [
+   3.7,
+   25.86
+  ],
+  [
+   4.7,
+   26.35
+  ],
+  [
+   5.7,
+   26.77
+  ],
+  [
+   6.7,
+   27.08
+  ],
+  [
+   7.7,
+   27.29
+  ],
+  [
+   8.7,
+   27.47
+  ],
+  [
+   9.7,
+   27.65
+  ],
+  [
+   10.7,
+   27.86
+  ],
+  [
+   11.7,
+   28.08
+  ],
+  [
+   12.7,
+   28.35
+  ],
+  [
+   13.7,
+   28.71
+  ],
+  [
+   14.7,
+   29.17
+  ],
+  [
+   15.7,
+   29.79
+  ],
+  [
+   16.7,
+   30.49
+  ],
+  [
+   17.7,
+   31.21
+  ],
+  [
+   18.7,
+   31.94
+  ],
+  [
+   19.7,
+   35.16
+  ],
+  [
+   20.7,
+   36.04
+  ],
+  [
+   21.7,
+   37.29
+  ],
+  [
+   22.7,
+   36.92
+  ],
+  [
+   23.7,
+   35.25
+  ],
+  [
+   24.7,
+   32.42
+  ],
+  [
+   25.0,
+   32.42
+  ]
+ ],
+ "vertices": 2091,
+ "triangles": 4061,
+ "gltf_attributes": [
+  "NORMAL",
+  "POSITION",
+  "TEXCOORD_0",
+  "TEXCOORD_1"
+ ],
+ "bytes": 115856
+}
