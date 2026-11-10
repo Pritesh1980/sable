@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "docs:check": "node --test scripts/checkMermaidDocsTest.js && node scripts/checkMermaidDocs.js",
+    "render:body": "python3 scripts/blender/render-sizes.py",
     "test": "vitest run",
     "test:relay": "npm --prefix server test",
     "test:watch": "vitest",

@@ -423,6 +423,137 @@ class Args(unittest.TestCase):
         with self.assertRaises(SystemExit):
             rob.parse_args(['--', '--image', 'a.png'])
 
+    def test_rejects_nan_and_infinity(self):
+        # inf made the ring loop run forever; nan failed later, in the blur.
+        base = ['--', '--image', 'a.png', '--width-cm', '12', '--out', 'r']
+        for flag, value in (('--width-cm', 'nan'), ('--upper-arm-length-cm', 'inf'),
+                            ('--ink-spread-mm', 'inf'), ('--ink-strength', 'nan'),
+                            ('--centre-cm', 'inf'), ('--biceps-cm', '-inf')):
+            with self.subTest(flag=flag, value=value), self.assertRaises(SystemExit):
+                rob.parse_args(base + [flag, value])
+
+
+def _rgba(w, h, fill, inner=None, alpha=1.0):
+    """Flat RGBA pixels (row-major, as Image.pixels), ``inner`` everywhere
+    but the outermost ring."""
+    px = []
+    for y in range(h):
+        for x in range(w):
+            edge = x in (0, w - 1) or y in (0, h - 1)
+            px.extend((*(fill if edge or inner is None else inner), alpha))
+    return px
+
+
+class DarkBackground(unittest.TestCase):
+    """Sable's own concept cards are light lines on near-black; the ink is the
+    light part there, so the image has to be flipped before it is inked."""
+
+    CARD = (14 / 255, 13 / 255, 11 / 255)  # Sable's near-black card
+    CREAM = (232 / 255, 226 / 255, 214 / 255)
+
+    def test_detects_a_dark_card_and_not_white_paper(self):
+        self.assertTrue(rob.is_dark_background(_rgba(8, 8, self.CARD, self.CREAM), 8, 8))
+        self.assertFalse(rob.is_dark_background(_rgba(8, 8, (1, 1, 1), (0, 0, 0)), 8, 8))
+
+    def test_a_transparent_border_is_bare_skin_not_dark(self):
+        self.assertFalse(rob.is_dark_background(_rgba(8, 8, (0, 0, 0), alpha=0.0), 8, 8))
+
+    def test_a_few_dark_edge_pixels_do_not_flip_paper(self):
+        px = _rgba(10, 10, (1, 1, 1))
+        px[0:4] = [0, 0, 0, 1]  # one dark corner pixel, say a design touching the edge
+        self.assertFalse(rob.is_dark_background(px, 10, 10))
+
+    def test_flipping_lightness_keeps_hue_and_alpha(self):
+        out = rob.invert_lightness([*self.CARD, 1.0, 0.8, 0.2, 0.2, 0.5])
+        card, red = out[:4], out[4:]
+        self.assertGreater(min(card[:3]), 0.9)  # near-black card → near-white paper
+        self.assertEqual(card[3], 1.0)
+        # red keeps its hue and chroma, and HSL lightness 0.5 stays 0.5
+        self.assertAlmostEqual(red[0] - red[1], 0.6)
+        self.assertGreater(red[0], red[1])
+        self.assertAlmostEqual(red[1], red[2])
+        self.assertAlmostEqual((max(red[:3]) + min(red[:3])) / 2, 0.5)
+        self.assertEqual(red[3], 0.5)
+
+    def test_flipping_twice_is_the_identity(self):
+        px = [0.1, 0.4, 0.9, 1.0, *self.CREAM, 1.0]
+        for a, b in zip(rob.invert_lightness(rob.invert_lightness(px)), px):
+            self.assertAlmostEqual(a, b)
+
+    def test_background_flag_defaults_to_auto(self):
+        base = ['--', '--image', 'a.png', '--width-cm', '12', '--out', 'r']
+        self.assertEqual(rob.parse_args(base).background, 'auto')
+        self.assertEqual(rob.parse_args(base + ['--background', 'dark']).background, 'dark')
+        with self.assertRaises(SystemExit):
+            rob.parse_args(base + ['--background', 'grey'])
+
+    def test_resolve_background(self):
+        dark = _rgba(4, 4, self.CARD)
+        paper = _rgba(4, 4, (1, 1, 1))
+        self.assertTrue(rob.flip_for_background('auto', dark, 4, 4))
+        self.assertFalse(rob.flip_for_background('auto', paper, 4, 4))
+        self.assertTrue(rob.flip_for_background('dark', paper, 4, 4))
+        self.assertFalse(rob.flip_for_background('light', dark, 4, 4))
+
+
+class CloseUp(unittest.TestCase):
+    """At the arm views' scale (about 0.44 mm a pixel) fine lines are thinner
+    than a pixel and read faint; the close-up frames the design itself."""
+
+    def test_faces_the_design_whatever_the_placement_or_side(self):
+        for placement, side in (('upper-arm', 'outer'), ('upper-arm', 'inner'),
+                                ('forearm', 'inner'), ('forearm', 'outer')):
+            self.assertEqual(rob.view_angles(placement, side, 'close-up'), (0.0, 0.0))
+
+    def test_any_placement_can_ask_for_it(self):
+        base = ['--', '--image', 'a.png', '--width-cm', '12', '--out', 'r']
+        for placement in ('upper-arm', 'forearm'):
+            args = rob.parse_args(base + ['--placement', placement, '--views', 'close-up'])
+            self.assertEqual(args.views, ['close-up'])
+
+    def test_frames_the_design_with_a_margin(self):
+        # 12 x 12.4 cm on a 30 cm arm: from the front the design shows its
+        # chord, 2r sin(w / 2r) = 9.08 cm, which the 2:3 frame's width must fit.
+        r = 30 / (2 * math.pi)
+        chord = 2 * r * math.sin(12 / (2 * r))
+        half = rob.close_up_half_height(12, 12.4, 30)
+        self.assertAlmostEqual(half, 1.3 * chord / (2 * 2 / 3))
+        self.assertLess(2 * half, 45 / 2)  # well over twice the arm views' scale
+
+    def test_a_tall_design_is_framed_by_its_height(self):
+        self.assertAlmostEqual(rob.close_up_half_height(4, 20, 30), 1.3 * 10)
+
+    def test_a_design_wrapping_past_half_way_shows_the_whole_arm_width(self):
+        half = rob.close_up_half_height(20, 6, 30)
+        self.assertAlmostEqual(half, 1.3 * (30 / math.pi) / (2 * 2 / 3))
+
+    def test_the_skin_not_the_axis_sits_at_the_framing_distance(self):
+        r = 30 / (2 * math.pi)
+        d = rob.close_up_distance(8.0, 30, rob.FOCAL_MM, rob.SENSOR_MM)
+        self.assertAlmostEqual(d, rob.frame_distance(8.0, rob.FOCAL_MM, rob.SENSOR_MM) + r)
+
+
+class ParametricTaper(unittest.TestCase):
+    """The parametric arm meets each measurement where the tape goes."""
+
+    def circ(self, placement, y, narrow, wide, length):
+        return rob.circumference_at(rob.taper_t(y, length, placement), narrow, wide)
+
+    def test_upper_arm_meets_both_tape_positions(self):
+        L = 32.0
+        self.assertAlmostEqual(self.circ('upper-arm', L / 8, 26, 30, L), 26)
+        self.assertAlmostEqual(self.circ('upper-arm', L / 2, 26, 30, L), 30)
+
+    def test_upper_arm_holds_the_biceps_up_to_the_shoulder(self):
+        L = 32.0
+        for y in (L / 2, 0.75 * L, L):
+            self.assertAlmostEqual(self.circ('upper-arm', y, 26, 30, L), 30)
+        self.assertAlmostEqual(self.circ('upper-arm', 0.0, 26, 30, L), 26)
+
+    def test_forearm_is_unchanged(self):
+        for y in (0.0, 5.0, 12.5, 25.0):
+            self.assertAlmostEqual(rob.taper_t(y, 25.0, 'forearm'), y / 25.0)
+
 
 class MakeHumanFiles(unittest.TestCase):
     """Reading MakeHuman's CC0 data files with our own parsers (#192)."""
@@ -1064,11 +1195,11 @@ class UpperArmArgs(unittest.TestCase):
 
     def test_views_default_per_placement_and_side(self):
         self.assertEqual(rob.parse_args(self.BASE).views,
-                         ['outer', 'front-three-quarter', 'back-three-quarter'])
+                         ['outer', 'front-three-quarter', 'back-three-quarter', 'close-up'])
         self.assertEqual(rob.parse_args(self.BASE + ['--side', 'inner']).views,
-                         ['front', 'front-three-quarter'])
+                         ['front', 'front-three-quarter', 'close-up'])
         self.assertEqual(rob.parse_args(self.BASE + ['--placement', 'forearm']).views,
-                         ['top', 'three-quarter', 'side'])
+                         ['top', 'three-quarter', 'side', 'close-up'])
         self.assertEqual(rob.parse_args(self.BASE + ['--views', 'outer,front']).views,
                          ['outer', 'front'])
         with self.assertRaises(SystemExit):
@@ -1375,3 +1506,25 @@ class Warnings(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class Label(unittest.TestCase):
+    BASE = ['--', '--image', 'a.png', '--width-cm', '12', '--out', 'r']
+
+    def test_files_are_named_after_the_view_without_a_label(self):
+        self.assertIsNone(rob.parse_args(self.BASE).label)
+        self.assertEqual(rob.view_filename('close-up', None), 'close-up.png')
+
+    def test_a_label_prefixes_every_view_file(self):
+        args = rob.parse_args(self.BASE + ['--label', 'koi-12cm'])
+        self.assertEqual(args.label, 'koi-12cm')
+        self.assertEqual(rob.view_filename('outer', args.label), 'koi-12cm-outer.png')
+
+    def test_a_label_names_params_json_too_so_sizes_can_share_a_folder(self):
+        self.assertEqual(rob.params_filename(None), 'params.json')
+        self.assertEqual(rob.params_filename('koi-12cm'), 'koi-12cm-params.json')
+
+    def test_a_label_must_be_a_plain_file_name(self):
+        for bad in ('', 'a/b', '../x', '.hidden', 'a b', 'x\\y'):
+            with self.subTest(bad=bad), self.assertRaises(SystemExit):
+                rob.parse_args(self.BASE + ['--label', bad])

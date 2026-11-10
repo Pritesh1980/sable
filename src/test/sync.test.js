@@ -23,6 +23,7 @@ describe('collectionFor / KEY_TO_COLLECTION', () => {
     expect(collectionFor('tattoo_font')).toBeNull()
     expect(collectionFor('openai_api_key')).toBeNull()
     expect(collectionFor('gemini_api_key')).toBeNull()
+    expect(collectionFor('tattoo_nearby_radius')).toBeNull() // #183 radius preference
   })
 
   it('only the five expected keys are synced', () => {

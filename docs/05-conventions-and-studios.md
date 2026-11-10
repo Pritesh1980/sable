@@ -16,6 +16,16 @@ closest show is highlighted as a hero card at the top.
 Each card shows the venue, dates, distance from Milton Keynes, a short summary, and a link
 to the event's site. Popular shows are marked with a ★.
 
+**Add to calendar.** An upcoming edition with announced days has **Add to calendar**
+on its card. It downloads an all-day `.ics` event for the year shown, including the
+venue, the show's web address (when known), and any saved artists you marked as
+attending that edition. Month-only *(TBC)* dates and past editions have no button.
+The file is made on your device; Sable does not get access to your calendar. Check
+unconfirmed dates with the show before making travel plans; the exported event carries
+the same warning. Exporting the same edition again uses the same calendar event ID.
+On an installed iPhone
+PWA, the Calendar hand-off still needs checking on a real phone.
+
 **Mark who's going.** Each card has a *Your artists attending* line — tap **Edit** to toggle
 which of your saved artists are appearing at that edition of the show. Those names then surface on the
 artist's detail card, on the Pipeline page, and next to the artist in idea matches. (Automatic look-up is
@@ -244,6 +254,9 @@ These two pages aren't islands — the connections surface throughout the app:
 - When an artist is attending a convention, you'll see it on their **detail card** and on
   the **dashboard**, and inside the **idea editor**'s artist matches.
 - A studio assignment in *Manage* is what places an artist on the *Studios* page.
+- A **guest spot** you add on an artist's detail card (a trip to another studio) shows its
+  distance from Milton Keynes, and the ones coming up nearby appear under **Nearby soon** on
+  the Pipeline page. See [Guest spots](03-gallery-and-ranking.md#guest-spots).
 
 ---
 

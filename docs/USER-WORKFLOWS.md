@@ -134,8 +134,8 @@ flowchart TB
   BOARD{"Part of a larger piece?"}
   GROUP["Add to a Board<br/>order related ideas"]
   READY{"Ready to discuss?"}
-  COPY["Copy idea brief<br/>or complete board brief"]
-  SHARE["Paste into an artist conversation<br/>outside Sable"]
+  COPY["Copy a text brief or export<br/>the idea as a PNG card"]
+  SHARE["Send it to an artist<br/>outside Sable"]
   BOOKED["When arranged externally:<br/>mark idea Booked"]
   DONE["After completion:<br/>mark idea Done"]
   REFINE["Refine description, tags,<br/>references, or artist links"]
@@ -150,7 +150,8 @@ flowchart TB
   READY -- no --> REFINE --> SHAPE
 ```
 
-**Copy brief** exports text; it does not send a message or expose a public link. Boards
+**Copy brief** exports idea or board text. **Share as image** exports an idea card with
+captioned references for a DM. Neither sends a message or exposes a public link. Boards
 group and order ideas without owning them, so deleting a board leaves its ideas intact.
 
 ---
