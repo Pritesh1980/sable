@@ -98,6 +98,9 @@ Tap **+** (you need at least one idea first). In the board editor you can:
 - **Add ideas** from the list at the bottom; **reorder** them with the ▲ ▼ arrows; remove
   one with **×**.
 - **Copy brief** to export the whole board — every idea plus its linked artists — as text.
+- **Share as image** to export a 1080×1350 board summary card (board title, description,
+  combined placements/styles/artists, and up to four member ideas' hero reference photos
+  with their titles) via the system share sheet or as a PNG download.
 
 > **Tip:** deleting a board never deletes the ideas inside it.
 
