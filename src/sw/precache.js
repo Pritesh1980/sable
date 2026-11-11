@@ -11,8 +11,13 @@
 //   audit.html        — local curation tool, not part of the app
 //   images/artists/** — personal reference images; potentially huge
 //   guide/**          — doc screenshots; runtime-cached on demand
-// The shipped demo WebPs are a bounded ~2.7 MiB set and must work offline.
-const INCLUDE = [/^assets\/.+\.(js|css)$/, /^icons\/.+/, /^(manifest\.json|favicon\.svg|icons\.svg)$/, /^images\/demo\/.+\.webp$/]
+//   models/designs/** — demo designs for the unlinked /lab/placement page
+// The shipped demo WebPs are a bounded ~2.7 MiB set and must work offline, and
+// so must the 3D arm (#195, ~115 KiB): the drawer has nothing to show without it.
+const INCLUDE = [
+  /^assets\/.+\.(js|css)$/, /^icons\/.+/, /^(manifest\.json|favicon\.svg|icons\.svg)$/,
+  /^images\/demo\/.+\.webp$/, /^models\/arm-[\w-]+\.(glb|json)$/,
+]
 
 // `base` is the deploy path ('/' at a root host, '/sable/' on GitHub Pages) —
 // the same value Vite prepends to built asset URLs, so cached keys match what
