@@ -5,6 +5,8 @@ import ConceptPiece from '../components/ConceptPiece'
 import ConceptVariantLab from '../components/ConceptVariantLab'
 import ConceptBackupStatus from '../components/ConceptBackupStatus'
 import ConceptViewer from '../components/ConceptViewer'
+import ConceptIdeaDialog from '../components/ConceptIdeaDialog'
+import useConceptIdeaTransfer from '../hooks/useConceptIdeaTransfer'
 import RefinementComposer from '../components/RefinementComposer'
 import RefinementCompare from '../components/RefinementCompare'
 import PromptPackComposer from '../components/PromptPackComposer'
@@ -130,7 +132,7 @@ function KeyField({ label, help, placeholder, value, onSave, onRemove }) {
   )
 }
 
-export default function Concepts({ concepts, setConcepts, commitConcepts, artists = [], ideas = [], backupOwnerId,
+export default function Concepts({ concepts, setConcepts, commitConcepts, artists = [], ideas = [], setIdeas, backupOwnerId,
   onExportBackup, backupRevision, ownerScope = backend.ownerScope, blobs = backend.blobs,
   relay = OFFLINE_RELAY, journal = pendingImageJobs }) {
   const refinement = useConceptRefinement({ ownerId: backupOwnerId, ownerScope, concepts, commitConcepts, blobs, relay, journal })
@@ -150,6 +152,7 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
   // Every image saved here is staged under its concept first (#115), so the
   // concept stores a key, never base64, and survives a failed upload.
   const userId = useAuth()?.user?.id
+  const ideaTransfer = useConceptIdeaTransfer({ concepts, ideas, setIdeas, userId, ownerScope, navigate })
   const stagingFor = (conceptId) => ({ userId, scope: 'concepts', id: conceptId })
 
   const initialDraft = useMemo(() => loadComposerDraft(), [])
@@ -543,10 +546,11 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
   // history entry too (#171), so Back closes the drawer, not the viewer
   // hidden under it. Their contents (a picked image, a prepared source) can't
   // ride in the URL, so a link or reload onto one just shows what's under it.
-  const openLayer = stlSource ? 'stl' : skinSource ? 'skin' : armSource ? 'arm'
+  const openLayer = ideaTransfer.selection ? 'idea' : stlSource ? 'stl' : skinSource ? 'skin' : armSource ? 'arm'
     : refinement.state.open ? 'refine' : null
   useHistoryLayer('layer', openLayer, () => {
-    if (stlSource) setStlSource(null)
+    if (ideaTransfer.selection) ideaTransfer.close()
+    else if (stlSource) setStlSource(null)
     else if (skinSource) setSkinSource(null)
     else if (armSource) setArmSource(null)
     else refinement.close()
@@ -578,7 +582,7 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
   )
 
   return (
-    <div className="min-h-screen bg-v2-ink">
+    <><div inert={Boolean(ideaTransfer.selection) || undefined} aria-hidden={ideaTransfer.selection ? true : undefined} className="min-h-screen bg-v2-ink">
       <header className="sticky top-0 z-10 flex items-center gap-4 px-4 sm:gap-8 sm:px-8 py-3.5 bg-v2-ink/[.88] backdrop-blur-md border-b border-v2-hairline">
         <div className="hidden sm:block font-v2-display text-[1.35rem] tracking-[0.28em] uppercase text-v2-cream">
           Sable<span className="text-v2-accent">.</span>
@@ -656,6 +660,7 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
                   onTryOnSkin={tryOnSkin}
                   onViewOnArm={viewOnArm}
                   onRefine={refineSource}
+                  onUseInIdea={ideaTransfer.open}
                 />
                 <div className="flex justify-end mt-4 pt-3 border-t border-v2-hairline">
                   <button
@@ -726,6 +731,7 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
           onTryOnSkin={tryOnSkin}
           onViewOnArm={viewOnArm}
           onRefine={refineSource}
+          onUseInIdea={ideaTransfer.open}
         />
       )}
 
@@ -759,5 +765,10 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
         backupStatus={paidBackupStatus}
       />}
     </div>
+    {ideaTransfer.selection && <ConceptIdeaDialog
+      key={`${ideaTransfer.selection.conceptId}:${ideaTransfer.selection.variantId}`}
+      source={ideaTransfer.source} ideas={ideas} busy={ideaTransfer.busy} error={ideaTransfer.error}
+      onClose={ideaTransfer.close} onSubmit={ideaTransfer.submit} />}
+    </>
   )
 }

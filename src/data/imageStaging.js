@@ -145,7 +145,7 @@ function attemptUpload(entry, dataUrl) {
 // falls back to uploading directly, and failing that hands the photo back
 // unregistered too — a key with no bytes anywhere would be worse than a photo
 // that is only on screen.
-export async function stageImage(input, { userId, scope, id, assertCurrent: assertCaller = () => {} } = {}) {
+export async function stageImage(input, { userId, scope, id, assertCurrent: assertCaller = () => {}, registerIdentity = true } = {}) {
   let dataUrl
   let assertCurrent
   try {
@@ -175,14 +175,14 @@ export async function stageImage(input, { userId, scope, id, assertCurrent: asse
     if (e.code === 'owner_changed') return { key: null, url: '', failed: true }
     console.error('[tattoo] could not stage an image; uploading it directly:', e)
     deleteStagedBytes(entry.key).catch(() => {})
-    return uploadDirectly(entry, dataUrl, assertCurrent)
+    return uploadDirectly(entry, dataUrl, assertCurrent, registerIdentity)
   }
-  registerBlobUrl(entry.key, dataUrl)
+  registerBlobUrl(entry.key, dataUrl, { registerIdentity })
   void attemptUpload(entry, dataUrl)
   return { key: entry.key, url: dataUrl }
 }
 
-async function uploadDirectly(entry, dataUrl, assertCurrent) {
+async function uploadDirectly(entry, dataUrl, assertCurrent, registerIdentity) {
   try {
     assertCurrent()
     await backend.blobs.upload(entry.userId, entry.key, dataUrlToBlob(dataUrl), entry.contentType)
@@ -191,7 +191,7 @@ async function uploadDirectly(entry, dataUrl, assertCurrent) {
     console.error('[tattoo] image upload failed:', e)
     return { key: null, url: '', failed: true }
   }
-  registerBlobUrl(entry.key, dataUrl)
+  registerBlobUrl(entry.key, dataUrl, { registerIdentity })
   return { key: entry.key, url: dataUrl }
 }
 

@@ -34,7 +34,7 @@ function pad2(n) {
   return String(n).padStart(2, '0')
 }
 
-function InfoPanel({ item, artists, concepts, onClose, onSaveTags, onAddVariant, onMarkBest, onDeleteVariant, onRateVariant, onMakeStl, onTryOnSkin, onViewOnArm, onRefine }) {
+function InfoPanel({ item, artists, concepts, onClose, onSaveTags, onAddVariant, onMarkBest, onDeleteVariant, onRateVariant, onMakeStl, onTryOnSkin, onViewOnArm, onRefine, onUseInIdea }) {
   const concept = item.concept
   const matched = (concept.tags || []).length && artists.length
     ? matchArtistsForIdea({ tags: concept.tags }, artists).slice(0, 3)
@@ -100,6 +100,7 @@ function InfoPanel({ item, artists, concepts, onClose, onSaveTags, onAddVariant,
         onTryOnSkin={onTryOnSkin}
         onViewOnArm={onViewOnArm}
         onRefine={onRefine}
+        onUseInIdea={onUseInIdea}
       />
     </aside>
   )
@@ -139,6 +140,7 @@ export default function ConceptViewer({
   onTryOnSkin,
   onViewOnArm,
   onRefine,
+  onUseInIdea,
   onIndexChange,
 }) {
   // The open piece is tracked by id as well as position: `items` holds only the
@@ -330,6 +332,8 @@ export default function ConceptViewer({
             <div id={sheetId} className="absolute inset-x-0 bottom-0 pointer-events-auto flex flex-col gap-4 bg-gradient-to-t from-v2-ink via-v2-ink/90 to-transparent pt-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1.25rem,env(safe-area-inset-bottom))] animate-slide-up">
               <ViewerSheetToggle open onToggle={() => setSheetOpen(false)} controls={sheetId} className="self-center" />
               <div className="min-w-0">{plate}</div>
+              {!showInfo && current.concept?.imageUrl && onUseInIdea && <button type="button" aria-label="Use original in idea"
+                onClick={() => onUseInIdea({ conceptId: current.concept.id, variantId: null })} className={PANEL_BUTTON}>Use in idea</button>}
               <div className="flex gap-2">
                 <button onClick={() => setShowInfo((s) => !s)} className={`${PANEL_BUTTON} flex-1`}>
                   Variants & STL export
@@ -369,6 +373,8 @@ export default function ConceptViewer({
           <div className="absolute left-8 bottom-7 pointer-events-auto max-w-[60%]">{plate}</div>
 
           <div className="absolute right-8 bottom-7 flex items-center gap-3 pointer-events-auto">
+            {!showInfo && current.concept?.imageUrl && onUseInIdea && <button type="button" aria-label="Use original in idea"
+              onClick={() => onUseInIdea({ conceptId: current.concept.id, variantId: null })} className={PANEL_BUTTON}>Use in idea</button>}
             {deleteButton()}
             <button onClick={() => setShowInfo((s) => !s)} className={PANEL_BUTTON}>
               Variants & STL export
@@ -399,6 +405,7 @@ export default function ConceptViewer({
           onTryOnSkin={onTryOnSkin}
           onViewOnArm={onViewOnArm}
           onRefine={onRefine}
+          onUseInIdea={onUseInIdea}
         />
       )}
     </div>

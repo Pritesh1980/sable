@@ -72,6 +72,15 @@ it('does not let a cached display URL hide a foreign key', async () => {
   await expect(stageConceptIdeaImage(PHOTO, { userId: 'u', ideaId: 'i', assertCurrent() {} })).rejects.toThrow()
 })
 
+it('does not make an unkeyed legacy concept canonicalize to its new idea copy', async () => {
+  const copy = await stageConceptIdeaImage(PHOTO, { userId: 'u', ideaId: 'i', assertCurrent() {} })
+  expect(keyForUrl(PHOTO)).toBeNull()
+  const original = await stageImage(PHOTO, { userId: 'u', scope: 'concepts', id: 'legacy' })
+  expect(keyForUrl(PHOTO)).toBe(original.key)
+  expect(await resolveBlobKey(copy.key)).toBe(PHOTO)
+  expect(keyForUrl(PHOTO)).toBe(original.key)
+})
+
 it('rejects unreadable or non-image bytes without returning an inline ref', async () => {
   await expect(stageConceptIdeaImage('data:text/plain;base64,YmFk', { userId: 'u', ideaId: 'i', assertCurrent() {} })).rejects.toThrow()
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('bad', { headers: { 'content-type': 'text/plain' } })))

@@ -42,7 +42,7 @@ export async function stageConceptIdeaImage(source, { userId, ideaId, assertCurr
   const blob = await resolveImageBlob(key || source)
   guard()
   if (!blob?.size || !blob.type.startsWith('image/')) throw new Error('Could not read that image. Try again when it is available.')
-  const staged = await stageImage(blob, { userId, scope: 'ideas', id: ideaId, assertCurrent: guard })
+  const staged = await stageImage(blob, { userId, scope: 'ideas', id: ideaId, assertCurrent: guard, registerIdentity: false })
   guard()
   if (staged.failed || !staged.key) throw new Error('Could not store that image on this device. Try again.')
   return { key: staged.key }

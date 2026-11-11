@@ -308,6 +308,7 @@ function VariantDetails({
   onDeleteVariant,
   onRateVariant,
   onRefine,
+  onUseInIdea,
 }) {
   const title = resultTitle(variant)
   const actionLabel = resultActionLabel(variant)
@@ -376,6 +377,9 @@ function VariantDetails({
           </div>
 
           <div className="flex flex-wrap gap-2 pt-1">
+            {imageUrl && onUseInIdea && <button type="button" aria-label={`Use ${title} in idea`}
+              onClick={() => onUseInIdea({ conceptId, variantId: variant.id })}
+              className="min-h-11 min-w-11 rounded-xs border border-cream-muted px-3 text-sm text-cream focus-visible:outline-2 focus-visible:outline-cream">Use in idea</button>}
             {imageUrl && onRefine && <button type="button" aria-label={`Refine ${title} for ${label}`}
               onClick={() => onRefine({ conceptId, parentVariantId: variant.id, imageUrl })}
               className="inline-flex min-h-11 items-center gap-2 rounded-xs border border-accent/45 px-3 text-sm text-accent focus-visible:outline-2 focus-visible:outline-cream">
@@ -468,6 +472,7 @@ function VariantCard({
   onDeleteVariant,
   onRateVariant,
   onRefine,
+  onUseInIdea,
 }) {
   const title = resultTitle(variant)
   const actionLabel = resultActionLabel(variant)
@@ -531,6 +536,7 @@ function VariantCard({
             onDeleteVariant={onDeleteVariant}
             onRateVariant={onRateVariant}
             onRefine={onRefine}
+            onUseInIdea={onUseInIdea}
           />
         </div>
       )}
@@ -549,6 +555,7 @@ export default function ConceptVariantLab({
   onDeleteVariant,
   onRateVariant,
   onRefine,
+  onUseInIdea,
 }) {
   const [isAdding, setIsAdding] = useState(false)
   const [expandedVariantId, setExpandedVariantId] = useState('')
@@ -579,6 +586,10 @@ export default function ConceptVariantLab({
           className="inline-flex min-h-11 items-center gap-2 rounded-xs border border-accent/45 px-3 text-sm text-accent focus-visible:outline-2 focus-visible:outline-cream">
           <Sparkles size={18} aria-hidden="true" />Refine this
         </button>}
+
+        {concept.imageUrl && onUseInIdea && <button type="button" aria-label="Use original in idea"
+          onClick={() => onUseInIdea({ conceptId: concept.id, variantId: null })}
+          className="min-h-11 min-w-11 rounded-xs border border-cream-muted px-3 text-sm text-cream focus-visible:outline-2 focus-visible:outline-cream">Use in idea</button>}
 
         {!isAdding && (
           <button
@@ -631,6 +642,7 @@ export default function ConceptVariantLab({
               onDeleteVariant={onDeleteVariant}
               onRateVariant={onRateVariant}
               onRefine={onRefine}
+              onUseInIdea={onUseInIdea}
             />
           ))
         )}

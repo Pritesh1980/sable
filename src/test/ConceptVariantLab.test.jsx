@@ -11,6 +11,20 @@ const baseConcept = {
 
 const noop = () => {}
 
+it('offers originals and image variants without offering text-only results', () => {
+  const onUseInIdea = vi.fn()
+  renderLab({ concept: { ...baseConcept, imageUrl: '/original.png', variants: [
+    { id: 'v', title: 'Arm preview', imageUrl: '/v.png' }, { id: 't', title: 'Text study', response: 'Notes only' },
+  ] }, onUseInIdea })
+  fireEvent.click(screen.getByRole('button', { name: 'Use original in idea' }))
+  expect(onUseInIdea).toHaveBeenLastCalledWith({ conceptId: 'concept-1', variantId: null })
+  fireEvent.click(screen.getByRole('button', { name: 'Expand Arm preview result for Raven chest tattoo' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Use Arm preview in idea' }))
+  expect(onUseInIdea).toHaveBeenLastCalledWith({ conceptId: 'concept-1', variantId: 'v' })
+  fireEvent.click(screen.getByRole('button', { name: 'Expand Text study result for Raven chest tattoo' }))
+  expect(screen.queryByRole('button', { name: 'Use Text study in idea' })).not.toBeInTheDocument()
+})
+
 function renderLab(props = {}) {
   return render(
     <ConceptVariantLab

@@ -112,7 +112,7 @@ function AppShell() {
             <Route path="/brief" element={<Brief ideas={ideas} setIdeas={setIdeas} artists={artists} mergedConventions={mergedConventions} boards={boards} setBoards={setBoards} />} />
             <Route path="/conventions" element={<Conventions artists={artists} setArtists={setArtists} conventionOverrides={conventionOverrides} setConventionOverrides={setConventionOverrides} conventionLineups={conventionLineups} setConventionLineups={setConventionLineups} conventionWinners={conventionWinners} setConventionWinners={setConventionWinners} />} />
             <Route path="/studios" element={<Studios artists={artists} />} />
-            <Route path="/concepts" element={<Concepts concepts={concepts} setConcepts={setConcepts} commitConcepts={commitConcepts} artists={artists} ideas={ideas} backupOwnerId={ownerId} onExportBackup={exportFullLibrary} backupRevision={backupRevision} ownerScope={backend.ownerScope} blobs={backend.blobs} relay={relay} journal={pendingImageJobs} />} />
+            <Route path="/concepts" element={<Concepts concepts={concepts} setConcepts={setConcepts} commitConcepts={commitConcepts} artists={artists} ideas={ideas} setIdeas={setIdeas} backupOwnerId={ownerId} onExportBackup={exportFullLibrary} backupRevision={backupRevision} ownerScope={backend.ownerScope} blobs={backend.blobs} relay={relay} journal={pendingImageJobs} />} />
             <Route path="/boards" element={<Navigate to="/brief?tab=boards" replace />} />
             <Route path="/help" element={<Help />} />
             {/* #195 spike: unlinked lab page for the 3D placement view. */}

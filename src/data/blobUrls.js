@@ -17,6 +17,7 @@ const REFRESH_MARGIN_MS = 60_000
 const keyToEntry = new Map() // key -> { url, cachedAt }
 const urlToKey = new Map()
 const inflight = new Map()
+const independentCopies = new Set()
 let cacheEpoch = 0
 
 // Only some backends' URLs expire (Supabase signed URLs; `urlTtlMs` on
@@ -36,12 +37,13 @@ function isFresh(entry) {
 // hydration can still hold it hours later, and canonicalizing an unmapped url
 // stores the raw expiring url in place of the key, on every device. One entry
 // per key per refresh, cleared with the rest at sign-out.
-export function registerBlobUrl(key, url) {
+export function registerBlobUrl(key, url, { registerIdentity = true } = {}) {
   if (!key) return
+  if (!registerIdentity) independentCopies.add(key)
   keyToEntry.set(key, { url, cachedAt: Date.now() })
   // A byte-identical independent copy has the same data URL. It must not
   // steal a retained source URL's identity (#204); canonical refs keep each key.
-  if (url && !urlToKey.has(url)) urlToKey.set(url, key)
+  if (url && !independentCopies.has(key) && !urlToKey.has(url)) urlToKey.set(url, key)
 }
 
 // Synchronous cache peek for render paths that can't await resolveBlobKey. A
@@ -129,4 +131,5 @@ export function clearBlobUrls() {
   keyToEntry.clear()
   urlToKey.clear()
   inflight.clear()
+  independentCopies.clear()
 }
