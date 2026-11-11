@@ -76,6 +76,7 @@ const SECTIONS = [
       'As you add style tags, matching artists appear ranked by overlap, status and rank — tap to link them to the idea.',
       'Use the sharing row below Back and Save. Share as image exports a 1080×1350 brief card with up to four available reference photos, short captions and a count of any extra references. External web image links are skipped. The system share sheet opens when available; otherwise the editor says Download requested and you can check your downloads for the PNG. Copy brief puts a formatted text summary on your clipboard.',
       'Make cover and the arrows below a reference reorder the photos. Card 1–4 marks the actual export selection; excluded web links and unavailable photos stay in the idea. Checking card means preparation is still running.',
+      'Bring a Concepts image straight into an idea with Use in idea. New idea opens a draft for review and Save; Add to existing idea appends one reference immediately and opens it. The idea keeps an independent image copy without changing its other notes or crops.',
       'Preview card shows the exact PNG. Horizontal, Vertical and Zoom adjust each selected reference’s export crop; Reset crop centres it again without changing the original. Share this card and quick Share as image use the same prepared bytes. Refresh preview retries unavailable photos; Refresh card retries an error. Close the preview, then Save the idea to keep its order and crops. Back without Save discards those draft changes.',
       'Switch to the Boards tab on the same page to group related ideas into a themed board, reorder them, and copy a board-level brief.',
     ],
@@ -128,6 +129,18 @@ const SECTIONS = [
       'Back closes the concept: the browser’s Back (Android’s back button, Safari’s back swipe) returns to the Concepts wall, however many concepts you swiped through, and the address names the concept, so a link opens it. A Make STL, Try on skin, View on arm in 3D or Refine panel opened on top closes first, and the live camera before its panel.',
       'Tag each concept with styles to reveal its top artist matches; tap a match to open their Instagram.',
       'With the style index built (Artists → Similar ink), the info panel also shows Visual matches — the concept image compared against each artist’s actual work, on-device, to rank who could execute it — plus a taste-fit score for how strongly the image matches your overall taste.',
+    ],
+  },
+  {
+    id: 'concept-ideas',
+    label: 'Use a concept in an idea',
+    blurb: 'Move from a chosen image to an editable Idea draft or an existing plan.',
+    image: 'concept-idea-picker.png',
+    steps: [
+      'Choose Use in idea on the original viewer image, or expand an image-bearing result under Variants & STL export. Saved skin, camera and 3D-arm results work too; text-only results have no image action.',
+      'New idea opens a draft with the prompt, selected result notes, styles and image. Review it and tap Save to keep it. Back without Save or reloading discards the draft; browser history does not recreate it.',
+      'Add to existing idea lets you search titles, select a destination and edit the optional note. Add image to idea appends one reference immediately, keeps the other fields and crops, and opens the idea.',
+      'The idea stores an independent image copy without recompression or an AI request. Deleting the concept does not break that reference. A cached image can be copied offline; otherwise reconnect and retry. Cancel, Escape or browser Back closes only the picker.',
     ],
   },
   {

@@ -51,6 +51,20 @@ The editor opens the system share sheet when available. Otherwise it requests a 
 and briefly says **Download requested**; check your downloads for the file. Use **Copy brief**
 instead to put a formatted plain-text summary on your clipboard.
 
+### Bring an AI concept into an idea
+
+In **Concepts**, choose **Use in idea** on an original image or an expanded AI result.
+**New idea** opens a draft with the prompt, notes, styles and chosen image; review it
+and tap **Save** to keep it. **Add to existing idea** lets you search by title, add an
+optional reference note and confirm **Add image to idea**. That adds the reference
+immediately and opens the idea without changing its other fields or crops.
+
+The idea keeps its own image copy, so deleting the source concept does not remove
+the reference. It can copy an image already stored on this device while offline;
+otherwise reconnect and retry. No AI request is made.
+
+![A new Idea draft created from a fictional AI result](../public/guide/concept-idea-draft.png)
+
 ### Choose the card's photos
 
 Use **Make cover** or the left/right arrows beneath a reference to reorder it.

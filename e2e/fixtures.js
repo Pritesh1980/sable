@@ -156,6 +156,39 @@ export async function openBriefCardFixture(page, { base = '/', missing = false }
   await page.getByText('Card arrangement study', { exact: true }).click()
 }
 
+// #204: distinct committed fictional images make wrong-variant copying visible.
+export async function openConceptIdeaFixture(page, { base = '/' } = {}) {
+  await openDemo(page, base + 'concepts')
+  await page.goto(base + 'manifest.json')
+  await page.evaluate(() => {
+    const user = JSON.parse(localStorage.getItem('tattoo_local_session')).user
+    const concepts = [{ id: 'idea-bridge-concept', prompt: 'Moonlit temple study',
+      imageUrl: 'images/demo/hexen_atlas/samurai-v4.webp', tags: ['blackwork'], response: 'Original composition',
+      variants: [
+        { id: 'best', title: 'Best study', isBest: true, imageUrl: 'images/demo/hexen_atlas/koi-v4.webp' },
+        { id: 'arm', title: '3D arm preview', isBest: false, imageUrl: 'images/demo/hexen_atlas/temple-v4.webp',
+          notes: 'Leave room around the wrist', response: 'Chosen arm placement', provider: 'other' },
+      ], createdAt: '2026-11-11T10:00:00.000Z', updatedAt: '2026-11-11T10:00:00.000Z' }]
+    const ideas = [{ id: 'existing-bridge-idea', title: 'Existing forearm plan', description: 'Keep this description', tags: ['fine-line'],
+      images: [{ url: 'images/demo/vesper_noctis/1.svg', note: 'Existing reference', briefCrop: { x: 1, y: 0, zoom: 2 } }],
+      linkedArtists: [], placement: 'forearm', status: 'idea', updatedAt: '2026-11-11T10:00:00.000Z' }]
+    for (const [name, rows] of [['concepts', concepts], ['ideas', ideas]]) {
+      localStorage.setItem(`tattoo_${name}`, JSON.stringify(rows))
+      localStorage.setItem(`tattoo_remote_${user.id}_${name}`, JSON.stringify(rows))
+    }
+  })
+  await page.goto(base + 'concepts')
+  await openConceptViewer(page, /Moonlit temple study/)
+}
+
+export async function openConceptIdeaVariant(page) {
+  await page.touchscreen.tap(...centre(page))
+  await page.getByRole('button', { name: 'Variants & STL export' }).tap()
+  await page.getByRole('button', { name: /^Expand 3D arm preview/ }).tap()
+  await page.getByRole('button', { name: 'Use in idea: 3D arm preview' }).tap()
+  await expect(page.getByRole('dialog', { name: 'Use in idea', exact: true })).toBeVisible()
+}
+
 export const opacity = (locator) => locator.evaluate((el) => getComputedStyle(el).opacity)
 
 // The installed app must start with no network: the service worker serves the

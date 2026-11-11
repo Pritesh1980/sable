@@ -377,7 +377,7 @@ function VariantDetails({
           </div>
 
           <div className="flex flex-wrap gap-2 pt-1">
-            {imageUrl && onUseInIdea && <button type="button" aria-label={`Use ${title} in idea`}
+            {imageUrl && onUseInIdea && <button type="button" aria-label={`Use in idea: ${title}`}
               onClick={() => onUseInIdea({ conceptId, variantId: variant.id })}
               className="min-h-11 min-w-11 rounded-xs border border-cream-muted px-3 text-sm text-cream focus-visible:outline-2 focus-visible:outline-cream">Use in idea</button>}
             {imageUrl && onRefine && <button type="button" aria-label={`Refine ${title} for ${label}`}
@@ -587,7 +587,7 @@ export default function ConceptVariantLab({
           <Sparkles size={18} aria-hidden="true" />Refine this
         </button>}
 
-        {concept.imageUrl && onUseInIdea && <button type="button" aria-label="Use original in idea"
+        {concept.imageUrl && onUseInIdea && <button type="button" aria-label="Use in idea: original"
           onClick={() => onUseInIdea({ conceptId: concept.id, variantId: null })}
           className="min-h-11 min-w-11 rounded-xs border border-cream-muted px-3 text-sm text-cream focus-visible:outline-2 focus-visible:outline-cream">Use in idea</button>}
 

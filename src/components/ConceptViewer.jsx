@@ -332,7 +332,7 @@ export default function ConceptViewer({
             <div id={sheetId} className="absolute inset-x-0 bottom-0 pointer-events-auto flex flex-col gap-4 bg-gradient-to-t from-v2-ink via-v2-ink/90 to-transparent pt-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pb-[max(1.25rem,env(safe-area-inset-bottom))] animate-slide-up">
               <ViewerSheetToggle open onToggle={() => setSheetOpen(false)} controls={sheetId} className="self-center" />
               <div className="min-w-0">{plate}</div>
-              {!showInfo && current.concept?.imageUrl && onUseInIdea && <button type="button" aria-label="Use original in idea"
+              {!showInfo && current.concept?.imageUrl && onUseInIdea && <button type="button" aria-label="Use in idea: original"
                 onClick={() => onUseInIdea({ conceptId: current.concept.id, variantId: null })} className={PANEL_BUTTON}>Use in idea</button>}
               <div className="flex gap-2">
                 <button onClick={() => setShowInfo((s) => !s)} className={`${PANEL_BUTTON} flex-1`}>
@@ -373,7 +373,7 @@ export default function ConceptViewer({
           <div className="absolute left-8 bottom-7 pointer-events-auto max-w-[60%]">{plate}</div>
 
           <div className="absolute right-8 bottom-7 flex items-center gap-3 pointer-events-auto">
-            {!showInfo && current.concept?.imageUrl && onUseInIdea && <button type="button" aria-label="Use original in idea"
+            {!showInfo && current.concept?.imageUrl && onUseInIdea && <button type="button" aria-label="Use in idea: original"
               onClick={() => onUseInIdea({ conceptId: current.concept.id, variantId: null })} className={PANEL_BUTTON}>Use in idea</button>}
             {deleteButton()}
             <button onClick={() => setShowInfo((s) => !s)} className={PANEL_BUTTON}>

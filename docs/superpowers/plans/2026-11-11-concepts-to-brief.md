@@ -85,3 +85,24 @@ single-use in-memory registry validates the captured scope and epoch at consumpt
 with A→B→A and reload tests. agy's review added staging-internal cancellation,
 stable URL identity for byte-identical copies, deleted-variant/blank-note tests and
 phone/history integration checks. Shared staging/cache changes remain narrowly tested.
+
+## Implementation receipt
+
+Four increments implemented. Verification: 255 unit-test files / 2,762 tests, 28 built
+Chromium phone/subpath/card/viewer browser checks, lint, both deployment-base builds,
+and the documentation check (23 Mermaid diagrams) passed. Both fictional guide PNGs
+were refreshed and visually inspected. Codex and the independent fresh whole-branch
+reviewer found no confirmed Important/Critical issues. The standalone UX critique's
+initial command permission denial was handled by an inline, tool-free retry. That
+review identified hidden search selections and speech-label mismatches; both were
+reproduced with failing tests and fixed in one pass, including all original/variant
+action labels. Final verification was rerun afterward.
+
+Decisions: preserve explicit Save and discard for new drafts; existing attachment is
+immediate and only appends. Ownership/cancellation guards extend inside shared staging;
+independent copy keys cannot steal legacy source URL identity. Abandoned-draft blob
+garbage collection remains separate work requiring a reference-liveness policy.
+History keeps the source layer active until destination replacement. Use the actual
+`docs/06-concepts.md` guide rather than the issue's obsolete filename. No live account
+writes or deployment were exercised. Five existing Gallery controls remain undersized;
+new picker controls meet the 44px target. Nothing pushed or merged by this implementation.

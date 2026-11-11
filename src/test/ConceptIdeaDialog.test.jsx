@@ -36,3 +36,18 @@ it('keeps Cancel usable while staging and marks Escape handled', () => {
   expect(fireEvent.keyDown(document, { key: 'Escape' })).toBe(false)
   expect(onClose).toHaveBeenCalledTimes(1)
 })
+
+it('cannot submit a destination hidden by a later search', () => {
+  const onSubmit = vi.fn()
+  mount({ ideas: [{ id: 'a', title: 'Forearm' }, { id: 'b', title: 'Back piece' }], onSubmit })
+  fireEvent.click(screen.getByRole('button', { name: 'Add to existing idea' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Forearm' }))
+  expect(screen.getByRole('button', { name: 'Add image to idea' })).toBeEnabled()
+  fireEvent.change(screen.getByRole('searchbox', { name: 'Search ideas' }), { target: { value: 'Back' } })
+  expect(screen.getByRole('button', { name: 'Add image to idea' })).toBeDisabled()
+  fireEvent.click(screen.getByRole('button', { name: 'Add image to idea' }))
+  expect(onSubmit).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button', { name: 'Back piece' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Add image to idea' }))
+  expect(onSubmit).toHaveBeenCalledWith({ ideaId: 'b', note: '3D arm preview' })
+})

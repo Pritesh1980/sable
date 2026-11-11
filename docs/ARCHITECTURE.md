@@ -489,6 +489,18 @@ The idea editor's `usePreparedBriefCard` versions all canvas-visible inputs, and
 `prepareBriefCardImage` returns one PNG and the actual selected source indices.
 Badges, preview and sharing consume that same result; stale async results are discarded
 and replaced preview URLs revoked. Crops are applied only inside each exported photo region.
+
+Concepts → Ideas (#204) resolves the selected original/variant bytes and stages an
+independent `ideas/<reserved id>/` key before a draft handoff or existing-idea append.
+The source concept's key is never reused. Copied cache entries do not become reverse
+aliases for unkeyed legacy source images. The transfer hook guards source, destination,
+owner epoch and cancellation across async boundaries. A bounded runtime-only mailbox
+stores one new draft; router state carries only a random request id. Brief consumes it
+once after commit, checks its original owner scope/epoch, and keeps explicit newness
+separate from the reserved id so Save inserts the full record. Saved-id links wait
+for collection hydration; existing attachments use a functional append, never a stale
+whole-record replacement. Reload discards an unsaved mailbox draft.
+
 `ideasCodec` warms the URL cache and, through `ensureUploaded`
 (which hands back the value it changed), swaps an inline
 photo stored before staging existed for its key. A concept's and a variant's `imageUrl`

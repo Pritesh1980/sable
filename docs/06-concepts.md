@@ -88,6 +88,29 @@ gesture; use **× Close** or swipe down.
 - **Delete** removes the concept — an **Undo** bar appears for a few seconds if you change
   your mind.
 
+## Use a concept in an idea
+
+Choose **Use in idea** on the original image (in the viewer controls), or expand a
+result under **Variants & STL export** and use its **Use in idea** action. Saved skin,
+camera and 3D-arm images work the same way; text-only results have no image action.
+
+![Choosing where to use a fictional concept image](../public/guide/concept-idea-picker.png)
+
+- **New idea** opens an editable draft with the prompt, chosen result's notes, styles
+  and image. Tap **Save** in the Idea editor to keep it; Back without Save discards it.
+- **Add to existing idea** searches your saved idea titles. Select one, edit the optional
+  note and confirm **Add image to idea**. One reference is added immediately; the idea's
+  title, description, original references and their crops stay unchanged.
+
+The image is copied into the idea's own storage without recompression or an AI call.
+Deleting the source concept does not break the idea's reference. Device-cached images
+can be copied offline; an unreadable image leaves the picker open with a retry message.
+**Cancel**, Escape or browser Back closes only the picker. Returning through history
+does not recreate an unsaved draft. Reloading before Save also discards that draft.
+
+These guide captures use fictional AI-generated demo tattoos to illustrate the controls;
+the selected result label is sample content, not evidence of a live 3D capture.
+
 ## Refine an image
 
 ![The refinement drawer with a fictional prepared source](../public/guide/concept-refinement.png)

@@ -16,13 +16,13 @@ it('offers originals and image variants without offering text-only results', () 
   renderLab({ concept: { ...baseConcept, imageUrl: '/original.png', variants: [
     { id: 'v', title: 'Arm preview', imageUrl: '/v.png' }, { id: 't', title: 'Text study', response: 'Notes only' },
   ] }, onUseInIdea })
-  fireEvent.click(screen.getByRole('button', { name: 'Use original in idea' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Use in idea: original' }))
   expect(onUseInIdea).toHaveBeenLastCalledWith({ conceptId: 'concept-1', variantId: null })
   fireEvent.click(screen.getByRole('button', { name: 'Expand Arm preview result for Raven chest tattoo' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Use Arm preview in idea' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Use in idea: Arm preview' }))
   expect(onUseInIdea).toHaveBeenLastCalledWith({ conceptId: 'concept-1', variantId: 'v' })
   fireEvent.click(screen.getByRole('button', { name: 'Expand Text study result for Raven chest tattoo' }))
-  expect(screen.queryByRole('button', { name: 'Use Text study in idea' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Use in idea: Text study' })).not.toBeInTheDocument()
 })
 
 function renderLab(props = {}) {

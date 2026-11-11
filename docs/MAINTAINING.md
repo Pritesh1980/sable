@@ -93,6 +93,11 @@ with Reorder **off** — that is the view people arrive in.
    wait ~1.5s for images → `browser_take_screenshot` per state, clicking view toggles / opening
    modals as needed.)
 
+For Concepts → Ideas guide captures, run
+`GUIDE_URL=http://localhost:15484 node scripts/captureConceptIdeasGuide.mjs` against
+an isolated local-backend server. It refreshes `concept-idea-picker.png` and
+`concept-idea-draft.png` at 430 × 920 using fictional Japanese-inspired demo images.
+
 ## Demo image assets
 
 Demo artwork ships as 1024 × 1536 WebP images (at most 350 KiB each) and
