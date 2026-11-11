@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { describe, it, expect, vi } from 'vitest'
+import { flushSync } from 'react-dom'
 import { act, render } from '@testing-library/react'
 import { MemoryRouter, Routes, Route, useLocation, useNavigate } from 'react-router'
 import useHistoryLayer from '../hooks/useHistoryLayer'
@@ -105,5 +106,35 @@ describe('useHistoryLayer', () => {
     forward()
     expect(view.queryByText('layer:stl')).toBeNull()
     expect(here()).toBe('/page?demo=1')
+  })
+
+  // The Concepts picker (Escape, reopen, Back at once): the router renders
+  // location changes as transitions, so a push and the pop straight after it
+  // can land in one render that never shows the layer's param. Watching the
+  // rendered param alone, the layer never saw itself popped and stayed open
+  // over a page whose URL had already left it.
+  it('a Back that lands before its entry is ever rendered still closes the layer', () => {
+    const onPop = vi.fn()
+    const view = renderLayers(<Layer name="layer" onPop={onPop} />)
+    act(() => {
+      flushSync(() => setters.layer('idea')) // its effect pushes ?layer=idea
+      probe.navigate(-1) // and Back lands before that push is rendered
+    })
+    expect(here()).toBe('/page?demo=1')
+    act(() => { window.dispatchEvent(new PopStateEvent('popstate')) })
+    expect(onPop).toHaveBeenCalledTimes(1)
+    expect(view.queryByText('layer:idea')).toBeNull()
+  })
+
+  it('a Back that pops only a layer stacked above leaves this one open', () => {
+    const onPop = vi.fn()
+    const view = renderLayers(<Layer name="layer" initial={null} onPop={onPop} />)
+    set('layer', 'skin')
+    const real = window.location.href
+    window.history.replaceState(null, '', '/page?demo=1&layer=skin')
+    act(() => { window.dispatchEvent(new PopStateEvent('popstate')) })
+    window.history.replaceState(null, '', real)
+    expect(onPop).not.toHaveBeenCalled()
+    expect(view.getByText('layer:skin')).toBeInTheDocument()
   })
 })

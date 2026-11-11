@@ -18,6 +18,12 @@ import useOverlayParam from './useOverlayParam'
  *
  * Two layers stack when each uses its own `name` (the drawer and the camera
  * over it): each entry carries its own marker, so Back peels one at a time.
+ *
+ * Back is also caught from the browser's own popstate, not only from the
+ * rendered URL: the router renders location changes as transitions, so a
+ * push and a Back straight after it (Escape, reopen, Back) can land in one
+ * render that never shows the param, and the layer would stay open over a
+ * page whose URL had already left it.
  */
 export default function useHistoryLayer(name, active, onPop) {
   const layer = useOverlayParam(name)
@@ -39,6 +45,16 @@ export default function useHistoryLayer(name, active, onPop) {
     else if (active) layerRef.current.replace(active)
     else layerRef.current.close()
   }, [active])
+
+  useEffect(() => {
+    const onPopState = () => {
+      if (!shown.current || new URLSearchParams(window.location.search).has(name)) return
+      shown.current = null
+      onPopRef.current?.()
+    }
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [name])
 
   const seen = useRef(layer.value)
   useEffect(() => {
