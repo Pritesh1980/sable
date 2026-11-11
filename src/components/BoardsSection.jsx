@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import RefImage from './RefImage'
 import GeneratedArtworkNotice from './GeneratedArtworkNotice'
 import {
@@ -9,6 +9,7 @@ import {
   getBoardIdeas,
   getBoardCover,
 } from '../data/boards'
+import { exportBoardCardImage } from '../data/briefCard'
 import { buildBoardBrief } from '../data/export'
 import { useFocusOnOpen } from '../hooks/useDialogFocus'
 
@@ -49,6 +50,13 @@ function BoardCard({ board, ideas, onOpen }) {
 function BoardModal({ board, onClose, onSave, onDelete, ideas, artists }) {
   const [draft, setDraft] = useState({ ...BLANK_BOARD, ...board })
   const [copied, setCopied] = useState(false)
+  const [shareState, setShareState] = useState('idle')
+  const [shareNote, setShareNote] = useState('')
+  useEffect(() => {
+    if (shareState !== 'download') return
+    const timer = setTimeout(() => setShareState('idle'), 2400)
+    return () => clearTimeout(timer)
+  }, [shareState])
   const isNew = !board.id
   const nameRef = useFocusOnOpen(isNew)
 
@@ -76,14 +84,29 @@ function BoardModal({ board, onClose, onSave, onDelete, ideas, artists }) {
     setTimeout(() => setCopied(false), 1600)
   }
 
+  async function shareBoardImage() {
+    if (!draft.name.trim() || shareState !== 'idle') return
+    setShareState('sharing')
+    setShareNote('')
+    try {
+      const result = await exportBoardCardImage(draft, ideas, { artists })
+      setShareNote(result.skippedNotice)
+      setShareState(result.method === 'download' ? 'download' : 'idle')
+    } catch (error) {
+      console.error('[tattoo] board card export failed:', error)
+      setShareNote('Could not create board image.')
+      setShareState('idle')
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-ink-black flex flex-col animate-fade-in overflow-y-auto">
-      <div className="px-5 pt-safe-top pt-6 pb-4 border-b border-ink-border sticky top-0 bg-ink-black z-10">
-        <div className="flex items-center justify-between">
-          <button onClick={onClose} className="text-cream-muted hover:text-cream text-sm tracking-widest uppercase">
+      <div className="px-5 pt-safe-top pt-6 pb-2 border-b border-ink-border sticky top-0 bg-ink-black z-10">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          <button onClick={onClose} className="min-h-11 text-cream-muted hover:text-cream text-sm tracking-widest uppercase">
             ← Back
           </button>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap items-center justify-end gap-x-4">
             {!isNew && (
               <button
                 onClick={() => {
@@ -92,23 +115,37 @@ function BoardModal({ board, onClose, onSave, onDelete, ideas, artists }) {
                     onClose()
                   }
                 }}
-                className="text-accent/60 hover:text-accent text-sm transition-colors"
+                className="min-h-11 px-2 text-accent/60 hover:text-accent text-sm transition-colors"
               >
                 Delete
               </button>
             )}
-            <button
-              onClick={copyBoardBrief}
-              disabled={!draft.name.trim()}
-              className="text-cream-muted hover:text-cream disabled:opacity-30 text-sm transition-colors"
-            >
-              {copied ? 'Copied' : 'Copy brief'}
-            </button>
-            <button onClick={save} className="text-accent hover:text-accent-hover text-sm font-body transition-colors">
+            <button onClick={save} className="min-h-11 px-2 text-accent hover:text-accent-hover text-sm font-body transition-colors">
               {isNew ? 'Add' : 'Save'}
             </button>
           </div>
         </div>
+        <div role="group" aria-label="Share board" className="flex flex-wrap items-center gap-x-5 border-t border-ink-border">
+          <button
+            onClick={copyBoardBrief}
+            disabled={!draft.name.trim()}
+            className="min-h-11 text-cream-muted hover:text-cream disabled:opacity-30 text-sm transition-colors"
+          >
+            {copied ? 'Copied' : 'Copy brief'}
+          </button>
+          <button
+            onClick={shareBoardImage}
+            disabled={!draft.name.trim() || shareState === 'sharing'}
+            aria-disabled={shareState === 'download' || undefined}
+            className="min-h-11 text-cream-muted hover:text-cream disabled:opacity-30 aria-disabled:cursor-default aria-disabled:text-cream text-sm transition-colors"
+          >
+            {shareState === 'sharing' ? 'Sharing…' : shareState === 'download' ? 'Download requested' : 'Share as image'}
+          </button>
+        </div>
+        <p role="status" className={shareNote ? 'font-mono text-xs text-cream-muted mt-1 mb-2' : 'sr-only'}>
+          {shareState === 'download' && <span className="sr-only">PNG download requested. </span>}
+          {shareNote}
+        </p>
         <GeneratedArtworkNotice images={[
           getBoardCover(draft, ideas),
           ...ideas.flatMap((idea) => idea.images || []),

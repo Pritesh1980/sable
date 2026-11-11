@@ -1,4 +1,4 @@
-import { test, expect, openIdeaWithPhoto, openBriefCardFixture } from './fixtures'
+import { test, expect, openDemo, openIdeaWithPhoto, openBriefCardFixture } from './fixtures'
 
 function readPngDimensions(bytes) {
   // PNG signature (8 bytes) + IHDR length (4) + 'IHDR' (4) + width (4 BE) + height (4 BE)
@@ -171,4 +171,53 @@ test('bad and external references stay in the idea but never receive card badges
   await page.getByRole('button', { name: 'Preview card', exact: true }).click()
   await expect(page.getByRole('slider', { name: 'Zoom reference 3' })).toBeVisible()
   await expect(page.getByRole('slider', { name: 'Zoom reference 1' })).toHaveCount(0)
+})
+
+test('Board editor copies the board brief and shares a 1080×1350 board summary PNG (#207)', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__copiedText = ''
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async (text) => {
+          window.__copiedText = text
+        },
+      },
+    })
+    Object.defineProperty(navigator, 'canShare', { configurable: true, value: () => false })
+  })
+
+  const board = {
+    id: 'guide-board',
+    name: 'Botanical studies',
+    description: 'Fern, moon and geometric reference studies',
+    ideaIds: ['demo-idea-forest', 'demo-idea-eclipse'],
+    cover: '',
+    createdAt: '2026-10-01T12:00:00.000Z',
+    updatedAt: '2026-10-01T12:00:00.000Z',
+  }
+  const storage = Object.fromEntries(
+    ['tattoo_boards', 'tattoo_remote_boards'].map((key) => [key, JSON.stringify([board])]),
+  )
+
+  await openDemo(page, '/brief?tab=boards', { storage })
+  await page.getByRole('button', { name: /Botanical studies/ }).click()
+
+  await page.getByRole('button', { name: 'Copy brief', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Copied', exact: true })).toBeVisible()
+  const copiedText = await page.evaluate(() => window.__copiedText)
+  expect(copiedText).toContain('Tattoo board: Botanical studies')
+  expect(copiedText).toContain('Botanical forearm study')
+
+  const downloadEvent = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Share as image', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Download requested' })).toBeDisabled()
+  await expect(page.getByRole('status')).toHaveText('PNG download requested.')
+  const download = await downloadEvent
+  expect(download.suggestedFilename()).toBe('sable-board-botanical-studies.png')
+  const chunks = []
+  for await (const chunk of await download.createReadStream()) chunks.push(chunk)
+  const { width, height } = readPngDimensions(Buffer.concat(chunks))
+  expect(width).toBe(1080)
+  expect(height).toBe(1350)
 })

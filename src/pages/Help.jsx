@@ -78,7 +78,7 @@ const SECTIONS = [
       'Make cover and the arrows below a reference reorder the photos. Card 1–4 marks the actual export selection; excluded web links and unavailable photos stay in the idea. Checking card means preparation is still running.',
       'Bring a Concepts image straight into an idea with Use in idea. New idea opens a draft for review and Save; Add to existing idea appends one reference immediately and opens it. The idea keeps an independent image copy without changing its other notes or crops.',
       'Preview card shows the exact PNG. Horizontal, Vertical and Zoom adjust each selected reference’s export crop; Reset crop centres it again without changing the original. Share this card and quick Share as image use the same prepared bytes. Refresh preview retries unavailable photos; Refresh card retries an error. Close the preview, then Save the idea to keep its order and crops. Back without Save discards those draft changes.',
-      'Switch to the Boards tab on the same page to group related ideas into a themed board, reorder them, and copy a board-level brief.',
+      'Switch to the Boards tab on the same page to group related ideas into a themed board, reorder them, and copy a board-level brief or share a 1080×1350 board summary card as an image.',
     ],
   },
   {
