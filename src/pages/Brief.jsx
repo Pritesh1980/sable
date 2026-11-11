@@ -1,5 +1,7 @@
 import { useEffect, useId, useState, useRef } from 'react'
-import { useSearchParams } from 'react-router'
+import { useLocation, useNavigate, useSearchParams } from 'react-router'
+import { backend } from '../backend'
+import { takeConceptIdeaHandoff } from '../data/conceptIdeaHandoff'
 import TagPill from '../components/TagPill'
 import Logo from '../components/Logo'
 import BoardsSection from '../components/BoardsSection'
@@ -74,7 +76,7 @@ function IdeaCard({ idea, onOpen }) {
   )
 }
 
-function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, mergedConventions = [] }) {
+function IdeaModal({ idea, isNew = !idea.id, onClose, onSave, onDelete, onRestoreImages, artists, mergedConventions = [] }) {
   const [draft, setDraft] = useState({ status: 'idea', ...idea, images: normalizeReferenceImages(idea.images) })
   // Which fields the user has actually edited this session (#63). `draft` is a
   // one-time snapshot that never reconciles with `idea` — anything that
@@ -102,7 +104,6 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
   const [analyzeNote, setAnalyzeNote] = useState('')
   const fileRef = useRef()
   const composerId = useId()
-  const isNew = !idea.id
   const titleRef = useFocusOnOpen(isNew)
   const userId = useAuth()?.user?.id
 
@@ -330,7 +331,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
               </button>
             )}
             <button onClick={save} disabled={uploading} className="min-h-11 px-2 text-accent hover:text-accent-hover text-sm font-body transition-colors disabled:opacity-40">
-              {isNew ? 'Add' : 'Save'}
+              {isNew && !idea.id ? 'Add' : 'Save'}
             </button>
           </div>
         </div>
@@ -646,12 +647,41 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
 
 const BLANK_IDEA = { title: '', description: '', tags: [], placement: '', images: [], linkedArtists: [], status: 'idea' }
 
-export default function Brief({ ideas, setIdeas, artists, mergedConventions = [], boards = [], setBoards = () => {} }) {
+export default function Brief({ ideas, setIdeas, artists, mergedConventions = [], boards = [], setBoards = () => {}, ownerScope = backend.ownerScope }) {
   const [searchParams] = useSearchParams()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const userId = useAuth()?.user?.id
   const [modal, setModal] = useState(null)
   const [statusFilter, setStatusFilter] = useState(null)
   // Deep links (?tab=boards) land on the Boards tab; afterwards plain state.
   const [tab, setTab] = useState(() => (searchParams.get('tab') === 'boards' ? 'boards' : 'ideas'))
+
+  const requestedId = searchParams.get('idea')
+  const handoffId = location.state?.conceptIdeaRequest
+  useEffect(() => {
+    if (modal || (!handoffId && !requestedId)) return undefined
+    let active = true
+    // Consume after the committed render, not in a state initializer: a
+    // StrictMode probe or discarded render must not spend a one-shot request.
+    queueMicrotask(() => {
+      if (!active) return
+      let idea
+      if (handoffId) idea = takeConceptIdeaHandoff(handoffId, { userId, ownerScope })
+      else idea = ideas.find(row => row.id === requestedId)
+      if (!handoffId && !idea) return // A saved target may still be hydrating.
+      if (idea) {
+        setModal({ idea, isNew: Boolean(handoffId) })
+        setTab('ideas')
+      }
+      const params = new URLSearchParams(location.search)
+      params.delete('idea')
+      const { conceptIdeaRequest: _request, ...rest } = location.state || {}
+      void navigate({ pathname: location.pathname, search: params.toString(), hash: location.hash },
+        { replace: true, state: Object.keys(rest).length ? rest : null })
+    })
+    return () => { active = false }
+  }, [handoffId, requestedId, ideas, modal, userId, ownerScope, navigate, location])
 
   const ideasRef = useRef(ideas)
   useEffect(() => { ideasRef.current = ideas })
@@ -722,7 +752,7 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
         </div>
         {tab === 'ideas' && (
           <button
-            onClick={() => setModal(BLANK_IDEA)}
+            onClick={() => setModal({ idea: BLANK_IDEA, isNew: true })}
             className="w-11 h-11 rounded-full border border-ink-border text-cream-muted hover:text-cream hover:border-cream-muted/50 transition-colors flex items-center justify-center text-xl"
             title="New idea"
             aria-label="New idea"
@@ -793,7 +823,7 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
           <span className="text-5xl mb-4 opacity-10">◇</span>
           <p className="text-cream-muted/90 font-body text-sm">No ideas yet.</p>
           <button
-            onClick={() => setModal(BLANK_IDEA)}
+            onClick={() => setModal({ idea: BLANK_IDEA, isNew: true })}
             className="text-accent hover:text-accent-hover font-body text-xs mt-1 underline underline-offset-4"
           >
             Capture your first idea — tag it to see matching artists
@@ -804,7 +834,7 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((idea) => (
-            <IdeaCard key={idea.id} idea={idea} onOpen={setModal} />
+            <IdeaCard key={idea.id} idea={idea} onOpen={(idea) => setModal({ idea, isNew: false })} />
           ))}
         </div>
       )}
@@ -813,7 +843,9 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
 
       {modal && (
         <IdeaModal
-          idea={modal}
+          key={modal.idea.id || 'new'}
+          idea={modal.idea}
+          isNew={modal.isNew}
           onClose={() => setModal(null)}
           onSave={saveIdea}
           onRestoreImages={restoreIdeaImages}
