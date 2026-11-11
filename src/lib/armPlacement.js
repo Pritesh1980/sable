@@ -10,7 +10,7 @@
 // geometry, no projection, nothing rebuilt while a finger moves.
 
 import {
-  pinchWidth, toInkPixels, healInkPixels, healedInkFloor, spreadInk, spreadSigmaPx, srgbToLinear,
+  pinchWidth, toInkPixels, healInkPixels, healedInkFloor, srgbToLinear,
   viewFrame, designYaw, snapshotPose, WHOLE_ARM,
 } from '../data/placement3d'
 
@@ -26,10 +26,6 @@ const EASE = 0.18 // share of the way to the new framing covered each frame
 const HALF_ARM_M = 0.075
 // A little towards the front to start with, so the arm reads as round.
 const OPENING_TURN = -0.3
-// The healed spread is redrawn into the design this long after a resize stops
-// (a pinch is many resizes), and only for a change of more than this share.
-const SPREAD_SETTLE_MS = 150
-const SPREAD_TOLERANCE = 0.15
 
 const VERTEX = /* glsl */ `
   attribute vec2 uv1;
@@ -50,7 +46,7 @@ const VERTEX = /* glsl */ `
 `
 
 const FRAGMENT = /* glsl */ `
-  uniform sampler2D uDesign; // healed, spread transmittance: 1 = bare skin
+  uniform sampler2D uDesign; // healed transmittance: 1 = bare skin
   uniform vec4 uPlace; // arc cm, centre cm, width cm, height cm
   uniform vec3 uSkin;
   uniform vec3 uInkFloor; // what lies under solid healed black
@@ -60,12 +56,6 @@ const FRAGMENT = /* glsl */ `
   varying float vHeightCm;
   varying vec3 vNormal;
   varying vec3 vToEye;
-
-  // Outside the image is bare skin.
-  vec3 design(vec2 st) {
-    vec2 inside = step(vec2(0.0), st) * step(st, vec2(1.0));
-    return mix(vec3(1.0), texture2D(uDesign, st).rgb, inside.x * inside.y);
-  }
 
   void main() {
     if (vFade < 0.02) discard;
@@ -77,8 +67,9 @@ const FRAGMENT = /* glsl */ `
     arc -= turn * floor(arc / max(turn, 1.0) + 0.5); // shortest way round
     vec2 st = vec2(arc / uPlace.z, (vHeightCm - uPlace.y) / uPlace.w) + 0.5;
 
-    vec3 t = design(st);
-    t = mix(vec3(1.0), t, step(1.0, turn)); // a model without skin coordinates: no ink
+    vec3 paper = texture2D(uDesign, clamp(st, 0.0, 1.0)).rgb;
+    vec2 edge = smoothstep(vec2(0.0), vec2(0.01), st) * smoothstep(vec2(0.0), vec2(0.01), 1.0 - st);
+    vec3 t = mix(vec3(1.0), paper, edge.x * edge.y * step(1.0, turn));
 
     // Healed: skin where the ink lets it through, a cool black where it doesn't.
     vec3 skin = uSkin * t + uInkFloor * (1.0 - t);
@@ -101,8 +92,7 @@ const FRAGMENT = /* glsl */ `
 
 // The image as healed ink: light paper, dark lines, whatever it started as
 // (see toInkPixels), settled under the skin (healInkPixels), no larger than
-// the texture needs to be. The spread depends on the print size, so the
-// engine draws that in (see bakeSpread).
+// the texture needs to be.
 export function loadDesign(src, {
   createImage = () => new Image(),
   createCanvas = () => document.createElement('canvas'),
@@ -146,13 +136,6 @@ export function createArmEngine(THREE, GLTFLoader, mount, { modelUrl, callbacks 
   let dirty = true
   let geometry = null
   let texture = null
-  // The healed spread is a Gaussian a fixed distance of skin wide, drawn into
-  // the design on the CPU as render-on-body.py does: in the shader it cost
-  // every frame (four times the frame time under software WebGL) for a blur
-  // of about one screen pixel. `ink` is the design before any spread.
-  let ink = null // { canvas, ctx, image, pixels }
-  let spreadPx = 0
-  let spreadTimer = 0
   let widthCm = 0
   let placed = null // the last setPlacement: { placement, perimeterCm }
   let spin = false
@@ -195,22 +178,6 @@ export function createArmEngine(THREE, GLTFLoader, mount, { modelUrl, callbacks 
   })
 
   const invalidate = () => { dirty = true }
-
-  // Draws the spread for the current print size, unless what is there is
-  // already close enough to it.
-  const bakeSpread = () => {
-    clearTimeout(spreadTimer)
-    spreadTimer = 0
-    if (!ink || !placed) return
-    const { canvas: design, ctx, image, pixels } = ink
-    const target = spreadSigmaPx(design.width, placed.placement.widthCm)
-    if (Math.abs(target - spreadPx) <= SPREAD_TOLERANCE * Math.max(target, spreadPx)) return
-    image.data.set(spreadInk(pixels, design.width, design.height, target))
-    ctx.putImageData(image, 0, 0)
-    spreadPx = target
-    texture.needsUpdate = true
-    invalidate()
-  }
 
   const frameCamera = () => {
     lift.position.y = -now.focusCm / 100
@@ -316,23 +283,16 @@ export function createArmEngine(THREE, GLTFLoader, mount, { modelUrl, callbacks 
       material.uniforms.uPlace.value.set(
         placement.arcCm, placement.centreCm, placement.widthCm, placement.heightCm)
       goal = { ...viewFrame(placement, view), yaw: designYaw(placement, perimeterCm) }
-      clearTimeout(spreadTimer)
-      spreadTimer = setTimeout(bakeSpread, SPREAD_SETTLE_MS)
       invalidate()
     },
-    // An ink canvas from loadDesign. The engine draws the spread into it.
+    // An ink canvas from loadDesign.
     setDesign(inkCanvas) {
-      const ctx = inkCanvas.getContext('2d', { willReadFrequently: true })
-      const image = ctx.getImageData(0, 0, inkCanvas.width, inkCanvas.height)
-      ink = { canvas: inkCanvas, ctx, image, pixels: image.data.slice() }
-      spreadPx = 0
       const next = new THREE.CanvasTexture(inkCanvas)
       next.colorSpace = THREE.SRGBColorSpace
       next.anisotropy = renderer.capabilities.getMaxAnisotropy()
       texture?.dispose()
       texture = next
       material.uniforms.uDesign.value = next
-      bakeSpread()
       invalidate()
     },
     setSpin(on) { spin = Boolean(on) },
@@ -344,7 +304,6 @@ export function createArmEngine(THREE, GLTFLoader, mount, { modelUrl, callbacks 
     // straight after the render.
     snapshot() {
       if (!geometry || !placed) return null
-      bakeSpread()
       const live = { now, turned }
       const { turned: turn, ...pose } = snapshotPose(placed.placement, placed.perimeterCm, turned)
       now = pose
@@ -361,7 +320,6 @@ export function createArmEngine(THREE, GLTFLoader, mount, { modelUrl, callbacks 
     dispose() {
       disposed = true
       cancelAnimationFrame(frame)
-      clearTimeout(spreadTimer)
       observer.disconnect()
       canvas.removeEventListener('pointerdown', onDown)
       canvas.removeEventListener('pointermove', onMove)

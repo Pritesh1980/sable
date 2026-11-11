@@ -97,24 +97,6 @@ function start(callbacks = {}, [width, height] = [400, 400]) {
   return { ...three, mount, engine, callbacks }
 }
 
-// An ink canvas as loadDesign makes one: a 2-D context the engine reads the
-// healed pixels from once, and writes each size's spread back into.
-function inkCanvas(width = 64, height = 80) {
-  const canvas = document.createElement('canvas')
-  canvas.width = width
-  canvas.height = height
-  const pixels = new Uint8ClampedArray(4 * width * height).fill(255)
-  pixels.fill(0, 4 * width * 40, 4 * width * 40 + 4 * 10) // a stroke of solid ink
-  // Each put is recorded as it was then: the engine reuses one ImageData.
-  const ctx = {
-    puts: [],
-    getImageData: vi.fn(() => ({ data: pixels.slice(), width, height })),
-    putImageData: vi.fn((image) => ctx.puts.push([...image.data])),
-  }
-  canvas.getContext = vi.fn(() => ctx)
-  return { canvas, ctx }
-}
-
 const pointer = (canvas, type, id, x, y) => {
   const event = new MouseEvent(type, { clientX: x, clientY: y, bubbles: true })
   Object.defineProperty(event, 'pointerId', { value: id })
@@ -241,91 +223,13 @@ describe('createArmEngine', () => {
   it('swaps the design texture and frees the old one', () => {
     const { engine, record } = start()
     record.loader.onLoad(gltfWith({ isMesh: true, geometry: armGeometry() }))
-    const { canvas: first } = inkCanvas()
+    const first = document.createElement('canvas')
     engine.setDesign(first)
     expect(record.meshes[0].material.uniforms.uDesign.value.image).toBe(first)
     expect(record.textures[0].colorSpace).toBe('srgb')
     expect(record.textures[0].anisotropy).toBe(8)
-    engine.setDesign(inkCanvas().canvas)
+    engine.setDesign(document.createElement('canvas'))
     expect(record.disposed).toEqual(['texture'])
-  })
-
-  describe('the healed spread', () => {
-    beforeEach(() => vi.useFakeTimers())
-    afterEach(() => vi.useRealTimers())
-    const spreadOf = (ctx) => ctx.puts.at(-1)
-    const isBlurred = (data) => Boolean(data?.some((v) => v > 0 && v < 255))
-
-    it('is drawn into the design at its print size, a fixed distance of skin', () => {
-      const { engine, record } = start()
-      const { canvas, ctx } = inkCanvas()
-      engine.setPlacement({ ...PLACED, widthCm: 3, heightCm: 3.75 }, TABLE)
-      engine.setDesign(canvas)
-      expect(isBlurred(spreadOf(ctx))).toBe(true)
-      expect(record.textures[0].needsUpdate).toBe(true)
-    })
-
-    it('is redrawn once a resize settles, not on every step of a pinch', () => {
-      const { engine } = start()
-      const { canvas, ctx } = inkCanvas()
-      engine.setPlacement({ ...PLACED, widthCm: 3, heightCm: 3.75 }, TABLE)
-      engine.setDesign(canvas)
-      const drawn = ctx.putImageData.mock.calls.length
-      for (const widthCm of [6, 9, 12, 15]) engine.setPlacement({ ...PLACED, widthCm, heightCm: widthCm * 1.25 }, TABLE)
-      expect(ctx.putImageData.mock.calls.length).toBe(drawn)
-      vi.advanceTimersByTime(1000)
-      expect(ctx.putImageData.mock.calls.length).toBe(drawn + 1)
-    })
-
-    it('always starts from the unspread design, so blurs never stack', () => {
-      const { engine } = start()
-      const { canvas, ctx } = inkCanvas()
-      engine.setPlacement({ ...PLACED, widthCm: 3, heightCm: 3.75 }, TABLE)
-      engine.setDesign(canvas)
-      engine.setPlacement({ ...PLACED, widthCm: 30, heightCm: 37.5 }, TABLE)
-      vi.advanceTimersByTime(1000)
-      engine.setPlacement({ ...PLACED, widthCm: 3, heightCm: 3.75 }, TABLE)
-      vi.advanceTimersByTime(1000)
-      const [first, wide, last] = ctx.puts
-      expect(wide).not.toEqual(first)
-      expect(last).toEqual(first)
-      expect(ctx.getImageData).toHaveBeenCalledTimes(1)
-    })
-
-    it('leaves a size change too small to see alone', () => {
-      const { engine } = start()
-      const { canvas, ctx } = inkCanvas()
-      engine.setPlacement(PLACED, TABLE)
-      engine.setDesign(canvas)
-      const drawn = ctx.putImageData.mock.calls.length
-      engine.setPlacement({ ...PLACED, widthCm: 12.2 }, TABLE)
-      vi.advanceTimersByTime(1000)
-      expect(ctx.putImageData.mock.calls.length).toBe(drawn)
-    })
-
-    it('is brought up to date before a snapshot, without waiting', () => {
-      const { engine, record } = start()
-      record.loader.onLoad(gltfWith({ isMesh: true, geometry: armGeometry() }))
-      const { canvas, ctx } = inkCanvas()
-      engine.setPlacement(PLACED, TABLE)
-      engine.setDesign(canvas)
-      const drawn = ctx.putImageData.mock.calls.length
-      engine.setPlacement({ ...PLACED, widthCm: 4, heightCm: 5 }, TABLE)
-      engine.snapshot()
-      expect(ctx.putImageData.mock.calls.length).toBe(drawn + 1)
-    })
-
-    it('stops waiting when the view goes', () => {
-      const { engine } = start()
-      const { canvas, ctx } = inkCanvas()
-      engine.setPlacement(PLACED, TABLE)
-      engine.setDesign(canvas)
-      engine.setPlacement({ ...PLACED, widthCm: 4, heightCm: 5 }, TABLE)
-      const drawn = ctx.putImageData.mock.calls.length
-      engine.dispose()
-      vi.advanceTimersByTime(1000)
-      expect(ctx.putImageData.mock.calls.length).toBe(drawn)
-    })
   })
 
   it('keeps drawing while spinning', () => {
@@ -353,7 +257,7 @@ describe('createArmEngine', () => {
     const { engine, record, canvas, mount } = start({ onResize })
     const geometry = armGeometry()
     record.loader.onLoad(gltfWith({ isMesh: true, geometry }))
-    engine.setDesign(inkCanvas().canvas)
+    engine.setDesign(document.createElement('canvas'))
     engine.dispose()
     expect(record.disposed.sort()).toEqual(['blank', 'material', 'renderer', 'texture'])
     expect(geometry.dispose).toHaveBeenCalledTimes(1)

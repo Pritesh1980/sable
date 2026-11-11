@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   circumferenceAt, designSizeCm, clampPlacement, pinchWidth, wrapShare,
-  isDarkBackground, toInkPixels, healInkPixels, healedInkFloor, spreadSigmaPx, spreadInk, gaussianKernel, HEALED_SPREAD_MM, MIN_WIDTH_CM, MAX_WRAP, viewFrame, designYaw, WHOLE_ARM,
+  isDarkBackground, toInkPixels, healInkPixels, healedInkFloor, MIN_WIDTH_CM, MAX_WRAP, viewFrame, designYaw, WHOLE_ARM,
   snapshotPose, MAX_SNAPSHOT_TURN, formatCm, arcLabel, snapshotVariant,
 } from '../data/placement3d'
 
@@ -137,57 +137,6 @@ describe('healedInkFloor', () => {
     const [r, g, b] = healedInkFloor(skin, 0.92)
     expect(b).toBeGreaterThan(r)
     expect(g).toBeGreaterThan(r)
-  })
-})
-
-describe('spreadSigmaPx', () => {
-  it('spreads a fixed distance of skin, so a bigger print blurs by fewer pixels', () => {
-    expect(spreadSigmaPx(1024, 12)).toBeCloseTo((HEALED_SPREAD_MM / 10) * (1024 / 12), 9)
-    expect(spreadSigmaPx(1024, 24)).toBeCloseTo(spreadSigmaPx(1024, 12) / 2, 9)
-  })
-  it('is no blur for a design with no size yet', () => {
-    expect(spreadSigmaPx(1024, 0)).toBe(0)
-  })
-})
-
-describe('gaussianKernel', () => {
-  it('is no blur below a quarter of a pixel', () => {
-    expect(gaussianKernel(0.2)).toEqual([1])
-    expect(gaussianKernel(0)).toEqual([1])
-  })
-  it('reaches out to three sigma and sums to one', () => {
-    const k = gaussianKernel(1.3)
-    expect(k).toHaveLength(2 * Math.ceil(3.9) + 1)
-    expect(k.reduce((a, b) => a + b, 0)).toBeCloseTo(1, 9)
-  })
-})
-
-describe('spreadInk', () => {
-  const W = [255, 255, 255, 255]
-  const K = [0, 0, 0, 255]
-  const grid = (w, h, at) => px(...Array.from({ length: w * h }, (_, i) => at(i % w, Math.floor(i / w))))
-  const inkAt = (out, w, x, y) => 1 - toLinear(srgb(out[4 * (y * w + x)]))
-
-  it('changes nothing when the spread is too small to see', () => {
-    const image = grid(3, 1, (x) => (x === 1 ? K : W))
-    expect([...spreadInk(image, 3, 1, 0.1)]).toEqual([...image])
-  })
-  it('spreads a dot into its neighbours, keeping the ink it had', () => {
-    const image = grid(9, 9, (x, y) => (x === 4 && y === 4 ? K : W))
-    const out = spreadInk(image, 9, 9, 1)
-    expect(inkAt(out, 9, 4, 4)).toBeLessThan(1)
-    expect(inkAt(out, 9, 5, 4)).toBeGreaterThan(0)
-    expect(inkAt(out, 9, 5, 4)).toBeCloseTo(inkAt(out, 9, 4, 5), 6) // round, not streaked
-    let total = 0
-    for (let y = 0; y < 9; y += 1) for (let x = 0; x < 9; x += 1) total += inkAt(out, 9, x, y)
-    // All of it, less what rounds away to bare skin in the faint tails.
-    expect(total).toBeGreaterThan(0.9)
-    expect(total).toBeLessThan(1.01)
-  })
-  it('fades ink at the border into the bare skin outside the image', () => {
-    const out = spreadInk(grid(9, 9, () => K), 9, 9, 1)
-    expect(out[0]).toBeGreaterThan(out[4 * (4 * 9 + 4)]) // corner lighter than middle
-    expect(out[4 * (4 * 9 + 4)]).toBe(0) // the middle stays solid
   })
 })
 

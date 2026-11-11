@@ -198,8 +198,8 @@ arm at its real size, close up, so the tattoo fills the view.
   wraps more than 90% of the way round, and a tall one is narrowed to fit the skin.
 - **Whole arm** steps back to judge scale; **Close up** returns to the tattoo.
 - The ink is shown **healed**, the way it looks once settled: black is a soft, cool black
-  rather than a crisp dark brown, colour fades a little, and lines spread a fraction of a
-  millimetre. Very faint strokes in a design stay faint on the arm.
+  rather than a dark brown, and colour fades a little. Very faint strokes in a design stay
+  faint on the arm.
 
 **Save as variant** keeps the picture on the concept next to your other results, titled
 with its width (for example *On the arm, 12 cm*) and with the size and position in its
