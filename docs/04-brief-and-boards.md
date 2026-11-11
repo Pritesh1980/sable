@@ -51,6 +51,32 @@ The editor opens the system share sheet when available. Otherwise it requests a 
 and briefly says **Download requested**; check your downloads for the file. Use **Copy brief**
 instead to put a formatted plain-text summary on your clipboard.
 
+### Choose the card's photos
+
+Use **Make cover** or the left/right arrows beneath a reference to reorder it.
+The first reference becomes the idea's cover; **Card 1–4** marks the photos actually
+prepared for export. **Checking card…** means selection is still being checked.
+External links and unavailable photos stay in the idea but are labelled as excluded.
+
+### Preview and crop before sharing
+
+Tap **Preview card** to see the exact PNG you will share. **Horizontal**, **Vertical**
+and **Zoom** adjust the export crop of each selected reference; **Reset crop** restores
+its centred crop. Captions, original photos and their other uses are unchanged.
+On a phone, the card stays visible while the crop controls scroll below it.
+
+![The card preview and export crop controls](../public/guide/brief-card-preview.png)
+
+After an edit, the old preview is hidden and sharing waits for the updated card.
+**Share this card** shares those exact prepared bytes. Quick **Share as image** in the
+editor uses the same prepared card without requiring a preview. **Refresh preview**
+retries photos that could not be read; a failed preparation also offers **Refresh card**
+in the editor.
+
+Close the preview to return to the editor, then **Save** the idea to keep its reference
+order and crop settings. Back without saving discards those draft changes.
+Crop settings follow each reference through backup and restore.
+
 ---
 
 ## Mood boards

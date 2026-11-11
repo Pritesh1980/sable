@@ -85,3 +85,25 @@ This plan covers both approved increments. Ordering may be a separate commit, bu
 ## Plan review receipt
 
 Codex and agy read-only reviews found no design blockers or unresolved owner decisions. Incorporated their guardrails for native-iPhone verification, the quick-share prepared-result path, full-content invalidation, and preservation of crop metadata during caption edits. Self-review confirmed the four tasks cover the issue and its approved extension.
+
+## Implementation receipt
+
+All four increments are implemented locally. Verification: 251 unit-test files / 2,728
+tests, 31 Chromium browser checks (including `/sable/`), lint, both base builds and
+23 Mermaid diagrams passed. Fictional guide screenshots were refreshed and inspected.
+Real iPhone Safari file-share activation remains an explicit acceptance check, not
+something established by the Chromium navigator.share stub.
+
+The independent final reviewer found two important issues, both reproduced before
+fixing: exclusion badges intercepted phone Remove taps, and identity-only removal
+confused duplicate references carrying different notes/crops. Regression tests now
+cover real touch Remove/Undo and occurrence-aware metadata preservation. The UX review
+also identified off-screen mobile crop feedback; the card now remains visible while
+its controls scroll separately, with 320/430px browser coverage.
+
+Review dispositions: keep the deliberate pending-image placeholder (never display a
+stale draft's PNG), and keep the existing overflow semantics counting all omitted local
+reference entries, including unavailable ones, rather than claiming extra decodable
+photos. Deferred minor: an uncropped axis may not visibly pan at 1× zoom. An unrelated
+touch audit also found five existing undersized Gallery controls; none was changed here.
+No push or merge is included in this implementation.

@@ -1,5 +1,6 @@
 import { useId } from 'react'
 import useDialogFocus, { useEscapeToClose } from '../hooks/useDialogFocus'
+import GeneratedArtworkNotice from './GeneratedArtworkNotice'
 
 function CropControl({ label, value, sourceIndex, zoom = false, onChange }) {
   const id = useId()
@@ -33,14 +34,15 @@ export default function BriefCardPreview({
           className="min-h-11 min-w-11 text-sm text-cream-muted hover:text-cream">Close</button>
       </div>
     </header>
-    <div className="mx-auto grid max-w-5xl gap-6 px-5 py-5 lg:grid-cols-2">
+    <div className="mx-auto grid h-[calc(100dvh_-_69px)] max-w-5xl grid-rows-[auto_minmax(0,1fr)] gap-4 overflow-hidden px-5 py-4 lg:h-auto lg:grid-cols-2 lg:grid-rows-none lg:gap-6 lg:overflow-visible lg:py-5">
       <div className="self-start lg:sticky lg:top-24">
-        <div className="flex aspect-[4/5] items-center justify-center border border-ink-border bg-ink-card" aria-busy={preparing}>
+        <div className="flex h-[28dvh] items-center justify-center border border-ink-border bg-ink-card lg:aspect-[4/5] lg:h-auto" aria-busy={preparing}>
           {prepared && previewUrl
             ? <img src={previewUrl} alt="Brief card preview" className="h-full w-full object-contain" />
             : <p className="px-5 text-center text-sm text-cream-muted">{error || 'Updating card…'}</p>}
         </div>
         <p className="mt-2 text-xs text-cream-muted">1080 × 1350 PNG. Changes stay in this idea’s draft until you save.</p>
+        <GeneratedArtworkNotice images={images} className="mt-2" />
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <button onClick={onShare}
             disabled={!prepared || shareState !== 'idle'}
@@ -55,7 +57,7 @@ export default function BriefCardPreview({
         {prepared?.skippedNotice && <p className="mt-2 text-sm text-cream-muted">{prepared.skippedNotice}</p>}
         {unavailable > 0 && <p className="mt-2 text-sm text-cream-muted">{unavailable} reference{unavailable === 1 ? '' : 's'} unavailable. Refresh to retry.</p>}
       </div>
-      <div className="space-y-5">
+      <div className="min-h-0 space-y-5 overflow-y-auto pb-5 lg:overflow-visible lg:pb-0">
         <div>
           <h3 className="font-display text-xl">Frame your references</h3>
           <p className="mt-2 text-sm leading-relaxed text-cream-muted">These controls change only the card’s crop. Your original photos and their notes stay untouched.</p>

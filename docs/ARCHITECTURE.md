@@ -480,8 +480,17 @@ only strips inline data URLs). `initial()` paints those rows directly; for the o
 `applyDefaults` unions the starter photos in, tombstone-aware and de-duplicated by
 identity, and nothing is added for display. `onEdit` normalises whatever a producer emitted into refs
 (`normalizeArtistImages`, `dedupeRefs`) and writes the tombstones. Idea state holds the
-stored `{ key, note }` / `{ url, note }` form too: `ideasCodec` only warms the URL cache
-and, through `ensureUploaded` (which hands back the value it changed), swaps an inline
+stored `{ key, note }` / `{ url, note }` form too, with optional
+`briefCrop: { x, y, zoom }` per reference occurrence (#205). The shared
+`referenceImages.js` normalizer preserves and bounds that export-only crop through
+cache/sync, inline migration and backup restore. It never changes source bytes or
+uses a display URL as durable identity. Ordering and notes are also occurrence-based.
+The idea editor's `usePreparedBriefCard` versions all canvas-visible inputs, and
+`prepareBriefCardImage` returns one PNG and the actual selected source indices.
+Badges, preview and sharing consume that same result; stale async results are discarded
+and replaced preview URLs revoked. Crops are applied only inside each exported photo region.
+`ideasCodec` warms the URL cache and, through `ensureUploaded`
+(which hands back the value it changed), swaps an inline
 photo stored before staging existed for its key. A concept's and a variant's `imageUrl`
 is the stored string as well — a blob key, an external URL or `''` — so there is no
 `unresolvedImageKey` any more. What the user sees is

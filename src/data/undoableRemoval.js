@@ -21,17 +21,17 @@ export function itemIdentity(item) {
   return JSON.stringify(item)
 }
 
-function indexOfIdentity(list, item) {
-  const id = itemIdentity(item)
-  return list.findIndex((candidate) => itemIdentity(candidate) === id)
+function indexOfIdentity(list, item, identify) {
+  const id = identify(item)
+  return list.findIndex((candidate) => identify(candidate) === id)
 }
 
-function countIdentity(list, item) {
-  const id = itemIdentity(item)
-  return list.reduce((n, candidate) => (itemIdentity(candidate) === id ? n + 1 : n), 0)
+function countIdentity(list, item, identify) {
+  const id = identify(item)
+  return list.reduce((n, candidate) => (identify(candidate) === id ? n + 1 : n), 0)
 }
 
-export function removeAt(list, index) {
+export function removeAt(list, index, identify = itemIdentity) {
   if (!Array.isArray(list) || index < 0 || index >= list.length) {
     return { list, removal: null }
   }
@@ -47,22 +47,22 @@ export function removeAt(list, index) {
       // How many of this identity remained after the removal. Restoring is
       // allowed back up to this many — which lets a batch bring back two photos
       // that share a URL, while still refusing to restore one removal twice.
-      remaining: countIdentity(next, item),
+      remaining: countIdentity(next, item, identify),
     },
   }
 }
 
 /** Remove by identity rather than position, so it stays correct when applied to a
  *  list that has shifted since the index was captured. */
-export function removeItem(list, item) {
+export function removeItem(list, item, identify = itemIdentity) {
   const next = Array.isArray(list) ? list.slice() : []
-  const at = indexOfIdentity(next, item)
+  const at = indexOfIdentity(next, item, identify)
   if (at === -1) return list
   next.splice(at, 1)
   return next
 }
 
-export function restoreRemoval(list, removal) {
+export function restoreRemoval(list, removal, identify = itemIdentity) {
   if (!removal) return list
   const next = Array.isArray(list) ? list.slice() : []
 
@@ -70,11 +70,11 @@ export function restoreRemoval(list, removal) {
   // press of Undo. Compared by count rather than presence so that genuinely
   // duplicated items (two photos sharing a URL) can both come back.
   const allowed = removal.remaining ?? 0
-  if (countIdentity(next, removal.item) > allowed) return list
+  if (countIdentity(next, removal.item, identify) > allowed) return list
 
   // Prefer the neighbours it sat between; fall back to the recorded index.
-  const prevIdx = removal.prev != null ? indexOfIdentity(next, removal.prev) : -1
-  const nextIdx = removal.nextItem != null ? indexOfIdentity(next, removal.nextItem) : -1
+  const prevIdx = removal.prev != null ? indexOfIdentity(next, removal.prev, identify) : -1
+  const nextIdx = removal.nextItem != null ? indexOfIdentity(next, removal.nextItem, identify) : -1
 
   let at
   if (prevIdx !== -1) at = prevIdx + 1

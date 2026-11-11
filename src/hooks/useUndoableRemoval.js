@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useRef } from 'react'
-import { removeAt, removeItem, restoreRemoval } from '../data/undoableRemoval'
+import { itemIdentity, removeAt, removeItem, restoreRemoval } from '../data/undoableRemoval'
 import { useUndo } from '../context/useUndo'
 
 const defaultBatchMessage = (n) => (n === 1 ? 'Removed' : `${n} items removed`)
@@ -26,6 +26,7 @@ const defaultConfirmMessage = (n) => (n === 1 ? 'Restored' : `${n} items restore
  * @param options.durable  true when the removal is already persisted, so the
  *                         offer should outlive this component; false when it
  *                         only edited draft state discarded on close.
+ * @param options.identify optional identity including per-occurrence metadata
  */
 export function useUndoableRemoval(list, onChange, options = {}) {
   const {
@@ -35,6 +36,7 @@ export function useUndoableRemoval(list, onChange, options = {}) {
     durable = false,
     isTargetVisible,
     subject,
+    identify = itemIdentity,
   } = options
 
   const { offer, promote, withdraw, registerVisibility } = useUndo()
@@ -74,11 +76,11 @@ export function useUndoableRemoval(list, onChange, options = {}) {
   }, [subject, registerVisibility])
 
   const remove = useCallback((index) => {
-    const { removal } = removeAt(listRef.current, index)
+    const { removal } = removeAt(listRef.current, index, identify)
     if (!removal) return
 
     const write = (updater) => (sinkRef.current || onChangeRef.current)(updater)
-    write((current) => removeItem(current, removal.item))
+    write((current) => removeItem(current, removal.item, identify))
 
     const batch = [...batchRef.current, removal]
     batchRef.current = batch
@@ -95,10 +97,10 @@ export function useUndoableRemoval(list, onChange, options = {}) {
       // Fallback for callers without a subject: this instance's own view.
       shouldConfirm: () => !mountedRef.current || !(visibleRef.current?.() ?? true),
       // Newest first, so each restore lands against the list the next expects.
-      onUndo: () => write((current) => batch.reduceRight((acc, r) => restoreRemoval(acc, r), current)),
+      onUndo: () => write((current) => batch.reduceRight((acc, r) => restoreRemoval(acc, r, identify), current)),
       onSettled: () => { batchRef.current = [] },
     })
-  }, [offer, message, batchMessage, confirmMessage, durable, batchKey, subject])
+  }, [offer, message, batchMessage, confirmMessage, durable, batchKey, subject, identify])
 
   /**
    * Hand the live offer to whoever owns the data now, and make it durable. Used

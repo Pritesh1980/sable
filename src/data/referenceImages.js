@@ -23,6 +23,12 @@ export function normalizeReferenceImages(images = []) {
 
 const validIndex = (images, index) => Number.isInteger(index) && index >= 0 && index < images.length
 
+// Removal/Undo must distinguish copies of one photo carrying different intent.
+// Equal copies remain interchangeable; this identity is never persisted.
+export function referenceOccurrenceIdentity(image) {
+  return JSON.stringify([image.key || image.url, image.note || '', normalizeBriefCrop(image.briefCrop)])
+}
+
 export function moveReferenceImage(images, fromIndex, toIndex) {
   const next = normalizeReferenceImages(images)
   if (!validIndex(next, fromIndex) || !validIndex(next, toIndex)) return next

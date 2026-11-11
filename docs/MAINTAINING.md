@@ -25,6 +25,12 @@ against the isolated server below. This refreshes `artist-capture.png` (430 × 9
 Wall and Gallery now both use `AddArtistModal`; screenshot analysis must be started
 explicitly, never by silently adding a key or sending a paid request during capture.
 
+For Brief card changes, run `GUIDE_URL=http://localhost:15474 node scripts/captureBriefCardGuide.mjs`
+against the isolated local-backend server. It refreshes `brief-idea-editor.png` at
+430 × 920 and `brief-card-preview.png` at 1280 × 900, using fictional references only.
+The second image is linked from the Ideas guide. Real iPhone Safari sharing is a
+separate acceptance check; Chromium emulation cannot prove native share-sheet activation.
+
 Screenshots are captured against the dev server with Playwright at a phone viewport
 (`430 × 920`), plus a couple at desktop width (`1280 × 900`). Capture **viewport** shots,
 not `fullPage` — the fixed bottom nav floats to the middle on full-page captures.

@@ -133,6 +133,29 @@ export async function openIdeaWithPhoto(page) {
   await expect(page.getByRole('button', { name: 'Remove photo' })).toBeAttached()
 }
 
+// Seed away from the running app so its sync cannot overwrite the fixture.
+export async function openBriefCardFixture(page, { base = '/', missing = false } = {}) {
+  await openDemo(page, base + 'brief')
+  await page.goto(base + 'manifest.json')
+  await page.evaluate(({ missing }) => {
+    const user = JSON.parse(localStorage.getItem('tattoo_local_session')).user
+    const refs = [
+      'mora.blackfern/fern-v4.webp', 'mora.blackfern/grasses-v4.webp',
+      'mora.blackfern/magnolia-v4.webp', 'vesper_noctis/1.svg',
+      'vesper_noctis/2.svg', 'vesper_noctis/3.svg',
+    ].map((path, index) => ({ url: 'images/demo/' + path, note: 'Reference ' + (index + 1) }))
+    if (missing) refs.unshift({ url: 'images/demo/missing-card.png', note: 'Unavailable' },
+      { url: 'https://example.com/external.jpg', note: 'External' })
+    const rows = [{ id: 'card-fixture', title: 'Card arrangement study', description: 'Keep breathing room.',
+      tags: ['fine-line'], placement: 'forearm', images: refs, linkedArtists: [], status: 'idea',
+      updatedAt: '2026-11-11T10:00:00.000Z' }]
+    localStorage.setItem('tattoo_ideas', JSON.stringify(rows))
+    localStorage.setItem(`tattoo_remote_${user.id}_ideas`, JSON.stringify(rows))
+  }, { missing })
+  await page.goto(base + 'brief')
+  await page.getByText('Card arrangement study', { exact: true }).click()
+}
+
 export const opacity = (locator) => locator.evaluate((el) => getComputedStyle(el).opacity)
 
 // The installed app must start with no network: the service worker serves the

@@ -12,7 +12,7 @@ import { IDEA_STATUSES, matchArtistsToIdea } from '../data/brief'
 import { shareOrDownloadBriefCard } from '../data/briefCard'
 import usePreparedBriefCard from '../hooks/usePreparedBriefCard'
 import BriefCardPreview from '../components/BriefCardPreview'
-import { moveReferenceImage, setReferenceCrop, setReferenceNote } from '../data/referenceImages'
+import { moveReferenceImage, referenceOccurrenceIdentity, setReferenceCrop, setReferenceNote } from '../data/referenceImages'
 import { buildIdeaBrief } from '../data/export'
 import { compressImages } from '../hooks/useImageUpload'
 import { stageImageRefs, withStagedImages } from '../data/imageStaging'
@@ -233,6 +233,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
     },
     {
       message: 'Photo removed',
+      identify: referenceOccurrenceIdentity,
       batchMessage: (n) => `${n} photos removed`,
       confirmMessage: (n) => (n === 1 ? 'Photo restored' : `${n} photos restored`),
       durable: false,
@@ -354,10 +355,11 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
             {shareState === 'sharing' ? 'Sharing…' : shareState === 'download' ? 'Download requested' : 'Share as image'}
           </button>
         </div>
-        <p role="status" className={shareNote ? 'font-mono text-xs text-cream-muted mt-1 mb-2' : 'sr-only'}>
+        <p role="status" className={shareNote || card.error ? 'font-mono text-xs text-cream-muted mt-1 mb-2' : 'sr-only'}>
           {shareState === 'download' && <span className="sr-only">PNG download requested. </span>}
           {shareNote || card.error}
         </p>
+        {card.error && <button onClick={card.refresh} className="min-h-11 px-2 text-sm text-cream-muted hover:text-cream">Refresh card</button>}
         <GeneratedArtworkNotice images={images} className="mt-2" />
       </div>
 
@@ -448,7 +450,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
                 <div key={`${itemIdentity(image)}:${index}`} id={`${composerId}-reference-${index}`} tabIndex={-1}
                   className="bg-ink-muted rounded-xs overflow-hidden border border-ink-border outline-hidden focus-visible:ring-2 focus-visible:ring-cream-muted">
                   <div className="relative aspect-square group">
-                    <span className="absolute left-1 top-1 z-10 bg-ink-black/90 px-2 py-1 text-xs text-cream">
+                    <span className="pointer-events-none absolute left-1 top-1 z-10 max-w-[calc(100%_-_3.25rem)] bg-ink-black/90 px-2 py-1 text-xs text-cream">
                       {!card.prepared ? 'Checking card…' : (() => {
                         const at = card.prepared.photos.findIndex((photo) => photo.sourceIndex === index)
                         if (at !== -1) return `Card ${at + 1}`

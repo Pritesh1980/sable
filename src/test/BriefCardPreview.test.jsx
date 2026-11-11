@@ -1,7 +1,8 @@
 import { beforeEach, afterEach, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import Brief from '../pages/Brief'
+import { UndoProvider } from '../context/UndoContext'
 
 let ctx
 beforeEach(() => {
@@ -25,7 +26,7 @@ const images = [
   { url: '/c.png', note: 'Third' },
 ]
 const idea = { id: 'i', title: 'A reference study', description: 'Old text', images, tags: [], linkedArtists: [] }
-const tree = (ideas, setIdeas) => <MemoryRouter><Brief ideas={ideas} setIdeas={setIdeas} artists={[]} /></MemoryRouter>
+const tree = (ideas, setIdeas) => <MemoryRouter><UndoProvider><Brief ideas={ideas} setIdeas={setIdeas} artists={[]} /></UndoProvider></MemoryRouter>
 
 it('saves occurrence ordering without overwriting unrelated concurrent edits', async () => {
   const setIdeas = vi.fn()
@@ -82,4 +83,34 @@ it('reset removes only the selected export crop', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Close card preview' }))
   fireEvent.click(screen.getByRole('button', { name: 'Save', exact: true }))
   expect(setIdeas.mock.calls.at(-1)[0]([idea])[0].images[1]).toEqual({ url: '/a.png', note: 'Second' })
+})
+
+it('keeps the generated imagery disclosure visible in a demo preview', async () => {
+  render(tree([{ ...idea, images: [{ url: 'images/demo/mora.blackfern/fern-v4.webp', note: 'Demo' }] }], vi.fn()))
+  fireEvent.click(screen.getByText('A reference study'))
+  fireEvent.click(screen.getByRole('button', { name: 'Preview card' }))
+  expect(within(screen.getByRole('dialog', { name: 'Preview card' })).getByText(/AI-generated imagery/)).toBeVisible()
+})
+
+it('offers a visible retry instead of stranding a failed card preparation', async () => {
+  HTMLCanvasElement.prototype.getContext.mockReturnValueOnce(null)
+  render(tree([{ ...idea, images: [] }], vi.fn()))
+  fireEvent.click(screen.getByText('A reference study'))
+  expect(await screen.findByRole('button', { name: 'Refresh card' })).toBeEnabled()
+  expect(screen.getByRole('button', { name: 'Share as image' })).toBeDisabled()
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh card' }))
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Share as image' })).toBeEnabled())
+})
+
+it('removes and undoes the chosen duplicate without losing either note or crop', async () => {
+  render(tree([idea], vi.fn()))
+  fireEvent.click(screen.getByText('A reference study'))
+  fireEvent.click(screen.getAllByRole('button', { name: 'Remove photo' })[1])
+  expect(screen.getAllByPlaceholderText('What to borrow from this image…').map((input) => input.value))
+    .toEqual(['First', 'Third'])
+  fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+  expect(screen.getAllByPlaceholderText('What to borrow from this image…').map((input) => input.value))
+    .toEqual(['First', 'Second', 'Third'])
+  fireEvent.click(screen.getByRole('button', { name: 'Preview card' }))
+  await waitFor(() => expect(screen.getByRole('slider', { name: 'Zoom reference 2' })).toHaveValue('2'))
 })
