@@ -624,11 +624,30 @@ starts:
 python3 -m unittest discover -s scripts/blender
 ```
 
-## The arm inside Sable: 3D placement (spike)
+## The arm inside Sable: 3D placement
 
 [#195](https://github.com/Pritesh1980/sable/issues/195) asks whether the same arm can
-live in the app, turned with a finger and resized with a pinch. The spike is at
-**`/lab/placement`** (not linked from the nav; demo designs only).
+live in the app, turned with a finger and resized with a pinch. It began as a spike at
+**`/lab/placement`** (not linked from the nav; demo designs only), which is still there.
+
+Since November 2026 it also opens from a real concept: a saved image result on the
+Concepts page has **View on arm in 3D** beside **Try on skin** and **Make STL**, which
+shows that result's own image on the arm in a full-screen drawer with the lab's controls,
+and **Save as variant** keeps a picture of it on the concept (user guide:
+[Concepts](06-concepts.md#see-a-concept-on-the-arm-in-3d)).
+
+- The stored image is a ref (a blob key or a static path). WebGL cannot read the pixels of
+  a cross-origin signed URL, so the drawer resolves it to a same-origin copy with
+  `useImageBytes`, as `GlCrossfade` does, and says so if the image is not on the device.
+- The renderer keeps no drawing buffer between frames (`preserveDrawingBuffer` is off), so
+  the engine's `snapshot()` draws a frame and reads the canvas as PNG in the same task.
+- The saved picture is framed on the design whatever the view was showing
+  (`snapshotPose`): close up even from **Whole arm**, and turned at most 0.6 rad from
+  square-on, so a design dragged round the back is brought to face the camera.
+- It is saved through the page's one add path (`Concepts.addVariant`): downsized like a
+  try-on result, staged first, and only the key reaches state. The variant is titled
+  "On the arm, 12 cm", with provider **Other** like a live try-on, and its notes carry the
+  size and position.
 
 Blender's part is one export, run again only when the arm itself should change:
 
@@ -681,19 +700,26 @@ skin, measured round the curve, the same definition `--width-cm` uses.
 | `src/data/placement3d.js` | Pure maths: clamping, pinch, what the camera frames, the dark-card flip. |
 | `src/lib/armPlacement.js` | The three.js scene: shader, camera, gestures. three.js is passed in, so it is unit tested against a mock (`armPlacement.spec.js`). |
 | `src/components/ArmPlacement3D.jsx` | The lazy chunk that imports three.js and drives the scene. |
+| `src/components/ArmPlacementPanel.jsx` | The view with its controls (readout, sliders, Whole arm), shared by the lab and the drawer. |
+| `src/components/ArmPlacementDrawer.jsx` | The dialog a concept result opens: resolves the image, saves the snapshot as a variant. |
 | `src/pages/PlacementLab.jsx` | The lab page. |
 | `e2e/placement3d.e2e.js` | Load, one-finger turn, pinch, close up and whole arm, and that the chunk stays out of other pages. |
+| `e2e/placementConcept.e2e.js` | From a saved result: open, pinch, save as a variant, that the saved picture is of the tattoo, Escape and Back, and that three.js loads only when the drawer opens. |
 
-### What the spike measured (Nov 2026)
+### What was measured (Nov 2026)
 
 | | Raw | Gzip |
 |---|---|---|
 | `arm-upper.glb` (2,091 vertices, 4,061 triangles) | 116 kB | 78 kB |
-| `ArmPlacement3D` chunk (view + glTF loader) | 53 kB | 16 kB |
-| `PlacementLab` chunk | 5 kB | 2 kB |
-| `three.module` (already shipped for the Home coverflow) | 736 kB | 184 kB |
+| `ArmPlacement3D` chunk (view + glTF loader) | 54 kB | 17 kB |
+| `ArmPlacementPanel` chunk (controls and placement maths, no three.js) | 6 kB | 3 kB |
+| `PlacementLab` chunk | 2 kB | 1 kB |
+| `three.module` (already shipped for the Home coverflow) | 747 kB | 188 kB |
 
-The main bundle is unchanged: nothing 3D loads until the lab page opens.
+The main bundle is unchanged: nothing 3D loads until the lab page or the drawer opens.
+The small `ArmPlacementPanel` chunk loads with the Concepts page; three.js and the glTF
+loader arrive only when **View on arm in 3D** is tapped (`e2e/placementConcept.e2e.js`
+checks this).
 
 **Draco was tried and dropped.** It shrinks the model to 17 kB, but three's Draco decoder
 is about 250 kB of extra files, so it costs more than it saves at this size. Two levels of
@@ -705,9 +731,8 @@ throttled six times. That is an emulated phone on a laptop GPU, not an iPhone: t
 is one texture read and a few dot products per pixel, so a real phone should manage, but
 nobody has held one yet.
 
-### Not in the spike
+### Not built yet
 
-- Saving a snapshot as a concept variant, and opening the view from a real concept.
 - The forearm, and the inner side of the upper arm (the export is `side='outer'`).
 - Your own measurements: the model is fitted to the default averages.
 - Skin near the elbow and over the shoulder: a design can sit between 1.7 and 25 cm above

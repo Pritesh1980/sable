@@ -252,6 +252,48 @@ describe('ConceptVariantLab', () => {
     })
   })
 
+  it('offers View on arm in 3D for image results and passes the same design details', () => {
+    const onViewOnArm = vi.fn()
+    renderLab({
+      concept: {
+        ...baseConcept,
+        variants: [{
+          id: 'variant-image', provider: 'gemini', title: 'Moth pass', imageUrl: 'user/u1/concepts/concept-1/moth',
+          response: '', notes: '', rating: 0, isBest: false, createdAt: '2026-05-31T08:00:00.000Z',
+        }],
+      },
+      onViewOnArm,
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Moth pass result for Raven chest tattoo' }))
+    const action = screen.getByRole('button', { name: 'View Moth pass result for Raven chest tattoo on the arm in 3D' })
+    expect(action).toHaveTextContent('View on arm in 3D')
+    fireEvent.click(action)
+    // The stored ref itself: the drawer resolves it, nothing upstream does.
+    expect(onViewOnArm).toHaveBeenCalledWith({
+      conceptId: 'concept-1',
+      conceptLabel: 'Raven chest tattoo',
+      variantId: 'variant-image',
+      variantLabel: 'Moth pass',
+      imageUrl: 'user/u1/concepts/concept-1/moth',
+    })
+  })
+
+  it('does not offer the 3D arm for a text-only result, or where the page has no 3D view', () => {
+    const variant = {
+      id: 'variant-text', provider: 'chatgpt', title: 'Text only', imageUrl: '',
+      response: 'Use this as artist-facing language.', notes: '', rating: 4, isBest: false,
+      createdAt: '2026-05-31T08:00:00.000Z',
+    }
+    const { unmount } = renderLab({ concept: { ...baseConcept, variants: [variant] }, onViewOnArm: vi.fn() })
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Text only result for Raven chest tattoo' }))
+    expect(screen.queryByRole('button', { name: /on the arm in 3D$/ })).toBeNull()
+    unmount()
+
+    renderLab({ concept: { ...baseConcept, variants: [{ ...variant, imageUrl: 'data:image/png;base64,x' }] } })
+    fireEvent.click(screen.getByRole('button', { name: 'Expand Text only result for Raven chest tattoo' }))
+    expect(screen.queryByRole('button', { name: /on the arm in 3D$/ })).toBeNull()
+  })
+
   it('does not show Make STL for variants without images', () => {
     renderLab({
       concept: {

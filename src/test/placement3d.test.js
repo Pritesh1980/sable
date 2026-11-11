@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   circumferenceAt, designSizeCm, clampPlacement, pinchWidth, wrapShare,
   isDarkBackground, toInkPixels, MIN_WIDTH_CM, MAX_WRAP, viewFrame, designYaw, WHOLE_ARM,
+  snapshotPose, MAX_SNAPSHOT_TURN, formatCm, arcLabel, snapshotVariant,
 } from '../data/placement3d'
 
 const TABLE = [[0, 24], [10, 28], [20, 30], [31, 36]]
@@ -134,5 +135,55 @@ describe('designYaw', () => {
     // 7.5 cm round a 30 cm arm is a quarter turn.
     expect(designYaw({ centreCm: 20, arcCm: 7.5 }, TABLE)).toBeCloseTo(-Math.PI / 2)
     expect(designYaw({ centreCm: 20, arcCm: -7.5 }, TABLE)).toBeCloseTo(Math.PI / 2)
+  })
+})
+
+describe('snapshotPose', () => {
+  const placed = { widthCm: 12, heightCm: 15.2, centreCm: 17, arcCm: 7.5 }
+  it('frames the saved picture on the design, whatever the view was showing', () => {
+    const pose = snapshotPose(placed, TABLE, 0)
+    expect(pose).toMatchObject(viewFrame(placed, 'design'))
+    expect(pose.frameCm).toBeLessThan(WHOLE_ARM.frameCm)
+    expect(pose.yaw).toBeCloseTo(designYaw(placed, TABLE))
+  })
+  it('keeps a small turn of the arm, so the picture is the angle you chose', () => {
+    expect(snapshotPose(placed, TABLE, 0.3).turned).toBeCloseTo(0.3)
+    expect(snapshotPose(placed, TABLE, -0.25).turned).toBeCloseTo(-0.25)
+  })
+  it('never saves the back of the arm: a design turned away is brought round', () => {
+    expect(snapshotPose(placed, TABLE, 2.5).turned).toBe(MAX_SNAPSHOT_TURN)
+    expect(snapshotPose(placed, TABLE, -2.5).turned).toBe(-MAX_SNAPSHOT_TURN)
+  })
+  it('counts whole turns of the arm as no turn at all', () => {
+    expect(snapshotPose(placed, TABLE, 4 * Math.PI + 0.2).turned).toBeCloseTo(0.2)
+    expect(snapshotPose(placed, TABLE, -2 * Math.PI - 0.1).turned).toBeCloseTo(-0.1)
+  })
+})
+
+describe('formatCm and arcLabel', () => {
+  it('gives one decimal place', () => {
+    expect(formatCm(12)).toBe('12.0 cm')
+    expect(formatCm(10.44)).toBe('10.4 cm')
+  })
+  it('says which way round the arm in words', () => {
+    expect(arcLabel(0)).toBe('outer arm')
+    expect(arcLabel(4)).toBe('4.0 cm to the back')
+    expect(arcLabel(-3)).toBe('3.0 cm to the front')
+  })
+})
+
+describe('snapshotVariant', () => {
+  const placed = { widthCm: 12, heightCm: 15.2, centreCm: 17, arcCm: 0 }
+  it('titles the variant with the width, without a needless decimal', () => {
+    expect(snapshotVariant('Moth line study', placed).title).toBe('On the arm, 12 cm')
+    expect(snapshotVariant('Moth', { ...placed, widthCm: 10.4 }).title).toBe('On the arm, 10.4 cm')
+  })
+  it('notes what was placed, how big and where', () => {
+    expect(snapshotVariant('Moth line study', placed).notes)
+      .toBe('3D arm preview of Moth line study. 12.0 cm wide × 15.2 cm tall, centred 17.0 cm above the elbow, outer arm.')
+    expect(snapshotVariant('Moth', { ...placed, arcCm: -3 }).notes).toContain('3.0 cm to the front.')
+  })
+  it('is saved like the live try-on: a preview made here, not by an AI provider', () => {
+    expect(snapshotVariant('Moth', placed).provider).toBe('other')
   })
 })

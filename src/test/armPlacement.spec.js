@@ -51,7 +51,11 @@ function makeThree() {
         this.setClearColor = vi.fn()
         this.setSize = vi.fn()
       }
-      render() { record.renders += 1 }
+      render(scene, camera) {
+        record.renders += 1
+        // What the frame showed: how far back the camera was, how far the arm was turned.
+        record.frame = { z: camera?.position.z, yaw: scene?.children[0].children[0].rotation.y }
+      }
       dispose() { record.disposed.push('renderer') }
     },
   }
@@ -267,6 +271,79 @@ describe('createArmEngine', () => {
     expect(record.meshes).toHaveLength(0)
     expect(onReady).not.toHaveBeenCalled()
     expect(onError).not.toHaveBeenCalled()
+  })
+})
+
+describe('snapshot', () => {
+  // The first eight bytes of every PNG file.
+  const PNG = 'data:image/png;base64,iVBORw0KGgo='
+  const SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
+
+  function ready(view = 'design', placement = PLACED) {
+    const made = start()
+    made.record.loader.onLoad(gltfWith({ isMesh: true, geometry: armGeometry() }))
+    made.engine.setPlacement(placement, TABLE, view)
+    made.canvas.toDataURL = vi.fn(() => PNG)
+    tick(80) // let the opening framing settle
+    return made
+  }
+
+  it('draws a frame and reads it back as PNG bytes in the same task', () => {
+    const { engine, record, canvas } = ready()
+    const before = record.renders
+    canvas.toDataURL = vi.fn(() => {
+      // The drawing buffer is only readable straight after a render.
+      expect(record.renders).toBe(before + 1)
+      return PNG
+    })
+    const bytes = engine.snapshot()
+    expect(canvas.toDataURL).toHaveBeenCalledWith('image/png')
+    expect(bytes).toBeInstanceOf(Uint8Array)
+    expect([...bytes]).toEqual(SIGNATURE)
+    expect(frames.length).toBeLessThanOrEqual(1) // no frame was waited for
+  })
+
+  it('frames the picture on the design even while the view shows the whole arm', () => {
+    const closeUp = ready('design')
+    const closeUpZ = closeUp.record.frame.z
+    const { engine, record } = ready('arm')
+    const wholeArmZ = record.frame.z
+    expect(wholeArmZ).toBeGreaterThan(closeUpZ)
+    engine.snapshot()
+    expect(record.frame.z).toBeCloseTo(closeUpZ)
+    // The view itself goes back to what it was showing.
+    tick(2)
+    expect(record.frame.z).toBeCloseTo(wholeArmZ)
+  })
+
+  it('brings a design that was turned away back to face the camera', () => {
+    const { engine, record, canvas } = ready()
+    pointer(canvas, 'pointerdown', 1, 100, 100)
+    pointer(canvas, 'pointermove', 1, 420, 100) // most of half a turn
+    tick()
+    const turnedAway = record.frame.yaw
+    expect(Math.abs(turnedAway)).toBeGreaterThan(2)
+    engine.snapshot()
+    expect(Math.abs(record.frame.yaw)).toBeLessThanOrEqual(0.6)
+    tick(2)
+    expect(record.frame.yaw).toBeCloseTo(turnedAway) // and the view is left as it was
+  })
+
+  it('has nothing to give before the arm and a placement are there', () => {
+    const { engine, record, canvas } = start()
+    canvas.toDataURL = vi.fn(() => PNG)
+    expect(engine.snapshot()).toBeNull()
+    record.loader.onLoad(gltfWith({ isMesh: true, geometry: armGeometry() }))
+    expect(engine.snapshot()).toBeNull() // an arm, but nowhere to put the design yet
+    expect(canvas.toDataURL).not.toHaveBeenCalled()
+  })
+
+  it('gives nothing when the canvas cannot be read', () => {
+    const { engine, canvas } = ready()
+    canvas.toDataURL = vi.fn(() => 'data:,') // what a zero-sized canvas returns
+    expect(engine.snapshot()).toBeNull()
+    canvas.toDataURL = vi.fn(() => { throw new Error('SecurityError') })
+    expect(engine.snapshot()).toBeNull()
   })
 })
 

@@ -10,6 +10,7 @@ import RefinementCompare from '../components/RefinementCompare'
 import PromptPackComposer from '../components/PromptPackComposer'
 import ReliefStlDrawer from '../components/ReliefStlDrawer'
 import SkinPreviewDrawer from '../components/SkinPreviewDrawer'
+import ArmPlacementDrawer from '../components/ArmPlacementDrawer'
 import SavedPromptPack from '../components/SavedPromptPack'
 import {
   addConceptVariant,
@@ -179,6 +180,7 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
   const viewer = useOverlayParam('concept')
   const [stlSource, setStlSource] = useState(null)
   const [skinSource, setSkinSource] = useState(null)
+  const [armSource, setArmSource] = useState(null)
 
   const hasOpenai = Boolean(openaiKey)
   const hasGemini = Boolean(geminiKey)
@@ -317,8 +319,8 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
     if (index !== -1) removeConcept(index)
   }
 
-  // Every variant arrives here: the result form, the on-skin preview and the
-  // live camera snapshot alike.
+  // Every variant arrives here: the result form, the on-skin preview, the live
+  // camera snapshot and the 3D arm snapshot alike.
   function addVariant(conceptId, input) {
     void withStagedImages([input.imageUrl], stagingFor(conceptId), ([key]) => {
       const staged = key ? { ...input, imageUrl: key } : input
@@ -348,6 +350,16 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
 
   function tryOnSkin(input) {
     setSkinSource({
+      conceptId: input.conceptId,
+      conceptLabel: input.conceptLabel,
+      variantLabel: input.variantLabel,
+      imageUrl: input.imageUrl,
+    })
+  }
+
+  // The stored ref goes as it is: the drawer resolves it to readable bytes.
+  function viewOnArm(input) {
+    setArmSource({
       conceptId: input.conceptId,
       conceptLabel: input.conceptLabel,
       variantLabel: input.variantLabel,
@@ -531,10 +543,12 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
   // history entry too (#171), so Back closes the drawer, not the viewer
   // hidden under it. Their contents (a picked image, a prepared source) can't
   // ride in the URL, so a link or reload onto one just shows what's under it.
-  const openLayer = stlSource ? 'stl' : skinSource ? 'skin' : refinement.state.open ? 'refine' : null
+  const openLayer = stlSource ? 'stl' : skinSource ? 'skin' : armSource ? 'arm'
+    : refinement.state.open ? 'refine' : null
   useHistoryLayer('layer', openLayer, () => {
     if (stlSource) setStlSource(null)
     else if (skinSource) setSkinSource(null)
+    else if (armSource) setArmSource(null)
     else refinement.close()
   })
 
@@ -640,6 +654,7 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
                   onRateVariant={rateVariant}
                   onMakeStl={makeStlFromVariant}
                   onTryOnSkin={tryOnSkin}
+                  onViewOnArm={viewOnArm}
                   onRefine={refineSource}
                 />
                 <div className="flex justify-end mt-4 pt-3 border-t border-v2-hairline">
@@ -709,6 +724,7 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
           onRateVariant={rateVariant}
           onMakeStl={makeStlFromVariant}
           onTryOnSkin={tryOnSkin}
+          onViewOnArm={viewOnArm}
           onRefine={refineSource}
         />
       )}
@@ -723,6 +739,12 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
         apiKey={geminiKey}
         onSave={addVariant}
         onClose={() => setSkinSource(null)}
+      />
+
+      <ArmPlacementDrawer
+        source={armSource}
+        onSave={addVariant}
+        onClose={() => setArmSource(null)}
       />
 
       {refinement.state.open && <RefinementComposer

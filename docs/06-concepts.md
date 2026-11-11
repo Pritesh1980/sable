@@ -68,7 +68,8 @@ On a phone, swipe left / right between concepts, swipe down to close, and tap th
 **Back closes the concept.** The browser's Back (Android's back button, Safari's back swipe)
 returns to the Concepts wall, not the page before it, and swiping between concepts doesn't
 add to your history. The address shows the concept (`?concept=…`), so a link opens it. A
-panel opened on top (**Make STL**, **Try on skin**, **Refine this**) closes first, and the
+panel opened on top (**Make STL**, **Try on skin**, **View on arm in 3D**, **Refine this**)
+closes first, and the
 live camera closes before its try-on panel. An app on the iPhone home screen has no back
 gesture; use **× Close** or swipe down.
 
@@ -160,6 +161,30 @@ concept next to your other results, or **Change photo…** to try another angle.
 This needs a Gemini key (set it in AI setup on this page). Your photo and the design are sent
 to Google's Gemini image model, subject to its API billing and data controls. Sable adds
 the preview to your library only when you save it; this is not a promise about provider retention.
+
+## See a concept on the arm in 3D
+
+On any result with an image, choose **View on arm in 3D**. The design is put on a 3D upper
+arm at its real size, close up, so the tattoo fills the view.
+
+- **Drag** with one finger to turn the arm. **Pinch** to resize the design (on a desktop,
+  scroll over it).
+- The line under the arm gives the size in centimetres, **wide × tall**, and how far round
+  the arm it goes. Width is measured round the curve, the way a stencil lies.
+- **Width**, **Above the elbow** and **Round the arm** move it precisely. A design never
+  wraps more than 90% of the way round, and a tall one is narrowed to fit the skin.
+- **Whole arm** steps back to judge scale; **Close up** returns to the tattoo.
+
+**Save as variant** keeps the picture on the concept next to your other results, titled
+with its width (for example *On the arm, 12 cm*) and with the size and position in its
+notes. The saved picture is always framed on the tattoo, even if you had stepped back to
+the whole arm or turned it away.
+
+It's free and nothing is sent anywhere: the arm is drawn on your device. It is one standard
+outer upper arm (about 30 cm round), not your own measurements, and a design fits between
+about 2 and 25 cm above the elbow. A light design on a dark card is flipped to dark ink
+automatically. If the image isn't downloaded to this device and you're offline, the panel
+says so; the arm model itself also needs a connection the first time.
 
 ## Export a relief STL
 

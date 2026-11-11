@@ -1,3 +1,4 @@
+import { createRef } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, waitFor } from '@testing-library/react'
 import ArmPlacement3D from '../components/ArmPlacement3D'
@@ -18,7 +19,7 @@ const props = (extra = {}) => ({
 })
 
 beforeEach(() => {
-  h.engine = { setPlacement: vi.fn(), setDesign: vi.fn(), setSpin: vi.fn(), dispose: vi.fn() }
+  h.engine = { setPlacement: vi.fn(), setDesign: vi.fn(), setSpin: vi.fn(), dispose: vi.fn(), snapshot: vi.fn() }
   h.createArmEngine.mockReset().mockReturnValue(h.engine)
   h.loadDesign.mockReset().mockResolvedValue(INK)
 })
@@ -80,6 +81,18 @@ describe('ArmPlacement3D', () => {
     await Promise.resolve()
     expect(h.engine.setDesign).toHaveBeenCalledTimes(1)
     expect(h.engine.setDesign).toHaveBeenCalledWith(INK)
+  })
+
+  it('hands its owner a way to take the picture', () => {
+    const bytes = new Uint8Array([1, 2, 3])
+    h.engine.snapshot.mockReturnValue(bytes)
+    const ref = createRef()
+    const { unmount } = render(<ArmPlacement3D {...props({ ref })} />)
+    expect(ref.current.snapshot()).toBe(bytes)
+    // Once the scene is gone there is nothing to photograph, and no crash.
+    const { snapshot } = ref.current
+    unmount()
+    expect(snapshot()).toBeNull()
   })
 
   it('does nothing without a design, and disposes the scene on unmount', () => {

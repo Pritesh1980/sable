@@ -149,6 +149,26 @@ describe('Concepts page', () => {
       expect(here()).toBe('/concepts')
     })
 
+    it('View on arm in 3D opens its drawer over the viewer; Back and Escape close only the drawer', () => {
+      render(<ConceptsHarness initialConcepts={withVariant} initialEntries={['/', '/concepts']} />)
+      openVariantInViewer()
+      const openArm = () => fireEvent.click(
+        screen.getByRole('button', { name: 'View Pass one result for A raven on the arm in 3D' }))
+      openArm()
+      const drawer = () => screen.queryByRole('dialog', { name: 'On the arm in 3D' })
+      expect(within(drawer()).getByRole('heading', { name: 'Pass one' })).toBeInTheDocument()
+      expect(here()).toBe('/concepts?concept=1&layer=arm')
+      back()
+      expect(drawer()).toBeNull()
+      expect(screen.getByRole('dialog', { name: /Concept: A raven/ })).toBeInTheDocument()
+
+      openArm()
+      fireEvent.keyDown(document, { key: 'Escape' })
+      expect(drawer()).toBeNull()
+      expect(screen.getByRole('dialog', { name: /Concept: A raven/ })).toBeInTheDocument()
+      expect(here()).toBe('/concepts?concept=1')
+    })
+
     it('closing the try-on drawer from its button leaves no entry for Back to land on', () => {
       render(<ConceptsHarness initialConcepts={withVariant} initialEntries={['/', '/concepts']} />)
       openVariantInViewer()
