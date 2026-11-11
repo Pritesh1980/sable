@@ -176,3 +176,120 @@ export function toInkPixels(pixels, width, height) {
   }
   return out
 }
+
+// ---- Healed ink -----------------------------------------------------------
+// Ported from render-on-body.py, so the phone view agrees with the Blender
+// renders. Fresh ink multiplied onto skin reads as the skin darkened: a warm
+// brown sticker. Healed pigment sits under the epidermis, which scatters light
+// back before it reaches the ink, so black settles to a cool blue-green black,
+// colour fades a little towards grey, and every line spreads a fraction of a
+// millimetre. The texture holds transmittance (1 = bare skin) as sRGB bytes;
+// the shader reads it in linear light and does the spread, which depends on
+// the print size.
+
+// Gaussian sigma of a healed line's spread into the dermis, in mm of skin.
+export const HEALED_SPREAD_MM = 0.15
+// Transmittance healed ink regains: solid black lets 2% more skin through.
+export const HEALED_DENSITY_LOSS = 0.02
+// How far coloured ink fades towards grey as it settles.
+export const HEALED_DESATURATE = 0.25
+// Solid healed black seen through the skin, as relative linear RGB.
+export const HEALED_TINT = [0.8, 0.98, 1.12]
+// How dark solid black is: 1 = pure black (render-on-body.py's default).
+export const INK_STRENGTH = 0.92
+
+const REC709 = [0.2126, 0.7152, 0.0722]
+const lumLinear = ([r, g, b]) => REC709[0] * r + REC709[1] * g + REC709[2] * b
+export const srgbToLinear = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)
+const linearToSrgb = (c) => (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055)
+
+// Byte → linear, once per value rather than once per pixel.
+const LINEAR = Array.from({ length: 256 }, (_, v) => srgbToLinear(v / 255))
+
+// toInkPixels' paper (sRGB bytes) → healed transmittance (sRGB bytes).
+export function healInkPixels(paper) {
+  const out = new Uint8ClampedArray(paper.length)
+  for (let i = 0; i < paper.length; i += 4) {
+    const rgb = [LINEAR[paper[i]], LINEAR[paper[i + 1]], LINEAR[paper[i + 2]]]
+    const y = lumLinear(rgb)
+    for (let ch = 0; ch < 3; ch += 1) {
+      const c = rgb[ch] + (y - rgb[ch]) * HEALED_DESATURATE
+      const t = Math.min(1, Math.max(0, c + (1 - c) * HEALED_DENSITY_LOSS))
+      out[i + ch] = Math.round(255 * linearToSrgb(t))
+    }
+    out[i + 3] = 255
+  }
+  return out
+}
+
+// The colour under solid healed black over this skin (both linear RGB): as
+// dark as fresh black at `strength`, only the hue moves.
+export function healedInkFloor(skinLinear, strength = INK_STRENGTH, tint = HEALED_TINT) {
+  const y = lumLinear(skinLinear) * (1 - strength)
+  const ty = lumLinear(tint)
+  return tint.map((t) => (y * t) / ty)
+}
+
+// The spread's sigma in texture pixels: a fixed distance of skin, so the same
+// image printed larger has fewer pixels per cm and blurs by fewer of them.
+export function spreadSigmaPx(texturePx, widthCm, spreadMm = HEALED_SPREAD_MM) {
+  return widthCm > 0 ? (spreadMm / 10) * (texturePx / widthCm) : 0
+}
+
+// Below this many texture pixels a blur is invisible; skip it.
+const MIN_SIGMA_PX = 0.25
+
+// Normalised 1-D Gaussian taps out to 3 sigma ([1] = no blur).
+export function gaussianKernel(sigmaPx) {
+  if (!(sigmaPx >= MIN_SIGMA_PX)) return [1]
+  const r = Math.ceil(3 * sigmaPx)
+  const taps = Array.from({ length: 2 * r + 1 }, (_, i) => Math.exp(-((i - r) ** 2) / (2 * sigmaPx * sigmaPx)))
+  const total = taps.reduce((sum, t) => sum + t, 0)
+  return taps.map((t) => t / total)
+}
+
+// Linear light → sRGB byte, through a table: 4096 steps is finer than a byte
+// anywhere on the curve.
+const TO_SRGB_STEPS = 4096
+const TO_SRGB = Uint8ClampedArray.from({ length: TO_SRGB_STEPS + 1 },
+  (_, i) => Math.round(255 * linearToSrgb(i / TO_SRGB_STEPS)))
+
+// Healed transmittance (sRGB bytes, as healInkPixels gives) spread by a
+// Gaussian of `sigmaPx`, blurred in linear light as render-on-body.py does.
+// Outside the image is bare skin, so ink at the border fades rather than
+// smearing outwards.
+export function spreadInk(pixels, width, height, sigmaPx) {
+  const kernel = gaussianKernel(sigmaPx)
+  if (kernel.length === 1) return Uint8ClampedArray.from(pixels)
+  const r = (kernel.length - 1) / 2
+  const n = width * height
+  const out = new Uint8ClampedArray(pixels.length)
+  const plane = new Float32Array(n)
+  const across = new Float32Array(n)
+  for (let ch = 0; ch < 3; ch += 1) {
+    for (let i = 0; i < n; i += 1) plane[i] = LINEAR[pixels[4 * i + ch]]
+    for (let y = 0; y < height; y += 1) {
+      const row = y * width
+      for (let x = 0; x < width; x += 1) {
+        let sum = 0
+        for (let k = -r; k <= r; k += 1) {
+          const xx = x + k
+          sum += kernel[k + r] * (xx < 0 || xx >= width ? 1 : plane[row + xx])
+        }
+        across[row + x] = sum
+      }
+    }
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        let sum = 0
+        for (let k = -r; k <= r; k += 1) {
+          const yy = y + k
+          sum += kernel[k + r] * (yy < 0 || yy >= height ? 1 : across[yy * width + x])
+        }
+        out[4 * (y * width + x) + ch] = TO_SRGB[Math.round(Math.min(1, Math.max(0, sum)) * TO_SRGB_STEPS)]
+      }
+    }
+  }
+  for (let i = 3; i < pixels.length; i += 4) out[i] = 255
+  return out
+}
