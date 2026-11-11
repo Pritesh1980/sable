@@ -146,6 +146,21 @@ test('Escape closes only the 3D drawer', async ({ page }) => {
   await expect(resultCount(page)).toHaveText('1 result')
 })
 
+// Reopened straight after Escape, Back lands before the reopen's history
+// entry has rendered: it must still close the drawer (useHistoryLayer listens
+// for popstate, not only for the param leaving the rendered URL).
+test('Escape, reopen at once, then Back closes the reopened drawer', async ({ page }) => {
+  const { drawer } = await openOnArm(page)
+  await page.keyboard.press('Escape')
+  await expect(drawer).toBeHidden()
+  await page.getByRole('button', { name: /on the arm in 3D$/ }).tap()
+  await expect(drawer).toBeVisible()
+  await page.goBack()
+  await expect(drawer).toBeHidden()
+  await expect(viewer(page)).toBeVisible()
+  await expect(page).toHaveURL(/\?concept=e2e-concept-1$/)
+})
+
 test('Back closes only the 3D drawer', async ({ page }) => {
   const { drawer } = await openOnArm(page)
   await expect(page).toHaveURL(/\?concept=e2e-concept-1&layer=arm$/)
