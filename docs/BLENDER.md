@@ -739,6 +739,5 @@ nobody has held one yet.
   the elbow, the range the export reports as cleanly mapped, so a tall piece is narrowed
   to fit (the hourglass opens at 10.4 cm wide, not 12).
 - Extracted designs keep a faint tint along some crop edges.
-- Offline: `models/` is not in the service worker's precache list.
 - The healed-ink look is a cool black floor only, with none of the spread or patchiness
   the Blender renders have.

@@ -22,6 +22,9 @@ describe('selectPrecacheAssets', () => {
     'images/demo/mora.blackfern/fern-v4.webp',
     'images/demo/mora.blackfern/fern-v4-thumb.webp',
     'guide/wall.png',
+    'models/arm-upper.glb',
+    'models/arm-upper.json',
+    'models/designs/hourglass.webp',
   ]
 
   it('includes hashed JS/CSS chunks and PWA shell assets, as root-relative URLs', () => {
@@ -47,6 +50,16 @@ describe('selectPrecacheAssets', () => {
     // screenshots are runtime-cached on demand, never precached.
     expect(urls).not.toContain('/images/artists/zoia.ink/01.jpg')
     expect(urls.some((u) => u.startsWith('/guide/'))).toBe(false)
+  })
+
+  // #195: View on arm in 3D lives in a lazy chunk (precached with the rest of
+  // assets/), but the arm itself is a public file, so offline the drawer had
+  // no arm to put the design on.
+  it('includes the 3D arm model and its measurements, not the lab-only designs', () => {
+    const urls = selectPrecacheAssets(distFiles)
+    expect(urls).toContain('/models/arm-upper.glb')
+    expect(urls).toContain('/models/arm-upper.json')
+    expect(urls).not.toContain('/models/designs/hourglass.webp')
   })
 
   it('returns a sorted, deduplicated list', () => {
