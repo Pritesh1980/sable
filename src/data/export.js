@@ -5,6 +5,7 @@ import { keyForUrl } from './blobUrls'
 import { refIdentity, refKey } from './imageRef'
 import { resolveImageBlob } from './imageResolver'
 import { blobToDataUrl, needsStaging, stageImage } from './imageStaging'
+import { normalizeReferenceImages } from './referenceImages'
 
 // v1 backups hold image refs and whatever display urls were in memory — for a
 // Supabase account those are signed urls that expire within the hour. v2
@@ -177,7 +178,7 @@ export async function createBackupWithImages(state, { exportedAt, onProgress } =
 // take the image as it is (their edits are normalised into refs on the way in).
 function storedRef(image, scope, key) {
   if (!key) return image
-  if (scope === 'ideas') return { key, note: (typeof image === 'object' && image.note) || '' }
+  if (scope === 'ideas') return normalizeReferenceImages([{ ...(typeof image === 'object' ? image : {}), key }])[0]
   if (scope === 'concepts') return key
   return image
 }

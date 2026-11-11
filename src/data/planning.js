@@ -1,6 +1,8 @@
 import { getCachedBlobUrl } from './blobUrls'
 import { resolveAssetPath } from './assetPath'
 import { itemIdentity } from './undoableRemoval'
+import { normalizeReferenceImages } from './referenceImages'
+export { normalizeReferenceImages } from './referenceImages'
 
 export const ARTIST_STATUSES = [
   { value: 'researching', label: 'Researching', tone: 'text-cream-muted' },
@@ -29,16 +31,6 @@ export function getImageUrl(image, base) {
 
 export function getImageNote(image) {
   return typeof image === 'string' ? '' : image?.note || ''
-}
-
-export function normalizeReferenceImages(images = []) {
-  return images
-    .map((image) => {
-      if (typeof image === 'string') return { url: image, note: '' }
-      if (image?.key) return { key: image.key, note: image.note || '' }
-      return { url: image?.url || '', note: image?.note || '' }
-    })
-    .filter((image) => image.key || image.url)
 }
 
 // Sets the note on one reference photo, matched by identity (key first, #114) —

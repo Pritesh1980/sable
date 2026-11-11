@@ -135,6 +135,16 @@ describe('restoreBackupImages', () => {
     stageImage.mockResolvedValue({ key: 'user/u2/new.jpg', url: 'staged' })
   })
 
+  it('preserves the reference crop when restoring bytes to a new account key', async () => {
+    const { data } = await restoreBackupImages({
+      artists: [], concepts: [], boards: [],
+      ideas: [{ id: 'i', images: [{ url: PNG, note: 'Shape', briefCrop: { x: 1, y: 0, zoom: 2 } }] }],
+    }, ctx)
+    expect(data.ideas[0].images).toEqual([{
+      key: 'user/u2/new.jpg', note: 'Shape', briefCrop: { x: 1, y: 0, zoom: 2 },
+    }])
+  })
+
   it('stages each embedded photo under the right scope: keys for ideas and concepts, the display url for artists', async () => {
     const data = {
       artists: [{ id: 'a', images: [PNG, { url: PNG, note: 'n' }, 'images/a.jpg'] }],

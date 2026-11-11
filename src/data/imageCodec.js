@@ -1,5 +1,6 @@
 import { warmImageCache } from './imageResolver'
 import { stageInlineOnce } from './imageStaging'
+import { normalizeReferenceImages } from './referenceImages'
 
 // Image codecs for the document collections that carry images (ideas, concepts).
 //
@@ -14,15 +15,10 @@ import { stageInlineOnce } from './imageStaging'
 
 // ── ideas: images is [{ key, note } | { url, note }] — state holds this form ──
 
-const ideaImage = (img) => {
-  if (typeof img === 'string') return { url: img, note: '' }
-  if (img?.key) return { key: img.key, note: img.note || '' }
-  return { url: img?.url || '', note: img?.note || '' }
-}
 const ideaRefs = (ideas) => ideas.flatMap((i) => i.images || [])
 
 export const ideasCodec = {
-  toCanonical: (ideas = []) => ideas.map((i) => ({ ...i, images: (i.images || []).map(ideaImage) })),
+  toCanonical: (ideas = []) => ideas.map((i) => ({ ...i, images: normalizeReferenceImages(i.images) })),
   toDisplay: async (ideas = []) => {
     warmImageCache(ideaRefs(ideas))
     return ideas
@@ -38,7 +34,7 @@ export const ideasCodec = {
         const key = await stageInlineOnce(url, { userId, scope: 'ideas', id: idea.id || 'misc' })
         if (!key) continue
         if (images === idea.images) images = [...idea.images]
-        images[i] = { key, note: (typeof img === 'object' && img.note) || '' }
+        images[i] = normalizeReferenceImages([{ ...(typeof img === 'object' ? img : {}), key }])[0]
         moved += 1
       }
       next.push(images === idea.images ? idea : { ...idea, images })
