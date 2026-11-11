@@ -627,17 +627,6 @@ describe('IdeaModal Share as image button', () => {
       },
     ]
 
-    render(
-      <MemoryRouter initialEntries={['/brief']}>
-        <Brief ideas={ideas} setIdeas={vi.fn()} artists={[]} boards={[]} setBoards={vi.fn()} />
-      </MemoryRouter>,
-    )
-
-    fireEvent.click(screen.getByText('Botanical forearm'))
-    const shareBtn = screen.getByRole('button', { name: /share as image/i })
-    expect(shareBtn).toBeInTheDocument()
-    expect(shareBtn).not.toBeDisabled()
-
     // jsdom has no 2D canvas; stub one so the export succeeds rather than erroring.
     const ctx = {
       fillRect: vi.fn(), strokeRect: vi.fn(), fillText: vi.fn(), drawImage: vi.fn(),
@@ -650,6 +639,14 @@ describe('IdeaModal Share as image button', () => {
       .mockImplementation((cb) => cb(new Blob(['png'], { type: 'image/png' })))
     const download = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
     try {
+      render(
+        <MemoryRouter initialEntries={['/brief']}>
+          <Brief ideas={ideas} setIdeas={vi.fn()} artists={[]} boards={[]} setBoards={vi.fn()} />
+        </MemoryRouter>,
+      )
+      fireEvent.click(screen.getByText('Botanical forearm'))
+      const shareBtn = screen.getByRole('button', { name: /share as image/i })
+      await waitFor(() => expect(shareBtn).toBeEnabled())
       fireEvent.click(shareBtn)
       await waitFor(() => {
         expect(screen.getByText(/2 web images not included/i)).toBeInTheDocument()

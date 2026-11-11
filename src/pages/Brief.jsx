@@ -9,7 +9,10 @@ import ReliefStlDrawer from '../components/ReliefStlDrawer'
 import GeneratedArtworkNotice from '../components/GeneratedArtworkNotice'
 import { STYLE_TAGS, PLACEMENTS } from '../data/artists'
 import { IDEA_STATUSES, matchArtistsToIdea } from '../data/brief'
-import { exportBriefCardImage } from '../data/briefCard'
+import { shareOrDownloadBriefCard } from '../data/briefCard'
+import usePreparedBriefCard from '../hooks/usePreparedBriefCard'
+import BriefCardPreview from '../components/BriefCardPreview'
+import { moveReferenceImage, setReferenceCrop, setReferenceNote } from '../data/referenceImages'
 import { buildIdeaBrief } from '../data/export'
 import { compressImages } from '../hooks/useImageUpload'
 import { stageImageRefs, withStagedImages } from '../data/imageStaging'
@@ -26,7 +29,6 @@ import {
   matchArtistsForIdea,
   normalizeArtistStatus,
   normalizeReferenceImages,
-  setImageNote,
 } from '../data/planning'
 import { itemIdentity } from '../data/undoableRemoval'
 import { activateOnKey } from '../a11y/activate'
@@ -88,6 +90,8 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
   const [copied, setCopied] = useState(false)
   const [shareState, setShareState] = useState('idle')
   const [shareNote, setShareNote] = useState('')
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const card = usePreparedBriefCard(draft, artists)
   useEffect(() => {
     if (shareState !== 'download') return
     const timer = setTimeout(() => setShareState('idle'), 2400)
@@ -242,9 +246,20 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
     }
   )
 
-  function updateImageNote(target, note) {
+  function updateImageNote(index, note) {
     touch('images')
-    setDraft((d) => ({ ...d, images: setImageNote(d.images, target, note) }))
+    setDraft((d) => ({ ...d, images: setReferenceNote(d.images, index, note) }))
+  }
+
+  function moveImage(from, to) {
+    touch('images')
+    setDraft((d) => ({ ...d, images: moveReferenceImage(d.images, from, to) }))
+    requestAnimationFrame(() => document.getElementById(`${composerId}-reference-${to}`)?.focus())
+  }
+
+  function updateCrop(index, crop) {
+    touch('images')
+    setDraft((d) => ({ ...d, images: setReferenceCrop(d.images, index, crop) }))
   }
 
   function save() {
@@ -285,12 +300,12 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
   }
 
   async function shareBriefImage() {
-    if (!draft.title.trim() || shareState !== 'idle') return
+    if (!draft.title.trim() || shareState !== 'idle' || !card.prepared) return
     setShareState('sharing')
     setShareNote('')
     try {
-      const result = await exportBriefCardImage(draft, { artists })
-      setShareNote(result.skippedNotice)
+      const result = await shareOrDownloadBriefCard(card.prepared.blob, card.prepared.filename)
+      setShareNote(card.prepared.skippedNotice)
       setShareState(result.method === 'download' ? 'download' : 'idle')
     } catch (error) {
       console.error('[tattoo] brief card export failed:', error)
@@ -301,7 +316,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
 
   return (
     <>
-    <div className="fixed inset-0 z-50 bg-ink-black flex flex-col animate-fade-in overflow-y-auto">
+    <div inert={previewOpen || undefined} aria-hidden={previewOpen || undefined} className="fixed inset-0 z-50 bg-ink-black flex flex-col animate-fade-in overflow-y-auto">
       <div className="px-5 pt-safe-top pt-6 pb-2 border-b border-ink-border sticky top-0 bg-ink-black z-10">
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <button onClick={onClose} className="min-h-11 text-cream-muted hover:text-cream text-sm tracking-widest uppercase">
@@ -326,9 +341,13 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
           >
             {copied ? 'Copied' : 'Copy brief'}
           </button>
+          <button onClick={() => setPreviewOpen(true)} disabled={!draft.title.trim()}
+            className="min-h-11 text-cream-muted hover:text-cream disabled:opacity-30 text-sm transition-colors">
+            Preview card
+          </button>
           <button
             onClick={shareBriefImage}
-            disabled={!draft.title.trim() || shareState === 'sharing'}
+            disabled={!draft.title.trim() || shareState === 'sharing' || !card.prepared}
             aria-disabled={shareState === 'download' || undefined}
             className="min-h-11 text-cream-muted hover:text-cream disabled:opacity-30 aria-disabled:cursor-default aria-disabled:text-cream text-sm transition-colors"
           >
@@ -337,7 +356,7 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
         </div>
         <p role="status" className={shareNote ? 'font-mono text-xs text-cream-muted mt-1 mb-2' : 'sr-only'}>
           {shareState === 'download' && <span className="sr-only">PNG download requested. </span>}
-          {shareNote}
+          {shareNote || card.error}
         </p>
         <GeneratedArtworkNotice images={images} className="mt-2" />
       </div>
@@ -426,8 +445,18 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
           {draft.images?.length > 0 && (
             <div className="grid grid-cols-2 gap-2 mb-3">
               {images.map((image, index) => (
-                <div key={itemIdentity(image) || index} className="bg-ink-muted rounded-xs overflow-hidden border border-ink-border">
+                <div key={`${itemIdentity(image)}:${index}`} id={`${composerId}-reference-${index}`} tabIndex={-1}
+                  className="bg-ink-muted rounded-xs overflow-hidden border border-ink-border outline-hidden focus-visible:ring-2 focus-visible:ring-cream-muted">
                   <div className="relative aspect-square group">
+                    <span className="absolute left-1 top-1 z-10 bg-ink-black/90 px-2 py-1 text-xs text-cream">
+                      {!card.prepared ? 'Checking card…' : (() => {
+                        const at = card.prepared.photos.findIndex((photo) => photo.sourceIndex === index)
+                        if (at !== -1) return `Card ${at + 1}`
+                        if (card.prepared.skippedWebIndices.includes(index)) return 'Web link · not on card'
+                        if (card.prepared.unavailableIndices.includes(index)) return 'Unavailable · not on card'
+                        return 'Extra reference'
+                      })()}
+                    </span>
                     <RefImage
                       src={image}
                       className="w-full h-full object-cover"
@@ -452,12 +481,27 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
                       <span className="bg-ink-dark/80 text-cream rounded-xs px-2 py-1 font-mono text-[0.625rem] uppercase tracking-widest">3D print</span>
                     </button>
                   </div>
+                  <div className="border-t border-ink-border px-2">
+                    <button onClick={() => moveImage(index, 0)} disabled={index === 0}
+                      aria-label={`Make reference ${index + 1} the cover`}
+                      className="min-h-11 w-full text-xs text-cream-muted hover:text-cream disabled:opacity-40">
+                      {index === 0 ? 'Cover' : 'Make cover'}
+                    </button>
+                    <div className="flex border-t border-ink-border">
+                      <button onClick={() => moveImage(index, index - 1)} disabled={index === 0}
+                        aria-label={`Move reference ${index + 1} earlier`}
+                        className="min-h-11 min-w-11 flex-1 text-sm text-cream-muted disabled:opacity-30">←</button>
+                      <button onClick={() => moveImage(index, index + 1)} disabled={index === images.length - 1}
+                        aria-label={`Move reference ${index + 1} later`}
+                        className="min-h-11 min-w-11 flex-1 text-sm text-cream-muted disabled:opacity-30">→</button>
+                    </div>
+                  </div>
                   <textarea
                     className="w-full bg-ink-card px-2 py-2 text-xs text-cream outline-hidden focus-visible:ring-2 focus-visible:ring-accent font-body placeholder-cream-muted/60 resize-none border-t border-ink-border"
                     rows={2}
                     placeholder="What to borrow from this image…"
                     value={getImageNote(image)}
-                    onChange={(e) => updateImageNote(image, e.target.value)}
+                    onChange={(e) => updateImageNote(index, e.target.value)}
                   />
                 </div>
               ))}
@@ -592,6 +636,8 @@ function IdeaModal({ idea, onClose, onSave, onDelete, onRestoreImages, artists, 
       </div>
     </div>
     <ReliefStlDrawer source={stlSource} onClose={() => setStlSource(null)} />
+    {previewOpen && <BriefCardPreview {...card} images={images} onClose={() => setPreviewOpen(false)}
+      onRefresh={card.refresh} onCrop={updateCrop} onShare={shareBriefImage} shareState={shareState} shareNote={shareNote} />}
     </>
   )
 }
