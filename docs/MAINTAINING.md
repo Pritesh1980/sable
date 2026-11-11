@@ -98,6 +98,11 @@ For Concepts → Ideas guide captures, run
 an isolated local-backend server. It refreshes `concept-idea-picker.png` and
 `concept-idea-draft.png` at 430 × 920 using fictional Japanese-inspired demo images.
 
+For the 3D arm guide capture, run
+`GUIDE_URL=http://localhost:15494 node scripts/captureArmGuide.mjs` against an isolated
+local-backend server. It refreshes `concept-arm.png` at 430 × 920 from the fictional
+hourglass design in `public/models/designs/`, waiting for the view to settle first.
+
 ## Demo image assets
 
 Demo artwork ships as 1024 × 1536 WebP images (at most 350 KiB each) and

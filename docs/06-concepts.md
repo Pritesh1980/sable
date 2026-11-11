@@ -190,6 +190,8 @@ the preview to your library only when you save it; this is not a promise about p
 On any result with an image, choose **View on arm in 3D**. The design is put on a 3D upper
 arm at its real size, close up, so the tattoo fills the view.
 
+![A fictional hourglass design on the 3D arm, with its size in centimetres](../public/guide/concept-arm.png)
+
 - **Drag** with one finger to turn the arm. **Pinch** to resize the design (on a desktop,
   scroll over it).
 - The line under the arm gives the size in centimetres, **wide × tall**, and how far round
