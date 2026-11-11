@@ -1,0 +1,125 @@
+{
+ "generator": "scripts/blender/export-arm-gltf.py",
+ "source": "MakeHuman base mesh and targets (CC0 1.0)",
+ "limb": "forearm",
+ "frame": "metres; origin at the wrist joint; +y to the elbow; +z out of the inner forearm; +x the thumb side",
+ "attributes": {
+  "TEXCOORD_0": "(arc_cm, perimeter_cm); perimeter 0 = no design",
+  "TEXCOORD_1": "(fade, 0); 1 solid, 0 dissolved"
+ },
+ "measurements_cm": {
+  "forearm_length": 25.0,
+  "wrist": 17.0,
+  "elbow": 26.0
+ },
+ "mh_sex": 0.5,
+ "subdivisions": 1,
+ "draco": false,
+ "skin_cm": [
+  1.0,
+  22.0
+ ],
+ "extent_cm": [
+  -4.0,
+  30.9
+ ],
+ "perimeter_cm": [
+  [
+   1.0,
+   17.01
+  ],
+  [
+   2.0,
+   17.31
+  ],
+  [
+   3.0,
+   17.9
+  ],
+  [
+   4.0,
+   18.55
+  ],
+  [
+   5.0,
+   19.21
+  ],
+  [
+   6.0,
+   19.86
+  ],
+  [
+   7.0,
+   20.52
+  ],
+  [
+   8.0,
+   21.19
+  ],
+  [
+   9.0,
+   21.82
+  ],
+  [
+   10.0,
+   22.4
+  ],
+  [
+   11.0,
+   22.92
+  ],
+  [
+   12.0,
+   23.38
+  ],
+  [
+   13.0,
+   23.84
+  ],
+  [
+   14.0,
+   24.29
+  ],
+  [
+   15.0,
+   24.78
+  ],
+  [
+   16.0,
+   25.24
+  ],
+  [
+   17.0,
+   25.65
+  ],
+  [
+   18.0,
+   25.96
+  ],
+  [
+   19.0,
+   26.1
+  ],
+  [
+   20.0,
+   26.1
+  ],
+  [
+   21.0,
+   26.0
+  ],
+  [
+   22.0,
+   26.01
+  ]
+ ],
+ "vertices": 1626,
+ "triangles": 3157,
+ "gltf_attributes": [
+  "NORMAL",
+  "POSITION",
+  "TEXCOORD_0",
+  "TEXCOORD_1"
+ ],
+ "bytes": 88832
+}

@@ -3,6 +3,7 @@ import {
   circumferenceAt, designSizeCm, clampPlacement, pinchWidth, wrapShare,
   isDarkBackground, toInkPixels, healInkPixels, healedInkFloor, MIN_WIDTH_CM, MAX_WRAP, viewFrame, designYaw, WHOLE_ARM,
   snapshotPose, MAX_SNAPSHOT_TURN, formatCm, arcLabel, snapshotVariant,
+  LIMBS, DEFAULT_LIMB, DEFAULT_PLACEMENT, limbFor, wholeLimbFrame,
 } from '../data/placement3d'
 
 const TABLE = [[0, 24], [10, 28], [20, 30], [31, 36]]
@@ -222,5 +223,52 @@ describe('snapshotVariant', () => {
   })
   it('is saved like the live try-on: a preview made here, not by an AI provider', () => {
     expect(snapshotVariant('Moth', placed).provider).toBe('other')
+  })
+})
+
+// ---- Forearm (#206) ---------------------------------------------------------
+describe('LIMBS and limbFor', () => {
+  it('has the upper arm and the forearm, each with its own model under models/arm-*', () => {
+    expect(Object.keys(LIMBS)).toEqual(['upper-arm', 'forearm'])
+    for (const limb of Object.values(LIMBS)) expect(limb.file).toMatch(/^arm-/)
+    expect(LIMBS['upper-arm'].placement).toEqual(DEFAULT_PLACEMENT)
+  })
+  it('opens the limb an idea is planned for', () => {
+    expect(limbFor('forearm')).toBe('forearm')
+    expect(limbFor('upper arm')).toBe('upper-arm')
+    expect(limbFor('sleeve')).toBe('upper-arm')
+  })
+  it('falls back to the upper arm for anywhere it has no model of', () => {
+    for (const p of ['', undefined, 'back', 'thigh', 'Forearm ']) expect(limbFor(p)).toBe(DEFAULT_LIMB)
+  })
+})
+
+describe('wholeLimbFrame', () => {
+  it('centres the whole visible limb with a little room either end', () => {
+    expect(wholeLimbFrame([-4, 30.9])).toEqual({ focusCm: 13.45, frameCm: 38.9 })
+  })
+  it('falls back to the upper arm when a model has no extent', () => {
+    expect(wholeLimbFrame(undefined)).toEqual(WHOLE_ARM)
+  })
+  it('caps the design frame at the limb it is on', () => {
+    const forearm = wholeLimbFrame([-4, 30.9])
+    const placed = { widthCm: 8, heightCm: 40, centreCm: 12, arcCm: 0 }
+    expect(viewFrame(placed, 'design', forearm)).toEqual(forearm)
+    expect(viewFrame(placed, 'arm', forearm)).toEqual(forearm)
+    expect(snapshotPose(placed, TABLE, 0, forearm)).toMatchObject(forearm)
+  })
+})
+
+describe('labels on the forearm', () => {
+  const forearm = LIMBS.forearm
+  it('names the line down the inner forearm and the way round by the hand', () => {
+    expect(arcLabel(0, forearm)).toBe('inner forearm')
+    expect(arcLabel(2, forearm)).toBe('2.0 cm towards the thumb')
+    expect(arcLabel(-2, forearm)).toBe('2.0 cm towards the little finger')
+  })
+  it('measures a forearm snapshot from the wrist', () => {
+    const v = snapshotVariant('Fern', { widthCm: 8, heightCm: 10, centreCm: 12, arcCm: 0 }, forearm)
+    expect(v.title).toBe('On the forearm, 8 cm')
+    expect(v.notes).toBe('3D forearm preview of Fern. 8.0 cm wide × 10.0 cm tall, centred 12.0 cm above the wrist, inner forearm.')
   })
 })

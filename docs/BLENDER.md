@@ -653,17 +653,40 @@ and **Save as variant** keeps a picture of it on the concept (user guide:
   "On the arm, 12 cm", with provider **Other** like a live try-on, and its notes carry the
   size and position.
 
-Blender's part is one export, run again only when the arm itself should change:
+**The forearm** ([#206](https://github.com/Pritesh1980/sable/issues/206)) is a second
+model, and **Upper arm** / **Forearm** at the top of the view switch between them. A Brief
+idea's reference photo opens the same drawer from **On arm**, on the limb its placement
+names (`limbFor`: *forearm* → forearm, *upper arm* and *sleeve* → upper arm, anything else
+the upper arm), and **Add to references** stages the picture into the idea's references
+the way a pasted photo is, noted with its width ("On the forearm, 8 cm").
+
+- Each limb is an entry in `LIMBS` (`src/data/placement3d.js`): its file, its default
+  placement and its words. The shader and the engine are the same for both: height is
+  whatever +y means in that model, so a forearm design points its top at the elbow.
+- Switching remounts the limb's view (keyed by limb), so the model, measurements and
+  placement all start afresh; the switch itself sits outside it and keeps focus.
+- The **Whole arm** framing comes from the model's `extent_cm` (`wholeLimbFrame`), not a
+  constant, so each limb steps back to all of itself.
+
+Blender's part is one export per limb, run again only when an arm itself should change:
 
 ```sh
 "$BLENDER" -b -P scripts/blender/export-arm-gltf.py -- \
   --makehuman-data ~/src/makehuman --out public/models
+"$BLENDER" -b -P scripts/blender/export-arm-gltf.py -- \
+  --makehuman-data ~/src/makehuman --out public/models --limb forearm
 ```
 
-It writes `public/models/arm-upper.glb` and `arm-upper.json`. The mesh is the body the
-renders use (same loader, same fit to 32 / 30 / 26 cm), cut down to the left arm, with a
-per-vertex fade so the cut edges dissolve into the backdrop. MakeHuman's data is CC0, so
-the model can ship in the repo.
+The first writes `public/models/arm-upper.glb` and `arm-upper.json`: the body the renders
+use (same loader, same fit to 32 / 30 / 26 cm), cut down to the left arm. The second writes
+`arm-forearm.glb` and `arm-forearm.json`: `render-on-body.py`'s forearm loader, laid out
+straight and palm up with the inner forearm towards +z and the thumb on +x, fitted to
+`--wrist-cm 17 --elbow-cm 26 --forearm-length-cm 25`. Its y runs from the wrist joint, so
+a positive arc round it is towards the thumb, and a design may sit 1–22 cm above the
+wrist (clear of the wrist bone and of the elbow crease). Each has a per-vertex fade so the
+cut edges (the torso, or the hand and the upper arm past the elbow) dissolve into the
+backdrop. Both match `models/arm-*`, which the service worker precaches. MakeHuman's data
+is CC0, so the models can ship in the repo.
 
 The view is framed on the tattoo, not the limb: it opens close enough that the design
 fills about 70% of the height, follows the design as it is resized or moved, and turns
@@ -704,10 +727,11 @@ skin, measured round the curve, the same definition `--width-cm` uses.
 | `src/data/placement3d.js` | Pure maths: clamping, pinch, what the camera frames, the dark-card flip. |
 | `src/lib/armPlacement.js` | The three.js scene: shader, camera, gestures. three.js is passed in, so it is unit tested against a mock (`armPlacement.spec.js`). |
 | `src/components/ArmPlacement3D.jsx` | The lazy chunk that imports three.js and drives the scene. |
-| `src/components/ArmPlacementPanel.jsx` | The view with its controls (readout, sliders, Whole arm), shared by the lab and the drawer. |
-| `src/components/ArmPlacementDrawer.jsx` | The dialog a concept result opens: resolves the image, saves the snapshot as a variant. |
+| `src/components/ArmPlacementPanel.jsx` | The view with its controls (limb switch, readout, sliders, Whole arm), shared by the lab and the drawer. |
+| `src/components/ArmPlacementDrawer.jsx` | The dialog a concept result or an idea photo opens: resolves the image, hands back the snapshot to save. |
 | `src/pages/PlacementLab.jsx` | The lab page. |
 | `e2e/placement3d.e2e.js` | Load, one-finger turn, pinch, close up and whole arm, and that the chunk stays out of other pages. |
+| `e2e/placementIdea.e2e.js` | From an idea's photo: opens on the forearm over the editor, adds the picture as a staged reference, Escape. |
 | `e2e/placementConcept.e2e.js` | From a saved result: open, pinch, save as a variant, that the saved picture is of the tattoo, Escape and Back, and that three.js loads only when the drawer opens. |
 
 ### What was measured (Nov 2026)
@@ -715,6 +739,7 @@ skin, measured round the curve, the same definition `--width-cm` uses.
 | | Raw | Gzip |
 |---|---|---|
 | `arm-upper.glb` (2,091 vertices, 4,061 triangles) | 116 kB | 78 kB |
+| `arm-forearm.glb` (1,626 vertices, 3,157 triangles) | 89 kB | 67 kB |
 | `ArmPlacement3D` chunk (view + glTF loader) | 54 kB | 17 kB |
 | `ArmPlacementPanel` chunk (controls and placement maths, no three.js) | 6 kB | 3 kB |
 | `PlacementLab` chunk | 2 kB | 1 kB |
@@ -737,7 +762,8 @@ nobody has held one yet.
 
 ### Not built yet
 
-- The forearm, and the inner side of the upper arm (the export is `side='outer'`).
+- The inner side of the upper arm (the export is `side='outer'`), and the outer forearm
+  (`side='inner'`): each limb shows one side, though Round the arm reaches the other.
 - Your own measurements: the model is fitted to the default averages.
 - Skin near the elbow and over the shoulder: a design can sit between 1.7 and 25 cm above
   the elbow, the range the export reports as cleanly mapped, so a tall piece is narrowed

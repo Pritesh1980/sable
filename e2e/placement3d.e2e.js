@@ -60,6 +60,25 @@ test('a pinch resizes the design, in centimetres', async ({ page }) => {
   expect(Number(share)).toBeLessThanOrEqual(90)
 })
 
+// #206: a second model, switched to in place.
+test('the forearm loads from the switch, at its own true size, and a finger turns it', async ({ page }) => {
+  const { view, mid } = await openLab(page)
+  await expect(size(page)).toContainText('12.0 cm wide')
+  const upper = await view.locator('canvas').screenshot()
+  const switcher = page.getByRole('group', { name: 'Limb' })
+  await switcher.getByRole('button', { name: 'Forearm' }).tap()
+  await expect(switcher.getByRole('button', { name: 'Forearm' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByText('Loading the arm…')).toHaveCount(0, { timeout: 20_000 })
+  // The forearm's own default and words: 8 cm wide on 600 x 760, above the wrist.
+  await expect(size(page)).toContainText('8.0 cm wide × 10.1 cm tall')
+  await expect(page.getByLabel('Above the wrist')).toBeVisible()
+  await expect(page.getByLabel('Round the arm')).toHaveAttribute('aria-valuetext', 'inner forearm')
+  await expect.poll(async () => (await view.locator('canvas').screenshot()).equals(upper)).toBe(false)
+  const before = await view.locator('canvas').screenshot()
+  await swipe(page, mid, [mid[0] + 120, mid[1]])
+  await expect.poll(async () => (await view.locator('canvas').screenshot()).equals(before)).toBe(false)
+})
+
 test('the 3D chunk stays out of the rest of the app', async ({ page }) => {
   const scripts = []
   page.on('request', (request) => { if (request.resourceType() === 'script') scripts.push(request.url()) })

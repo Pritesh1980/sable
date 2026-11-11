@@ -108,5 +108,52 @@ class Args(unittest.TestCase):
         self.assertEqual((a.upper_arm_length_cm, a.biceps_cm, a.above_elbow_cm), (32.0, 30.0, 26.0))
 
 
+class ForearmFade(unittest.TestCase):
+    L = 25.0
+
+    def test_solid_along_the_forearm(self):
+        self.assertEqual(ex.forearm_fade(12.0, self.L), 1.0)
+
+    def test_the_hand_dissolves_below_the_wrist(self):
+        lo, hi = ex.HAND_FADE_CM
+        self.assertEqual(ex.forearm_fade(lo, self.L), 0.0)
+        self.assertEqual(ex.forearm_fade(hi, self.L), 1.0)
+        self.assertTrue(0.0 < ex.forearm_fade((lo + hi) / 2, self.L) < 1.0)
+
+    def test_the_upper_arm_dissolves_past_the_elbow(self):
+        solid, gone = (self.L + d for d in ex.PAST_ELBOW_FADE_CM)
+        self.assertEqual(ex.forearm_fade(solid, self.L), 1.0)
+        self.assertEqual(ex.forearm_fade(gone, self.L), 0.0)
+        self.assertTrue(0.0 < ex.forearm_fade((solid + gone) / 2, self.L) < 1.0)
+
+
+class ForearmSkin(unittest.TestCase):
+    def test_runs_from_above_the_wrist_to_below_the_elbow_crease(self):
+        lo, hi = ex.forearm_skin(25.0)
+        self.assertEqual(lo, ex.FOREARM_SKIN_FROM_WRIST_CM)
+        self.assertEqual(hi, 25.0 - ex.FOREARM_SKIN_BELOW_ELBOW_CM)
+        self.assertTrue(0.0 < lo < hi < 25.0)
+
+
+class LimbArgs(unittest.TestCase):
+    def test_upper_arm_is_the_default_and_keeps_its_file_name(self):
+        a = ex.parse_args(['--makehuman-data', '/x', '--out', '/y'])
+        self.assertEqual((a.limb, ex.output_name(a)), ('upper-arm', 'arm-upper'))
+
+    def test_forearm_has_its_own_file_and_tape_measurements(self):
+        a = ex.parse_args(['--makehuman-data', '/x', '--out', '/y', '--limb', 'forearm'])
+        self.assertEqual(ex.output_name(a), 'arm-forearm')
+        self.assertEqual((a.wrist_cm, a.elbow_cm, a.forearm_length_cm), (17.0, 26.0, 25.0))
+
+    def test_an_explicit_name_wins(self):
+        a = ex.parse_args(['--makehuman-data', '/x', '--out', '/y', '--limb', 'forearm', '--name', 'f'])
+        self.assertEqual(ex.output_name(a), 'f')
+
+    def test_files_match_the_precache_pattern(self):
+        for limb in ex.LIMBS:
+            a = ex.parse_args(['--makehuman-data', '/x', '--out', '/y', '--limb', limb])
+            self.assertTrue(ex.output_name(a).startswith('arm-'))
+
+
 if __name__ == '__main__':
     unittest.main()

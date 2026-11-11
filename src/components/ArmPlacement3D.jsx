@@ -7,7 +7,7 @@ import { createArmEngine, loadDesign } from '../lib/armPlacement'
 // chunk that brings in three.js and the glTF loader, so neither enters the
 // main bundle; the scene itself is src/lib/armPlacement.js.
 export default function ArmPlacement3D({
-  modelUrl, imageSrc, placement, perimeterCm, view = 'design',
+  modelUrl, imageSrc, placement, perimeterCm, whole, view = 'design',
   onResize, onDesignSize, onReady, onError, spin = false, ref,
 }) {
   const mountRef = useRef(null)
@@ -49,8 +49,8 @@ export default function ArmPlacement3D({
   }, [imageSrc, modelUrl])
 
   useEffect(() => {
-    engineRef.current?.setPlacement(placement, perimeterCm, view)
-  }, [placement, perimeterCm, view, modelUrl])
+    engineRef.current?.setPlacement(placement, perimeterCm, view, whole)
+  }, [placement, perimeterCm, view, whole, modelUrl])
 
   useEffect(() => {
     engineRef.current?.setSpin(spin)

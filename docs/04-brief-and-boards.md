@@ -30,7 +30,12 @@ Tap **+** to add an idea (or tap a card to edit one). The editor gives you:
   image itself; only fields you haven't filled are touched.
 - **Reference images** — paste an image URL or upload photos, each with a note on *what to
   borrow from it*. **3D print** on an image opens the relief STL export for it (see
-  [AI concepts](06-concepts.md#export-a-relief-stl)).
+  [AI concepts](06-concepts.md#export-a-relief-stl)). **On arm** puts it on the 3D arm at
+  its real size, on the forearm when the idea's placement is *forearm* and on the upper arm
+  otherwise; **Add to references** keeps the picture as another reference, noted with its
+  width (see [On the arm in 3D](06-concepts.md#see-a-concept-on-the-arm-in-3d)). Save the
+  idea to keep it. It works best with a flat design (a drawing, a flash sheet, a concept):
+  a photo of a tattoo already on skin goes on whole, its skin and background included.
 
 If an idea uses a shipped demo image, its editor keeps the **AI-generated imagery** label
 visible while you review or change its references.

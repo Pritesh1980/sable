@@ -137,7 +137,7 @@ export function createArmEngine(THREE, GLTFLoader, mount, { modelUrl, callbacks 
   let geometry = null
   let texture = null
   let widthCm = 0
-  let placed = null // the last setPlacement: { placement, perimeterCm }
+  let placed = null // the last setPlacement: { placement, perimeterCm, whole }
   let spin = false
   // `now` eases towards `goal`: what the camera frames, and how far the arm is
   // turned to keep the design facing it. `turned` is the user's own drag.
@@ -276,13 +276,14 @@ export function createArmEngine(THREE, GLTFLoader, mount, { modelUrl, callbacks 
   canvas.addEventListener('wheel', onWheel, { passive: false })
 
   return {
-    // Where the design sits, and what the camera should frame.
-    setPlacement(placement, perimeterCm, view = 'design') {
+    // Where the design sits, and what the camera should frame. `whole` is
+    // the limb's whole view (wholeLimbFrame), the most it ever frames.
+    setPlacement(placement, perimeterCm, view = 'design', whole = WHOLE_ARM) {
       widthCm = placement.widthCm
-      placed = { placement, perimeterCm }
+      placed = { placement, perimeterCm, whole }
       material.uniforms.uPlace.value.set(
         placement.arcCm, placement.centreCm, placement.widthCm, placement.heightCm)
-      goal = { ...viewFrame(placement, view), yaw: designYaw(placement, perimeterCm) }
+      goal = { ...viewFrame(placement, view, whole), yaw: designYaw(placement, perimeterCm) }
       invalidate()
     },
     // An ink canvas from loadDesign.
@@ -305,7 +306,7 @@ export function createArmEngine(THREE, GLTFLoader, mount, { modelUrl, callbacks 
     snapshot() {
       if (!geometry || !placed) return null
       const live = { now, turned }
-      const { turned: turn, ...pose } = snapshotPose(placed.placement, placed.perimeterCm, turned)
+      const { turned: turn, ...pose } = snapshotPose(placed.placement, placed.perimeterCm, turned, placed.whole)
       now = pose
       turned = turn
       frameCamera()
