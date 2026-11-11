@@ -176,3 +176,57 @@ export function toInkPixels(pixels, width, height) {
   }
   return out
 }
+
+// ---- Healed ink -----------------------------------------------------------
+// Ported from render-on-body.py, so the phone view agrees with the Blender
+// renders. Fresh ink multiplied onto skin reads as the skin darkened: a warm
+// brown sticker. Healed pigment sits under the epidermis, which scatters light
+// back before it reaches the ink, so black settles to a cool blue-green black
+// and colour fades a little towards grey. The texture holds transmittance
+// (1 = bare skin) as sRGB bytes, which the shader reads in linear light.
+//
+// Not ported: the renders' 0.15 mm Gaussian spread. Framed on the design, it
+// is about one screen pixel wide here, and it cost either every frame (in
+// the shader: the settle test timed out under software WebGL) or 150-700 ms
+// of main thread after each resize (on the CPU, measured on a Mac).
+
+// Transmittance healed ink regains: solid black lets 2% more skin through.
+export const HEALED_DENSITY_LOSS = 0.02
+// How far coloured ink fades towards grey as it settles.
+export const HEALED_DESATURATE = 0.25
+// Solid healed black seen through the skin, as relative linear RGB.
+export const HEALED_TINT = [0.8, 0.98, 1.12]
+// How dark solid black is: 1 = pure black (render-on-body.py's default).
+export const INK_STRENGTH = 0.92
+
+const REC709 = [0.2126, 0.7152, 0.0722]
+const lumLinear = ([r, g, b]) => REC709[0] * r + REC709[1] * g + REC709[2] * b
+export const srgbToLinear = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)
+const linearToSrgb = (c) => (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055)
+
+// Byte → linear, once per value rather than once per pixel.
+const LINEAR = Array.from({ length: 256 }, (_, v) => srgbToLinear(v / 255))
+
+// toInkPixels' paper (sRGB bytes) → healed transmittance (sRGB bytes).
+export function healInkPixels(paper) {
+  const out = new Uint8ClampedArray(paper.length)
+  for (let i = 0; i < paper.length; i += 4) {
+    const rgb = [LINEAR[paper[i]], LINEAR[paper[i + 1]], LINEAR[paper[i + 2]]]
+    const y = lumLinear(rgb)
+    for (let ch = 0; ch < 3; ch += 1) {
+      const c = rgb[ch] + (y - rgb[ch]) * HEALED_DESATURATE
+      const t = Math.min(1, Math.max(0, c + (1 - c) * HEALED_DENSITY_LOSS))
+      out[i + ch] = Math.round(255 * linearToSrgb(t))
+    }
+    out[i + 3] = 255
+  }
+  return out
+}
+
+// The colour under solid healed black over this skin (both linear RGB): as
+// dark as fresh black at `strength`, only the hue moves.
+export function healedInkFloor(skinLinear, strength = INK_STRENGTH, tint = HEALED_TINT) {
+  const y = lumLinear(skinLinear) * (1 - strength)
+  const ty = lumLinear(tint)
+  return tint.map((t) => (y * t) / ty)
+}

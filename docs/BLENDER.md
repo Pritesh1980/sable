@@ -644,6 +644,10 @@ and **Save as variant** keeps a picture of it on the concept (user guide:
 - The saved picture is framed on the design whatever the view was showing
   (`snapshotPose`): close up even from **Whole arm**, and turned at most 0.6 rad from
   square-on, so a design dragged round the back is brought to face the camera.
+- The ink is the same healed model as `render-on-body.py` (see
+  [Healed or fresh ink](#healed-or-fresh-ink)), ported to `src/data/placement3d.js`:
+  `healInkPixels` fades colour and lets 2% of the skin back through, once at load, and the
+  shader lays `healedInkFloor` (a cool black at fresh black's darkness) under solid ink.
 - It is saved through the page's one add path (`Concepts.addVariant`): downsized like a
   try-on result, staged first, and only the key reaches state. The variant is titled
   "On the arm, 12 cm", with provider **Other** like a live try-on, and its notes carry the
@@ -739,5 +743,8 @@ nobody has held one yet.
   the elbow, the range the export reports as cleanly mapped, so a tall piece is narrowed
   to fit (the hourglass opens at 10.4 cm wide, not 12).
 - Extracted designs keep a faint tint along some crop edges.
-- The healed-ink look is a cool black floor only, with none of the spread or patchiness
-  the Blender renders have.
+- Healed ink has the renders' cool black floor, colour fade and density loss, but not their
+  0.15 mm spread or patchiness. Framed on the design, the spread is about one screen pixel
+  wide, and it cost either every frame (a GPU blur: the settle test timed out under
+  software WebGL) or 150–700 ms of main thread after each resize (a CPU blur, measured on
+  a Mac). Side by side on the phone, the two looked the same.

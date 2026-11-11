@@ -9,10 +9,14 @@
 // design is therefore four uniforms and one texture read per pixel: no decal
 // geometry, no projection, nothing rebuilt while a finger moves.
 
-import { pinchWidth, toInkPixels, viewFrame, designYaw, snapshotPose, WHOLE_ARM } from '../data/placement3d'
+import {
+  pinchWidth, toInkPixels, healInkPixels, healedInkFloor, srgbToLinear,
+  viewFrame, designYaw, snapshotPose, WHOLE_ARM,
+} from '../data/placement3d'
 
 const BACKDROP = 0x131110 // v2-ink
 const SKIN = 0x9a7654 // render-on-body.py's default tone, warm-brown
+const SKIN_LINEAR = [SKIN >> 16, (SKIN >> 8) & 0xff, SKIN & 0xff].map((v) => srgbToLinear(v / 255))
 export const MAX_TEXTURE_PX = 1024
 const TILT_LIMIT = 0.45
 const DRAG_SPEED = 0.008
@@ -42,9 +46,10 @@ const VERTEX = /* glsl */ `
 `
 
 const FRAGMENT = /* glsl */ `
-  uniform sampler2D uDesign;
+  uniform sampler2D uDesign; // healed transmittance: 1 = bare skin
   uniform vec4 uPlace; // arc cm, centre cm, width cm, height cm
   uniform vec3 uSkin;
+  uniform vec3 uInkFloor; // what lies under solid healed black
   uniform vec3 uBackdrop;
   varying vec2 vSurface;
   varying float vFade;
@@ -52,26 +57,26 @@ const FRAGMENT = /* glsl */ `
   varying vec3 vNormal;
   varying vec3 vToEye;
 
-  // Healed black ink is a cool, slightly lifted black, never #000.
-  const vec3 INK_FLOOR = vec3(0.055, 0.07, 0.085);
-
   void main() {
     if (vFade < 0.02) discard;
     vec3 n = normalize(vNormal);
     vec3 v = normalize(vToEye);
 
-    // The design, as ink: the texture multiplies the skin, white is bare skin.
     float turn = vSurface.y;
     float arc = vSurface.x - uPlace.x;
     arc -= turn * floor(arc / max(turn, 1.0) + 0.5); // shortest way round
     vec2 st = vec2(arc / uPlace.z, (vHeightCm - uPlace.y) / uPlace.w) + 0.5;
+
     vec3 paper = texture2D(uDesign, clamp(st, 0.0, 1.0)).rgb;
     vec2 edge = smoothstep(vec2(0.0), vec2(0.01), st) * smoothstep(vec2(0.0), vec2(0.01), 1.0 - st);
-    float inked = edge.x * edge.y * step(1.0, turn);
-    vec3 skin = uSkin * mix(vec3(1.0), mix(INK_FLOOR, vec3(1.0), paper), inked);
+    vec3 t = mix(vec3(1.0), paper, edge.x * edge.y * step(1.0, turn));
+
+    // Healed: skin where the ink lets it through, a cool black where it doesn't.
+    vec3 skin = uSkin * t + uInkFloor * (1.0 - t);
 
     // Soft studio light in view space: a wrapped key from the upper left, a
-    // dim fill, and a rim that lifts the silhouette off the near-black.
+    // dim fill, and a rim that lifts the silhouette off the near-black. The
+    // sheen lies over ink and skin alike, as it does on healed skin.
     float key = dot(n, normalize(vec3(-0.45, 0.55, 0.7))) * 0.5 + 0.5;
     float fill = max(dot(n, normalize(vec3(0.8, -0.1, 0.4))), 0.0);
     float rim = pow(1.0 - max(dot(n, v), 0.0), 3.0);
@@ -85,8 +90,9 @@ const FRAGMENT = /* glsl */ `
   }
 `
 
-// The image as an ink canvas: light paper, dark lines, whatever it started as
-// (see toInkPixels), no larger than the texture needs to be.
+// The image as healed ink: light paper, dark lines, whatever it started as
+// (see toInkPixels), settled under the skin (healInkPixels), no larger than
+// the texture needs to be.
 export function loadDesign(src, {
   createImage = () => new Image(),
   createCanvas = () => document.createElement('canvas'),
@@ -102,7 +108,7 @@ export function loadDesign(src, {
       const ctx = canvas.getContext('2d', { willReadFrequently: true })
       ctx.drawImage(image, 0, 0, canvas.width, canvas.height)
       const data = ctx.getImageData(0, 0, canvas.width, canvas.height)
-      data.data.set(toInkPixels(data.data, canvas.width, canvas.height))
+      data.data.set(healInkPixels(toInkPixels(data.data, canvas.width, canvas.height)))
       ctx.putImageData(data, 0, 0)
       resolve(canvas)
     }
@@ -166,6 +172,7 @@ export function createArmEngine(THREE, GLTFLoader, mount, { modelUrl, callbacks 
       uDesign: { value: blank },
       uPlace: { value: new THREE.Vector4(0, 17, 12, 12) },
       uSkin: { value: new THREE.Color(SKIN) },
+      uInkFloor: { value: new THREE.Vector3(...healedInkFloor(SKIN_LINEAR)) },
       uBackdrop: { value: new THREE.Color(BACKDROP) },
     },
   })

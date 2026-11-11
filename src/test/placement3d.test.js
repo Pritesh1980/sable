@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   circumferenceAt, designSizeCm, clampPlacement, pinchWidth, wrapShare,
-  isDarkBackground, toInkPixels, MIN_WIDTH_CM, MAX_WRAP, viewFrame, designYaw, WHOLE_ARM,
+  isDarkBackground, toInkPixels, healInkPixels, healedInkFloor, MIN_WIDTH_CM, MAX_WRAP, viewFrame, designYaw, WHOLE_ARM,
   snapshotPose, MAX_SNAPSHOT_TURN, formatCm, arcLabel, snapshotVariant,
 } from '../data/placement3d'
 
@@ -100,6 +100,43 @@ describe('toInkPixels', () => {
   it('turns transparency into bare skin', () => {
     const out = toInkPixels(px([0, 0, 0, 0], [0, 0, 0, 255]), 2, 1)
     expect([...out.slice(0, 4)]).toEqual([255, 255, 255, 255])
+  })
+})
+
+// Healed ink, ported from render-on-body.py so the phone view and the Blender
+// renders agree: what a design looks like once it has settled under the skin.
+const srgb = (v) => v / 255
+const toLinear = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)
+const lum = ([r, g, b]) => 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+describe('healInkPixels', () => {
+  it('leaves bare skin bare', () => {
+    expect([...healInkPixels(px([255, 255, 255, 255]))]).toEqual([255, 255, 255, 255])
+  })
+  it('lets 2% of the skin back through solid black, in linear light', () => {
+    const [r, g, b] = healInkPixels(px([0, 0, 0, 255]))
+    expect(r).toBe(g)
+    expect(g).toBe(b)
+    expect(toLinear(srgb(r))).toBeCloseTo(0.02, 2)
+  })
+  it('fades coloured ink a quarter of the way to grey', () => {
+    const [r, g, b] = healInkPixels(px([200, 40, 40, 255]))
+    expect(r).toBeGreaterThan(g) // still red
+    expect(g).toBeGreaterThan(40) // but less so
+    expect(r).toBeLessThan(200)
+    expect(g).toBe(b)
+  })
+})
+
+describe('healedInkFloor', () => {
+  const skin = [0.32, 0.18, 0.09] // a warm brown, linear
+  it('is as dark as fresh black over this skin at the same strength', () => {
+    expect(lum(healedInkFloor(skin, 0.92))).toBeCloseTo(lum(skin) * 0.08, 6)
+  })
+  it('is a cool blue-green black, not the skin darkened to brown', () => {
+    const [r, g, b] = healedInkFloor(skin, 0.92)
+    expect(b).toBeGreaterThan(r)
+    expect(g).toBeGreaterThan(r)
   })
 })
 

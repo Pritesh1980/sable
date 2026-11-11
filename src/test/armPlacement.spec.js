@@ -32,6 +32,7 @@ function makeThree() {
         record.camera = this
       }
     },
+    Vector3: class { constructor(...v) { this.v = v } },
     Vector4: class { set(...v) { this.v = v } },
     Color: class { constructor(hex) { this.hex = hex } },
     DataTexture: disposable('blank'),
@@ -149,6 +150,14 @@ describe('createArmEngine', () => {
     const material = record.meshes[0].material
     expect(material.uniforms.uPlace.value.v).toEqual([3, 17, 12, 15.2])
     expect(record.meshes).toHaveLength(1)
+  })
+
+  it('lays a cool healed black under the skin, not the skin darkened', () => {
+    const { record } = start()
+    record.loader.onLoad(gltfWith({ isMesh: true, geometry: armGeometry() }))
+    const [r, g, b] = record.meshes[0].material.uniforms.uInkFloor.value.v
+    expect(b).toBeGreaterThan(r)
+    expect(g).toBeGreaterThan(r)
   })
 
   it('eases the camera in on the design, and back out for the whole arm', () => {
