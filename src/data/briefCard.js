@@ -1,3 +1,4 @@
+import { getBoardIdeas } from './boards'
 import { refKey } from './imageRef'
 import { isSameOrigin, resolveImageBytes, resolveImageRef } from './imageResolver'
 import { getImageNote, normalizeReferenceImages } from './planning'
@@ -284,6 +285,10 @@ export function layoutBriefCard(
     photoNotes,
     overflowCount,
     measureText,
+    kicker = 'SABLE · TATTOO BRIEF',
+    defaultTitle = 'Untitled idea',
+    placements,
+    overflowUnit = 'reference',
   } = {},
 ) {
   const inferred = [photoCount, skippedWebCount, photoNotes, overflowCount].includes(undefined)
@@ -329,7 +334,7 @@ export function layoutBriefCard(
   const artistLine = wrappedArtist.lines[0] || ''
   const headerHeight = artistLine ? Math.round(kickerFontSize * 1.4 + artistFontSize * 1.6) : Math.round(kickerFontSize * 1.5)
   const header = {
-    kicker: 'SABLE · TATTOO BRIEF',
+    kicker,
     kickerFontSize,
     artistLine,
     artistTruncated: wrappedArtist.truncated,
@@ -350,13 +355,13 @@ export function layoutBriefCard(
   const titleFontSize = Math.round(width * (count === 0 ? 0.067 : 0.052))
   const titleLineHeight = Math.round(titleFontSize * 1.18)
   const maxTitleLines = count > 0 ? 2 : 3
-  const titleText = String(idea?.title ?? '').trim() || 'Untitled idea'
+  const titleText = String(idea?.title ?? '').trim() || defaultTitle
   const wrappedTitle = wrapTextLines(titleText, {
     maxWidth: contentWidth,
     maxLines: maxTitleLines,
     measure: (t) => measure(t, titleFontSize, fonts.display, { weight: 600 }),
   })
-  const titleLines = wrappedTitle.lines.length ? wrappedTitle.lines : ['Untitled idea']
+  const titleLines = wrappedTitle.lines.length ? wrappedTitle.lines : [defaultTitle]
   const title = {
     lines: titleLines,
     truncated: wrappedTitle.truncated,
@@ -374,8 +379,13 @@ export function layoutBriefCard(
   cursorY = title.box.y + title.box.height + Math.round(height * 0.018)
 
   // Placement & style tag pills
+  const placementList = Array.isArray(placements)
+    ? placements.filter(Boolean)
+    : idea?.placement
+      ? [idea.placement]
+      : []
   const rawPills = [
-    ...(idea?.placement ? [{ label: String(idea.placement).toUpperCase(), kind: 'placement' }] : []),
+    ...placementList.map((p) => ({ label: String(p).toUpperCase(), kind: 'placement' })),
     ...((idea?.tags || []).filter(Boolean).map((tag) => ({ label: String(tag).toUpperCase(), kind: 'tag' }))),
   ]
 
@@ -519,7 +529,7 @@ export function layoutBriefCard(
     photos: {
       box: photosBox,
       slots,
-      overflowLabel: extraPhotos > 0 ? `+${extraPhotos} more reference${extraPhotos === 1 ? '' : 's'}` : '',
+      overflowLabel: extraPhotos > 0 ? `+${extraPhotos} more ${overflowUnit}${extraPhotos === 1 ? '' : 's'}` : '',
       overflowFontSize: captionSize,
       skippedWebCount: skippedWeb,
       skippedNotice,
@@ -537,7 +547,7 @@ function loadDomImage(src, { timeoutMs = IMAGE_LOAD_TIMEOUT_MS } = {}) {
       return
     }
     const image = new Image()
-    if (/^https?:/i.test(src)) {
+    if (!/^(?:data|blob):/i.test(src)) {
       image.crossOrigin = 'anonymous'
     }
     let settled = false
@@ -804,8 +814,8 @@ function canvasToPngBlob(canvas, hasContext) {
   })
 }
 
-export function briefCardFilename(idea) {
-  const raw = String(idea?.title ?? 'idea').toLowerCase()
+function slugifyCardName(value, fallback) {
+  const raw = String(value ?? fallback).toLowerCase()
   let slug = ''
   let prevDash = false
   for (const ch of raw) {
@@ -818,8 +828,15 @@ export function briefCardFilename(idea) {
       prevDash = true
     }
   }
-  const clean = trimChars(slug, '-').slice(0, 48) || 'idea'
-  return `sable-brief-${clean}.png`
+  return trimChars(slug, '-').slice(0, 48) || fallback
+}
+
+export function briefCardFilename(idea) {
+  return `sable-brief-${slugifyCardName(idea?.title, 'idea')}.png`
+}
+
+export function boardCardFilename(board) {
+  return `sable-board-${slugifyCardName(board?.name, 'board')}.png`
 }
 
 export function requestBriefCardDownload(blob, filename) {
@@ -947,4 +964,267 @@ export async function exportBriefCardImage(idea, options = {}) {
   const prepared = await prepareBriefCardImage(idea, options)
   const delivery = await shareOrDownloadBriefCard(prepared.blob, prepared.filename, options)
   return { ...prepared, ...delivery }
+}
+
+function formatBoardIdeaCaption(idea) {
+  const title = String(idea?.title ?? '').trim() || 'Untitled idea'
+  return idea?.placement ? `${title} · ${idea.placement}` : title
+}
+
+function inferBoardCardPhotos(board, ideas = []) {
+  const boardIdeas = getBoardIdeas({ ideaIds: board?.ideaIds || [] }, ideas)
+  const eligibleNotes = []
+  let skippedWebCount = 0
+
+  for (const idea of boardIdeas) {
+    let foundForIdea = false
+    for (const image of normalizeReferenceImages(idea?.images)) {
+      if (refKey(image)) {
+        if (!foundForIdea) {
+          eligibleNotes.push(formatBoardIdeaCaption(idea))
+          foundForIdea = true
+        }
+        continue
+      }
+      const resolved = resolveImageRef(image)
+      if (!resolved.src) continue
+      if (!isSameOrigin(resolved.src)) {
+        skippedWebCount += 1
+      } else if (!foundForIdea) {
+        eligibleNotes.push(formatBoardIdeaCaption(idea))
+        foundForIdea = true
+      }
+    }
+  }
+
+  const photoCount = Math.min(MAX_BRIEF_CARD_PHOTOS, eligibleNotes.length)
+  const overflowCount = photoCount > 0 ? Math.max(0, boardIdeas.length - photoCount) : 0
+  return {
+    photoCount,
+    photoNotes: eligibleNotes.slice(0, MAX_BRIEF_CARD_PHOTOS),
+    overflowCount,
+    skippedWebCount,
+  }
+}
+
+/**
+ * Pure layout for the 1080×1350 Instagram DM board summary card (#207).
+ */
+export function layoutBoardCard(
+  board = {},
+  ideas = [],
+  {
+    width = BRIEF_CARD_WIDTH,
+    height = BRIEF_CARD_HEIGHT,
+    fonts = DEFAULT_BRIEF_FONTS,
+    artists = [],
+    photoCount,
+    skippedWebCount,
+    photoNotes,
+    overflowCount,
+    measureText,
+  } = {},
+) {
+  const boardIdeas = getBoardIdeas({ ideaIds: board?.ideaIds || [] }, ideas)
+  const inferred = [photoCount, skippedWebCount, photoNotes, overflowCount].includes(undefined)
+    ? inferBoardCardPhotos(board, ideas)
+    : null
+  const count = Math.min(
+    MAX_BRIEF_CARD_PHOTOS,
+    Math.max(0, photoCount !== undefined ? photoCount : inferred.photoCount),
+  )
+  const skippedWeb = skippedWebCount !== undefined ? skippedWebCount : inferred.skippedWebCount
+  const notes = photoNotes ?? inferred.photoNotes
+  const extraIdeas = overflowCount ?? inferred.overflowCount
+
+  const kicker = boardIdeas.length > 0
+    ? `SABLE · TATTOO BOARD · ${boardIdeas.length} IDEA${boardIdeas.length === 1 ? '' : 'S'}`
+    : 'SABLE · TATTOO BOARD'
+  const placements = [...new Set(boardIdeas.map((idea) => idea.placement).filter(Boolean))]
+  const tags = [...new Set(boardIdeas.flatMap((idea) => idea.tags || []).filter(Boolean))]
+  const linkedArtists = [...new Set(boardIdeas.flatMap((idea) => idea.linkedArtists || []).filter(Boolean))]
+
+  const baseDesc = String(board?.description ?? '').trim()
+  let description = baseDesc
+  if (count === 0 && boardIdeas.length > 0) {
+    const ideaList = boardIdeas
+      .map((idea, index) => {
+        const label = String(idea?.title ?? '').trim() || 'Untitled idea'
+        return `${index + 1}. ${label}${idea?.placement ? ` (${idea.placement})` : ''}`
+      })
+      .join('\n')
+    description = baseDesc ? `${baseDesc}\n\n${ideaList}` : ideaList
+  }
+
+  return layoutBriefCard(
+    {
+      title: board?.name,
+      description,
+      tags,
+      linkedArtists,
+    },
+    {
+      width,
+      height,
+      fonts,
+      artists,
+      photoCount: count,
+      skippedWebCount: skippedWeb,
+      photoNotes: notes,
+      overflowCount: extraIdeas,
+      measureText,
+      kicker,
+      defaultTitle: 'Untitled board',
+      placements,
+      overflowUnit: 'idea',
+    },
+  )
+}
+
+/**
+ * Resolves up to 4 ready hero photos (one per member idea in board order) while
+ * skipping cross-origin `{ url }` images that would taint the canvas (#207).
+ */
+export async function collectBoardCardPhotos(
+  board = {},
+  ideas = [],
+  { loadImage = loadDomImage, onlyReadyKeys = false } = {},
+) {
+  const boardIdeas = getBoardIdeas({ ideaIds: board?.ideaIds || [] }, ideas)
+  const ideaGroups = []
+  let skippedWebCount = 0
+
+  for (const idea of boardIdeas) {
+    const caption = formatBoardIdeaCaption(idea)
+    const candidates = []
+    for (const image of normalizeReferenceImages(idea?.images)) {
+      const key = refKey(image)
+      if (!key) {
+        const resolved = resolveImageRef(image)
+        if (!resolved.src) continue
+        if (!isSameOrigin(resolved.src)) {
+          skippedWebCount += 1
+          continue
+        }
+        candidates.push({ image, directSrc: resolved.src })
+        continue
+      }
+      const sync = resolveImageRef(image)
+      if (onlyReadyKeys && sync.status !== 'ready') {
+        continue
+      }
+      candidates.push({ image, directSrc: isSameOrigin(sync.src) ? sync.src : '' })
+    }
+    if (candidates.length > 0) {
+      ideaGroups.push({ caption, candidates })
+    }
+  }
+
+  const photos = []
+  for (const group of ideaGroups) {
+    if (photos.length >= MAX_BRIEF_CARD_PHOTOS) break
+    for (const candidate of group.candidates) {
+      let src = candidate.directSrc
+      let release = () => {}
+      if (!src) {
+        const bytes = await resolveImageBytes(candidate.image)
+        src = bytes.src
+        release = bytes.release
+      }
+      if (!src) {
+        release()
+        continue
+      }
+      try {
+        const element = await loadImage(src)
+        if (element) {
+          photos.push({ element, note: group.caption, crop: candidate.image.briefCrop })
+          break
+        }
+      } finally {
+        release()
+      }
+    }
+  }
+
+  return {
+    photos,
+    overflowCount: photos.length > 0 ? Math.max(0, boardIdeas.length - photos.length) : 0,
+    skippedWebCount,
+    skippedNotice: formatSkippedWebImagesNotice(skippedWebCount),
+  }
+}
+
+/**
+ * Waits for web fonts, resolves up to 4 member-idea hero photos, renders the
+ * 1080×1350 board summary card onto a canvas, and shares or downloads the PNG (#207).
+ */
+export async function exportBoardCardImage(
+  board,
+  ideas = [],
+  {
+    artists = [],
+    width = BRIEF_CARD_WIDTH,
+    height = BRIEF_CARD_HEIGHT,
+    fonts = DEFAULT_BRIEF_FONTS,
+    onlyReadyKeys = false,
+    loadImage,
+    createCanvas = () => document.createElement('canvas'),
+    nav,
+    download,
+  } = {},
+) {
+  await loadBriefCardFonts(fonts)
+
+  const { photos, overflowCount, skippedWebCount, skippedNotice } = await collectBoardCardPhotos(
+    board,
+    ideas,
+    { loadImage, onlyReadyKeys },
+  )
+
+  const canvas = createCanvas()
+  canvas.width = width
+  canvas.height = height
+  let ctx = null
+  try {
+    ctx = canvas.getContext?.('2d') || null
+  } catch {
+    ctx = null
+  }
+
+  const measureText = ctx
+    ? (text, fontSpec, fontSize) => {
+        ctx.font = fontSpec
+        const measured = ctx.measureText?.(text)?.width
+        return typeof measured === 'number' && measured > 0
+          ? measured
+          : defaultMeasureText(text, fontSize)
+      }
+    : undefined
+
+  const layout = layoutBoardCard(board, ideas, {
+    width,
+    height,
+    fonts,
+    artists,
+    photoCount: photos.length,
+    skippedWebCount,
+    photoNotes: photos.map((p) => p.note),
+    overflowCount,
+    measureText,
+  })
+
+  const drawn = ctx ? drawBriefCardOnCanvas(canvas, layout, photos) : false
+  const blob = await canvasToPngBlob(canvas, drawn)
+  const filename = boardCardFilename(board)
+  const delivery = await shareOrDownloadBriefCard(blob, filename, { nav, download })
+
+  return {
+    ...delivery,
+    blob,
+    layout,
+    photoCount: photos.length,
+    skippedWebCount,
+    skippedNotice,
+  }
 }
