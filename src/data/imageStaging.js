@@ -145,11 +145,13 @@ function attemptUpload(entry, dataUrl) {
 // falls back to uploading directly, and failing that hands the photo back
 // unregistered too — a key with no bytes anywhere would be worse than a photo
 // that is only on screen.
-export async function stageImage(input, { userId, scope, id } = {}) {
+export async function stageImage(input, { userId, scope, id, assertCurrent: assertCaller = () => {} } = {}) {
   let dataUrl
   let assertCurrent
   try {
-    ;({ assertCurrent } = captureOwner(userId))
+    const owner = captureOwner(userId)
+    assertCurrent = () => { owner.assertCurrent(); assertCaller() }
+    assertCurrent()
     dataUrl = typeof input === 'string' ? input : await blobToDataUrl(input)
     assertCurrent()
   } catch (e) {

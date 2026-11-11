@@ -39,7 +39,9 @@ function isFresh(entry) {
 export function registerBlobUrl(key, url) {
   if (!key) return
   keyToEntry.set(key, { url, cachedAt: Date.now() })
-  if (url) urlToKey.set(url, key)
+  // A byte-identical independent copy has the same data URL. It must not
+  // steal a retained source URL's identity (#204); canonical refs keep each key.
+  if (url && !urlToKey.has(url)) urlToKey.set(url, key)
 }
 
 // Synchronous cache peek for render paths that can't await resolveBlobKey. A
