@@ -9,6 +9,8 @@ import {
   drawBriefCardOnCanvas,
   exportBriefCardImage,
   shareOrDownloadBriefCard,
+  prepareBriefCardImage,
+  computeBriefCardCrop,
 } from '../data/briefCard'
 import { registerBlobUrl, clearBlobUrls } from '../data/blobUrls'
 import Brief from '../pages/Brief'
@@ -35,6 +37,40 @@ function boxesOverlap(a, b) {
     a.y + a.height > b.y
   )
 }
+
+describe('export-only crop and prepared PNG', () => {
+  it('uses bounded source coordinates for an edge crop without stretching', () => {
+    expect(computeBriefCardCrop(800, 600, 200, 400, { x: 1, y: 0, zoom: 2 }))
+      .toEqual({ sx: 650, sy: 0, sw: 150, sh: 300 })
+    expect(computeBriefCardCrop(800, 600, 200, 400))
+      .toEqual({ sx: 250, sy: 0, sw: 300, sh: 600 })
+  })
+  it('keeps source occurrence and crop attached after exclusions and decode failures', async () => {
+    const crop = { x: 1, y: 0, zoom: 2 }
+    const result = await collectBriefCardPhotos([
+      { url: 'https://example.com/x.jpg' }, { url: '/bad.png' },
+      { url: '/good.png', note: 'Shape', briefCrop: crop },
+      { url: '/good.png', note: 'Shading' },
+    ], { loadImage: async (src) => src.endsWith('/bad.png') ? null : { width: 800, height: 600 } })
+    expect(result.photos.map((p) => p.sourceIndex)).toEqual([2, 3])
+    expect(result.photos[0]).toMatchObject({ note: 'Shape', crop, ref: { url: '/good.png', note: 'Shape', briefCrop: crop } })
+    expect(result.unavailableCount).toBe(1)
+  })
+  it('prepares a PNG without triggering delivery', async () => {
+    const ctx = {
+      fillRect: vi.fn(), strokeRect: vi.fn(), fillText: vi.fn(), drawImage: vi.fn(),
+      save: vi.fn(), restore: vi.fn(), beginPath: vi.fn(), rect: vi.fn(), clip: vi.fn(),
+      moveTo: vi.fn(), lineTo: vi.fn(), stroke: vi.fn(), measureText: (t) => ({ width: t.length * 12 }),
+    }
+    const blob = new Blob(['actual PNG'], { type: 'image/png' })
+    const result = await prepareBriefCardImage({ title: 'Prepared' }, {
+      createCanvas: () => ({ getContext: () => ctx, toBlob: (cb) => cb(blob) }),
+    })
+    expect(result.blob).toBe(blob)
+    expect(result.filename).toBe('sable-brief-prepared.png')
+    expect(result.layout.width).toBe(1080)
+  })
+})
 
 describe('layoutBriefCard', () => {
   it('defaults to 1080×1350 Instagram portrait and keeps all boxes inside the canvas', () => {

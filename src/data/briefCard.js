@@ -2,6 +2,7 @@ import { refKey } from './imageRef'
 import { isSameOrigin, resolveImageBytes, resolveImageRef } from './imageResolver'
 import { getImageNote, normalizeReferenceImages } from './planning'
 import { trimChars, trimEndChars } from './textTrim'
+import { normalizeBriefCrop } from './referenceImages'
 
 export const BRIEF_CARD_WIDTH = 1080
 export const BRIEF_CARD_HEIGHT = 1350
@@ -569,26 +570,30 @@ export async function collectBriefCardPhotos(
   const normalized = normalizeReferenceImages(images)
   const candidates = []
   let skippedWebCount = 0
+  const unavailableIndices = []
+  const skippedWebIndices = []
 
-  for (const image of normalized) {
+  for (const [sourceIndex, image] of normalized.entries()) {
     const key = refKey(image)
     const note = getImageNote(image)
     if (!key) {
       const resolved = resolveImageRef(image)
-      if (!resolved.src) continue
+      if (!resolved.src) { unavailableIndices.push(sourceIndex); continue }
       if (!isSameOrigin(resolved.src)) {
         skippedWebCount += 1
+        skippedWebIndices.push(sourceIndex)
         continue
       }
-      candidates.push({ image, note, directSrc: resolved.src })
+      candidates.push({ image, note, sourceIndex, directSrc: resolved.src })
       continue
     }
 
     const sync = resolveImageRef(image)
     if (onlyReadyKeys && sync.status !== 'ready') {
+      unavailableIndices.push(sourceIndex)
       continue
     }
-    candidates.push({ image, note, directSrc: isSameOrigin(sync.src) ? sync.src : '' })
+    candidates.push({ image, note, sourceIndex, directSrc: isSameOrigin(sync.src) ? sync.src : '' })
   }
 
   const photos = []
@@ -603,13 +608,17 @@ export async function collectBriefCardPhotos(
     }
     if (!src) {
       release()
+      unavailableIndices.push(candidate.sourceIndex)
       continue
     }
     try {
       const element = await loadImage(src)
       if (element) {
-        photos.push({ element, note: candidate.note })
-      }
+        photos.push({ element, note: candidate.note, sourceIndex: candidate.sourceIndex,
+          ref: candidate.image, crop: candidate.image.briefCrop })
+      } else unavailableIndices.push(candidate.sourceIndex)
+    } catch {
+      unavailableIndices.push(candidate.sourceIndex)
     } finally {
       release()
     }
@@ -617,6 +626,9 @@ export async function collectBriefCardPhotos(
 
   return {
     photos,
+    unavailableCount: unavailableIndices.length,
+    unavailableIndices,
+    skippedWebIndices,
     // Count omitted reference entries, not decoded photos. This keeps the
     // number independent of decode order without fetching surplus images.
     overflowCount: photos.length === MAX_BRIEF_CARD_PHOTOS ? candidates.length - photos.length : 0,
@@ -625,14 +637,18 @@ export async function collectBriefCardPhotos(
   }
 }
 
-function drawCoverImage(ctx, img, slot) {
+export function computeBriefCardCrop(iw, ih, width, height, crop) {
+  const { x, y, zoom } = normalizeBriefCrop(crop) || { x: 0.5, y: 0.5, zoom: 1 }
+  const scale = Math.max(width / iw, height / ih) * zoom
+  const sw = width / scale
+  const sh = height / scale
+  return { sx: Math.max(0, iw - sw) * x, sy: Math.max(0, ih - sh) * y, sw, sh }
+}
+
+function drawCoverImage(ctx, img, slot, crop) {
   const iw = img.naturalWidth || img.width || slot.width
   const ih = img.naturalHeight || img.height || slot.height
-  const scale = Math.max(slot.width / iw, slot.height / ih)
-  const sw = slot.width / scale
-  const sh = slot.height / scale
-  const sx = Math.max(0, (iw - sw) / 2)
-  const sy = Math.max(0, (ih - sh) / 2)
+  const { sx, sy, sw, sh } = computeBriefCardCrop(iw, ih, slot.width, slot.height, crop)
 
   ctx.save()
   ctx.beginPath()
@@ -709,7 +725,7 @@ export function drawBriefCardOnCanvas(canvas, layout, photos = []) {
     ctx.fillRect(slot.x, slot.y, slot.width, slot.height)
     const photo = photos[slot.index]
     if (photo?.element) {
-      drawCoverImage(ctx, photo.element, { ...slot, height: slot.imageHeight })
+      drawCoverImage(ctx, photo.element, { ...slot, height: slot.imageHeight }, photo.crop)
       const { lines, fontSize, lineHeight, pad } = slot.caption
       ctx.fillStyle = theme.cream
       ctx.font = `400 ${fontSize}px ${fonts.body}`
@@ -861,7 +877,7 @@ export async function shareOrDownloadBriefCard(
  * Waits for web fonts, resolves ready local/blob photos, renders the 1080×1350
  * card onto a canvas, and shares or downloads the resulting PNG (#180).
  */
-export async function exportBriefCardImage(
+export async function prepareBriefCardImage(
   idea,
   {
     artists = [],
@@ -871,16 +887,15 @@ export async function exportBriefCardImage(
     onlyReadyKeys = true,
     loadImage,
     createCanvas = () => document.createElement('canvas'),
-    nav,
-    download,
   } = {},
 ) {
   await loadBriefCardFonts(fonts)
 
-  const { photos, overflowCount, skippedWebCount, skippedNotice } = await collectBriefCardPhotos(idea?.images, {
+  const selection = await collectBriefCardPhotos(idea?.images, {
     loadImage,
     onlyReadyKeys,
   })
+  const { photos, overflowCount, skippedWebCount } = selection
 
   const canvas = createCanvas()
   canvas.width = width
@@ -917,14 +932,19 @@ export async function exportBriefCardImage(
   const drawn = ctx ? drawBriefCardOnCanvas(canvas, layout, photos) : false
   const blob = await canvasToPngBlob(canvas, drawn)
   const filename = briefCardFilename(idea)
-  const delivery = await shareOrDownloadBriefCard(blob, filename, { nav, download })
-
   return {
-    ...delivery,
+    ...selection,
     blob,
+    filename,
     layout,
     photoCount: photos.length,
-    skippedWebCount,
-    skippedNotice,
   }
+}
+
+// Compatibility/imperative path; editor sharing uses its already-prepared PNG
+// so navigator.share is reached synchronously from the user's tap.
+export async function exportBriefCardImage(idea, options = {}) {
+  const prepared = await prepareBriefCardImage(idea, options)
+  const delivery = await shareOrDownloadBriefCard(prepared.blob, prepared.filename, options)
+  return { ...prepared, ...delivery }
 }
