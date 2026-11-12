@@ -1,6 +1,6 @@
 import { createRef, useImperativeHandle } from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { render, screen, fireEvent, act, within, waitFor } from '@testing-library/react'
 import ArmPlacementPanel from '../components/ArmPlacementPanel'
 
 // The 3D view is a stub that exposes the props it was given and answers
@@ -17,8 +17,15 @@ vi.mock('../components/ArmPlacement3D', () => ({
 
 const META = {
   skin_cm: [1.7, 25],
+  extent_cm: [-15, 35.4],
   perimeter_cm: [[1.7, 25], [10, 28], [16, 30], [25, 32]],
 }
+const FOREARM_META = {
+  skin_cm: [1, 22],
+  extent_cm: [-4, 30.9],
+  perimeter_cm: [[1, 17], [12, 23], [22, 26]],
+}
+const metaFor = (url) => (String(url).includes('arm-forearm') ? FOREARM_META : META)
 const BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47])
 
 async function open(props = {}) {
@@ -36,7 +43,7 @@ const drawn = (size = { width: 600, height: 760 }) => act(() => {
 beforeEach(() => {
   view.props = null
   view.snapshot = vi.fn(() => BYTES)
-  vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve(META) })))
+  vi.stubGlobal('fetch', vi.fn((url) => Promise.resolve({ ok: true, json: () => Promise.resolve(metaFor(url)) })))
 })
 afterEach(() => vi.unstubAllGlobals())
 
@@ -66,6 +73,7 @@ describe('ArmPlacementPanel', () => {
     expect(ref.current.snapshot()).toEqual({
       bytes: BYTES,
       placement: { widthCm: 9, heightCm: 11.4, centreCm: 17, arcCm: 0 },
+      limb: 'upper-arm',
     })
   })
 
@@ -120,5 +128,66 @@ describe('ArmPlacementPanel', () => {
     render(<ArmPlacementPanel ref={ref} imageSrc="blob:design" />)
     expect(await screen.findByRole('alert')).toHaveTextContent('The arm model could not be loaded.')
     expect(ref.current.snapshot()).toBeNull()
+  })
+})
+
+// #206: the forearm, and a switch between the two.
+describe('ArmPlacementPanel limbs', () => {
+  it('frames the whole limb from the model it loaded', async () => {
+    await open()
+    expect(view.props.whole).toEqual({ focusCm: 10.2, frameCm: 54.4 })
+  })
+
+  it('opens on the limb it is asked for, with that limb\'s words and default', async () => {
+    await open({ limb: 'forearm' })
+    expect(view.props.modelUrl).toBe('/models/arm-forearm.glb')
+    expect(fetch).toHaveBeenCalledWith('/models/arm-forearm.json')
+    drawn()
+    expect(screen.getByTestId('placement-size')).toHaveTextContent('8.0 cm wide × 10.1 cm tall')
+    expect(screen.getByLabelText('Above the wrist')).toHaveAttribute('type', 'range')
+    expect(screen.getByLabelText('Round the arm')).toHaveAttribute('aria-valuetext', 'inner forearm')
+    expect(view.props.whole).toEqual({ focusCm: 13.45, frameCm: 38.9 })
+  })
+
+  it('switches limb, starting the view afresh on the new one', async () => {
+    const onReadyChange = vi.fn()
+    const { ref } = await open({ onReadyChange })
+    drawn()
+    const group = screen.getByRole('group', { name: 'Limb' })
+    expect(within(group).getByRole('button', { name: 'Upper arm' })).toHaveAttribute('aria-pressed', 'true')
+    const forearm = within(group).getByRole('button', { name: 'Forearm' })
+    forearm.focus()
+    fireEvent.click(forearm)
+    // The limb's view starts afresh, but the switch is the same one: a
+    // keyboard user's focus stays where they left it.
+    expect(forearm).toHaveAttribute('aria-pressed', 'true')
+    expect(document.activeElement).toBe(forearm)
+    await waitFor(() => expect(view.props.modelUrl).toBe('/models/arm-forearm.glb'))
+    // A new arm: nothing to save until it and the design are drawn again.
+    expect(onReadyChange).toHaveBeenLastCalledWith(false)
+    expect(ref.current.snapshot()).toBeNull()
+    drawn()
+    expect(ref.current.snapshot()).toMatchObject({ limb: 'forearm', placement: { widthCm: 12, centreCm: 12 } })
+  })
+
+  it('carries the width across a switch, so the same stencil can be compared', async () => {
+    await open()
+    drawn()
+    fireEvent.change(screen.getByLabelText('Width'), { target: { value: '9.5' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Forearm' }))
+    await waitFor(() => expect(view.props.modelUrl).toBe('/models/arm-forearm.glb'))
+    drawn()
+    // Same width; the forearm's own height up the limb, since heights don't map across.
+    expect(screen.getByTestId('placement-size')).toHaveTextContent('9.5 cm wide')
+    expect(screen.getByLabelText('Above the wrist')).toHaveValue('12')
+    fireEvent.click(screen.getByRole('button', { name: 'Upper arm' }))
+    await waitFor(() => expect(view.props.modelUrl).toBe('/models/arm-upper.glb'))
+    drawn()
+    expect(screen.getByTestId('placement-size')).toHaveTextContent('9.5 cm wide')
+  })
+
+  it('has no switcher for a limb it does not know, and opens the upper arm', async () => {
+    await open({ limb: 'thigh' })
+    expect(view.props.modelUrl).toBe('/models/arm-upper.glb')
   })
 })

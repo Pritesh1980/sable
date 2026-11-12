@@ -1,14 +1,22 @@
 import { readFileSync } from 'node:fs'
 import { describe, it, expect } from 'vitest'
-import { clampPlacement, DEFAULT_PLACEMENT } from '../data/placement3d'
+import { clampPlacement, LIMBS } from '../data/placement3d'
 
 // Contract between scripts/blender/export-arm-gltf.py and the 3D placement
 // view: the shipped model must carry the skin coordinates the shader reads,
 // and its sidecar the table the size readout is clamped by.
-const meta = JSON.parse(readFileSync('public/models/arm-upper.json', 'utf8'))
-const glb = readFileSync('public/models/arm-upper.glb')
+// Every limb in LIMBS (#206) must ship its model.
+describe.each(Object.values(LIMBS))('public/models/$file', ({ id, file, placement }) => {
+  const meta = JSON.parse(readFileSync(`public/models/${file}.json`, 'utf8'))
+  const glb = readFileSync(`public/models/${file}.glb`)
 
-describe('public/models/arm-upper', () => {
+  it('is the limb it is filed under, with the extent its whole view frames', () => {
+    expect(meta.limb).toBe(id)
+    const [lo, hi] = meta.extent_cm
+    expect(lo).toBeLessThan(meta.skin_cm[0])
+    expect(hi).toBeGreaterThan(meta.skin_cm[1])
+  })
+
   it('is an uncompressed binary glTF with the skin attributes', () => {
     expect(glb.subarray(0, 4).toString('latin1')).toBe('glTF')
     const json = JSON.parse(glb.subarray(20, 20 + glb.readUInt32LE(12)).toString('utf8'))
@@ -36,6 +44,6 @@ describe('public/models/arm-upper', () => {
 
   it('fits the default placement without clamping it', () => {
     const arm = { skinCm: meta.skin_cm, perimeterCm: meta.perimeter_cm, aspect: 760 / 600 }
-    expect(clampPlacement(DEFAULT_PLACEMENT, arm)).toMatchObject(DEFAULT_PLACEMENT)
+    expect(clampPlacement(placement, arm)).toMatchObject(placement)
   })
 })

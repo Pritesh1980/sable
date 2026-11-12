@@ -5,14 +5,44 @@
 // The arm model (scripts/blender/export-arm-gltf.py) carries each vertex's
 // place on the skin, so a placement is just three numbers:
 //   widthCm   printed width, measured round the curve as a stencil lies
-//   centreCm  height of the design's centre above the elbow joint
-//   arcCm     how far round the arm from the outside line (0 = outer arm)
+//   centreCm  height of the design's centre up the limb: above the elbow
+//             joint on the upper arm, above the wrist joint on the forearm
+//   arcCm     how far round from the line down the limb's +z side (the outer
+//             upper arm, the inner forearm)
 
 export const MIN_WIDTH_CM = 3
 // A design may go at most this far round the arm: past it the two edges meet
 // at the back and the seam shows.
 export const MAX_WRAP = 0.9
 export const DEFAULT_PLACEMENT = { widthCm: 12, centreCm: 17, arcCm: 0 }
+
+// The limbs there is a model of (#206), each exported by export-arm-gltf.py
+// to public/models/<file>.{glb,json} (precached as models/arm-*). The words
+// are what the sliders and saved notes say: `ahead` is the way a positive arc
+// runs round the limb, `behind` a negative one.
+export const LIMBS = {
+  'upper-arm': {
+    id: 'upper-arm', label: 'Upper arm', noun: 'arm', file: 'arm-upper',
+    along: 'Above the elbow', from: 'above the elbow',
+    line: 'outer arm', ahead: 'to the back', behind: 'to the front',
+    placement: DEFAULT_PLACEMENT,
+  },
+  forearm: {
+    id: 'forearm', label: 'Forearm', noun: 'forearm', file: 'arm-forearm',
+    along: 'Above the wrist', from: 'above the wrist',
+    line: 'inner forearm', ahead: 'towards the thumb', behind: 'towards the little finger',
+    placement: { widthCm: 8, centreCm: 12, arcCm: 0 },
+  },
+}
+export const DEFAULT_LIMB = 'upper-arm'
+
+// An idea's body placement (PLACEMENTS in data/artists.js) → the limb its 3D
+// view opens on. A sleeve starts on the upper arm; anywhere without a model
+// falls back to it too, and the view's switcher is one tap away.
+const LIMB_FOR_PLACEMENT = { forearm: 'forearm', 'upper arm': 'upper-arm', sleeve: 'upper-arm' }
+export function limbFor(placement) {
+  return LIMB_FOR_PLACEMENT[placement] || DEFAULT_LIMB
+}
 
 export function circumferenceAt(table, yCm) {
   if (yCm <= table[0][0]) return table[0][1]
@@ -71,18 +101,29 @@ export function wrapShare({ widthCm, centreCm }, perimeterCm) {
 // Sable is about the tattoo, so the view is framed on the design and the arm
 // is its setting. 'arm' steps back to the whole limb, to judge scale.
 
-// The exported model spans about 54 cm, centred 10.5 cm above the elbow.
+// The upper arm model spans about 54 cm, centred 10.5 cm above the elbow: the
+// whole-limb view of a model whose sidecar gives no extent.
 export const WHOLE_ARM = { focusCm: 10.5, frameCm: 54 }
 const CLOSEST_FRAME_CM = 14
 const FRAME_MARGIN = 1.4
+const WHOLE_MARGIN_CM = 4
 
-// `focusCm`: the height above the elbow at the middle of the view.
-// `frameCm`: how much arm fits in the view, top to bottom.
-export function viewFrame({ widthCm, heightCm, centreCm }, mode = 'design') {
-  if (mode === 'arm') return WHOLE_ARM
+// The whole-limb view from a model's `extent_cm` (the heights its visible
+// skin spans): all of it, with a little room either end.
+export function wholeLimbFrame(extentCm) {
+  if (!Array.isArray(extentCm)) return WHOLE_ARM
+  const [lo, hi] = extentCm
+  return { focusCm: round2((lo + hi) / 2), frameCm: round2(hi - lo + WHOLE_MARGIN_CM) }
+}
+
+// `focusCm`: the height up the limb at the middle of the view.
+// `frameCm`: how much limb fits in the view, top to bottom.
+// `whole`: the limb's whole view (wholeLimbFrame), the most ever framed.
+export function viewFrame({ widthCm, heightCm, centreCm }, mode = 'design', whole = WHOLE_ARM) {
+  if (mode === 'arm') return whole
   // A wide design wraps away round the arm, so its width needs less room.
   const frameCm = Math.max(CLOSEST_FRAME_CM, FRAME_MARGIN * Math.max(heightCm, 0.6 * widthCm))
-  return frameCm >= WHOLE_ARM.frameCm ? WHOLE_ARM : { focusCm: centreCm, frameCm: round2(frameCm) }
+  return frameCm >= whole.frameCm ? whole : { focusCm: centreCm, frameCm: round2(frameCm) }
 }
 
 // How far to turn the arm (radians about its length) so the design's centre
@@ -101,11 +142,11 @@ export function designYaw({ centreCm, arcCm }, perimeterCm) {
 export const MAX_SNAPSHOT_TURN = 0.6
 
 // `turned` is the user's own drag, in radians, on top of the design's yaw.
-export function snapshotPose(placement, perimeterCm, turned = 0) {
-  const whole = 2 * Math.PI
-  const turn = turned - whole * Math.round(turned / whole) // shortest way round
+export function snapshotPose(placement, perimeterCm, turned = 0, whole = WHOLE_ARM) {
+  const full = 2 * Math.PI
+  const turn = turned - full * Math.round(turned / full) // shortest way round
   return {
-    ...viewFrame(placement, 'design'),
+    ...viewFrame(placement, 'design', whole),
     yaw: designYaw(placement, perimeterCm),
     turned: Math.min(MAX_SNAPSHOT_TURN, Math.max(-MAX_SNAPSHOT_TURN, turn)),
   }
@@ -113,19 +154,19 @@ export function snapshotPose(placement, perimeterCm, turned = 0) {
 
 export const formatCm = (n) => `${n.toFixed(1)} cm`
 
-export function arcLabel(arcCm) {
-  if (arcCm === 0) return 'outer arm'
-  return `${formatCm(Math.abs(arcCm))} ${arcCm > 0 ? 'to the back' : 'to the front'}`
+export function arcLabel(arcCm, limb = LIMBS[DEFAULT_LIMB]) {
+  if (arcCm === 0) return limb.line
+  return `${formatCm(Math.abs(arcCm))} ${arcCm > 0 ? limb.ahead : limb.behind}`
 }
 
 // What a saved snapshot is called, labelled the way the live try-on labels
 // its own: made on this device, so the provider is 'other', not an AI.
-export function snapshotVariant(label, { widthCm, heightCm, centreCm, arcCm }) {
+export function snapshotVariant(label, { widthCm, heightCm, centreCm, arcCm }, limb = LIMBS[DEFAULT_LIMB]) {
   return {
     provider: 'other',
-    title: `On the arm, ${round1(widthCm)} cm`,
-    notes: `3D arm preview of ${label}. ${formatCm(widthCm)} wide × ${formatCm(heightCm)} tall, `
-      + `centred ${formatCm(centreCm)} above the elbow, ${arcLabel(arcCm)}.`,
+    title: `On the ${limb.noun}, ${round1(widthCm)} cm`,
+    notes: `3D ${limb.noun} preview of ${label}. ${formatCm(widthCm)} wide × ${formatCm(heightCm)} tall, `
+      + `centred ${formatCm(centreCm)} ${limb.from}, ${arcLabel(arcCm, limb)}.`,
   }
 }
 

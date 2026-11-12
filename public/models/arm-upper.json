@@ -1,6 +1,7 @@
 {
  "generator": "scripts/blender/export-arm-gltf.py",
  "source": "MakeHuman base mesh and targets (CC0 1.0)",
+ "limb": "upper-arm",
  "frame": "metres; origin at the elbow joint; +y to the shoulder; +z out of the outer arm",
  "attributes": {
   "TEXCOORD_0": "(arc_cm, perimeter_cm); perimeter 0 = no design",
@@ -17,6 +18,10 @@
  "skin_cm": [
   1.7,
   25.0
+ ],
+ "extent_cm": [
+  -15.0,
+  35.4
  ],
  "perimeter_cm": [
   [

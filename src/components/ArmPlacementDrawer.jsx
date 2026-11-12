@@ -4,12 +4,15 @@ import useDialogFocus, { isTopmostDialog } from '../hooks/useDialogFocus'
 import useImageBytes from '../hooks/useImageBytes'
 import { blobToDataUrl } from '../data/imageStaging'
 import { shrinkImageDataUrl } from '../data/skinPreview'
-import { snapshotVariant } from '../data/placement3d'
+import { snapshotVariant, LIMBS, DEFAULT_LIMB } from '../data/placement3d'
 
-// A saved concept result on the 3D upper arm at true size (#195), opened from
-// the result's "View on arm in 3D" action. The picture it saves becomes a
-// variant on the same concept, the way a try-on snapshot does.
-function ArmPlacementContent({ source, onSave, onClose }) {
+// An image on the 3D arm at true size (#195): a saved concept result, from its
+// "View on arm in 3D" action, whose picture becomes a variant on the same
+// concept the way a try-on snapshot does; or a Brief idea's reference photo
+// (#206), whose picture joins the idea's references. `source.limb` is the limb
+// it opens on; `onSave(conceptId, variant)` gets the picture as a data URL in
+// `variant.imageUrl`, for the page to stage.
+function ArmPlacementContent({ source, onSave, onClose, saveLabel, hint }) {
   // Focus moves in, Tab stays in, and focus goes back to the opener on close.
   const dialogRef = useDialogFocus(true)
   const panelRef = useRef(null)
@@ -35,7 +38,7 @@ function ArmPlacementContent({ source, onSave, onClose }) {
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [dialogRef])
 
-  const label = source.variantLabel || source.conceptLabel || 'Concept'
+  const label = source.label || source.variantLabel || source.conceptLabel || 'Concept'
 
   async function handleSave() {
     setError('')
@@ -51,7 +54,8 @@ function ArmPlacementContent({ source, onSave, onClose }) {
       // Downsized like every try-on result; the page stages it before the
       // key reaches state (Concepts.addVariant).
       const imageUrl = await shrinkImageDataUrl(png)
-      onSave(source.conceptId, { ...snapshotVariant(label, shot.placement), imageUrl })
+      const limb = LIMBS[shot.limb] || LIMBS[DEFAULT_LIMB]
+      onSave(source.conceptId, { ...snapshotVariant(label, shot.placement, limb), imageUrl })
       onClose()
     } catch {
       setError('Could not save a picture of this view.')
@@ -89,6 +93,7 @@ function ArmPlacementContent({ source, onSave, onClose }) {
           {status === 'ready' && (
             <ArmPlacementPanel
               ref={panelRef}
+              limb={source.limb || DEFAULT_LIMB}
               imageSrc={src}
               onReadyChange={setCanSave}
               className="flex flex-1 flex-col"
@@ -108,6 +113,7 @@ function ArmPlacementContent({ source, onSave, onClose }) {
         </div>
 
         <footer className="border-t border-v2-hairline px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          {hint && <p data-testid="arm-hint" className="mb-2 font-v2-ui text-xs text-v2-muted">{hint}</p>}
           {error && <p role="alert" className="mb-2 font-v2-ui text-sm text-v2-accent">{error}</p>}
           <button
             type="button"
@@ -115,7 +121,7 @@ function ArmPlacementContent({ source, onSave, onClose }) {
             disabled={status !== 'ready' || !canSave || saving}
             className="min-h-11 w-full rounded-xs bg-v2-cream px-4 font-v2-ui text-sm font-semibold text-v2-ink transition-[filter] hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {saving ? 'Saving…' : 'Save as variant'}
+            {saving ? 'Saving…' : saveLabel}
           </button>
         </footer>
       </section>
@@ -123,7 +129,12 @@ function ArmPlacementContent({ source, onSave, onClose }) {
   )
 }
 
-export default function ArmPlacementDrawer({ source, onSave, onClose }) {
+export default function ArmPlacementDrawer({ source, onSave, onClose, saveLabel = 'Save as variant', hint = '' }) {
   if (!source) return null
-  return <ArmPlacementContent key={source.imageUrl} source={source} onSave={onSave} onClose={onClose} />
+  return (
+    <ArmPlacementContent
+      key={source.imageUrl} source={source} onSave={onSave} onClose={onClose} saveLabel={saveLabel}
+      hint={hint}
+    />
+  )
 }

@@ -24,6 +24,8 @@ describe('selectPrecacheAssets', () => {
     'guide/wall.png',
     'models/arm-upper.glb',
     'models/arm-upper.json',
+    'models/arm-forearm.glb',
+    'models/arm-forearm.json',
     'models/designs/hourglass.webp',
   ]
 
@@ -59,6 +61,9 @@ describe('selectPrecacheAssets', () => {
     const urls = selectPrecacheAssets(distFiles)
     expect(urls).toContain('/models/arm-upper.glb')
     expect(urls).toContain('/models/arm-upper.json')
+    // #206: the forearm is matched by the same models/arm-* rule.
+    expect(urls).toContain('/models/arm-forearm.glb')
+    expect(urls).toContain('/models/arm-forearm.json')
     expect(urls).not.toContain('/models/designs/hourglass.webp')
   })
 

@@ -69,7 +69,7 @@ const SECTIONS = [
     blurb: 'Capture tattoo ideas, link artists to them, and group ideas into mood boards.',
     image: 'brief-idea-editor.png',
     steps: [
-      'Open Ideas and tap + to create an idea. Add a title, description, style tags, body placement and reference images. 3D print on a reference image turns it into a printable relief STL.',
+      'Open Ideas and tap + to create an idea. Add a title, description, style tags, body placement and reference images. 3D print on a reference image turns it into a printable relief STL; On arm puts it on the 3D arm at its real size (the forearm for a forearm idea, otherwise the upper arm), and Add to references keeps that picture as another reference. It works best with a flat design such as a drawing or flash sheet; a photo of a tattoo already on skin goes on whole, background and all.',
       'The tabs at the top of Ideas filter by status: All, then Idea, Booked or Done once at least one idea has that status.',
       'An AI-generated imagery label stays visible in an idea or board editor when it shows a shipped demo image; a Board cover is labeled even if its linked ideas have no demo images.',
       'With a Gemini key set and a reference image uploaded, Fill idea from image drafts the title, description, tags and placement from the image — only fields you left empty are filled.',
@@ -124,7 +124,7 @@ const SECTIONS = [
       '+ Prompt packs in the composer builds tailored prompts for ChatGPT, Firefly, Gemini and Claude from free text or a Brief idea; Save Pack keeps the set. Pack concepts without an image wait in the Drafts strip until you paste a result in.',
       'Click a saved concept and it fills the screen like the artists’ Wall; Esc or × Close (top-left) takes you back (with its details open, the first Esc closes just the panel). On a phone, swipe left/right between concepts, down to close, and tap the image (or Details) for Delete and Variants. Deleting shows an Undo bar for a few seconds. Press I for its prompt, response, style matching and AI results — save multiple outputs as variants, each with an image, text, notes and a rating; mark the strongest as Best.',
       'On a result with an image, Try on skin opens Live camera (free and instant: drag, pinch and twist the design over your camera view, Real size calibrates against a bank card to show centimetres, Save snapshot keeps it) or, for a polished render, takes a photo of the placement and has Gemini draw the design onto it as a healed tattoo (needs a Gemini key; the photo is sent to Google). Save the result as a variant to keep it.',
-      'On a result with an image, View on arm in 3D puts the design on a 3D upper arm at its real size (see On the arm in 3D below).',
+      'On a result with an image, View on arm in 3D puts the design on a 3D upper arm or forearm at its real size (see On the arm in 3D below).',
       'For results with images, use Make STL to export a printable relief (also from an idea’s reference image via 3D print, or any photo via Use another image…). Choose Relief for shading-as-height or Line art for crisp raised lines (it starts at Fine detail and 1.5mm lines, with Raise dark lines ticked; Line mask shows exactly what will be raised while you tune the threshold), or Lithophane for a thin plate that shows the image when backlit; Add a border gives it a stiffening frame; check it in the rotatable 3D preview before downloading. If a photo cannot be read right now (for example, offline and not yet downloaded) the drawer says it is available when online and Download STL stays disabled.',
       'Back closes the concept: the browser’s Back (Android’s back button, Safari’s back swipe) returns to the Concepts wall, however many concepts you swiped through, and the address names the concept, so a link opens it. A Make STL, Try on skin, View on arm in 3D or Refine panel opened on top closes first, and the live camera before its panel.',
       'Tag each concept with styles to reveal its top artist matches; tap a match to open their Instagram.',
@@ -134,13 +134,13 @@ const SECTIONS = [
   {
     id: 'concept-arm',
     label: 'On the arm in 3D',
-    blurb: 'See a concept at its real size on an upper arm, turn it, and keep the picture.',
+    blurb: 'See a concept or reference photo at its real size on an upper arm or forearm, turn it, and keep the picture.',
     image: 'concept-arm.png',
     steps: [
-      'On a result with an image, choose View on arm in 3D. The design goes on a 3D upper arm at its real size, close up on the tattoo.',
-      'Drag to turn the arm, pinch to resize (scroll on a desktop). The size shows in centimetres, wide × tall, and how far round the arm it goes; Width, Above the elbow and Round the arm place it precisely. Whole arm steps back to judge scale.',
+      'On a result with an image, choose View on arm in 3D; on an idea, tap On arm on a reference photo. The design goes on a 3D arm at its real size, close up on the tattoo. Upper arm and Forearm at the top switch limbs, keeping the design’s width (an idea opens on the limb its placement names).',
+      'Drag to turn the arm, pinch to resize (scroll on a desktop). The size shows in centimetres, wide × tall, and how far round the arm it goes; Width, Above the elbow (Above the wrist on the forearm) and Round the arm place it precisely. Round the arm starts from the outer upper arm or the inner forearm. Whole arm steps back to judge scale.',
       'The ink is shown healed: a soft, cool black, and colour faded a little. Very faint strokes in a design stay faint on the arm.',
-      'Save as variant keeps the picture, framed on the tattoo, with its size in the title and notes. Free and on-device: nothing is sent anywhere, and the arm works offline once the app is installed. It is a standard outer upper arm, not your own measurements.',
+      'Save as variant keeps the picture on the concept, framed on the tattoo, with its size in the title and notes; from an idea, Add to references keeps it as another reference. Free and on-device: nothing is sent anywhere, and both arms work offline once the app is installed. Each is a standard arm (outer upper arm, inner forearm), not your own measurements.',
     ],
   },
   {

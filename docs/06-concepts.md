@@ -187,8 +187,12 @@ the preview to your library only when you save it; this is not a promise about p
 
 ## See a concept on the arm in 3D
 
-On any result with an image, choose **View on arm in 3D**. The design is put on a 3D upper
-arm at its real size, close up, so the tattoo fills the view.
+On any result with an image, choose **View on arm in 3D**. The design is put on a 3D arm
+at its real size, close up, so the tattoo fills the view. **Upper arm** and **Forearm** at
+the top of the view switch limbs; the design keeps its width (narrowed if it doesn't fit)
+and starts from the middle of the other limb. A
+reference photo on an idea opens the same view from its **On arm** button (see
+[Ideas & boards](04-brief-and-boards.md)).
 
 ![A fictional hourglass design on the 3D arm, with its size in centimetres](../public/guide/concept-arm.png)
 
@@ -196,23 +200,27 @@ arm at its real size, close up, so the tattoo fills the view.
   scroll over it).
 - The line under the arm gives the size in centimetres, **wide × tall**, and how far round
   the arm it goes. Width is measured round the curve, the way a stencil lies.
-- **Width**, **Above the elbow** and **Round the arm** move it precisely. A design never
-  wraps more than 90% of the way round, and a tall one is narrowed to fit the skin.
+- **Width**, **Above the elbow** (on the forearm, **Above the wrist**) and **Round the arm**
+  move it precisely. Round the arm starts from the outer upper arm, or the inner forearm, and
+  runs towards the back of the arm or the thumb. A design never wraps more than 90% of the
+  way round, and a tall one is narrowed to fit the skin.
 - **Whole arm** steps back to judge scale; **Close up** returns to the tattoo.
 - The ink is shown **healed**, the way it looks once settled: black is a soft, cool black
   rather than a dark brown, and colour fades a little. Very faint strokes in a design stay
   faint on the arm.
 
 **Save as variant** keeps the picture on the concept next to your other results, titled
-with its width (for example *On the arm, 12 cm*) and with the size and position in its
+with its width (for example *On the arm, 12 cm*, or *On the forearm, 8 cm*) and with the size and position in its
 notes. The saved picture is always framed on the tattoo, even if you had stepped back to
 the whole arm or turned it away.
 
-It's free and nothing is sent anywhere: the arm is drawn on your device. It is one standard
-outer upper arm (about 30 cm round), not your own measurements, and a design fits between
-about 2 and 25 cm above the elbow. A light design on a dark card is flipped to dark ink
-automatically. If the image isn't downloaded to this device and you're offline, the panel
-says so; the arm model itself also needs a connection the first time.
+It's free and nothing is sent anywhere: the arm is drawn on your device. Each limb is one
+standard arm, not your own measurements: an outer upper arm about 30 cm round, where a
+design fits between about 2 and 25 cm above the elbow, and an inner forearm 25 cm long,
+17 cm round the wrist and 26 cm below the elbow, where it fits between 1 and 22 cm above
+the wrist. A light design on a dark card is flipped to dark ink automatically. Once the app
+is installed both arms work offline; if the image itself isn't downloaded to this device and
+you're offline, the panel says so.
 
 ## Export a relief STL
 

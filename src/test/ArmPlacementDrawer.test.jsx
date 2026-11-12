@@ -111,6 +111,48 @@ describe('ArmPlacementDrawer', () => {
     expect(onSave.mock.calls[0][1].notes).toMatch(/^3D arm preview of Moth over a crescent moon\./)
   })
 
+  // #206: Brief ideas open it too, on the limb the idea is planned for.
+  it('opens on the limb it is asked for, the upper arm by default', () => {
+    const { unmount } = open()
+    expect(h.panel.limb).toBe('upper-arm')
+    unmount()
+    open({ source: { ...source, limb: 'forearm' } })
+    expect(h.panel.limb).toBe('forearm')
+  })
+
+  it('describes the picture by the limb it was taken on, whichever it opened on', async () => {
+    h.snapshot.mockReturnValue({ bytes: PNG, placement: { widthCm: 8, heightCm: 10, centreCm: 12, arcCm: 2 }, limb: 'forearm' })
+    const { onSave } = open()
+    act(() => h.panel.onReadyChange(true))
+    fireEvent.click(save())
+    await waitFor(() => expect(onSave).toHaveBeenCalled())
+    expect(onSave.mock.calls[0][1]).toMatchObject({
+      title: 'On the forearm, 8 cm',
+      notes: '3D forearm preview of Moth line study. 8.0 cm wide × 10.0 cm tall, centred 12.0 cm above the wrist, 2.0 cm towards the thumb.',
+    })
+  })
+
+  it('names any source by its label, and says what saving does where it was opened', async () => {
+    const { onSave } = open({
+      source: { imageUrl: 'user/u1/ideas/i1/abc', label: 'Fern reference 2', limb: 'forearm' },
+      saveLabel: 'Add to references',
+    })
+    expect(screen.getByRole('heading', { name: 'Fern reference 2' })).toBeInTheDocument()
+    act(() => h.panel.onReadyChange(true))
+    fireEvent.click(screen.getByRole('button', { name: 'Add to references' }))
+    await waitFor(() => expect(onSave).toHaveBeenCalled())
+    expect(onSave.mock.calls[0][0]).toBeUndefined()
+    expect(onSave.mock.calls[0][1].notes).toMatch(/^3D arm preview of Fern reference 2\./)
+  })
+
+  it('shows a hint under the view when its opener gives one', () => {
+    const { unmount } = open()
+    expect(screen.queryByTestId('arm-hint')).toBeNull()
+    unmount()
+    open({ hint: 'Best with a flat design.' })
+    expect(screen.getByTestId('arm-hint')).toHaveTextContent('Best with a flat design.')
+  })
+
   it('stays open and says so when no picture could be taken', async () => {
     const { onSave, onClose } = open()
     act(() => h.panel.onReadyChange(true))

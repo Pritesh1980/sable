@@ -14,8 +14,9 @@ vi.mock('three/addons/loaders/GLTFLoader.js', () => ({ GLTFLoader: class {} }))
 const TABLE = [[0, 30], [31, 30]]
 const PLACED = { widthCm: 12, heightCm: 15.2, centreCm: 17, arcCm: 0 }
 const INK = { width: 600, height: 760 }
+const WHOLE = { focusCm: 13.45, frameCm: 38.9 }
 const props = (extra = {}) => ({
-  modelUrl: '/models/arm.glb', imageSrc: '/a.webp', placement: PLACED, perimeterCm: TABLE, ...extra,
+  modelUrl: '/models/arm.glb', imageSrc: '/a.webp', placement: PLACED, perimeterCm: TABLE, whole: WHOLE, ...extra,
 })
 
 beforeEach(() => {
@@ -31,7 +32,7 @@ describe('ArmPlacement3D', () => {
     const [, , mount, options] = h.createArmEngine.mock.calls[0]
     expect(mount).toBe(getByTestId('arm-placement-3d'))
     expect(options.modelUrl).toBe('/models/arm.glb')
-    expect(h.engine.setPlacement).toHaveBeenCalledWith(PLACED, TABLE, 'design')
+    expect(h.engine.setPlacement).toHaveBeenCalledWith(PLACED, TABLE, 'design', WHOLE)
     expect(h.engine.setSpin).toHaveBeenCalledWith(false)
   })
 
@@ -48,7 +49,7 @@ describe('ArmPlacement3D', () => {
     const moved = { ...PLACED, widthCm: 18 }
     rerender(<ArmPlacement3D {...props({ placement: moved, view: 'arm', spin: true })} />)
     expect(h.createArmEngine).toHaveBeenCalledTimes(1)
-    expect(h.engine.setPlacement).toHaveBeenLastCalledWith(moved, TABLE, 'arm')
+    expect(h.engine.setPlacement).toHaveBeenLastCalledWith(moved, TABLE, 'arm', WHOLE)
     expect(h.engine.setSpin).toHaveBeenLastCalledWith(true)
   })
 

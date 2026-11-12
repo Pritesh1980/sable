@@ -8,6 +8,8 @@ import BoardsSection from '../components/BoardsSection'
 import { getBoardCover } from '../data/boards'
 import ArtistImage from '../components/ArtistImage'
 import ReliefStlDrawer from '../components/ReliefStlDrawer'
+import ArmPlacementDrawer from '../components/ArmPlacementDrawer'
+import { limbFor } from '../data/placement3d'
 import GeneratedArtworkNotice from '../components/GeneratedArtworkNotice'
 import { STYLE_TAGS, PLACEMENTS } from '../data/artists'
 import { IDEA_STATUSES, matchArtistsToIdea } from '../data/brief'
@@ -181,19 +183,20 @@ function IdeaModal({ idea, isNew = !idea.id, onClose, onSave, onDelete, onRestor
     }))
   }
 
+  // A data URL is staged like an attached file; a web URL goes in at once.
+  // Save stays disabled until it lands, or the idea would save without it.
+  function appendImage(url, note = '') {
+    setUploading(true)
+    const staging = withStagedImages([url], { userId, scope: 'ideas', id: idea.id || 'misc' }, ([key]) => {
+      touch('images')
+      setDraft((d) => ({ ...d, images: [...(d.images || []), key ? { key, note } : { url, note }] }))
+    })
+    void Promise.resolve(staging).finally(() => setUploading(false))
+  }
+
   function addImage() {
     const url = newImage.trim()
-    if (url) {
-      // A pasted data URL is staged like an attached file; a web URL goes in
-      // at once.
-      // Save stays disabled until it lands, or the idea would save without it.
-      setUploading(true)
-      const staging = withStagedImages([url], { userId, scope: 'ideas', id: idea.id || 'misc' }, ([key]) => {
-        touch('images')
-        setDraft((d) => ({ ...d, images: [...(d.images || []), key ? { key, note: '' } : { url, note: '' }] }))
-      })
-      void Promise.resolve(staging).finally(() => setUploading(false))
-    }
+    if (url) appendImage(url)
     setNewImage('')
   }
 
@@ -293,6 +296,18 @@ function IdeaModal({ idea, isNew = !idea.id, onClose, onSave, onDelete, onRestor
     const label = `${draft.title?.trim() || 'Idea'} reference ${index + 1}`
     // A string the drawer can key on and resolve: the blob key, or the url.
     setStlSource({ imageUrl: image.key || image.url, label, filenameSeed: label })
+  }
+
+  // A reference photo on the 3D arm at true size (#206), on the limb the idea
+  // is planned for as the draft has it now. The picture it takes joins the
+  // references, staged like any other photo, noted with its size.
+  const [armSource, setArmSource] = useState(null)
+  function viewOnArm(image, index) {
+    const label = `${draft.title?.trim() || 'Idea'} reference ${index + 1}`
+    setArmSource({ imageUrl: image.key || image.url, label, limb: limbFor(draft.placement) })
+  }
+  function addArmPicture(_conceptId, picture) {
+    appendImage(picture.imageUrl, picture.title)
   }
 
   async function copyBrief() {
@@ -483,6 +498,13 @@ function IdeaModal({ idea, isNew = !idea.id, onClose, onSave, onDelete, onRestor
                     >
                       <span className="bg-ink-dark/80 text-cream rounded-xs px-2 py-1 font-mono text-[0.625rem] uppercase tracking-widest">3D print</span>
                     </button>
+                    <button
+                      onClick={() => viewOnArm(image, index)}
+                      aria-label={`View reference ${index + 1} on the arm in 3D`}
+                      className="absolute bottom-0 right-0 h-11 min-w-11 flex items-end justify-end p-1 can-hover:opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <span className="bg-ink-dark/80 text-cream rounded-xs px-2 py-1 font-mono text-[0.625rem] uppercase tracking-widest">On arm</span>
+                    </button>
                   </div>
                   <div className="border-t border-ink-border px-2">
                     <button onClick={() => moveImage(index, 0)} disabled={index === 0}
@@ -639,6 +661,11 @@ function IdeaModal({ idea, isNew = !idea.id, onClose, onSave, onDelete, onRestor
       </div>
     </div>
     <ReliefStlDrawer source={stlSource} onClose={() => setStlSource(null)} />
+    <ArmPlacementDrawer
+      source={armSource} onSave={addArmPicture} onClose={() => setArmSource(null)}
+      saveLabel="Add to references"
+      hint="Best with a flat design: a photo of a tattoo already on skin goes on whole, background and all."
+    />
     {previewOpen && <BriefCardPreview {...card} images={images} onClose={() => setPreviewOpen(false)}
       onRefresh={card.refresh} onCrop={updateCrop} onShare={shareBriefImage} shareState={shareState} shareNote={shareNote} />}
     </>
