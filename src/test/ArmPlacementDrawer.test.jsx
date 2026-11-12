@@ -145,6 +145,14 @@ describe('ArmPlacementDrawer', () => {
     expect(onSave.mock.calls[0][1].notes).toMatch(/^3D arm preview of Fern reference 2\./)
   })
 
+  it('shows a hint under the view when its opener gives one', () => {
+    const { unmount } = open()
+    expect(screen.queryByTestId('arm-hint')).toBeNull()
+    unmount()
+    open({ hint: 'Best with a flat design.' })
+    expect(screen.getByTestId('arm-hint')).toHaveTextContent('Best with a flat design.')
+  })
+
   it('stays open and says so when no picture could be taken', async () => {
     const { onSave, onClose } = open()
     act(() => h.panel.onReadyChange(true))

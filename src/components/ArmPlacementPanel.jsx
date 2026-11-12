@@ -63,21 +63,33 @@ function LimbSwitch({ value, onChange }) {
 export default function ArmPlacementPanel({
   limb: initialLimb = DEFAULT_LIMB, className = '', ref, ...props
 }) {
-  const [limbId, setLimbId] = useState(LIMBS[initialLimb] ? initialLimb : DEFAULT_LIMB)
-  // Keyed: another limb is another model, its own measurements and its own
-  // starting placement, so everything in it starts afresh. The switch sits
-  // outside it, over the top of the stage, so it keeps keyboard focus.
+  const [shown, setShown] = useState({
+    limbId: LIMBS[initialLimb] ? initialLimb : DEFAULT_LIMB, widthCm: null,
+  })
+  // The width on screen, carried to the other limb on a switch so the same
+  // stencil can be compared on both (clamped there if it doesn't fit).
+  const widthRef = useRef(null)
+  const onWidth = useCallback((widthCm) => { widthRef.current = widthCm }, [])
+  const switchTo = (limbId) => {
+    if (limbId !== shown.limbId) setShown({ limbId, widthCm: widthRef.current })
+  }
+  // Keyed: another limb is another model and its own measurements, so
+  // everything in it starts afresh, from the limb's own default height. The
+  // switch sits outside it, over the top of the stage, so it keeps focus.
   return (
     <div className={`relative ${className}`}>
-      <LimbSwitch value={limbId} onChange={setLimbId} />
-      <LimbPlacement key={limbId} ref={ref} limb={LIMBS[limbId]} {...props} />
+      <LimbSwitch value={shown.limbId} onChange={switchTo} />
+      <LimbPlacement
+        key={shown.limbId} ref={ref} limb={LIMBS[shown.limbId]} startWidthCm={shown.widthCm}
+        onWidth={onWidth} {...props}
+      />
     </div>
   )
 }
 
 // The stage, readout and sliders, as children of the panel's own box.
 function LimbPlacement({
-  limb, imageSrc, initialAspect = 1, spin = false, onReadyChange,
+  limb, imageSrc, initialAspect = 1, spin = false, onReadyChange, startWidthCm, onWidth,
   stageClassName = '', children, ref,
 }) {
   const viewRef = useRef(null)
@@ -87,7 +99,8 @@ function LimbPlacement({
   // The design's shape (height / width), and which image it was measured from.
   const [aspect, setAspect] = useState(initialAspect)
   const [drawnSrc, setDrawnSrc] = useState(null)
-  const [wanted, setWanted] = useState(limb.placement)
+  const [wanted, setWanted] = useState(() => (
+    startWidthCm ? { ...limb.placement, widthCm: startWidthCm } : limb.placement))
   const [view, setView] = useState('design')
 
   useEffect(() => {
@@ -113,6 +126,8 @@ function LimbPlacement({
   }, [imageSrc])
   const onReady = useCallback(() => setReady(true), [])
   const onError = useCallback((e) => setError(e.message), [])
+
+  useEffect(() => { if (placement) onWidth?.(placement.widthCm) }, [placement, onWidth])
 
   const canSnapshot = Boolean(placement) && ready && drawnSrc === imageSrc && !error
   useEffect(() => { onReadyChange?.(canSnapshot) }, [canSnapshot, onReadyChange])

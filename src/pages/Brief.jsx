@@ -664,6 +664,7 @@ function IdeaModal({ idea, isNew = !idea.id, onClose, onSave, onDelete, onRestor
     <ArmPlacementDrawer
       source={armSource} onSave={addArmPicture} onClose={() => setArmSource(null)}
       saveLabel="Add to references"
+      hint="Best with a flat design: a photo of a tattoo already on skin goes on whole, background and all."
     />
     {previewOpen && <BriefCardPreview {...card} images={images} onClose={() => setPreviewOpen(false)}
       onRefresh={card.refresh} onCrop={updateCrop} onShare={shareBriefImage} shareState={shareState} shareNote={shareNote} />}

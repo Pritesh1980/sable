@@ -62,6 +62,8 @@ describe('3D arm from an idea reference photo', () => {
     expect(within(drawer()).getByRole('heading', { name: 'Fern study reference 2' })).toBeInTheDocument()
     expect(h.panel.imageSrc).toBe('bytes:data:image/png;base64,frond')
     expect(h.panel.limb).toBe('forearm')
+    // Reference photos are often of a tattoo already on skin: say so where it shows.
+    expect(within(drawer()).getByTestId('arm-hint')).toHaveTextContent(/flat design/)
   })
 
   it('follows the placement as edited, before the idea is saved', () => {

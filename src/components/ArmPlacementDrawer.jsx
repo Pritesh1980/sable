@@ -12,7 +12,7 @@ import { snapshotVariant, LIMBS, DEFAULT_LIMB } from '../data/placement3d'
 // (#206), whose picture joins the idea's references. `source.limb` is the limb
 // it opens on; `onSave(conceptId, variant)` gets the picture as a data URL in
 // `variant.imageUrl`, for the page to stage.
-function ArmPlacementContent({ source, onSave, onClose, saveLabel }) {
+function ArmPlacementContent({ source, onSave, onClose, saveLabel, hint }) {
   // Focus moves in, Tab stays in, and focus goes back to the opener on close.
   const dialogRef = useDialogFocus(true)
   const panelRef = useRef(null)
@@ -113,6 +113,7 @@ function ArmPlacementContent({ source, onSave, onClose, saveLabel }) {
         </div>
 
         <footer className="border-t border-v2-hairline px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          {hint && <p data-testid="arm-hint" className="mb-2 font-v2-ui text-xs text-v2-muted">{hint}</p>}
           {error && <p role="alert" className="mb-2 font-v2-ui text-sm text-v2-accent">{error}</p>}
           <button
             type="button"
@@ -128,11 +129,12 @@ function ArmPlacementContent({ source, onSave, onClose, saveLabel }) {
   )
 }
 
-export default function ArmPlacementDrawer({ source, onSave, onClose, saveLabel = 'Save as variant' }) {
+export default function ArmPlacementDrawer({ source, onSave, onClose, saveLabel = 'Save as variant', hint = '' }) {
   if (!source) return null
   return (
     <ArmPlacementContent
       key={source.imageUrl} source={source} onSave={onSave} onClose={onClose} saveLabel={saveLabel}
+      hint={hint}
     />
   )
 }

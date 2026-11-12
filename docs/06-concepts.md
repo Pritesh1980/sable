@@ -189,7 +189,8 @@ the preview to your library only when you save it; this is not a promise about p
 
 On any result with an image, choose **View on arm in 3D**. The design is put on a 3D arm
 at its real size, close up, so the tattoo fills the view. **Upper arm** and **Forearm** at
-the top of the view switch limbs; switching starts the design afresh on the other one. A
+the top of the view switch limbs; the design keeps its width (narrowed if it doesn't fit)
+and starts from the middle of the other limb. A
 reference photo on an idea opens the same view from its **On arm** button (see
 [Ideas & boards](04-brief-and-boards.md)).
 

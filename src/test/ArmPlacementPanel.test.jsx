@@ -149,7 +149,7 @@ describe('ArmPlacementPanel limbs', () => {
     expect(view.props.whole).toEqual({ focusCm: 13.45, frameCm: 38.9 })
   })
 
-  it('switches limb, starting the design afresh on the new one', async () => {
+  it('switches limb, starting the view afresh on the new one', async () => {
     const onReadyChange = vi.fn()
     const { ref } = await open({ onReadyChange })
     drawn()
@@ -167,7 +167,23 @@ describe('ArmPlacementPanel limbs', () => {
     expect(onReadyChange).toHaveBeenLastCalledWith(false)
     expect(ref.current.snapshot()).toBeNull()
     drawn()
-    expect(ref.current.snapshot()).toMatchObject({ limb: 'forearm', placement: { widthCm: 8, centreCm: 12 } })
+    expect(ref.current.snapshot()).toMatchObject({ limb: 'forearm', placement: { widthCm: 12, centreCm: 12 } })
+  })
+
+  it('carries the width across a switch, so the same stencil can be compared', async () => {
+    await open()
+    drawn()
+    fireEvent.change(screen.getByLabelText('Width'), { target: { value: '9.5' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Forearm' }))
+    await waitFor(() => expect(view.props.modelUrl).toBe('/models/arm-forearm.glb'))
+    drawn()
+    // Same width; the forearm's own height up the limb, since heights don't map across.
+    expect(screen.getByTestId('placement-size')).toHaveTextContent('9.5 cm wide')
+    expect(screen.getByLabelText('Above the wrist')).toHaveValue('12')
+    fireEvent.click(screen.getByRole('button', { name: 'Upper arm' }))
+    await waitFor(() => expect(view.props.modelUrl).toBe('/models/arm-upper.glb'))
+    drawn()
+    expect(screen.getByTestId('placement-size')).toHaveTextContent('9.5 cm wide')
   })
 
   it('has no switcher for a limb it does not know, and opens the upper arm', async () => {

@@ -69,8 +69,8 @@ test('the forearm loads from the switch, at its own true size, and a finger turn
   await switcher.getByRole('button', { name: 'Forearm' }).tap()
   await expect(switcher.getByRole('button', { name: 'Forearm' })).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByText('Loading the arm…')).toHaveCount(0, { timeout: 20_000 })
-  // The forearm's own default and words: 8 cm wide on 600 x 760, above the wrist.
-  await expect(size(page)).toContainText('8.0 cm wide × 10.1 cm tall')
+  // The width comes across (it fits the forearm), with the forearm's own words.
+  await expect(size(page)).toContainText('12.0 cm wide × 15.2 cm tall')
   await expect(page.getByLabel('Above the wrist')).toBeVisible()
   await expect(page.getByLabel('Round the arm')).toHaveAttribute('aria-valuetext', 'inner forearm')
   await expect.poll(async () => (await view.locator('canvas').screenshot()).equals(upper)).toBe(false)

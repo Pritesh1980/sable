@@ -663,8 +663,12 @@ the way a pasted photo is, noted with its width ("On the forearm, 8 cm").
 - Each limb is an entry in `LIMBS` (`src/data/placement3d.js`): its file, its default
   placement and its words. The shader and the engine are the same for both: height is
   whatever +y means in that model, so a forearm design points its top at the elbow.
-- Switching remounts the limb's view (keyed by limb), so the model, measurements and
-  placement all start afresh; the switch itself sits outside it and keeps focus.
+- Switching remounts the limb's view (keyed by limb), so the model and measurements start
+  afresh. The width carries across (clamped to the new limb) so the same stencil can be
+  compared; the height up the limb is the new limb's default, since heights don't map
+  across. The switch itself sits outside the keyed view and keeps focus.
+- From an idea, the drawer shows a one-line hint that a photo of a tattoo already on skin
+  goes on whole, background and all.
 - The **Whole arm** framing comes from the model's `extent_cm` (`wholeLimbFrame`), not a
   constant, so each limb steps back to all of itself.
 

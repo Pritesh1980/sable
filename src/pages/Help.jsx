@@ -137,7 +137,7 @@ const SECTIONS = [
     blurb: 'See a concept or reference photo at its real size on an upper arm or forearm, turn it, and keep the picture.',
     image: 'concept-arm.png',
     steps: [
-      'On a result with an image, choose View on arm in 3D; on an idea, tap On arm on a reference photo. The design goes on a 3D arm at its real size, close up on the tattoo. Upper arm and Forearm at the top switch limbs (an idea opens on the limb its placement names).',
+      'On a result with an image, choose View on arm in 3D; on an idea, tap On arm on a reference photo. The design goes on a 3D arm at its real size, close up on the tattoo. Upper arm and Forearm at the top switch limbs, keeping the design’s width (an idea opens on the limb its placement names).',
       'Drag to turn the arm, pinch to resize (scroll on a desktop). The size shows in centimetres, wide × tall, and how far round the arm it goes; Width, Above the elbow (Above the wrist on the forearm) and Round the arm place it precisely. Round the arm starts from the outer upper arm or the inner forearm. Whole arm steps back to judge scale.',
       'The ink is shown healed: a soft, cool black, and colour faded a little. Very faint strokes in a design stay faint on the arm.',
       'Save as variant keeps the picture on the concept, framed on the tattoo, with its size in the title and notes; from an idea, Add to references keeps it as another reference. Free and on-device: nothing is sent anywhere, and both arms work offline once the app is installed. Each is a standard arm (outer upper arm, inner forearm), not your own measurements.',
