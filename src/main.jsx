@@ -17,7 +17,7 @@ watchForDemoReseed()
 
 // Register the service worker in built copies only; under `vite dev` it would
 // cache-first serve stale source modules, so any leftover one is removed.
-setupServiceWorker({ dev: import.meta.env.DEV, base: import.meta.env.BASE_URL })
+void setupServiceWorker({ dev: import.meta.env.DEV, base: import.meta.env.BASE_URL })
 
 // Match the router to the deploy base so deep links resolve under a sub-path
 // (e.g. /sable/gallery on GitHub Pages). BASE_URL carries a trailing slash;
