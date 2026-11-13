@@ -700,6 +700,11 @@ ordinary importable modules with unit tests (`src/sw/swStrategy.js`,
 `src/sw/precache.js`), and a **contract test reads the shipped `public/sw.js` as text**
 and asserts its invariants still hold.
 
+Registration (`src/sw/register.js`) happens only in built copies. Under `vite dev`
+the worker would serve source modules cache-first at URLs that never change, so an
+edit or `.env.local` change stays invisible after a restart. The dev boot therefore
+unregisters any leftover worker, clears its caches and reloads once.
+
 ```mermaid
 flowchart TB
   REQ(["fetch"]) --> SHARE{"same-origin POST<br/>to base + share?"}
