@@ -10,7 +10,7 @@ Japanese-inspired, tribal, colour-realism and brush-lettering styles. Its
 
 ---
 
-The **Classic gallery** (**⋯ → Classic gallery**) is where structured browsing lives — the
+The **Artists** page is where structured browsing lives — the
 Wall is for looking, this page is for organising. A sticky bar at the top holds the
 **style filter** (tap a tag to show only artists with it; tap **All** to clear) and a
 **view toggle** on the right with four modes. (Everyday ranking now lives on the Home
@@ -130,7 +130,7 @@ full **ranking board** — your Top 5 pinned up top, everyone else below, with *
 every row, **Drop ↓** to push an artist out of the Top 5, and **↑ To top 5** to pull one
 in. Close it (or press **Esc**) to return to the Wall.
 
-The Classic gallery keeps its own ranking tools for when you're already there organising:
+The Artists page keeps its own ranking tools for when you're already there organising:
 
 1. **Drag** in Grid view, with **⇅ Reorder** turned on.
 2. **Nudge** the rank number up/down in Filmstrip view.

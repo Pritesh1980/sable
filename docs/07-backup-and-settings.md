@@ -10,7 +10,7 @@ With device-local storage, everything you create stays in this browser even if y
 use a real login. Signing out clears displayed caches, not the owner-namespaced
 library; signing back in as the same owner on the same device restores it. That is
 **not** a cloud copy. Cloud-storage builds sync separately across devices. The
-**Backup** panel in **⋯ → Settings** requests a full snapshot you control.
+**Backup** panel in **More → Settings** requests a full snapshot you control.
 
 ![The Settings page with the backup panel](../public/guide/settings.png)
 
@@ -76,10 +76,8 @@ still import; a backup from a *newer* version is refused with a message to updat
 
 ## Appearance
 
-Theme (**◑ / ◐**) and text size (**A+ / A−**) sit at the right-hand end of the bottom
-bar on every page except the home Wall, on phone and desktop alike. The Wall has no
-bottom bar: open its menu (**⋯**) and pick any page to reach them. Both are per-device
-and don't sync.
+**More → Settings → Appearance** has two switches: **Theme** (Dark / Light) and
+**Text size** (Normal / Large). Both are per-device and don't sync.
 
 ## When to back up
 

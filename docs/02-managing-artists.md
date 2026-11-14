@@ -92,7 +92,7 @@ enable cloud sync.
 
 ## The manage table
 
-Deeper upkeep lives on the classic Artists page — **⋯ → Classic gallery**, then the
+Deeper upkeep lives on the classic Artists page — **Artists**, then the
 **Manage** button in the header (or deep-link to `/gallery?mode=manage`). A count of
 artists and photos sits at the top.
 

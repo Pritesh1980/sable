@@ -74,7 +74,7 @@ with Reorder **off** — that is the view people arrive in.
 
    | Route | Files |
    |---|---|
-   | `/` | `wall.png` (desktop), `wall-mobile.png` (phone), `wall-viewer.png` (desktop, viewer open with HUD visible), `drawer.png` (desktop, ⋯ open) |
+   | `/` | `wall.png` (desktop), `wall-mobile.png` (phone), `wall-viewer.png` (desktop, viewer open with HUD visible), `nav-more.png` (desktop, More open) |
    | `/pipeline` | `dashboard.png`, `dashboard-desktop.png` |
    | `/gallery` | `gallery-filmstrip.png`, `gallery-grid.png`, `gallery-grid-desktop.png`, `gallery-compare.png`, `gallery-stylewall.png`, `artist-detail.png`, `guest-spots.png` (`?artist=vesper_noctis`, seeded London trip), `ranking-swipe.png` |
    | `/gallery?mode=manage` | `manage-list.png`, `manage-artist-expanded.png` |
@@ -86,7 +86,7 @@ with Reorder **off** — that is the view people arrive in.
    | `/settings` | `settings.png` |
    | `/help` | `help-overview.png` |
 
-   The v2 surfaces (`wall*`, `drawer`, `concepts*`) are laptop-first — capture those at
+   The v2 surfaces (`wall*`, `nav-more`, `concepts*`) are laptop-first — capture those at
    `1280 × 900`; the classic pages keep the phone viewport.
 
    (Doing this with the Playwright MCP: resize → navigate → `browser_evaluate` to seed → reload →

@@ -5,6 +5,7 @@ import Settings from '../pages/Settings'
 import { isIOS, getShareShortcutUrl } from '../data/platform'
 import { backend } from '../backend'
 import { AuthContext } from '../context/auth-context'
+import { ThemeProvider } from '../context/ThemeContext'
 
 vi.mock('../data/platform', () => ({
   isIOS: vi.fn(() => false),
@@ -16,6 +17,7 @@ const noop = () => {}
 function renderSettings(props = {}, auth = null) {
   return render(
     <MemoryRouter>
+      <ThemeProvider>
       <AuthContext.Provider value={auth}>
         <Settings
         artists={[]}
@@ -32,6 +34,7 @@ function renderSettings(props = {}, auth = null) {
         {...props}
         />
       </AuthContext.Provider>
+      </ThemeProvider>
     </MemoryRouter>
   )
 }
@@ -60,14 +63,21 @@ describe('Settings page', () => {
     expect(await screen.findByText('Download requested—check the file was saved.')).toBeInTheDocument()
   })
 
-  // #162: the controls live in the bottom bar (Nav), which the Wall doesn't show.
-  it('says theme and font size are in the bottom bar, not on the Wall', () => {
+  // #220: theme and text size are set here, not from unlabelled chips in the nav.
+  it('switches the theme and the text size from Appearance, in words', () => {
+    localStorage.clear()
     renderSettings()
-    const copy = screen.getByText(/theme \(◑\) and font size \(A\+\)/i).textContent
-    expect(copy).not.toMatch(/top-right/i)
-    expect(copy).toMatch(/bottom bar/i)
-    expect(copy).toMatch(/except the home wall/i)
-    expect(copy).toMatch(/per-device and don't sync/i)
+    fireEvent.click(screen.getByRole('button', { name: 'Light' }))
+    expect(document.documentElement).toHaveAttribute('data-theme', 'light')
+    expect(screen.getByRole('button', { name: 'Light' })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(screen.getByRole('button', { name: 'Dark' }))
+    expect(document.documentElement).toHaveAttribute('data-theme', '')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Large' }))
+    expect(document.documentElement).toHaveAttribute('data-font', 'large')
+    fireEvent.click(screen.getByRole('button', { name: 'Normal' }))
+    expect(document.documentElement).toHaveAttribute('data-font', '')
+    expect(screen.getByText(/per-device and don't sync/i)).toBeInTheDocument()
   })
 
   it('describes device-only and cloud sign-in restoration separately', () => {

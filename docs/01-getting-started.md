@@ -59,9 +59,8 @@ tiled edge to edge. No panels, no stats — the work itself is the interface.
   as a slim strip. **Drag the rank number** on any tile to reorder the five, or tap
   **Rank ⤢** to open the full ranking board (see
   [Gallery & ranking](03-gallery-and-ranking.md)).
-- On phones, the header puts **Sable**, the **+** add-artist button and the **⋯**
-  Drawer menu on the first row, with **Artists / Concepts** on a second row.
-  Wider screens keep these controls in one row.
+- The Wall's own bar holds just its name and the **+** add-artist button. Getting
+  around is the navigation's job (see [Moving around](#moving-around)).
 - Just below the Top 5 strip, above the photos, a quiet **Consider** shelf suggests artists matched
   to the styles you already collect. Open the Instagram profile to judge for yourself,
   then **+ Add** (the form comes pre-filled) or **Not for me** (never suggested again).
@@ -121,31 +120,25 @@ artist's photos and gets a red *new* dot on the Wall.
 
 ## Moving around
 
-Sable has two primary spaces, switched from the bar on the Wall:
+Every page has the same navigation: a bar along the **bottom on a phone**, and the
+same list along the **top on a laptop**.
 
-- **Artists** — the Wall and viewer, above.
-- **Concepts** — your generated images, on the same kind of wall
-  (see [AI concepts](06-concepts.md)).
-
-Everything else lives in the **Drawer** — tap **⋯** at the top-right of the Wall:
-
-![The Drawer](../public/guide/drawer.png)
-
-- **Classic gallery** — the previous Artists page: filmstrip, compare, grid and style-wall
-  views, ranking, and Manage mode.
+- **Home** — the Wall and viewer, above.
+- **Artists** — filmstrip, compare, grid and style-wall views, ranking, and Manage mode.
 - **Ideas** — tattoo ideas, with Boards as a tab.
-- **Pipeline** — the shortlist dashboard (below).
-- **Radar** — upcoming conventions. · **Studios** — where your artists work.
-- **Settings** — backup, account & sign out. · **Help** — this guide, in the app.
+- **AI** — your generated concepts (see [AI concepts](06-concepts.md)).
+- **More** — everything else, in two groups:
 
-On the classic pages the familiar bottom bar is still there — with the **A+ / A−**
-text size, **◑ / ◐** theme and **⏻** sign-out controls at its right end. **⏻** asks
-before it signs you out, since it sits right next to the theme toggle. Tap the
-**Sable logo** at the top-left of any classic page to return to the Home Wall.
+![The More menu](../public/guide/nav-more.png)
+
+- **Plan** — **Pipeline** (the shortlist dashboard, below), **Radar** (upcoming
+  conventions) and **Studios** (where your artists work).
+- **App** — **Settings** (backup, account, theme and text size) and **Help** (this
+  guide, in the app).
 
 ## The Pipeline page
 
-The old Home dashboard lives on at **Drawer → Pipeline**, titled *Pipeline* (Home is the
+The old Home dashboard lives on at **More → Pipeline**, titled *Pipeline* (Home is the
 Wall): the Top 5 coverflow,
 the shortlist pipeline (researching → shortlisted → contact next), idea stats, **Nearby soon**
 (guest spots by your artists coming up near Milton Keynes) and idea matches.
@@ -170,7 +163,7 @@ You don't start from a blank app:
 - **Ideas**, **Boards** and **AI concepts** start empty — those are yours to build.
 
 > **Tip:** device-local data does not sync; cloud-storage builds sync to your account.
-> **Drawer → Settings → Export Backup** gives
+> **More → Settings → Export Backup** gives
 > you a restore point you control (see [Settings, backup & restore](07-backup-and-settings.md)).
 
 ---

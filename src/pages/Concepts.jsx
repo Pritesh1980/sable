@@ -583,21 +583,9 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
 
   return (
     <><div inert={Boolean(ideaTransfer.selection) || undefined} aria-hidden={ideaTransfer.selection ? true : undefined} className="min-h-screen bg-v2-ink">
-      <header className="sticky top-0 z-10 flex items-center gap-4 px-4 sm:gap-8 sm:px-8 py-3.5 bg-v2-ink/[.88] backdrop-blur-md border-b border-v2-hairline">
-        <div className="hidden sm:block font-v2-display text-[1.35rem] tracking-[0.28em] uppercase text-v2-cream">
-          Sable<span className="text-v2-accent">.</span>
-        </div>
-        <nav className="flex items-center gap-4 sm:gap-6 flex-1">
-          <button
-            onClick={() => navigate('/')}
-            className="font-v2-ui text-sm tracking-wide uppercase min-h-11 flex items-center border-b-2 border-transparent text-v2-muted hover:text-v2-cream"
-          >
-            Artists
-          </button>
-          <button className="font-v2-ui text-sm tracking-wide uppercase min-h-11 flex items-center border-b-2 border-v2-accent text-v2-cream">
-            Concepts
-          </button>
-        </nav>
+      <header className="sticky top-[var(--nav-top)] z-10 flex items-center gap-4 px-4 sm:gap-8 sm:px-8 py-3.5 bg-v2-ink/[.88] backdrop-blur-md border-b border-v2-hairline">
+        {/* The app nav does the navigating (#220): this bar names the page. */}
+        <h1 className="flex-1 font-v2-display text-[1.35rem] tracking-[0.28em] uppercase text-v2-cream">Concepts</h1>
         <button
           onClick={() => setComposerOpen(true)}
           className="font-v2-ui text-sm text-v2-ink bg-v2-cream rounded-xs px-4 min-h-11 font-semibold hover:brightness-95 transition-[filter]"

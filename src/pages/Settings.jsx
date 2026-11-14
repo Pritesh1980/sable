@@ -1,14 +1,38 @@
 import Logo from '../components/Logo'
 import BackupPanel from '../components/BackupPanel'
 import { useAuth } from '../context/useAuth'
+import { useTheme } from '../context/useTheme'
 import { isIOS, getShareShortcutUrl } from '../data/platform'
 import { backend } from '../backend'
 
 const MANAGING_ARTISTS_GUIDE_URL =
   'https://github.com/Pritesh1980/sable/blob/main/docs/02-managing-artists.md#share-from-instagram'
 
+// A two-way setting shown as two named buttons, the current one pressed.
+function Choice({ label, value, options, onPick }) {
+  return (
+    <div className="flex items-center justify-between gap-4 mb-3">
+      <p className="text-cream text-sm font-body">{label}</p>
+      <div role="group" aria-label={label} className="flex border border-ink-border rounded-xs overflow-hidden">
+        {options.map(([id, name]) => (
+          <button
+            key={id}
+            type="button"
+            aria-pressed={value === id}
+            onClick={() => { if (value !== id) onPick() }}
+            className={`px-4 min-h-11 text-sm font-body transition-colors ${value === id ? 'bg-ink-muted text-cream' : 'text-cream-muted hover:text-cream'}`}
+          >
+            {name}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function Settings({ artists, setArtists, ideas, setIdeas, boards, setBoards, concepts, setConcepts, conventionOverrides, setConventionOverrides, onExportBackup }) {
   const auth = useAuth()
+  const { theme, toggle: toggleTheme, fontSize, toggleFont } = useTheme()
   const onIOS = isIOS()
   const shortcutUrl = onIOS ? getShareShortcutUrl() : ''
 
@@ -16,7 +40,7 @@ export default function Settings({ artists, setArtists, ideas, setIdeas, boards,
     <div className="min-h-screen bg-ink-black max-w-5xl mx-auto px-4 md:px-8 pt-safe-top pb-24">
       {/* Header */}
       <div className="pt-10 pb-6">
-        <Logo size={28} className="mb-3" />
+        <Logo size={28} className="mb-3 md:hidden" />
         <h1 className="font-display text-5xl text-cream leading-none tracking-tight">Settings</h1>
         <p className="font-mono text-xs text-cream-muted/90 mt-3 tracking-widest">
           Backup, account &amp; appearance
@@ -96,11 +120,13 @@ export default function Settings({ artists, setArtists, ideas, setIdeas, boards,
         setConventionOverrides={setConventionOverrides}
       />
 
-      {/* Appearance pointer */}
+      {/* Appearance (#220): these were unlabelled chips at the end of the nav. */}
       <div className="bg-ink-card border border-ink-border rounded-xs p-4">
-        <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-1">Appearance</p>
-        <p className="text-cream-muted/90 text-sm font-body leading-relaxed">
-          Theme (◑) and font size (A+) sit at the right-hand end of the bottom bar on every page except the home Wall, on phone and desktop alike. From the Wall, open the menu (⋯) and pick any page to reach them. They're per-device and don't sync.
+        <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-3">Appearance</p>
+        <Choice label="Theme" value={theme} onPick={toggleTheme} options={[['dark', 'Dark'], ['light', 'Light']]} />
+        <Choice label="Text size" value={fontSize} onPick={toggleFont} options={[['normal', 'Normal'], ['large', 'Large']]} />
+        <p className="text-cream-muted/90 text-xs font-body leading-relaxed mt-1">
+          Both are per-device and don't sync.
         </p>
       </div>
     </div>

@@ -33,9 +33,6 @@ function renderWall(props = {}, { initialEntries = ['/'] } = {}) {
         artists={baseArtists}
         setArtists={vi.fn()}
         onOpenArtist={vi.fn()}
-        onOpenDrawer={vi.fn()}
-        onSwitchView={vi.fn()}
-        activeView="artists"
         {...props}
       />
     </MemoryRouter>
@@ -93,20 +90,14 @@ describe('Wall page', () => {
     expect(onOpenArtist.mock.calls[0][0]).toMatchObject({ artistId: 'carlosvalera' })
   })
 
-  it('renders the hairline bar with wordmark, view switch, add-artist and drawer controls', () => {
-    const onOpenDrawer = vi.fn()
-    const onSwitchView = vi.fn()
-    renderWall({ onOpenDrawer, onSwitchView })
-
-    expect(screen.getByText('Sable')).toBeInTheDocument()
-
-    // Named for what it does, not for its glyph (#76) — it used to announce as
-    // "⋯ button", which is what this query was matching.
-    fireEvent.click(screen.getByRole('button', { name: /everything else/i }))
-    expect(onOpenDrawer).toHaveBeenCalledTimes(1)
-
-    fireEvent.click(screen.getByRole('button', { name: /concepts/i }))
-    expect(onSwitchView).toHaveBeenCalledWith('concepts')
+  // #220: the app's one nav does the navigating; the wall's bar only names the
+  // page and adds an artist.
+  it('has a heading and no navigation of its own', () => {
+    renderWall()
+    expect(screen.getByRole('heading', { level: 1, name: 'Wall' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /everything else/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /concepts/i })).toBeNull()
+    expect(screen.queryByRole('navigation')).toBeNull()
   })
 
   it('opens the quick-add modal from the bar\'s + Add artist button', () => {
@@ -188,7 +179,7 @@ describe('Wall page', () => {
         const next = typeof update === 'function' ? update(prev) : update
         return next.map((a) => (prev.some((p) => p.id === a.id) ? a : { ...a, images: [...(a.images || []), '/images/new/1.jpg'] }))
       })
-      return <Wall artists={artists} setArtists={setArtists} onOpenArtist={vi.fn()} onOpenDrawer={vi.fn()} onSwitchView={vi.fn()} />
+      return <Wall artists={artists} setArtists={setArtists} onOpenArtist={vi.fn()} />
     }
 
     async function saveNewArtist() {

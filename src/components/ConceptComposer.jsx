@@ -117,7 +117,7 @@ export default function ConceptComposer({
   }
 
   return (
-    <aside className="fixed top-0 right-0 bottom-0 z-40 w-full max-w-[420px] bg-v2-surface border-l border-v2-hairline p-7 overflow-y-auto shadow-[-30px_0_60px_rgba(0,0,0,0.4)]">
+    <aside className="fixed top-[var(--nav-top)] right-0 bottom-0 z-40 w-full max-w-[420px] bg-v2-surface border-l border-v2-hairline p-7 overflow-y-auto shadow-[-30px_0_60px_rgba(0,0,0,0.4)]">
       <div className="flex items-start justify-between mb-1">
         <h2 className="font-v2-display text-v2-cream text-[1.1rem] tracking-[0.2em] uppercase">New concept</h2>
         <button

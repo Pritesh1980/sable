@@ -305,7 +305,7 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
       {/* Page header */}
       <div className="px-4 pt-10 pb-4 flex flex-wrap items-end justify-between gap-y-4">
         <div>
-          <Logo size={28} className="mb-3" />
+          <Logo size={28} className="mb-3 md:hidden" />
           <p className="font-mono text-xs text-accent tracking-[0.4em] uppercase mb-2">Your Collection</p>
           <h1 className="font-display text-5xl text-cream leading-none tracking-tight">Artists</h1>
           <GeneratedArtworkNotice images={artists.flatMap((artist) => artist.images || [])} className="mt-3" />
@@ -374,7 +374,7 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
       {!manageMode && (
       <>
       {/* Sticky filter bar */}
-      <div className="sticky top-0 z-20 bg-ink-black/80 backdrop-blur-md border-b border-ink-border px-4 py-3 mb-8">
+      <div className="sticky top-[var(--nav-top)] z-20 bg-ink-black/80 backdrop-blur-md border-b border-ink-border px-4 py-3 mb-8">
         {/* #77: was three wrapped pill rows + a forced-onto-its-own-line
             switcher row (171px on a phone, ~23% of the usable viewport).
             #73 had the switcher claim its own full-width row specifically to

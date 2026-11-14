@@ -55,8 +55,6 @@ function tree(props, { entries, strict }) {
               artists={artists}
               ideas={[]}
               onAddArtist={vi.fn()}
-              onOpenDrawer={vi.fn()}
-              onSwitchView={vi.fn()}
               activeView="artists"
               {...props}
             />
@@ -96,7 +94,7 @@ describe('Wall → WallViewer integration', () => {
 
   it('hides the wall bar while the viewer is open', () => {
     renderApp()
-    expect(screen.getByText('Sable')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Wall' })).toBeInTheDocument()
     clickPiece('zoia.ink')
     expect(screen.queryByText('Sable')).not.toBeInTheDocument()
   })
@@ -109,7 +107,7 @@ describe('Wall → WallViewer integration', () => {
     fireEvent.keyDown(window, { key: 'Escape' })
 
     expect(screen.queryByRole('heading', { name: 'zoia.ink' })).not.toBeInTheDocument()
-    expect(screen.getByText('Sable')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Wall' })).toBeInTheDocument()
   })
 
   it('the close button returns to the wall without a keyboard (#89)', () => {
@@ -119,7 +117,7 @@ describe('Wall → WallViewer integration', () => {
     fireEvent.click(screen.getByRole('button', { name: /close viewer/i }))
 
     expect(screen.queryByRole('heading', { name: 'zoia.ink' })).not.toBeInTheDocument()
-    expect(screen.getByText('Sable')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Wall' })).toBeInTheDocument()
   })
 
   it('locks body scroll while open and releases it on close', () => {
@@ -186,7 +184,7 @@ describe('Wall → WallViewer integration', () => {
 
       expect(here()).toBe('/')
       expect(viewerHeading('Carlos Valera')).not.toBeInTheDocument()
-      expect(screen.getByText('Sable')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Wall' })).toBeInTheDocument()
     })
 
     it('under StrictMode, one open is one entry and swipes add none', () => {
@@ -240,7 +238,7 @@ describe('Wall → WallViewer integration', () => {
       fireEvent.keyDown(window, { key: 'Escape' })
       fireEvent.keyDown(window, { key: 'Escape' })
       expect(here()).toBe('/')
-      expect(screen.getByText('Sable')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Wall' })).toBeInTheDocument()
     })
 
     it('moving between photos replaces the entry instead of stacking one per photo', () => {
@@ -271,7 +269,7 @@ describe('Wall → WallViewer integration', () => {
 
       fireEvent.click(screen.getByRole('button', { name: /close viewer/i }))
       expect(here()).toBe('/')
-      expect(screen.getByText('Sable')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Wall' })).toBeInTheDocument()
       // Replaced in place: nothing between the Wall and the page before it.
       back()
       expect(screen.getByText('Brief page mock')).toBeInTheDocument()
@@ -280,7 +278,7 @@ describe('Wall → WallViewer integration', () => {
     it('a deep link to a photo that no longer exists just shows the Wall', () => {
       renderApp({}, { entries: ['/?photo=gone.artist.1'] })
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-      expect(screen.getByText('Sable')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Wall' })).toBeInTheDocument()
     })
 
     it('Generate replaces the viewer entry, so Back from Concepts returns to the Wall', () => {

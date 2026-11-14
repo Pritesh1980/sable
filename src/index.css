@@ -115,6 +115,18 @@
   }
 }
 
+/* Height of the app nav where it sits at the top (laptop). 0 on a phone, where
+   the nav is a bottom bar. Sticky page headers use it as their `top` (#220). */
+:root {
+  --nav-top: 0px;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --nav-top: 3.5rem;
+  }
+}
+
 /* ── Utilities ─────────────────────────────────────────────────────────── */
 
 @layer utilities {
