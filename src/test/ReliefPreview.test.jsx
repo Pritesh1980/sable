@@ -45,4 +45,12 @@ describe('ReliefPreview', () => {
     unmount()
     expect(h.engine.dispose).toHaveBeenCalled()
   })
+
+  it('hands base and accent ink meshes in tattoo mode', async () => {
+    render(<ReliefPreview heightmap={heightmap} settings={{ ...settings, mode: 'tattoo', baseMm: 3, maxReliefMm: 0.6 }} />)
+    await waitFor(() => expect(h.engine.setMesh).toHaveBeenCalled())
+    const mesh = h.engine.setMesh.mock.calls.at(-1)[0]
+    expect(mesh.faces.length).toBeGreaterThan(0)
+    expect(mesh.accentMesh.faces.length).toBeGreaterThan(0)
+  })
 })

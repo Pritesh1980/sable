@@ -2,12 +2,27 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import ReliefStlDrawer from '../components/ReliefStlDrawer'
 import { buildReliefStl } from '../data/reliefStl'
+import {
+  buildTattooPrintMeshes,
+  liftTattooWithGemini,
+  serializeTwoPart3mf,
+} from '../data/tattooPrint'
 
 vi.mock('../data/reliefStl', async () => {
   const actual = await vi.importActual('../data/reliefStl')
   return {
     ...actual,
     buildReliefStl: vi.fn(() => 'solid mocked\nendsolid mocked'),
+  }
+})
+
+vi.mock('../data/tattooPrint', async () => {
+  const actual = await vi.importActual('../data/tattooPrint')
+  return {
+    ...actual,
+    liftTattooWithGemini: vi.fn(async () => 'data:image/png;base64,lifted-tattoo'),
+    buildTattooPrintMeshes: vi.fn(actual.buildTattooPrintMeshes),
+    serializeTwoPart3mf: vi.fn(actual.serializeTwoPart3mf),
   }
 })
 
@@ -329,6 +344,116 @@ describe('ReliefStlDrawer', () => {
       expect(await screen.findByText(/available when online/i)).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Download STL' })).toBeDisabled()
       expect(screen.queryByRole('img', { name: 'Raven Chest STL source' })).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Print this tattoo mode and Gemini lift (#219)', () => {
+    beforeEach(() => {
+      liftTattooWithGemini.mockClear()
+      buildTattooPrintMeshes.mockClear()
+      serializeTwoPart3mf.mockClear()
+    })
+
+    it('offers Print this tattoo defaults, cutout mask, two-colour 3MF, split STLs and single-extruder STL', async () => {
+      const clickedLinks = []
+      const clickSpyLocal = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function () {
+        clickedLinks.push(this.download)
+      })
+      try {
+        render(<ReliefStlDrawer source={source} onClose={() => {}} />)
+        fireEvent.load(screen.getByRole('img', { name: 'Raven Chest STL source' }))
+
+        fireEvent.change(screen.getByLabelText('Style'), { target: { value: 'tattoo' } })
+
+        expect(screen.getByLabelText('Width in millimetres')).toHaveValue(120)
+        expect(screen.getByLabelText('Ink depth in millimetres')).toHaveValue(0.6)
+        expect(screen.getByLabelText('Plate thickness in millimetres')).toHaveValue(3)
+        expect(screen.getByLabelText('Minimum stroke and gap in millimetres')).toHaveValue(0.45)
+        expect(screen.getByLabelText('Silhouette margin in millimetres')).toHaveValue(3)
+        expect(screen.getByLabelText('Finish')).toHaveValue('inlay')
+        expect(screen.getByLabelText('Export format')).toHaveValue('3mf')
+        expect(screen.getByText(/personal keepsakes of your own ink only/i)).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Cutout mask' })).toBeInTheDocument()
+
+        // Default: two-colour 3MF
+        fireEvent.click(screen.getByRole('button', { name: 'Download 2-colour 3MF' }))
+        expect(buildTattooPrintMeshes).toHaveBeenCalledWith(expect.any(Object), expect.objectContaining({
+          mode: 'tattoo',
+          finish: 'inlay',
+          exportFormat: '3mf',
+          widthMm: 120,
+        }))
+        expect(serializeTwoPart3mf).toHaveBeenCalled()
+        expect(clickedLinks).toContain('tattoo-raven-chest-export.3mf')
+
+        // Split STLs
+        fireEvent.change(screen.getByLabelText('Export format'), { target: { value: 'split-stl' } })
+        fireEvent.click(screen.getByRole('button', { name: 'Download base + ink STLs' }))
+        expect(clickedLinks).toContain('tattoo-raven-chest-export-base.stl')
+        expect(clickedLinks).toContain('tattoo-raven-chest-export-ink.stl')
+
+        // Single-extruder STL with filament swap height
+        fireEvent.change(screen.getByLabelText('Export format'), { target: { value: 'merged-stl' } })
+        expect(screen.getByText(/pause at height 2\.4 mm/i)).toBeInTheDocument()
+        fireEvent.click(screen.getByRole('button', { name: 'Download STL' }))
+        expect(clickedLinks).toContain('tattoo-raven-chest-export-single-extruder.stl')
+      } finally {
+        clickSpyLocal.mockRestore()
+      }
+    })
+
+    it('disables Lift the tattoo without a Gemini key, and lets you lift, toggle and save with one', async () => {
+      const onSave = vi.fn()
+      const { rerender } = render(
+        <ReliefStlDrawer source={{ ...source, conceptId: 'c1' }} apiKey="" onSave={onSave} onClose={() => {}} />,
+      )
+      fireEvent.load(screen.getByRole('img', { name: 'Raven Chest STL source' }))
+      expect(screen.getByRole('button', { name: 'Lift the tattoo' })).toBeDisabled()
+      expect(screen.getByText(/add a gemini key/i)).toBeInTheDocument()
+
+      rerender(
+        <ReliefStlDrawer source={{ ...source, conceptId: 'c1' }} apiKey="SECRET" onSave={onSave} onClose={() => {}} />,
+      )
+      const liftButton = screen.getByRole('button', { name: 'Lift the tattoo' })
+      expect(liftButton).toBeEnabled()
+      fireEvent.click(liftButton)
+
+      await waitFor(() => expect(liftTattooWithGemini).toHaveBeenCalledWith('SECRET', {
+        photoDataUrl: source.imageUrl,
+      }))
+
+      // Switched to lifted image and tattoo mode automatically.
+      const img = await screen.findByRole('img', { name: 'Raven Chest STL source' })
+      expect(img).toHaveAttribute('src', 'data:image/png;base64,lifted-tattoo')
+      fireEvent.load(img)
+      expect(screen.getByLabelText('Style')).toHaveValue('tattoo')
+
+      // Toggle back to Original photo and then back to Lifted design.
+      fireEvent.click(screen.getByRole('button', { name: 'Original photo' }))
+      expect(screen.getByRole('img', { name: 'Raven Chest STL source' })).toHaveAttribute('src', source.imageUrl)
+      fireEvent.load(screen.getByRole('img', { name: 'Raven Chest STL source' }))
+
+      fireEvent.click(screen.getByRole('button', { name: 'Lifted design' }))
+      expect(screen.getByRole('img', { name: 'Raven Chest STL source' })).toHaveAttribute('src', 'data:image/png;base64,lifted-tattoo')
+      fireEvent.load(screen.getByRole('img', { name: 'Raven Chest STL source' }))
+
+      // Save lifted design via onSave without closing the drawer.
+      fireEvent.click(screen.getByRole('button', { name: 'Save as variant' }))
+      await waitFor(() => expect(onSave).toHaveBeenCalledWith('c1', expect.objectContaining({
+        provider: 'gemini',
+        title: 'Lifted tattoo — Raven Chest',
+        imageUrl: 'data:image/png;base64,lifted-tattoo',
+      })))
+      expect(screen.getByRole('button', { name: 'Saved' })).toBeDisabled()
+    })
+
+    it('validates backing plate clearance in tattoo mode', () => {
+      render(<ReliefStlDrawer source={source} onClose={() => {}} />)
+      fireEvent.change(screen.getByLabelText('Style'), { target: { value: 'tattoo' } })
+      fireEvent.change(screen.getByLabelText('Plate thickness in millimetres'), { target: { value: '1.5' } })
+      fireEvent.change(screen.getByLabelText('Ink depth in millimetres'), { target: { value: '1.4' } })
+      expect(screen.getByText('Ink depth must leave at least 0.4mm of backing plate.')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Download 2-colour 3MF' })).toBeDisabled()
     })
   })
 })

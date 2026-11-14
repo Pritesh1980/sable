@@ -29,7 +29,8 @@ Tap **+** to add an idea (or tap a card to edit one). The editor gives you:
   image, this button drafts the title, description, style tags and placement from the
   image itself; only fields you haven't filled are touched.
 - **Reference images** — paste an image URL or upload photos, each with a note on *what to
-  borrow from it*. **3D print** on an image opens the relief STL export for it (see
+  borrow from it*. **3D print** on an image opens the STL / two-colour 3MF export for it
+  (with optional Gemini **Lift the tattoo** preparation and **Add to references**, see
   [AI concepts](06-concepts.md#export-a-relief-stl)). **On arm** puts it on the 3D arm at
   its real size, on the forearm when the idea's placement is *forearm* and on the upper arm
   otherwise; **Add to references** keeps the picture as another reference, noted with its

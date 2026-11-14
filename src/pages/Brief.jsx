@@ -692,7 +692,13 @@ function IdeaModal({ idea, isNew = !idea.id, onClose, onSave, onDelete, onRestor
         </div>
       </div>
     </div>
-    <ReliefStlDrawer source={stlSource} onClose={() => setStlSource(null)} />
+    <ReliefStlDrawer
+      source={stlSource}
+      apiKey={geminiKey}
+      onSave={addArmPicture}
+      saveLabel="Add to references"
+      onClose={() => setStlSource(null)}
+    />
     <ArmPlacementDrawer
       source={armSource} onSave={addArmPicture} onClose={() => setArmSource(null)}
       saveLabel="Add to references"

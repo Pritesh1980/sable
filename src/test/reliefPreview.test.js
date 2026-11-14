@@ -54,5 +54,36 @@ describe('createReliefPreview', () => {
     expect(createReliefPreview(THREE, mount)).toBeTruthy()
     expect(style.touchAction).toBe('pan-y')
   })
+
+  it('renders both base and accent ink meshes sharing one centre and disposes both', () => {
+    const added = []
+    const removed = []
+    let disposedCount = 0
+    const canvas = { style: {}, addEventListener: vi.fn(), removeEventListener: vi.fn(), parentNode: null }
+    const THREE = {
+      WebGLRenderer: class { constructor() { this.domElement = canvas } setPixelRatio() {} setSize() {} render() {} dispose() {} },
+      Scene: class { add(o) { added.push(o) } remove(o) { removed.push(o) } },
+      PerspectiveCamera: class { constructor() { this.up = { set() {} }; this.position = { set() {} } } lookAt() {} updateProjectionMatrix() {} },
+      HemisphereLight: class {},
+      DirectionalLight: class { constructor() { this.position = { set() {} } } },
+      MeshStandardMaterial: class { dispose() { disposedCount += 1 } },
+      BufferGeometry: class {
+        constructor() { this.attrs = {} }
+        setAttribute(k, v) { this.attrs[k] = v }
+        setIndex(v) { this.index = v }
+        computeVertexNormals() {}
+        dispose() { disposedCount += 1 }
+      },
+      BufferAttribute: class { constructor(array, itemSize) { this.array = array; this.itemSize = itemSize } },
+      Mesh: class { constructor(geo, mat) { this.geo = geo; this.mat = mat } },
+    }
+    const mount = { clientWidth: 100, clientHeight: 100, appendChild: vi.fn() }
+    const engine = createReliefPreview(THREE, mount)
+    engine.setMesh({ ...mesh, accentMesh: mesh })
+    const meshesAdded = added.filter((o) => o instanceof THREE.Mesh)
+    expect(meshesAdded).toHaveLength(2)
+    engine.dispose()
+    expect(disposedCount).toBe(4) // 2 geometries + 2 materials
+  })
 })
 
