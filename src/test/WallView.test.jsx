@@ -47,6 +47,20 @@ describe('WallView (#220)', () => {
     expect(main().getAllByRole('img')).toHaveLength(3)
   })
 
+  // #161: a new artist is unranked, so their photos land at the foot of the wall.
+  it('brings a just-added artist into view', () => {
+    const original = Element.prototype.scrollIntoView
+    const scrollIntoView = vi.fn()
+    Element.prototype.scrollIntoView = scrollIntoView
+    try {
+      renderWall({ revealArtistId: baseArtists[baseArtists.length - 1].id })
+      expect(scrollIntoView).toHaveBeenCalledTimes(1)
+      expect(scrollIntoView.mock.instances[0].dataset.artistId).toBe(baseArtists[baseArtists.length - 1].id)
+    } finally {
+      Element.prototype.scrollIntoView = original
+    }
+  })
+
   it('says so when a style filter leaves nothing to show', () => {
     renderWall({ wallArtists: [] })
     expect(screen.getByText(/no artists match this filter/i)).toBeInTheDocument()

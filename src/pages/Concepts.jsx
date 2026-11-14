@@ -148,7 +148,7 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
     confirmMessage: (n) => (n === 1 ? 'Concept restored' : `${n} concepts restored`),
   })
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   // Every image saved here is staged under its concept first (#115), so the
   // concept stores a key, never base64, and survives a failed upload.
   const userId = useAuth()?.user?.id
@@ -169,6 +169,12 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
   // ?new=1 opens it empty: Home's "New concept" links land here (#220).
   const [composerOpen, setComposerOpen] = useState(() => Boolean(searchParams.get('steer')) || searchParams.get('new') === '1')
   const [pendingPasteConceptId, setPendingPasteConceptId] = useState(null)
+  // Spend ?new=1 once it has opened the composer, or Back to this page reopens it.
+  const wantsNew = searchParams.get('new') === '1'
+  useEffect(() => {
+    if (!wantsNew) return
+    setSearchParams((prev) => { const next = new URLSearchParams(prev); next.delete('new'); return next }, { replace: true })
+  }, [wantsNew, setSearchParams])
 
   const [openaiKey, setOpenaiKey] = useState(() => localStorage.getItem('openai_api_key') || '')
   const [geminiKey, setGeminiKey] = useState(() => localStorage.getItem('gemini_api_key') || '')

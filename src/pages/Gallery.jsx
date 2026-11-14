@@ -172,6 +172,9 @@ export default function Gallery({ artists, setArtists, ideas = [], mergedConvent
   useEffect(() => {
     if (quickAdding) return undefined
     function handlePagePaste(e) {
+      // A wall photo open full-screen takes the paste itself: it adds the image
+      // to that artist, so it must not also open add-artist here (#220).
+      if (searchParams.has('photo')) return
       const active = document.activeElement
       if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return
       const file = [...(e.clipboardData?.files || [])].find((f) => f.type?.startsWith('image/'))
@@ -182,7 +185,7 @@ export default function Gallery({ artists, setArtists, ideas = [], mergedConvent
     }
     document.addEventListener('paste', handlePagePaste)
     return () => document.removeEventListener('paste', handlePagePaste)
-  }, [quickAdding])
+  }, [quickAdding, searchParams])
 
   const artistsWithImages = artists.filter((a) => a.images?.length > 0)
 
@@ -491,6 +494,7 @@ export default function Gallery({ artists, setArtists, ideas = [], mergedConvent
           ideas={ideas}
           setArtists={setArtists}
           onAddArtist={(initial) => { setAddInitial(initial); setQuickAdding(true) }}
+          revealArtistId={captureReceipt?.kind === 'created' ? captureReceipt.artistId : null}
         />
       ) : viewMode === 'filmstrip' ? (
         <FilmstripView artists={sorted} onOpenArtist={openArtist} onSetRank={setRank} onSetStatus={setStatus} />

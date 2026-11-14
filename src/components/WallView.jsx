@@ -16,7 +16,7 @@ import { useStorage } from '../hooks/useStorage'
 // The Wall: full-bleed masonry of every artist reference image, the default
 // view on the Artists page (#220). Getting around is the app nav's job and the
 // page header belongs to Gallery; this is only the wall and what hangs off it.
-export default function WallView({ artists = [], wallArtists = artists, ideas = [], setArtists = () => {}, onAddArtist = () => {} }) {
+export default function WallView({ artists = [], wallArtists = artists, ideas = [], setArtists = () => {}, onAddArtist = () => {}, revealArtistId = null }) {
   const items = buildWallItems(wallArtists)
   // The open photo lives in the URL (?photo=<artistId>.<n>, #159): the browser's
   // Back closes the viewer instead of leaving the Wall, and a photo can be
@@ -100,6 +100,16 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
       prev.map((a) => (a.id === artistId ? { ...a, images: [...(a.images || []), stamped] } : a))
     )
   }
+
+  // #161: a new artist is unranked, so it lands at the foot of the wall, out of
+  // sight under "Artist saved". Bring its first photo into view; the order stays.
+  useEffect(() => {
+    if (!revealArtistId) return
+    const tile = [...document.querySelectorAll('[data-artist-id]')]
+      .find((el) => el.dataset.artistId === revealArtistId)
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    tile?.scrollIntoView?.({ behavior: still ? 'auto' : 'smooth', block: 'center' })
+  }, [revealArtistId])
 
   return (
     <div className="bg-v2-ink">
