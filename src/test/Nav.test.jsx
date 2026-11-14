@@ -78,6 +78,18 @@ describe('Nav', () => {
     expect(screen.getByRole('link', { name: /Studios/ })).toHaveAttribute('aria-current', 'page')
   })
 
+  it('marks the current place with more than a colour change', () => {
+    renderNav(['/brief'])
+    expect(screen.getByRole('link', { name: 'Ideas' }).className).toMatch(/border-accent/)
+    expect(screen.getByRole('link', { name: 'Artists' }).className).toMatch(/border-transparent/)
+  })
+
+  it('moves focus into More when it opens', () => {
+    renderNav()
+    openMore()
+    expect(screen.getByRole('dialog', { name: 'More' }).contains(document.activeElement)).toBe(true)
+  })
+
   it('closes More after picking a page', () => {
     renderNav()
     openMore()

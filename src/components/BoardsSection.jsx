@@ -100,8 +100,8 @@ function BoardModal({ board, onClose, onSave, onDelete, ideas, artists }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-ink-black flex flex-col animate-fade-in overflow-y-auto">
-      <div className="px-5 pt-safe-top pt-6 pb-2 border-b border-ink-border sticky top-[var(--nav-top)] bg-ink-black z-10">
+    <div className="fixed inset-0 top-[var(--nav-top)] z-50 bg-ink-black flex flex-col animate-fade-in overflow-y-auto">
+      <div className="px-5 pt-safe-top pt-6 pb-2 border-b border-ink-border sticky top-0 bg-ink-black z-10">
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <button onClick={onClose} className="min-h-11 text-cream-muted hover:text-cream text-sm tracking-widest uppercase">
             ← Back
