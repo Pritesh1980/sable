@@ -9,6 +9,8 @@ import Gallery from '../pages/Gallery'
 // flow, rather than silently doing nothing.
 vi.mock('../hooks/useImageUpload', () => ({
   compressImages: vi.fn(async () => ['data:image/jpeg;base64,SHOT']),
+  // The open wall photo uploads a pasted image to its artist.
+  uploadImages: vi.fn(async () => []),
 }))
 vi.mock('../data/screenshotIntake', () => ({
   analyzeScreenshotWithGemini: vi.fn(async () => null),
