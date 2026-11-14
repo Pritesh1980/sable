@@ -3,10 +3,9 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import DemoIntro from '../components/DemoIntro'
 import { DEMO_SESSION, DEMO_INTRO_KEY } from '../data/demoSeed'
 
-// The demo is the funnel's landing pad: someone arriving from the README badge
-// lands on a populated Wall with no idea what Sable is for. This strip is the
-// only place the proposition reaches them, so the conditions under which it
-// shows (and stays hidden) are worth pinning down.
+// The demo is the funnel's landing pad. Home states the proposition (#220);
+// this strip says the data is invented, so when it shows (and stays hidden)
+// is worth pinning down.
 
 function seedDemoSession() {
   localStorage.setItem('tattoo_local_session', JSON.stringify(DEMO_SESSION))
@@ -17,10 +16,10 @@ describe('DemoIntro', () => {
     localStorage.clear()
   })
 
-  it('states the proposition on a demo session', () => {
+  it('says the data is invented on a demo session', () => {
     seedDemoSession()
     render(<DemoIntro />)
-    expect(screen.getByText(/every tattoo artist you love/i)).toBeTruthy()
+    expect(screen.getByText(/you are looking at the demo/i)).toBeTruthy()
     expect(screen.getByText(/AI-generated imagery/i)).toBeInTheDocument()
     expect(screen.getByText(/demo updates reset artists and ideas/i)).toBeInTheDocument()
   })
@@ -44,11 +43,11 @@ describe('DemoIntro', () => {
     seedDemoSession()
     const { unmount } = render(<DemoIntro />)
     fireEvent.click(screen.getByRole('button', { name: /dismiss/i }))
-    expect(screen.queryByText(/every tattoo artist you love/i)).toBeNull()
+    expect(screen.queryByText(/you are looking at the demo/i)).toBeNull()
 
     unmount()
     render(<DemoIntro />)
-    expect(screen.queryByText(/every tattoo artist you love/i)).toBeNull()
+    expect(screen.queryByText(/you are looking at the demo/i)).toBeNull()
   })
 
   it('records the dismissal device-locally, never in a synced collection', () => {
