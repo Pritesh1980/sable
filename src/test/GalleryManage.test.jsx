@@ -20,7 +20,7 @@ function renderGallery({ artists = baseArtists, setArtists = vi.fn(), route = '/
 describe('Gallery manage mode', () => {
   it('discloses generated artwork independently of editable notes and demo session', () => {
     renderGallery({ artists: [{ ...baseArtists[0], notes: '', images: ['images/demo/mora.blackfern/fern-v4.webp'] }] })
-    expect(screen.getByText(/AI-generated imagery/)).toBeInTheDocument()
+    expect(screen.getAllByText(/AI-generated imagery/).length).toBeGreaterThan(0)
   })
 
   it('keeps the generated-art notice visible inside Browse', () => {

@@ -35,7 +35,7 @@ function declares44pt(className) {
   return axis('w') && axis('h')
 }
 
-const VIEW_TITLES = ['Filmstrip view', 'Compare artists', 'Grid view', 'Style wall']
+const VIEW_TITLES = ['Filmstrip view', 'Compare artists', 'Grid view', 'Wall view']
 
 describe('view switcher touch targets (#73)', () => {
   beforeEach(() => localStorage.clear())

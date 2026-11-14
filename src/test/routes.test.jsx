@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router'
 import App from '../App'
 import { AuthProvider } from '../context/AuthContext'
 import { ThemeProvider } from '../context/ThemeContext'
+import { DEFAULT_ARTISTS } from '../data/artists'
 import { takeSharedImage } from '../sw/shareTarget'
 
 vi.mock('../sw/shareTarget', () => ({ takeSharedImage: vi.fn(async () => null) }))
@@ -72,9 +73,18 @@ describe('root and pipeline routes', () => {
     seedSession()
   })
 
-  it('renders the Wall at /', async () => {
+  it('renders the start page at /, not the wall', async () => {
     renderAt('/')
-    await waitFor(() => expect(screen.getByText('Sable')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'Sable' })).toBeInTheDocument())
+    expect(screen.queryByRole('region', { name: /your top five/i })).not.toBeInTheDocument()
+  })
+
+  // #220: the wall moved to Artists; old photo links keep working.
+  it('redirects /?photo=<artist>.<n> to the Artists wall with the viewer open', async () => {
+    const [first] = [...DEFAULT_ARTISTS].sort((a, b) => a.rank - b.rank)
+    renderAt(`/?photo=${first.id}.1`)
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Artists' })).toBeInTheDocument(), { timeout: 5000 })
+    expect(await screen.findByRole('heading', { name: first.name || first.handle })).toBeInTheDocument()
   })
 
   it('renders the old Dashboard content at /pipeline', async () => {

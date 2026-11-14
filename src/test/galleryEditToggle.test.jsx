@@ -22,7 +22,7 @@ function renderGallery({ artists = baseArtists, setArtists = vi.fn() } = {}) {
 }
 
 const toGrid = () => fireEvent.click(screen.getByTitle('Grid view'))
-const editToggle = () => screen.getByRole('button', { name: /reorder/i })
+const editToggle = () => screen.getByRole('button', { name: 'Reorder and add photos' })
 const handles = () => document.querySelectorAll('[aria-roledescription="sortable"]')
 
 describe('Gallery edit toggle (#70)', () => {
@@ -30,8 +30,8 @@ describe('Gallery edit toggle (#70)', () => {
 
   it('offers the toggle only in grid view — the only view that has cards to reorder', () => {
     renderGallery()
-    // Filmstrip is the default view.
-    expect(screen.queryByRole('button', { name: /reorder/i })).not.toBeInTheDocument()
+    // The wall is the default view (#220): nothing to reorder there either.
+    expect(screen.queryByRole('button', { name: 'Reorder and add photos' })).not.toBeInTheDocument()
 
     toGrid()
     expect(editToggle()).toBeInTheDocument()

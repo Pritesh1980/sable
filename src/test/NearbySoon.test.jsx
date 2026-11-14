@@ -48,7 +48,7 @@ describe('NearbySoon', () => {
     expect(screen.getByText(/No guest spots within 100 mi/i)).toBeInTheDocument()
   })
 
-  it('compact mode is one line: the soonest spot, then a count linking to Pipeline', () => {
+  it('compact mode is a chip: the soonest spot, then a +N linking to Pipeline', () => {
     localStorage.setItem('tattoo_nearby_radius', '200')
     renderPanel({ compact: true })
     const links = screen.getAllByRole('link')
@@ -56,7 +56,7 @@ describe('NearbySoon', () => {
     expect(links[0]).toHaveTextContent('Vesper Ash')
     expect(links[0]).toHaveTextContent('London')
     expect(links[0]).toHaveAttribute('href', '/gallery?artist=a1#guest-spots')
-    expect(links[1]).toHaveTextContent('+1 more')
+    expect(links[1]).toHaveTextContent('+1')
     expect(links[1]).toHaveAttribute('href', '/pipeline')
     expect(screen.getAllByText(/Nearby soon/i)).toHaveLength(1)
   })

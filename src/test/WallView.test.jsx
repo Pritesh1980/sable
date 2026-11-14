@@ -1,8 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { useState } from 'react'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
-import Wall from '../pages/Wall'
+import WallView from '../components/WallView'
 
 vi.mock('../hooks/useImageUpload', () => ({
   uploadImages: vi.fn(async (files) => files.map((_, i) => `data:image/jpeg;base64,DROPPED${i}`)),
@@ -29,10 +28,9 @@ const baseArtists = [
 function renderWall(props = {}, { initialEntries = ['/'] } = {}) {
   return render(
     <MemoryRouter initialEntries={initialEntries}>
-      <Wall
+      <WallView
         artists={baseArtists}
         setArtists={vi.fn()}
-        onOpenArtist={vi.fn()}
         {...props}
       />
     </MemoryRouter>
@@ -40,20 +38,19 @@ function renderWall(props = {}, { initialEntries = ['/'] } = {}) {
 }
 
 // The RankRail Top-5 dock also renders artist names + thumbnails above the
-// masonry, so masonry-targeting queries scope to <main> to stay unambiguous.
-const main = () => within(screen.getByRole('main'))
+// masonry, so masonry-targeting queries scope to the masonry column container.
+const main = () => within(document.querySelector('[class*="columns-"]'))
 
-describe('Wall page', () => {
-  it('keeps generated-art provenance outside hover captions after dismissing the intro', () => {
-    localStorage.setItem('tattoo_demo_intro_dismissed', '1')
-    renderWall({ artists: [{ ...baseArtists[0], images: ['images/demo/mora.blackfern/fern-v4.webp'] }] })
-    const notices = screen.getAllByText(/AI-generated imagery/)
-    expect(notices.some((notice) => !notice.closest('figcaption'))).toBe(true)
-  })
-
+describe('WallView (#220)', () => {
   it('renders one piece per image across all artists', () => {
     renderWall()
     expect(main().getAllByRole('img')).toHaveLength(3)
+  })
+
+  it('is not a landmark of its own: the Artists page owns <main>', () => {
+    renderWall()
+    expect(screen.queryByRole('main')).toBeNull()
+    expect(screen.queryByRole('heading', { level: 1 })).toBeNull()
   })
 
   it('surfaces the Top-5 dock on the wall', () => {
@@ -61,13 +58,14 @@ describe('Wall page', () => {
     expect(screen.getByRole('region', { name: /your top five/i })).toBeInTheDocument()
   })
 
-  it('captions with a prominent artist name and their studio — no style tags', () => {
+  it('always shows the artist name; only the studio waits for hover', () => {
     renderWall()
     const caption = main().getByText('Carlos Valera').closest('figcaption')
-    expect(caption).toHaveTextContent('No Regrets London')
+    expect(caption.className).not.toMatch(/opacity-0/)
+    const studio = within(caption).getByText('No Regrets London')
+    expect(studio.className).toMatch(/can-hover:opacity-0/)
+    expect(studio.className).toMatch(/group-hover:opacity-100/)
     expect(caption).not.toHaveTextContent('realism')
-    expect(caption.className).toMatch(/opacity-0/)
-    expect(caption.className).toMatch(/group-hover:opacity-100/)
   })
 
   it('omits the studio line when the artist has none', () => {
@@ -78,139 +76,29 @@ describe('Wall page', () => {
 
   it('shows a recent dot only for recent items', () => {
     renderWall()
-    const dots = screen.getAllByTitle('New since your last visit')
-    expect(dots).toHaveLength(1)
+    expect(screen.getAllByTitle('New since your last visit')).toHaveLength(1)
   })
 
-  it('calls onOpen with the right item when a piece is clicked', () => {
-    const onOpenArtist = vi.fn()
-    renderWall({ onOpenArtist })
+  it('builds the masonry from wallArtists (the filtered list) while the rail keeps everyone', () => {
+    renderWall({ wallArtists: [baseArtists[1]] })
+    expect(main().getAllByRole('img')).toHaveLength(1)
+    expect(main().queryByRole('button', { name: 'Open zoia.ink' })).toBeNull()
+    expect(within(screen.getByRole('region', { name: /your top five/i })).getAllByRole('listitem')).toHaveLength(2)
+  })
+
+  it('opens the photo viewer on click', () => {
+    renderWall()
     fireEvent.click(main().getByRole('button', { name: 'Open Carlos Valera' }))
-    expect(onOpenArtist).toHaveBeenCalledTimes(1)
-    expect(onOpenArtist.mock.calls[0][0]).toMatchObject({ artistId: 'carlosvalera' })
+    expect(screen.getByRole('heading', { name: 'Carlos Valera' })).toBeInTheDocument()
   })
 
-  // #220: the app's one nav does the navigating; the wall's bar only names the
-  // page and adds an artist.
-  it('has a heading and no navigation of its own', () => {
+  it('has no add-artist or demo chrome of its own', () => {
     renderWall()
-    expect(screen.getByRole('heading', { level: 1, name: 'Wall' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /everything else/i })).toBeNull()
-    expect(screen.queryByRole('button', { name: /concepts/i })).toBeNull()
-    expect(screen.queryByRole('navigation')).toBeNull()
-  })
-
-  it('opens the quick-add modal from the bar\'s + Add artist button', () => {
-    renderWall()
-    fireEvent.click(screen.getByRole('button', { name: /\+ add artist/i }))
-    expect(screen.getByText('Add an artist')).toBeInTheDocument()
-  })
-
-  it('renders an empty state with an add-artist CTA that opens the quick-add modal', () => {
-    renderWall({ artists: [] })
-    expect(screen.queryAllByRole('img')).toHaveLength(0)
-    expect(screen.queryByRole('region', { name: /your top five/i })).toBeNull()
-    const ctas = screen.getAllByRole('button', { name: /add artist/i })
-    fireEvent.click(ctas[ctas.length - 1])
-    expect(screen.getByText('Add an artist')).toBeInTheDocument()
-  })
-
-  // Signing in on the public demo build yields an empty account (the curated
-  // seed is not shipped there), which dead-ended with no route to the thing
-  // that deploy exists to show. Gating lives in canOfferDemo (see
-  // demoSeed.test.js); the suite runs with seeding enabled, i.e. NOT the demo
-  // build, so the default here is correctly hidden.
-  describe('empty-state demo entry', () => {
-    beforeEach(() => localStorage.clear())
-
-    it('stays hidden on a build that ships the curated seed', () => {
-      renderWall({ artists: [] })
-      expect(screen.queryByRole('button', { name: /view the demo/i })).toBeNull()
-    })
-
-    it('never appears when the wall has artists', () => {
-      renderWall()
-      expect(screen.queryByRole('button', { name: /view the demo/i })).toBeNull()
-    })
-  })
-
-  describe('quick-add end to end', () => {
-    beforeEach(() => vi.clearAllMocks())
-
-    it('adds a new artist in exactly two clicks: + Add artist, then Save', async () => {
-      const setArtists = vi.fn()
-      renderWall({ setArtists })
-
-      // Click 1
-      fireEvent.click(screen.getByRole('button', { name: /\+ add artist/i }))
-      fireEvent.change(screen.getByPlaceholderText(/handle or instagram url/i), {
-        target: { value: '@new_artist' },
-      })
-      // Click 2
-      fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
-
-      await waitFor(() => expect(setArtists).toHaveBeenCalled())
-      const next = setArtists.mock.calls[0][0](baseArtists)
-      expect(next.some((a) => a.handle === 'new_artist')).toBe(true)
-    })
-  })
-
-  // #161: a new artist lands unranked at the foot of the Wall, out of sight
-  // under "Artist saved". Bring its first photo into view; order is unchanged.
-  describe('revealing a newly saved artist', () => {
-    let scrolled
-    const realScroll = Element.prototype.scrollIntoView
-    const realMatchMedia = window.matchMedia
-
-    beforeEach(() => {
-      scrolled = []
-      Element.prototype.scrollIntoView = function (options) { scrolled.push({ el: this, options }) }
-    })
-    afterEach(() => {
-      Element.prototype.scrollIntoView = realScroll
-      window.matchMedia = realMatchMedia
-    })
-
-    // A library that gives each artist it has not seen a photo, so the new
-    // artist has a Wall tile to scroll to.
-    function LiveWall() {
-      const [artists, setArtistsState] = useState(baseArtists)
-      const setArtists = (update) => setArtistsState((prev) => {
-        const next = typeof update === 'function' ? update(prev) : update
-        return next.map((a) => (prev.some((p) => p.id === a.id) ? a : { ...a, images: [...(a.images || []), '/images/new/1.jpg'] }))
-      })
-      return <Wall artists={artists} setArtists={setArtists} onOpenArtist={vi.fn()} />
-    }
-
-    async function saveNewArtist() {
-      render(<MemoryRouter><LiveWall /></MemoryRouter>)
-      fireEvent.click(screen.getByRole('button', { name: /\+ add artist/i }))
-      fireEvent.change(screen.getByPlaceholderText(/handle or instagram url/i), { target: { value: '@new_artist' } })
-      fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
-      await screen.findByText('Artist saved')
-    }
-
-    it('scrolls the new artist\'s first tile into view, smoothly', async () => {
-      await saveNewArtist()
-      await waitFor(() => expect(scrolled).toHaveLength(1))
-      const tile = main().getByRole('button', { name: 'Open new_artist' }).closest('figure')
-      expect(scrolled[0].el).toBe(tile)
-      expect(scrolled[0].options).toMatchObject({ behavior: 'smooth' })
-      // Still last: revealing it does not reorder the Wall.
-      expect(main().getAllByRole('button', { name: /^Open / }).at(-1)).toHaveAccessibleName('Open new_artist')
-    })
-
-    it('jumps without animation under reduced motion', async () => {
-      window.matchMedia = (query) => ({ matches: query.includes('reduce'), media: query, addEventListener() {}, removeEventListener() {} })
-      await saveNewArtist()
-      await waitFor(() => expect(scrolled).toHaveLength(1))
-      expect(scrolled[0].options).toMatchObject({ behavior: 'auto' })
-    })
+    expect(screen.queryByRole('button', { name: /add artist/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /view the demo/i })).toBeNull()
   })
 
   describe('drop-zone and paste wiring', () => {
-    beforeEach(() => vi.clearAllMocks())
-
     it('dropping a file on a wall piece adds a stamped image to that artist', async () => {
       const setArtists = vi.fn()
       renderWall({ setArtists })

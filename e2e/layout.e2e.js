@@ -22,7 +22,7 @@ const ROUTES = [
 const WIDTHS = [320, 375, 390, 414]
 
 test('a returning demo resets to six favourites without resurrecting extra entries', async ({ page }) => {
-  await openDemo(page, '/')
+  await openDemo(page, '/gallery')
   await page.evaluate(() => {
     const userId = JSON.parse(localStorage.getItem('tattoo_local_session')).user.id
     const rows = [...JSON.parse(localStorage.getItem('tattoo_artists_meta')),
@@ -63,28 +63,27 @@ async function settle(page) {
   await expect(page.locator('#root')).not.toBeEmpty()
 }
 
-// The Top 5 strip sticks under the Wall's bar, and the bar sticks under the app
-// nav where the nav is at the top (`md` up, #220). A fixed offset that fit
-// neither left the strip behind the bar with a sliver showing (#161).
+// On Artists the filter bar owns the top edge (it sticks under the app nav
+// where the nav is at the top, `md` up, #220). The Top 5 strip belongs to the
+// wall below it: it must sit under the bar at rest and scroll away rather than
+// stick behind it (#161).
 for (const width of [390, 1024]) {
   test.describe(`Top 5 strip at ${width}px`, () => {
     test.use({ viewport: { width, height: 844 } })
 
-    test('sticks directly below the wall header while scrolling', async ({ page }) => {
-      await openDemo(page, '/')
+    test('sits under the filter bar and scrolls away with the wall', async ({ page }) => {
+      await openDemo(page, '/gallery')
       await settle(page)
+      const strip = page.getByRole('region', { name: 'Your top five' })
+      await expect(strip).toBeVisible()
+      const bar = page.getByRole('button', { name: 'Wall view' }).locator('xpath=ancestor::div[contains(@class,"sticky")][1]')
+      const [b, s] = await Promise.all([bar.boundingBox(), strip.boundingBox()])
+      expect(s.y).toBeGreaterThanOrEqual(b.y + b.height - 1)
       await page.evaluate(() => window.scrollTo(0, 900))
       await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
-      const header = page.locator('header').first()
-      const strip = page.getByRole('region', { name: 'Your top five' })
-      await expect.poll(async () => {
-        const [h, s] = await Promise.all([header.boundingBox(), strip.boundingBox()])
-        return Math.abs(s.y - (h.y + h.height))
-      }).toBeLessThanOrEqual(1)
-      // On a phone the nav is the bottom bar, so the Wall's bar reaches the top.
-      const nav = await page.getByRole('navigation', { name: 'Main' }).boundingBox()
-      const navBottom = nav.y < 100 ? nav.y + nav.height : 0
-      expect(Math.abs((await header.boundingBox()).y - navBottom)).toBeLessThanOrEqual(1)
+      // The bar stays reachable; the strip has moved off under it.
+      await expect(bar).toBeInViewport()
+      await expect(strip).not.toBeInViewport()
     })
   })
 }
@@ -126,7 +125,7 @@ test.describe('ranking board at 320px with A+', () => {
   test.use({ viewport: { width: 320, height: 800 } })
 
   test('keeps every artist name readable', async ({ page }) => {
-    await openDemo(page, '/', { storage: { tattoo_font: 'large' } })
+    await openDemo(page, '/gallery', { storage: { tattoo_font: 'large' } })
     await settle(page)
     await page.getByRole('button', { name: 'Rank ⤢' }).click()
     const board = page.getByRole('dialog', { name: 'Rank artists' })
@@ -147,12 +146,12 @@ for (const width of WIDTHS) {
   test.describe(`at ${width}px`, () => {
     test.use({ viewport: { width, height: 800 } })
 
-    test('wall controls fit without colliding', async ({ page }) => {
-      await openDemo(page, '/')
+    test('artists controls fit without colliding', async ({ page }) => {
+      await openDemo(page, '/gallery')
       await settle(page)
-      // The app nav (four places and More) plus the Wall's own add button.
+      // The app nav (four places and More) plus the page's own + Add button.
       const nav = page.getByRole('navigation', { name: 'Main' })
-      const add = page.locator('header').first().getByRole('button', { name: /add artist/i })
+      const add = page.getByRole('main').getByRole('button', { name: '+ Add', exact: true })
       const links = nav.getByRole('link')
       await expect(links).toHaveCount(4)
       const controls = [0, 1, 2, 3].map((i) => links.nth(i))
@@ -210,7 +209,7 @@ for (const width of WIDTHS) {
       await openDemo(page, '/gallery')
       await settle(page)
       const failures = []
-      for (const view of ['Filmstrip view', 'Compare artists', 'Grid view', 'Style wall']) {
+      for (const view of ['Filmstrip view', 'Compare artists', 'Grid view', 'Wall view']) {
         await page.getByRole('button', { name: view }).click()
         await page.waitForLoadState('networkidle')
         const { scrollWidth, culprits } = await overflow(page)

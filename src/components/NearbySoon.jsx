@@ -20,8 +20,8 @@ const milesLabel = (miles) => (miles === 0 ? 'local' : `${miles} mi`)
 const artistLink = (artist) => `/gallery?artist=${encodeURIComponent(artist.id)}#guest-spots`
 
 // Guest spots by saved artists coming up near Milton Keynes (#183). The full
-// version sits on Pipeline; `compact` is a single line on Home (the soonest
-// spot, then a count linking to Pipeline), and nothing at all when none is coming up.
+// version sits on Pipeline; `compact` is a small chip in the Artists header (the
+// soonest spot, then a +N linking to Pipeline), and nothing at all when none is coming up.
 export default function NearbySoon({ artists = [], today = todayIso(), compact = false, className = '' }) {
   const [radiusMiles, setRadiusMiles] = useState(readRadius)
   const rows = nearbySoon(artists, { today, radiusMiles })
@@ -34,15 +34,15 @@ export default function NearbySoon({ artists = [], today = todayIso(), compact =
 
   if (compact) {
     if (rows.length === 0) return null
-    const [{ artist, spot, distanceMiles }] = rows
+    const [{ artist, spot }] = rows
     return (
-      <div className={`flex items-center gap-3 min-w-0 font-mono text-[0.6875rem] tracking-wide ${className}`}>
-        <Link to={artistLink(artist)} className="flex items-center min-h-11 min-w-0 text-cream-muted hover:text-cream">
+      <div className={`inline-flex items-center max-w-full min-h-11 rounded-full border border-ink-border font-mono text-[0.6875rem] tracking-wide ${className}`}>
+        <Link to={artistLink(artist)} className="flex items-center min-h-11 min-w-0 pl-3 pr-3 text-cream-muted hover:text-cream">
           <span className="text-accent uppercase tracking-widest mr-2 shrink-0">Nearby soon</span>
-          <span className="truncate">{artistLabel(artist)} · {spot.city} · {formatSpotDates(spot)} · {milesLabel(distanceMiles)}</span>
+          <span className="truncate">{artistLabel(artist)} · {spot.city}</span>
         </Link>
         {rows.length > 1 && (
-          <Link to="/pipeline" className="flex items-center min-h-11 shrink-0 text-cream-muted/80 hover:text-cream">+{rows.length - 1} more</Link>
+          <Link to="/pipeline" aria-label={`${rows.length - 1} more nearby, see Pipeline`} className="flex items-center min-h-11 pr-3 shrink-0 text-cream-muted/80 hover:text-cream">+{rows.length - 1}</Link>
         )}
       </div>
     )

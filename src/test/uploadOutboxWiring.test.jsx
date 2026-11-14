@@ -66,7 +66,7 @@ describe('the app retries queued photo uploads (#115)', () => {
   it('when the browser comes back online', async () => {
     const { key, upload } = await stageWhileUploadsFail()
     renderApp()
-    await screen.findByText('Sable')
+    await screen.findByRole('heading', { level: 1, name: 'Sable' })
     // Once when staged, once more at launch — still failing.
     await waitFor(() => expect(upload.mock.calls.length).toBeGreaterThanOrEqual(2))
     await new Promise((resolve) => setTimeout(resolve, 20))

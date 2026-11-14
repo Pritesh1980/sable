@@ -71,6 +71,7 @@ function detailSheet() {
 describe('switching the open artist inside ArtistDetail, through Gallery (#78)', () => {
   it('a tag tapped after switching artists via Similar ink is written onto the new artist, not the old one', () => {
     render(<Harness />)
+    fireEvent.click(screen.getByRole('button', { name: 'Filmstrip view' }))
 
     fireEvent.click(screen.getByText('Artist A'))
     expect(within(detailSheet()).getByText('Artist A')).toBeInTheDocument()
@@ -103,6 +104,7 @@ describe('switching the open artist inside ArtistDetail, through Gallery (#78)',
   // A, discarding whatever the user was doing on B.
   it('an upload started on A that resolves after switching to B does not reopen A', async () => {
     render(<Harness />)
+    fireEvent.click(screen.getByRole('button', { name: 'Filmstrip view' }))
 
     fireEvent.click(screen.getByText('Artist A'))
     fireEvent.change(detailSheet().querySelector('input[type="file"]'), {
@@ -167,6 +169,7 @@ describe('artist detail and the Back button (#159)', () => {
 
   it('tapping an artist pushes ?artist=<id>, and Back closes the detail onto the gallery', () => {
     renderAt('/', '/gallery')
+    fireEvent.click(screen.getByRole('button', { name: 'Filmstrip view' }))
     fireEvent.click(screen.getByText('Artist A'))
     expect(here()).toBe('/gallery?artist=a')
     expect(detailSheet()).not.toBeNull()
@@ -180,6 +183,7 @@ describe('artist detail and the Back button (#159)', () => {
 
   it('the sheet\'s own ← Back leaves no entry behind', () => {
     renderAt('/', '/gallery')
+    fireEvent.click(screen.getByRole('button', { name: 'Filmstrip view' }))
     fireEvent.click(screen.getByText('Artist A'))
     fireEvent.click(within(detailSheet()).getByRole('button', { name: /back/i }))
     expect(here()).toBe('/gallery')
@@ -191,6 +195,7 @@ describe('artist detail and the Back button (#159)', () => {
 
   it('switching artist inside the sheet replaces the entry', () => {
     renderAt('/', '/gallery')
+    fireEvent.click(screen.getByRole('button', { name: 'Filmstrip view' }))
     fireEvent.click(screen.getByText('Artist A'))
     fireEvent.click(within(detailSheet()).getByText('switch to Artist B'))
     expect(here()).toBe('/gallery?artist=b')
@@ -202,6 +207,7 @@ describe('artist detail and the Back button (#159)', () => {
 
   it('keeps the other query params through open and close', () => {
     renderAt('/gallery?demo=1')
+    fireEvent.click(screen.getByRole('button', { name: 'Filmstrip view' }))
     fireEvent.click(screen.getByText('Artist A'))
     expect(here()).toBe('/gallery?demo=1&artist=a')
     fireEvent.click(within(detailSheet()).getByRole('button', { name: /back/i }))
@@ -210,6 +216,7 @@ describe('artist detail and the Back button (#159)', () => {
 
   it('a deep link opens that artist; closing it stays on the gallery', () => {
     renderAt('/', '/gallery?artist=b')
+    fireEvent.click(screen.getByRole('button', { name: 'Filmstrip view' }))
     expect(within(detailSheet()).getByText('Artist B')).toBeInTheDocument()
     fireEvent.click(within(detailSheet()).getByRole('button', { name: /back/i }))
     expect(here()).toBe('/gallery')
@@ -220,6 +227,7 @@ describe('artist detail and the Back button (#159)', () => {
 
   it('a deep link to an artist who is not in the gallery shows the gallery', () => {
     renderAt('/gallery?artist=nobody')
+    fireEvent.click(screen.getByRole('button', { name: 'Filmstrip view' }))
     expect(detailSheet()).toBeNull()
     expect(screen.getByRole('heading', { name: 'Artists' })).toBeInTheDocument()
   })

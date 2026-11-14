@@ -29,6 +29,8 @@ test('every route deep-links under the base, with no broken assets', async ({ pa
 
 test('stored image paths are based at display time and actually load', async ({ page }) => {
   await page.goto('gallery')
+  // The wall lazy-loads what is off screen; the filmstrip is the view whose photos all load.
+  await page.getByRole('button', { name: 'Filmstrip view' }).tap()
   await page.waitForLoadState('networkidle')
   const images = await page.locator('img[src*="images/demo/"]').evaluateAll((els) =>
     els.map((img) => ({ src: new URL(img.src).pathname, loaded: img.complete && img.naturalWidth > 0 })))
@@ -48,7 +50,7 @@ test('legacy routes redirect within the base', async ({ page }) => {
   await page.goto('does-not-exist')
   // The router writes its home as the bare base (`/sable`), as the logo link does.
   await expect(page).toHaveURL(/\/sable\/?$/)
-  await expect(page.getByRole('heading', { name: 'Wall' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Sable' })).toBeVisible()
 })
 
 test('in-app navigation keeps the base', async ({ page }) => {
@@ -59,15 +61,25 @@ test('in-app navigation keeps the base', async ({ page }) => {
 
 // #159: overlay params ride on the based URL, and Back pops them within it.
 test('Back closes the wall viewer within the base', async ({ page }) => {
+  await page.goto('brief')
   await page.goto('gallery')
-  await page.goto('')
   await page.getByRole('button', { name: /^Open / }).first().click()
-  await expect(page).toHaveURL(/\/sable\/?\?(.+&)?photo=/)
-  await page.goBack()
-  await expect(page).toHaveURL(/\/sable\/?(\?demo=1)?$/)
-  await expect(page.getByRole('heading', { name: 'Wall' })).toBeVisible()
+  await expect(page).toHaveURL(/\/sable\/gallery\?(.+&)?photo=/)
   await page.goBack()
   await expect(page).toHaveURL(/\/sable\/gallery$/)
+  await expect(page.getByRole('heading', { name: 'Artists' })).toBeVisible()
+  await page.goBack()
+  await expect(page).toHaveURL(/\/sable\/brief$/)
+})
+
+// #220: the wall used to be the home page, so old photo links start at the base.
+test('an old /?photo= link lands on the Artists wall within the base', async ({ page }) => {
+  await page.goto('gallery')
+  await page.getByRole('button', { name: /^Open / }).first().click()
+  const photo = new URL(page.url()).searchParams.get('photo')
+  await page.goto(`?photo=${photo}`)
+  await expect(page).toHaveURL(/\/sable\/gallery\?(.+&)?photo=/)
+  await expect(page.getByRole('dialog', { name: / — image \d+ of \d+$/ })).toBeVisible()
 })
 
 test('shared capture saves and removes only its consumed query parameter', async ({ page }) => {

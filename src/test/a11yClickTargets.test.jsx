@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
-import StyleWall from '../components/StyleWall'
 import FilmstripView from '../components/FilmstripView'
 import ArtistDetail from '../components/ArtistDetail'
 import Brief from '../pages/Brief'
@@ -21,15 +20,6 @@ const pressEscape = () => fireEvent.keyDown(document, { key: 'Escape' })
 beforeEach(() => localStorage.clear())
 
 describe('keyboard-operable click targets', () => {
-  it('style wall tiles open the artist', () => {
-    const onOpenArtist = vi.fn()
-    render(<StyleWall artists={[artist]} onOpenArtist={onOpenArtist} />)
-    const [tile] = screen.getAllByRole('button', { name: /open zoia/i })
-    expect(tile).toHaveAttribute('tabindex', '0')
-    fireEvent.keyDown(tile, { key: 'Enter' })
-    expect(onOpenArtist).toHaveBeenCalledWith(artist)
-  })
-
   it('filmstrip thumbnails and the artist block open the artist', () => {
     const onOpenArtist = vi.fn()
     render(<FilmstripView artists={[artist]} onOpenArtist={onOpenArtist} onSetRank={vi.fn()} onSetStatus={vi.fn()} />)
