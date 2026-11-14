@@ -62,6 +62,20 @@ Sable opens on **Home**, a short start page:
 An empty section says what an artist, idea or concept is here and has a button to make
 the first one. Home follows the light or dark theme.
 
+### Starting from nothing
+
+Every empty page says what it holds and gives one way to start:
+
+- **Ideas** and **AI concepts** define an idea, a board and a concept, and show a faded
+  **Example** of a filled one. The example is a picture only: it is not saved and goes
+  away when you add your own.
+- **Pipeline** shows three steps instead of its panels: add an artist, put them in
+  order, write an idea. Only the current step has a button.
+- **Add a sample artist** (empty Home, Artists and Pipeline) saves one invented artist,
+  Mora Vane, with three AI-generated photos, so you can try the wall, the viewer and
+  ranking. It is a normal artist record and syncs like one. A note on Home and Artists
+  marks it, and **Remove sample** takes it out in one tap.
+
 ![Home on a phone](../public/guide/home-mobile.png)
 
 ## The Wall, in Artists

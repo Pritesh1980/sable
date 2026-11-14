@@ -44,6 +44,8 @@ import { readStagedImage } from '../data/stagedImageStore'
 import { resolveAssetPath } from '../data/assetPath'
 import { LIMITS } from '../../shared/imageJobs'
 import { RefreshCw } from 'lucide-react'
+import EmptyState from '../components/EmptyState'
+import ExampleFigure from '../components/ExampleFigure'
 
 const OFFLINE_RELAY = createRelayClient({ auth: backend.auth })
 
@@ -614,16 +616,35 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
       )}
 
       {wallItems.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-4 py-32 text-center px-6">
-          <p className="font-v2-display text-v2-cream text-xl tracking-wide">
-            No concepts yet — describe an idea to start the wall.
-          </p>
-          <button
+        <div className="max-w-xl px-4 sm:px-8 py-10">
+          <EmptyState
+            tone="v2"
+            definition="A concept is a picture of an idea, drawn by AI from your description. It is a sketch to show an artist what you mean, not a finished design."
             onClick={() => setComposerOpen(true)}
-            className="font-v2-ui text-sm text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-xs px-5 min-h-11 transition-colors"
-          >
-            + New concept
-          </button>
+            cta="Make your first concept"
+          />
+          <ExampleFigure tone="v2" className="mt-8">
+            <div className="flex gap-3 bg-v2-surface rounded-xs p-3">
+              <img
+                src={resolveAssetPath('images/demo/vesper_noctis/hourglass-v4-thumb.webp')}
+                alt="AI-generated picture of an ocean inside an hourglass"
+                width="96"
+                height="144"
+                loading="lazy"
+                className="w-24 h-36 object-cover rounded-xs shrink-0"
+              />
+              <div className="min-w-0 font-v2-ui">
+                <p className="text-xs tracking-widest uppercase text-v2-muted">You write</p>
+                <p className="text-sm text-v2-cream leading-relaxed mt-1">
+                  “An ocean held inside an hourglass, black and grey, for my forearm.”
+                </p>
+                <p className="text-xs tracking-widest uppercase text-v2-muted mt-3">You get</p>
+                <p className="text-sm text-v2-muted leading-relaxed mt-1">
+                  A picture like this one, and the artists whose style suits it.
+                </p>
+              </div>
+            </div>
+          </ExampleFigure>
         </div>
       ) : (
         <main className="columns-[280px] gap-[6px] p-[6px]">

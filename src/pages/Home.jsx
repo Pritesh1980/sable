@@ -4,6 +4,8 @@ import { LogoMark } from '../components/Logo'
 import ArtistImage from '../components/ArtistImage'
 import RefImage from '../components/RefImage'
 import DemoIntro from '../components/DemoIntro'
+import EmptyState from '../components/EmptyState'
+import SampleArtistNotice, { SampleArtistButton } from '../components/SampleArtistNotice'
 import { nextStep, topArtists, homeIdeas } from '../data/homeNext'
 import { useAuth } from '../context/useAuth'
 import { backend } from '../backend'
@@ -37,23 +39,6 @@ function Section({ id, title, count, action, step, children }) {
 
 const actionClass = 'inline-flex items-center gap-1.5 min-h-11 font-mono text-xs text-accent hover:text-cream tracking-widest uppercase transition-colors shrink-0'
 
-// An empty row says what the thing is before asking for one (#220, group C).
-function Empty({ definition, to, cta, children }) {
-  return (
-    <div className="border border-dashed border-ink-border rounded-xs px-5 py-6">
-      <p className="font-body text-sm text-cream-muted leading-relaxed max-w-prose">{definition}</p>
-      <Link
-        to={to}
-        className="inline-flex items-center gap-2 min-h-11 mt-4 px-4 border border-accent/50 hover:border-accent text-accent hover:text-cream font-mono text-xs tracking-widest uppercase rounded-xs transition-colors"
-      >
-        <Plus size={14} aria-hidden="true" />
-        {cta}
-      </Link>
-      {children}
-    </div>
-  )
-}
-
 function DemoOffer() {
   const { signOut } = useAuth() || {}
   const offered = canOfferDemo({
@@ -77,7 +62,7 @@ function DemoOffer() {
   )
 }
 
-export default function Home({ artists = [], ideas = [], concepts = [] }) {
+export default function Home({ artists = [], ideas = [], concepts = [], setArtists = () => {} }) {
   const top = topArtists(artists, 6)
   const next = nextStep({ artists, ideas, concepts })
   const shownIdeas = homeIdeas(ideas, 3)
@@ -123,16 +108,18 @@ export default function Home({ artists = [], ideas = [], concepts = [] }) {
           )}
         >
           {artists.length === 0 ? (
-            <Empty
+            <EmptyState
               definition="Save the tattooists whose work you would wear. Each one keeps their photos, styles and where they work, and you put them in order as your taste settles."
               to="/gallery?add=1"
               cta="Add an artist"
             >
+              <SampleArtistButton setArtists={setArtists} />
               <DemoOffer />
-            </Empty>
+            </EmptyState>
           ) : (
             // The first tile is your number one and takes a 2x2 block; a phone
             // shows six tiles (1 + 2 + 3), a laptop five (1 + 4).
+            <>
             <ol className="grid grid-cols-3 md:grid-cols-4 gap-1.5">
               {top.map((artist, i) => (
                 <li
@@ -160,6 +147,8 @@ export default function Home({ artists = [], ideas = [], concepts = [] }) {
                 </li>
               ))}
             </ol>
+            <SampleArtistNotice artists={artists} setArtists={setArtists} className="mt-3" />
+            </>
           )}
         </Section>
 
@@ -173,7 +162,7 @@ export default function Home({ artists = [], ideas = [], concepts = [] }) {
           )}
         >
           {ideas.length === 0 ? (
-            <Empty
+            <EmptyState
               definition="An idea is a tattoo you want: a title, where on the body it goes, the styles it suits and any reference photos. Sable then suggests which of your artists fit it."
               to="/brief?new=1"
               cta="Write your first idea"
@@ -217,7 +206,7 @@ export default function Home({ artists = [], ideas = [], concepts = [] }) {
           )}
         >
           {concepts.length === 0 ? (
-            <Empty
+            <EmptyState
               definition="A concept is a picture of an idea, drawn by AI from your description. It is a sketch to show an artist what you mean, not a finished design."
               to="/concepts?new=1"
               cta="Make your first concept"

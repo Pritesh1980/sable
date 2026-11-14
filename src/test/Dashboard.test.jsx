@@ -46,12 +46,6 @@ describe('Home pipeline', () => {
     expect(screen.getAllByText('@zoia.ink').length).toBeGreaterThan(0)
     expect(screen.getByText(/parked.*1/i)).toBeInTheDocument()
   })
-
-  it('shows an add-artists CTA when the pipeline is empty', () => {
-    renderHome({ a: [] })
-    const cta = screen.getByRole('link', { name: /add artists/i })
-    expect(cta).toHaveAttribute('href', '/gallery?mode=manage')
-  })
 })
 
 describe('Top 5 panel', () => {

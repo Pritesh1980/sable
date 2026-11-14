@@ -345,7 +345,7 @@ describe('Concepts page', () => {
       await settle(journal)
       expect(recoveryBar()).not.toBeInTheDocument()
       expect(backupBox()).not.toBeInTheDocument()
-      expect(screen.getByText(/no concepts yet/i)).toBeInTheDocument()
+      expect(screen.getByText(/a concept is a picture of an idea/i)).toBeInTheDocument()
     })
 
     it('keeps recovery reachable without a relay while the journal holds an accepted job', async () => {

@@ -275,19 +275,19 @@ export default function BoardsSection({ boards, setBoards, ideas, artists, onGoT
       {ideas.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <span className="text-5xl mb-4 opacity-10">▦</span>
-          <p className="text-cream-muted/90 font-body text-sm">No ideas yet.</p>
+          <p className="text-cream-muted/90 font-body text-sm max-w-prose">A board groups ideas that belong together, such as the pieces of one sleeve, so you can share them with an artist as a single brief.</p>
           <button
             onClick={onGoToIdeas}
             className="text-accent hover:text-accent-hover font-body text-xs mt-1 underline underline-offset-4"
           >
-            Capture ideas first — boards group them
+            Write an idea first
           </button>
         </div>
       ) : boards.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <span className="text-5xl mb-4 opacity-10">▦</span>
-          <p className="text-cream-muted/90 font-body text-sm">No boards yet.</p>
-          <p className="text-cream-muted/90 font-body text-xs mt-1">Tap + to group ideas into a board.</p>
+          <p className="text-cream-muted/90 font-body text-sm max-w-prose">A board groups ideas that belong together, such as the pieces of one sleeve, so you can share them with an artist as a single brief.</p>
+          <p className="text-cream-muted/90 font-body text-xs mt-2">Tap + to make your first board.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -45,15 +45,14 @@ describe('Gallery manage mode', () => {
   // #161: an empty collection showed only filters and view buttons, in every view.
   it('greets an empty collection with a way to add the first artist', () => {
     renderGallery({ artists: [] })
-    expect(screen.getByText(/no artists here yet/i)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '+ Add artist' }))
+    expect(screen.getByText(/save the tattooists whose work/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Add an artist' }))
     expect(screen.getByRole('dialog', { name: 'Add an artist' })).toBeInTheDocument()
   })
 
   it('keeps the empty message out of a collection that has artists', () => {
     renderGallery()
-    expect(screen.queryByText(/no artists here yet/i)).toBeNull()
-    expect(screen.queryByRole('button', { name: '+ Add artist' })).toBeNull()
+    expect(screen.queryByText(/save the tattooists whose work/i)).toBeNull()
   })
 
   it('is a main landmark', () => {

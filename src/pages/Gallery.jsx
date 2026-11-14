@@ -32,6 +32,8 @@ import TagPill from '../components/TagPill'
 import AddArtistForm from '../components/AddArtistForm'
 import ArtistTable from '../components/ArtistTable'
 import AddArtistModal from '../components/AddArtistModal'
+import EmptyState from '../components/EmptyState'
+import SampleArtistNotice, { SampleArtistButton } from '../components/SampleArtistNotice'
 import useOverlayParam from '../hooks/useOverlayParam'
 import { useAuth } from '../context/useAuth'
 import { STYLE_TAGS, createArtist } from '../data/artists'
@@ -474,18 +476,18 @@ export default function Gallery({ artists, setArtists, ideas = [], mergedConvent
         </div>
       </div>
 
+      <SampleArtistNotice artists={artists} setArtists={setArtists} className="mx-4 md:mx-8 my-3" />
+
       {/* #161: with nobody saved, every view was blank under its filters. */}
       {artists.length === 0 ? (
-        <div className="flex flex-col items-center gap-4 px-6 py-24 text-center">
-          <p className="font-display text-xl text-cream tracking-wide">
-            No artists here yet — add one to start your collection.
-          </p>
-          <button
+        <div className="max-w-xl mx-auto px-4 py-12">
+          <EmptyState
+            definition="Save the tattooists whose work you would wear. Each one keeps their photos, styles and where they work, and you put them in order as your taste settles."
             onClick={() => setQuickAdding(true)}
-            className="font-mono text-xs text-accent hover:text-cream border border-accent/40 hover:border-accent px-5 min-h-11 rounded-xs transition-colors tracking-widest uppercase"
+            cta="Add an artist"
           >
-            + Add artist
-          </button>
+            <SampleArtistButton setArtists={setArtists} />
+          </EmptyState>
         </div>
       ) : viewMode === 'wall' ? (
         <WallView

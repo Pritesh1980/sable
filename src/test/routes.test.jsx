@@ -45,7 +45,7 @@ describe('legacy route redirects', () => {
     await waitFor(() => expect(screen.getByRole('heading', { name: /ideas/i })).toBeInTheDocument())
     // The Boards tab is rendered and active (it shows the boards empty state).
     expect(screen.getByRole('button', { name: /boards \(\d+\)/i })).toBeInTheDocument()
-    expect(screen.getByText(/boards group them/i)).toBeInTheDocument()
+    expect(screen.getByText(/a board groups ideas/i)).toBeInTheDocument()
   })
 })
 
