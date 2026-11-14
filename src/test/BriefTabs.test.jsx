@@ -30,6 +30,12 @@ function renderBrief({ route = '/brief', setBoards = vi.fn(), props = {} } = {})
 describe('Brief Ideas | Boards tabs', () => {
   beforeEach(() => localStorage.clear())
 
+  it('opens a blank idea from ?new=1 (Home links here, #220)', async () => {
+    renderBrief({ route: '/brief?new=1' })
+    expect(await screen.findByRole('button', { name: '← Back' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull()
+  })
+
   it('defaults to the Ideas tab', () => {
     renderBrief()
     expect(screen.getByText('Koru unfurling')).toBeInTheDocument()

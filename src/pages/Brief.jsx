@@ -685,9 +685,11 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
   const [tab, setTab] = useState(() => (searchParams.get('tab') === 'boards' ? 'boards' : 'ideas'))
 
   const requestedId = searchParams.get('idea')
+  // ?new=1 opens a blank idea: Home's "New idea" links land here (#220).
+  const wantsNew = searchParams.get('new') === '1'
   const handoffId = location.state?.conceptIdeaRequest
   useEffect(() => {
-    if (modal || (!handoffId && !requestedId)) return undefined
+    if (modal || (!handoffId && !requestedId && !wantsNew)) return undefined
     let active = true
     // Consume after the committed render, not in a state initializer: a
     // StrictMode probe or discarded render must not spend a one-shot request.
@@ -695,20 +697,22 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
       if (!active) return
       let idea
       if (handoffId) idea = takeConceptIdeaHandoff(handoffId, { userId, ownerScope })
-      else idea = ideas.find(row => row.id === requestedId)
+      else if (requestedId) idea = ideas.find(row => row.id === requestedId)
+      else idea = BLANK_IDEA
       if (!handoffId && !idea) return // A saved target may still be hydrating.
       if (idea) {
-        setModal({ idea, isNew: Boolean(handoffId) })
+        setModal({ idea, isNew: Boolean(handoffId) || idea === BLANK_IDEA })
         setTab('ideas')
       }
       const params = new URLSearchParams(location.search)
       params.delete('idea')
+      params.delete('new')
       const { conceptIdeaRequest: _request, ...rest } = location.state || {}
       void navigate({ pathname: location.pathname, search: params.toString(), hash: location.hash },
         { replace: true, state: Object.keys(rest).length ? rest : null })
     })
     return () => { active = false }
-  }, [handoffId, requestedId, ideas, modal, userId, ownerScope, navigate, location])
+  }, [handoffId, requestedId, wantsNew, ideas, modal, userId, ownerScope, navigate, location])
 
   const ideasRef = useRef(ideas)
   useEffect(() => { ideasRef.current = ideas })

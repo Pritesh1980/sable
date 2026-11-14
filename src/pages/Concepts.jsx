@@ -166,7 +166,8 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
   )
   const [idea, setIdea] = useState(initialDraft.idea)
   const [placement, setPlacement] = useState(initialDraft.placement)
-  const [composerOpen, setComposerOpen] = useState(() => Boolean(searchParams.get('steer')))
+  // ?new=1 opens it empty: Home's "New concept" links land here (#220).
+  const [composerOpen, setComposerOpen] = useState(() => Boolean(searchParams.get('steer')) || searchParams.get('new') === '1')
   const [pendingPasteConceptId, setPendingPasteConceptId] = useState(null)
 
   const [openaiKey, setOpenaiKey] = useState(() => localStorage.getItem('openai_api_key') || '')

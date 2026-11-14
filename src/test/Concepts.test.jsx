@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
-import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { act, cleanup, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { createOwnerScope } from '../backend/ownerScope'
 import { MemoryRouter, useLocation, useNavigate } from 'react-router'
 import Concepts from '../pages/Concepts'
@@ -183,6 +183,13 @@ describe('Concepts page', () => {
   it('pre-fills and opens the composer from a ?steer=<artistId> query param', () => {
     render(<ConceptsHarness initialEntries={['/concepts?steer=zoia.ink']} />)
     expect(screen.getByText(/steering is pre-set to @zoia\.ink/i)).toBeInTheDocument()
+  })
+
+  it('opens the composer empty from ?new=1 (Home links here, #220)', () => {
+    expect(render(<ConceptsHarness />).container.querySelector('aside')).toBeNull()
+    cleanup()
+    render(<ConceptsHarness initialEntries={['/concepts?new=1']} />)
+    expect(screen.getByRole('button', { name: /AI setup/i })).toBeInTheDocument()
   })
 
   it('handles a steer id containing dots', () => {
