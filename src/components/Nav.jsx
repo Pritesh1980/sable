@@ -1,151 +1,88 @@
-import { useState } from 'react'
-import { NavLink, useNavigate, useLocation } from 'react-router'
-import { useTheme } from '../context/useTheme'
-import { useAuth } from '../context/useAuth'
+import { useId, useState } from 'react'
+import { NavLink, useLocation } from 'react-router'
+import { Ellipsis } from 'lucide-react'
 import { useEscapeToClose } from '../hooks/useDialogFocus'
-import { backend } from '../backend'
+import { PRIMARY_LINKS, MORE_GROUPS } from '../data/navLinks'
 
-// Four tabs mirror the workflow: see what's next, curate artists, match ideas,
-// generate concepts. Everything reference/admin lives under More.
-const PRIMARY_LINKS = [
-  { to: '/', label: 'Home', icon: '◈' },
-  { to: '/gallery', label: 'Artists', icon: '◇' },
-  { to: '/brief', label: 'Ideas', icon: '✎' },
-  { to: '/concepts', label: 'AI', icon: '✦' },
-]
+// One navigation for every page (#220): a bottom tab bar on a phone, the same
+// list as a top bar from `md` up. The list itself lives in data/navLinks.js.
+// `--nav-top` (index.css) is this bar's height on a laptop and 0 on a phone, so
+// a page's own sticky header can sit under it.
 
-const MORE_LINKS = [
-  { to: '/conventions', label: 'Radar', icon: '◎', description: 'Conventions near you' },
-  { to: '/studios', label: 'Studios', icon: '⌂', description: 'Where your artists work' },
-  { to: '/settings', label: 'Settings', icon: '⚙', description: 'Backup, account & sign out' },
-  { to: '/help', label: 'Help', icon: '?', description: 'How to use Sable' },
-]
+const ITEM = 'flex-1 md:flex-none flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 min-h-14 md:min-h-11 md:px-3 font-body text-xs md:text-sm tracking-widest md:tracking-wide uppercase md:normal-case transition-colors duration-200'
+const tone = (on) => (on ? 'text-cream' : 'text-cream-muted hover:text-cream')
 
 function MoreMenu({ onClose }) {
-  const navigate = useNavigate()
   const ref = useEscapeToClose(onClose)
-
-  function go(to) {
-    void navigate(to)
-    onClose()
-  }
+  const id = useId()
 
   return (
     <div ref={ref} role="dialog" aria-modal="true" aria-label="More" className="fixed inset-0 z-40" onClick={onClose}>
       <div
         role="presentation"
-        className="absolute bottom-[calc(env(safe-area-inset-bottom,0px)+3.5rem)] left-4 right-4 max-w-2xl mx-auto bg-ink-card border border-ink-border rounded-xs overflow-hidden animate-slide-up shadow-2xl shadow-black/60"
+        className="absolute bottom-[calc(env(safe-area-inset-bottom,0px)+4rem)] left-4 right-4 md:bottom-auto md:left-auto md:top-[calc(var(--nav-top)+0.5rem)] md:right-6 md:w-80 bg-ink-card border border-ink-border rounded-xs overflow-hidden animate-slide-up shadow-2xl shadow-black/60"
         onClick={(e) => e.stopPropagation()}
       >
-        {MORE_LINKS.map(({ to, label, icon, description }) => (
-          <button
-            key={to}
-            onClick={() => go(to)}
-            className="w-full flex items-center gap-4 px-5 py-4 hover:bg-ink-muted transition-colors border-b border-ink-border last:border-b-0 text-left"
-          >
-            <span aria-hidden="true" className="text-xl text-cream-muted leading-none w-6 text-center">{icon}</span>
-            <div>
-              <p className="font-body text-cream text-sm">{label}</p>
-              <p className="font-mono text-cream-muted/60 text-[0.625rem] tracking-widest mt-0.5">{description}</p>
-            </div>
-          </button>
+        {MORE_GROUPS.map(({ label, links }) => (
+          <div key={label} role="group" aria-labelledby={`${id}-${label}`} className="border-b border-ink-border last:border-b-0 py-2">
+            <p id={`${id}-${label}`} className="px-5 pt-2 pb-1 font-mono text-[0.625rem] text-cream-muted tracking-widest uppercase">{label}</p>
+            {links.map(({ to, label: name, Icon, description }) => (
+              <NavLink
+                key={to}
+                to={to}
+                onClick={onClose}
+                className={({ isActive }) => `flex items-center gap-4 px-5 py-3 hover:bg-ink-muted transition-colors ${isActive ? 'text-accent' : 'text-cream'}`}
+              >
+                <Icon size={20} strokeWidth={1.5} aria-hidden="true" className="shrink-0" />
+                <span className="min-w-0">
+                  <span className="block font-body text-sm">{name}</span>
+                  <span className="block font-mono text-xs text-cream-muted mt-0.5">{description}</span>
+                </span>
+              </NavLink>
+            ))}
+          </div>
         ))}
       </div>
     </div>
   )
 }
 
-// ⏻ sits right against the theme toggle, so a stray tap asks first (#161). The
-// note matches Settings: what signing out leaves behind depends on storage.
-function confirmSignOut() {
-  const note = backend.kind === 'local'
-    ? 'Your device-only library stays on this device; sign in again as the same owner to see it.'
-    : 'Your cloud-stored library syncs back when you sign in again.'
-  return window.confirm(`Sign out of Sable?\n\n${note}`)
-}
-
-// The visible circle. The button around it is the tap target, and is bigger.
-const CHIP = 'w-8 h-8 flex items-center justify-center rounded-full bg-ink-card border border-ink-border'
-
 export default function Nav() {
-  const { theme, toggle, fontSize, toggleFont } = useTheme()
-  const auth = useAuth()
   const [moreOpen, setMoreOpen] = useState(false)
-  const location = useLocation()
-
-  // The Wall (/) is chrome-free — its own hairline bar is the nav.
-  if (location.pathname === '/') return null
+  const { pathname } = useLocation()
+  const inMore = MORE_GROUPS.some((g) => g.links.some((l) => l.to === pathname))
 
   return (
     <>
       {moreOpen && <MoreMenu onClose={() => setMoreOpen(false)} />}
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-ink-dark border-t border-ink-border safe-bottom">
-        <div className="flex items-stretch max-w-2xl mx-auto">
-          {PRIMARY_LINKS.map(({ to, label, icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === '/'}
-              className={({ isActive }) =>
-                `flex-1 flex flex-col items-center justify-center gap-0.5 py-3 text-xs font-body transition-colors duration-200 ${
-                  isActive ? 'text-cream' : 'text-cream-muted hover:text-cream/70'
-                }`
-              }
-            >
-              <span aria-hidden="true" className="text-base leading-none">{icon}</span>
-              <span className="tracking-widest uppercase text-xs">{label}</span>
+      <nav
+        aria-label="Main"
+        className="fixed bottom-0 left-0 right-0 z-50 bg-ink-dark border-t border-ink-border safe-bottom md:bottom-auto md:top-0 md:h-14 md:border-t-0 md:border-b"
+      >
+        <div className="flex items-stretch md:items-center md:h-full md:gap-2 md:px-6">
+          <p aria-hidden="true" className="hidden md:block font-display text-xl tracking-[0.2em] uppercase text-cream mr-6">
+            Sable<span className="text-accent">.</span>
+          </p>
+
+          {PRIMARY_LINKS.map(({ to, label, Icon }) => (
+            <NavLink key={to} to={to} end={to === '/'} className={({ isActive }) => `${ITEM} ${tone(isActive)}`}>
+              <Icon size={20} strokeWidth={1.5} aria-hidden="true" />
+              <span>{label}</span>
             </NavLink>
           ))}
 
           <button
+            type="button"
             onClick={() => setMoreOpen((o) => !o)}
-            className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-3 text-xs font-body transition-colors duration-200 ${
-              moreOpen ? 'text-cream' : 'text-cream-muted hover:text-cream/70'
-            }`}
+            aria-expanded={moreOpen}
+            aria-haspopup="dialog"
+            data-current={inMore}
+            className={`${ITEM} md:ml-auto ${tone(moreOpen || inMore)}`}
           >
-            <span aria-hidden="true" className="text-base leading-none">⋯</span>
-            <span className="tracking-widest uppercase text-xs">More</span>
+            <Ellipsis size={20} strokeWidth={1.5} aria-hidden="true" />
+            <span>More</span>
           </button>
-
-          {/* Accessibility + theme controls — chrome lives in chrome, so these
-              can never float over page content (they used to be fixed top-right).
-              Each button is a 44pt target (#76) wrapping the 32px chip it used to
-              be, so the circles look unchanged. */}
-          <div className="flex items-center pl-1 pr-1 border-l border-ink-border">
-            <button
-              onClick={toggleFont}
-              title={fontSize === 'large' ? 'Reduce font size' : 'Increase font size'}
-              aria-label={fontSize === 'large' ? 'Reduce font size' : 'Increase font size'}
-              className="w-11 h-11 flex items-center justify-center group"
-            >
-              <span className={`${CHIP} text-cream-muted group-hover:text-cream transition-colors duration-200 font-mono text-xs font-bold leading-none`}>
-                {fontSize === 'large' ? 'A−' : 'A+'}
-              </span>
-            </button>
-            <button
-              onClick={toggle}
-              title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
-              aria-label={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
-              className="w-11 h-11 flex items-center justify-center group"
-            >
-              <span className={`${CHIP} text-cream-muted group-hover:text-cream transition-colors duration-200 text-sm`}>
-                {theme === 'dark' ? '◑' : '◐'}
-              </span>
-            </button>
-            {auth?.user && (
-              <button
-                onClick={() => { if (confirmSignOut()) auth.signOut() }}
-                title={`Sign out (${auth.user.email})`}
-                aria-label={`Sign out (${auth.user.email})`}
-                className="w-11 h-11 flex items-center justify-center group"
-              >
-                <span className={`${CHIP} text-cream-muted group-hover:text-accent transition-colors duration-200 text-sm`}>
-                  ⏻
-                </span>
-              </button>
-            )}
-          </div>
         </div>
       </nav>
     </>

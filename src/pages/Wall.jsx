@@ -21,59 +21,26 @@ import { isDemoSession, canOfferDemo } from '../data/demoSeed'
 import DemoIntro from '../components/DemoIntro'
 import GeneratedArtworkNotice from '../components/GeneratedArtworkNotice'
 
-// The Wall — image-first home surface. Full-bleed masonry of every artist
-// reference image; the hairline bar above it is the only chrome. Routing is
-// deliberately NOT wired here (App.jsx / Nav.jsx untouched) — the view switch,
-// add-artist and drawer affordances are emitted as callbacks for a later task.
-function Bar({ activeView, onSwitchView, onAddArtist, onOpenDrawer }) {
+// The Wall: full-bleed masonry of every artist reference image. Getting around
+// is the app nav's job (#220); this bar only names the page and adds an artist.
+function Bar({ onAddArtist }) {
   return (
-    <header className="sticky top-0 z-10 grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-1 px-3 py-2 md:grid-cols-[auto_minmax(0,1fr)_auto_auto] md:gap-x-6 xl:gap-x-8 md:px-8 md:py-3.5 bg-v2-ink/[.88] backdrop-blur-md border-b border-v2-hairline">
-      <div className="col-start-1 row-start-1 font-v2-display text-[1.35rem] tracking-[0.28em] uppercase text-v2-cream">
-        Sable<span className="text-v2-accent">.</span>
-      </div>
-
-      <nav className="col-span-3 col-start-1 row-start-2 flex min-w-0 items-center gap-6 md:col-span-1 md:col-start-2 md:row-start-1">
-        {[
-          { id: 'artists', label: 'Artists' },
-          { id: 'concepts', label: 'Concepts' },
-        ].map(({ id, label }) => (
-          <button
-            key={id}
-            onClick={() => onSwitchView(id)}
-            className={`font-v2-ui text-sm tracking-wide uppercase min-h-11 flex items-center border-b-2 transition-colors ${
-              activeView === id
-                ? 'text-v2-cream border-v2-accent'
-                : 'text-v2-muted border-transparent hover:text-v2-cream'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
-
+    <header className="sticky top-[var(--nav-top)] z-10 flex items-center justify-between gap-3 px-3 py-2 md:px-8 bg-v2-ink/[.88] backdrop-blur-md border-b border-v2-hairline">
+      <h1 className="font-v2-display text-[1.35rem] tracking-[0.28em] uppercase text-v2-cream">Wall</h1>
       <button
         onClick={onAddArtist}
         aria-label="+ Add artist"
         title="Add artist"
-        className="col-start-2 row-start-1 flex h-11 w-11 items-center justify-center gap-2 font-v2-ui text-sm text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-xs md:col-start-3 md:w-auto md:px-4 shrink-0 whitespace-nowrap transition-colors"
+        className="flex h-11 w-11 items-center justify-center gap-2 font-v2-ui text-sm text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-xs md:w-auto md:px-4 shrink-0 whitespace-nowrap transition-colors"
       >
         <Plus size={18} aria-hidden="true" />
         <span className="hidden md:inline">Add artist</span>
-      </button>
-
-      <button
-        onClick={onOpenDrawer}
-        title="Everything else — ideas, ranking, conventions, studios, settings"
-        aria-label="Everything else — ideas, ranking, conventions, studios, settings"
-        className="col-start-3 row-start-1 md:col-start-4 font-v2-ui text-lg text-v2-muted hover:text-v2-cream w-11 h-11 flex items-center justify-center shrink-0"
-      >
-        ⋯
       </button>
     </header>
   )
 }
 
-export default function Wall({ artists = [], ideas = [], setArtists = () => {}, onOpenArtist, onOpenDrawer, onSwitchView, activeView = 'artists' }) {
+export default function Wall({ artists = [], ideas = [], setArtists = () => {}, onOpenArtist }) {
   const items = buildWallItems(artists)
   // The open photo lives in the URL (?photo=<artistId>.<n>, #159): the browser's
   // Back closes the viewer instead of leaving the Wall, and a photo can be
@@ -175,12 +142,7 @@ export default function Wall({ artists = [], ideas = [], setArtists = () => {}, 
   return (
     <div className="min-h-screen bg-v2-ink">
       {!viewerOpen && (
-        <Bar
-          activeView={activeView}
-          onSwitchView={onSwitchView}
-          onAddArtist={() => setAddArtistOpen(true)}
-          onOpenDrawer={onOpenDrawer}
-        />
+        <Bar onAddArtist={() => setAddArtistOpen(true)} />
       )}
 
       {/* Under the bar, above everything else: the demo drops visitors straight

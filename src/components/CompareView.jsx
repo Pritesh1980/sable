@@ -12,7 +12,7 @@ function CompareColumn({ artist, onOpen, onRemove }) {
   return (
     <div className="flex flex-col border border-ink-border/50 rounded-xs overflow-hidden bg-ink-card/20 min-w-0">
       {/* Sticky header */}
-      <div className="sticky top-0 z-10 bg-ink-black border-b border-ink-border/50 px-4 py-3">
+      <div className="sticky top-[var(--nav-top)] z-10 bg-ink-black border-b border-ink-border/50 px-4 py-3">
         <div className="flex items-start justify-between gap-2">
           <div
             role="button"

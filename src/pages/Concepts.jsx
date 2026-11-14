@@ -583,7 +583,7 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
 
   return (
     <><div inert={Boolean(ideaTransfer.selection) || undefined} aria-hidden={ideaTransfer.selection ? true : undefined} className="min-h-screen bg-v2-ink">
-      <header className="sticky top-0 z-10 flex items-center gap-4 px-4 sm:gap-8 sm:px-8 py-3.5 bg-v2-ink/[.88] backdrop-blur-md border-b border-v2-hairline">
+      <header className="sticky top-[var(--nav-top)] z-10 flex items-center gap-4 px-4 sm:gap-8 sm:px-8 py-3.5 bg-v2-ink/[.88] backdrop-blur-md border-b border-v2-hairline">
         <div className="hidden sm:block font-v2-display text-[1.35rem] tracking-[0.28em] uppercase text-v2-cream">
           Sable<span className="text-v2-accent">.</span>
         </div>

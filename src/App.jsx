@@ -1,9 +1,8 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
-import { Routes, Route, Navigate, useNavigate } from 'react-router'
+import { Routes, Route, Navigate } from 'react-router'
 import { UndoProvider } from './context/UndoContext'
 import { watchUploadOutbox } from './data/imageStaging'
 import Nav from './components/Nav'
-import Drawer from './components/Drawer'
 import Wall from './pages/Wall'
 import ProtectedRoute from './components/ProtectedRoute'
 import { useAuth } from './context/useAuth'
@@ -70,9 +69,7 @@ function AppShell() {
   // shot them. The artists you keep off it sync through the gallery.
   const [conventionWinners, setConventionWinners] = useStorage('tattoo_convention_winners', {})
   const mergedConventions = mergeConventionOverrides(conventionOverrides)
-  const [drawerOpen, setDrawerOpen] = useState(false)
   const [backupRevision, setBackupRevision] = useState(0)
-  const navigate = useNavigate()
   // Photos staged while uploads were failing upload on launch and whenever
   // the browser comes back online, not only at the next edit (#115).
   const userId = useAuth()?.user?.id
@@ -88,7 +85,7 @@ function AppShell() {
   }
 
   return (
-    <div className="bg-ink-black min-h-screen pb-20">
+    <div className="bg-ink-black min-h-screen pb-20 md:pb-0 md:pt-[var(--nav-top)]">
       {/* Above the routes so a pending undo survives the surface that offered it
           — a row collapsing, a modal closing, a navigation (#53). */}
       <UndoProvider>
@@ -101,9 +98,6 @@ function AppShell() {
                   artists={artists}
                   setArtists={setArtists}
                   ideas={ideas}
-                  activeView="artists"
-                  onSwitchView={(view) => view === 'concepts' && navigate('/concepts')}
-                  onOpenDrawer={() => setDrawerOpen(true)}
                 />
               )}
             />
@@ -147,7 +141,6 @@ function AppShell() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
-        {drawerOpen && <Drawer onClose={() => setDrawerOpen(false)} />}
         <Nav />
       </UndoProvider>
     </div>

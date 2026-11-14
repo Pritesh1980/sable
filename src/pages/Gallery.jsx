@@ -374,7 +374,7 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
       {!manageMode && (
       <>
       {/* Sticky filter bar */}
-      <div className="sticky top-0 z-20 bg-ink-black/80 backdrop-blur-md border-b border-ink-border px-4 py-3 mb-8">
+      <div className="sticky top-[var(--nav-top)] z-20 bg-ink-black/80 backdrop-blur-md border-b border-ink-border px-4 py-3 mb-8">
         {/* #77: was three wrapped pill rows + a forced-onto-its-own-line
             switcher row (171px on a phone, ~23% of the usable viewport).
             #73 had the switcher claim its own full-width row specifically to
