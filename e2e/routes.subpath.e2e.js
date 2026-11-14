@@ -48,7 +48,7 @@ test('legacy routes redirect within the base', async ({ page }) => {
   await page.goto('does-not-exist')
   // The router writes its home as the bare base (`/sable`), as the logo link does.
   await expect(page).toHaveURL(/\/sable\/?$/)
-  await expect(page.getByRole('button', { name: /everything else/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Wall' })).toBeVisible()
 })
 
 test('in-app navigation keeps the base', async ({ page }) => {
@@ -65,7 +65,7 @@ test('Back closes the wall viewer within the base', async ({ page }) => {
   await expect(page).toHaveURL(/\/sable\/?\?(.+&)?photo=/)
   await page.goBack()
   await expect(page).toHaveURL(/\/sable\/?(\?demo=1)?$/)
-  await expect(page.getByRole('button', { name: /everything else/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Wall' })).toBeVisible()
   await page.goBack()
   await expect(page).toHaveURL(/\/sable\/gallery$/)
 })

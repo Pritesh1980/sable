@@ -44,17 +44,17 @@ Use the numbered sections below to learn individual features, the
 
 Sable opens on **the Wall** — every photo from every artist you follow, edge to edge.
 Click any photo and it fills the screen; from there the keyboard drives everything,
-including generating a concept in that artist's style (`G`). The bar at the top switches
-between the two primary spaces and holds the **⋯** Drawer for everything else.
+including generating a concept in that artist's style (`G`). One navigation is on every
+page: a bottom bar on a phone, a top bar on a laptop.
 
-| Primary (the bar) | | The Drawer (⋯) |
+| The bar | | Under More |
 |---|---|---|
-| **Artists** — the Wall & full-screen viewer | | **Classic gallery** — four browse views, ranking & Manage |
-| **Concepts** — generated images on their own wall | | **Ideas** — tattoo ideas, with Boards as a tab |
-| **+ Add artist** — one small form, done | | **Pipeline** — the shortlist dashboard |
-| | | **Radar** · **Studios** · **Settings** · **Help** |
+| **Home** — the Wall & full-screen viewer | | **Plan**: **Pipeline** — the shortlist dashboard |
+| **Artists** — four browse views, ranking & Manage | | **Plan**: **Radar** · **Studios** |
+| **Ideas** — tattoo ideas, with Boards as a tab | | **App**: **Settings** · **Help** |
+| **AI** — generated concepts on their own wall | | |
 
-The same guidance is built into the app under **⋯ → Help**:
+The same guidance is built into the app under **More → Help**:
 
 ![The in-app Help page](../public/guide/help-overview.png)
 
@@ -109,13 +109,13 @@ The pieces are designed to feed each other:
 3. Found the style? Press **`G`** — the Concepts composer opens already steered to that
    artist. Describe the idea, pick a placement, generate (or copy the prompt into your AI
    of choice and paste the result back).
-4. **Capture an idea** in *⋯ → Ideas*, tag it with styles, and it suggests matching artists
+4. **Capture an idea** in *Ideas*, tag it with styles, and it suggests matching artists
    to link. **Group related ideas** on the Boards tab; **Copy brief** shares a clean summary.
-5. **Rank and shortlist** in *⋯ → Classic gallery*; *⋯ → Pipeline* shows where everyone
+5. **Rank and shortlist** in *Artists*; *More → Pipeline* shows where everyone
    stands: researching → shortlisted → contact next → contacted.
-6. Check **⋯ → Radar** for conventions where your shortlisted artists are appearing, and
+6. Check **More → Radar** for conventions where your shortlisted artists are appearing, and
    **Studios** for where they work and how far that is.
-7. **Export a backup** from *⋯ → Settings* so you always hold a restore point.
+7. **Export a backup** from *More → Settings* so you always hold a restore point.
 
 ---
 

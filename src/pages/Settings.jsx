@@ -40,7 +40,7 @@ export default function Settings({ artists, setArtists, ideas, setIdeas, boards,
     <div className="min-h-screen bg-ink-black max-w-5xl mx-auto px-4 md:px-8 pt-safe-top pb-24">
       {/* Header */}
       <div className="pt-10 pb-6">
-        <Logo size={28} className="mb-3" />
+        <Logo size={28} className="mb-3 md:hidden" />
         <h1 className="font-display text-5xl text-cream leading-none tracking-tight">Settings</h1>
         <p className="font-mono text-xs text-cream-muted/90 mt-3 tracking-widest">
           Backup, account &amp; appearance

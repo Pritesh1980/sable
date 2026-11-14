@@ -41,7 +41,7 @@ do not enable a relay or send paid requests as part of this walkthrough.
   - Review the match rationale explaining why each artist fits.
 
 - Try Dashboard match rationales:
-  - Go to **⋯ → Pipeline**.
+  - Go to **More → Pipeline**.
   - Look at idea-to-artist matches.
   - Check the rationale text shown alongside suggested matches.
 

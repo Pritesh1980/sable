@@ -69,7 +69,7 @@ flowchart TB
   VIEW["Open full-screen<br/>browse their portfolio"]
   INDEX{"Style index built?"}
   SIMILAR["Review Similar ink<br/>and taste fit"]
-  ORGANISE["Use Classic gallery<br/>filter, compare, or rank"]
+  ORGANISE["Use the Artists page<br/>filter, compare, or rank"]
   STATUS{"Decision"}
   ACTIVE["Researching → Shortlisted<br/>→ Contact next"]
   PARK["Maybe or Pass"]

@@ -63,9 +63,9 @@ async function settle(page) {
   await expect(page.locator('#root')).not.toBeEmpty()
 }
 
-// The Wall header is two rows on a phone and one from `md` up, and the Top 5
-// strip sticks under it. A fixed offset that fit neither left the strip behind
-// the header with a sliver showing (#161). 1024 is the one-row layout.
+// The Top 5 strip sticks under the Wall's bar, and the bar sticks under the app
+// nav where the nav is at the top (`md` up, #220). A fixed offset that fit
+// neither left the strip behind the bar with a sliver showing (#161).
 for (const width of [390, 1024]) {
   test.describe(`Top 5 strip at ${width}px`, () => {
     test.use({ viewport: { width, height: 844 } })
@@ -81,7 +81,10 @@ for (const width of [390, 1024]) {
         const [h, s] = await Promise.all([header.boundingBox(), strip.boundingBox()])
         return Math.abs(s.y - (h.y + h.height))
       }).toBeLessThanOrEqual(1)
-      expect((await header.boundingBox()).y).toBeLessThanOrEqual(1)
+      // On a phone the nav is the bottom bar, so the Wall's bar reaches the top.
+      const nav = await page.getByRole('navigation', { name: 'Main' }).boundingBox()
+      const navBottom = nav.y < 100 ? nav.y + nav.height : 0
+      expect(Math.abs((await header.boundingBox()).y - navBottom)).toBeLessThanOrEqual(1)
     })
   })
 }
@@ -147,11 +150,13 @@ for (const width of WIDTHS) {
     test('wall controls fit without colliding', async ({ page }) => {
       await openDemo(page, '/')
       await settle(page)
-      const header = page.locator('header').first()
-      const tabs = header.locator('nav button')
-      const add = header.getByRole('button', { name: /add artist/i })
-      const menu = header.getByRole('button', { name: /everything else/i })
-      const controls = [tabs.nth(0), tabs.nth(1), add, menu]
+      // The app nav (four places and More) plus the Wall's own add button.
+      const nav = page.getByRole('navigation', { name: 'Main' })
+      const add = page.locator('header').first().getByRole('button', { name: /add artist/i })
+      const links = nav.getByRole('link')
+      await expect(links).toHaveCount(4)
+      const controls = [0, 1, 2, 3].map((i) => links.nth(i))
+        .concat(nav.getByRole('button', { name: 'More' }), add)
       const bounds = await Promise.all(controls.map((control) => control.boundingBox()))
       for (const box of bounds) {
         expect(box.x).toBeGreaterThanOrEqual(0)

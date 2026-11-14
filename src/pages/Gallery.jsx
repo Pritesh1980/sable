@@ -305,7 +305,7 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
       {/* Page header */}
       <div className="px-4 pt-10 pb-4 flex flex-wrap items-end justify-between gap-y-4">
         <div>
-          <Logo size={28} className="mb-3" />
+          <Logo size={28} className="mb-3 md:hidden" />
           <p className="font-mono text-xs text-accent tracking-[0.4em] uppercase mb-2">Your Collection</p>
           <h1 className="font-display text-5xl text-cream leading-none tracking-tight">Artists</h1>
           <GeneratedArtworkNotice images={artists.flatMap((artist) => artist.images || [])} className="mt-3" />

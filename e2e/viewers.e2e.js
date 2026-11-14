@@ -66,7 +66,7 @@ test.describe('Back closes the overlay', () => {
     await page.goBack()
     await expect(viewer).toBeHidden()
     await expect(page).toHaveURL(/\/$/)
-    await expect(page.getByRole('button', { name: /everything else/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Wall' })).toBeVisible()
 
     await page.goBack()
     await expect(page).toHaveURL(/\/brief$/)

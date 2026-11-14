@@ -42,7 +42,7 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
   return (
     <div className="min-h-screen bg-ink-black max-w-5xl mx-auto px-4 md:px-8 pt-safe-top pb-24">
       <div className="pt-10 pb-6">
-        <Logo size={28} className="mb-3" />
+        <Logo size={28} className="mb-3 md:hidden" />
         <p className="font-mono text-xs text-accent tracking-[0.4em] uppercase mb-2">What's next</p>
         <h1 className="font-display text-5xl text-cream leading-none tracking-tight">Pipeline</h1>
       </div>
