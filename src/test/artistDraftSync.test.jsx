@@ -49,6 +49,7 @@ afterEach(() => cleanup())
 describe('the explicit edit-form Save does not clobber a field synced in while editing (#81)', () => {
   it('keeps a notes change that landed via sync while only the name was edited', () => {
     render(<Harness />)
+    fireEvent.click(screen.getByRole('button', { name: 'Filmstrip view' }))
     fireEvent.click(screen.getByText('Zoia'))
     fireEvent.click(within(detailSheet()).getByText('Edit details'))
 
@@ -72,6 +73,7 @@ describe('the explicit edit-form Save does not clobber a field synced in while e
 
   it('keeps a status change that landed via sync while only the studio was edited', () => {
     render(<Harness />)
+    fireEvent.click(screen.getByRole('button', { name: 'Filmstrip view' }))
     fireEvent.click(screen.getByText('Zoia'))
     fireEvent.click(within(detailSheet()).getByText('Edit details'))
 
@@ -93,6 +95,7 @@ describe('the explicit edit-form Save does not clobber a field synced in while e
 
   it('does not still patch a field that was touched, then abandoned via Cancel', () => {
     render(<Harness />)
+    fireEvent.click(screen.getByRole('button', { name: 'Filmstrip view' }))
     fireEvent.click(screen.getByText('Zoia'))
     fireEvent.click(within(detailSheet()).getByText('Edit details'))
 
@@ -127,6 +130,7 @@ describe('the explicit edit-form Save does not clobber a field synced in while e
   // carry that stale entry into its patch.
   it('does not let an out-of-editing tag toggle leave a stale tags touch for a later edit session', () => {
     render(<Harness />)
+    fireEvent.click(screen.getByRole('button', { name: 'Filmstrip view' }))
     fireEvent.click(screen.getByText('Zoia'))
 
     // Toggle a tag while not editing — auto-saves immediately via its own

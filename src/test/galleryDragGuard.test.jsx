@@ -78,7 +78,7 @@ describe('guards transitions that would orphan an active keyboard drag (#74)', (
     expect(screen.getByTitle('Filmstrip view')).toBeDisabled()
     expect(screen.getByTitle('Compare artists')).toBeDisabled()
     expect(screen.getByTitle('Grid view')).toBeDisabled()
-    expect(screen.getByTitle('Style wall')).toBeDisabled()
+    expect(screen.getByTitle('Wall view')).toBeDisabled()
     expect(editToggle()).toBeDisabled()
     expect(manageToggle()).toBeDisabled()
     expect(screen.getByRole('button', { name: 'All' })).toBeDisabled()

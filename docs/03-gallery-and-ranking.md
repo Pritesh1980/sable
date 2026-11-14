@@ -1,6 +1,6 @@
 # Gallery & ranking
 
-*Browse your collection four different ways, filter by style, open any artist, and put them in priority order.*
+*Browse your collection four ways, filter by style, open any artist, and put them in priority order.*
 
 ← [Back to contents](README.md)
 
@@ -10,15 +10,23 @@ Japanese-inspired, tribal, colour-realism and brush-lettering styles. Its
 
 ---
 
-The **Artists** page is where structured browsing lives — the
-Wall is for looking, this page is for organising. A sticky bar at the top holds the
-**style filter** (tap a tag to show only artists with it; tap **All** to clear) and a
-**view toggle** on the right with four modes. (Everyday ranking now lives on the Home
-Wall — see [Ranking your favourites](#ranking-your-favourites) below.) With no artists
-saved yet, every view shows **+ Add artist** instead, which opens the same capture form
-as **+ Add** in the header.
+The **Artists** page is where browsing and organising live. A sticky bar at the top holds the
+**style filter** (tap a tag to show only artists with it; tap **All** to clear; it narrows
+every view, the Wall included) and a **view toggle** on the right with four modes. The
+**Wall** is the default. Everyday ranking happens on it: see
+[Ranking your favourites](#ranking-your-favourites) below. With no artists saved yet, every
+view shows **+ Add artist**, which opens the same capture form as **+ Add** in the header.
+
+A small **Nearby soon** chip in the heading shows the soonest guest spot by a saved artist,
+with **+N** linking to Pipeline.
 
 ## The four views
+
+### ▦ Wall
+Every photo from every artist, edge to edge, with your Top 5 pinned above. It is the
+default view; see [Getting started](01-getting-started.md#the-wall-in-artists).
+
+![The Wall](../public/guide/wall.png)
 
 ### ☰ Filmstrip
 A scrollable row per artist — rank controls on the left, details and a strip of their work
@@ -49,11 +57,6 @@ On a wider screen the grid expands to show more artists per row:
 Add up to four artists side by side to weigh them against each other, portfolios and all.
 
 ![Compare view](../public/guide/gallery-compare.png)
-
-### ▦ Style Wall
-An edge-to-edge wall of everyone's work — pure visual browsing.
-
-![Style wall](../public/guide/gallery-stylewall.png)
 
 ---
 
@@ -89,9 +92,9 @@ Nothing is saved until you do.
 
 Spots by your saved artists in the next 90 days and within reach show up as **Nearby
 soon** on the Pipeline page (100 miles by default; the **Within** menu changes it, and this
-device remembers your choice), with their notes, and as a single line on the Home Wall (the
-soonest one, then **+N more** for the rest) when there is one. Tapping one opens the artist
-at their Guest spots. Artists you've marked *pass* are left out.
+device remembers your choice), with their notes, and as a chip in the Artists heading (the
+soonest one, then **+N** to Pipeline). Home's **Next** line can suggest it too. Tapping one opens
+the artist at their Guest spots. Artists you've marked *pass* are left out.
 
 ### Similar ink
 
@@ -124,7 +127,7 @@ Similar ink; if you haven't built it yet, the map offers **Build style index**.
 
 Everything below sets the **same single ranking** — one ordered list of every artist.
 
-The quickest place to rank is the **Home Wall**. Your **Top 5** is pinned at the top:
+The quickest place to rank is the **Wall**, the default Artists view. Your **Top 5** is pinned at the top:
 **drag the rank number** on any tile to reorder the five, or tap **Rank ⤢** to open the
 full **ranking board** — your Top 5 pinned up top, everyone else below, with **▲ / ▼** on
 every row, **Drop ↓** to push an artist out of the Top 5, and **↑ To top 5** to pull one
@@ -140,7 +143,7 @@ The Artists page keeps its own ranking tools for when you're already there organ
 
 ![Swipe-compare ranking](../public/guide/ranking-swipe.png)
 
-> **Tip:** ranking flows through the whole app — the Home **Top 5** and **Contact next**,
+> **Tip:** ranking flows through the whole app — the **Top 5** on Home and the Wall and **Contact next**,
 > and the artist suggestions in *Brief*, all respect the order you set here.
 
 ---

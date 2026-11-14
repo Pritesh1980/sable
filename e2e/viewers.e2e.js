@@ -14,7 +14,7 @@ const imageLabel = /^(.+) — image (\d+) of (\d+)$/
 
 test.describe('wall viewer', () => {
   test('swipes through images and artists, taps for controls, swipes down to close', async ({ page }) => {
-    await openDemo(page, '/')
+    await openDemo(page, '/gallery')
     await page.getByRole('button', { name: 'Open Mora Vane' }).first().click()
     const viewer = page.getByRole('dialog', { name: imageLabel })
     await expect(viewer).toBeVisible()
@@ -40,7 +40,7 @@ test.describe('wall viewer', () => {
   })
 
   test('the Close button is on top and closes it', async ({ page }) => {
-    await openDemo(page, '/')
+    await openDemo(page, '/gallery')
     await page.getByRole('button', { name: 'Open Vesper Ash' }).first().click()
     const close = page.getByRole('button', { name: 'Close viewer' })
     expect(await isOnTop(close)).toBe(true)
@@ -52,21 +52,21 @@ test.describe('wall viewer', () => {
 // #159: Back (Android's button, Safari's edge swipe) closes the overlay rather
 // than leaving the page, and closing from the UI leaves no entry behind.
 test.describe('Back closes the overlay', () => {
-  test('wall viewer: Back closes the photo, and a second Back leaves the Wall', async ({ page }) => {
+  test('wall viewer: Back closes the photo, and a second Back leaves the wall', async ({ page }) => {
     await openDemo(page, '/brief')
-    await page.goto('/')
+    await page.goto('/gallery')
     await page.getByRole('button', { name: 'Open Mora Vane' }).first().click()
     const viewer = page.getByRole('dialog', { name: imageLabel })
     await expect(viewer).toBeVisible()
-    await expect(page).toHaveURL(/\/\?photo=/)
+    await expect(page).toHaveURL(/\/gallery\?photo=/)
 
     await swipe(page, ...LEFT(centre(page)))
     await expect(page).toHaveURL(/\?photo=.+\.2$/)
 
     await page.goBack()
     await expect(viewer).toBeHidden()
-    await expect(page).toHaveURL(/\/$/)
-    await expect(page.getByRole('heading', { name: 'Wall' })).toBeVisible()
+    await expect(page).toHaveURL(/\/gallery$/)
+    await expect(page.getByRole('heading', { name: 'Artists' })).toBeVisible()
 
     await page.goBack()
     await expect(page).toHaveURL(/\/brief$/)
@@ -74,16 +74,16 @@ test.describe('Back closes the overlay', () => {
 
   test('wall viewer: Close leaves no entry for Back to land on', async ({ page }) => {
     await openDemo(page, '/brief')
-    await page.goto('/')
+    await page.goto('/gallery')
     await page.getByRole('button', { name: 'Open Vesper Ash' }).first().click()
     await page.getByRole('button', { name: 'Close viewer' }).tap()
-    await expect(page).toHaveURL(/\/$/)
+    await expect(page).toHaveURL(/\/gallery$/)
     await page.goBack()
     await expect(page).toHaveURL(/\/brief$/)
   })
 
   test('wall viewer: Escape closes Info & notes first, then the viewer', async ({ page }) => {
-    await openDemo(page, '/')
+    await openDemo(page, '/gallery')
     await page.getByRole('button', { name: 'Open Mora Vane' }).first().click()
     const viewer = page.getByRole('dialog', { name: imageLabel })
     // The key handler attaches once the viewer is up; a press before that is lost.
@@ -101,6 +101,7 @@ test.describe('Back closes the overlay', () => {
   test('artist detail: Back closes the detail onto the gallery', async ({ page }) => {
     await openDemo(page, '/')
     await page.goto('/gallery')
+    await page.getByRole('button', { name: 'Filmstrip view' }).click()
     // The card's centre holds the status button; its name opens the detail.
     await page.getByRole('button', { name: /^Open / }).first().getByRole('heading').click()
     const back = page.getByRole('button', { name: '← Back' })
@@ -115,6 +116,7 @@ test.describe('Back closes the overlay', () => {
 
   test('artist detail: a deep link opens it, and ← Back stays on the gallery', async ({ page }) => {
     await openDemo(page, '/gallery')
+    await page.getByRole('button', { name: 'Filmstrip view' }).click()
     // The card's centre holds the status button; its name opens the detail.
     await page.getByRole('button', { name: /^Open / }).first().getByRole('heading').click()
     const url = page.url()

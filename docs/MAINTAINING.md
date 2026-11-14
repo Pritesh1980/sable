@@ -15,14 +15,15 @@ When you change UI under `src/pages/` or `src/components/`, update the matching 
 ## Regenerating screenshots
 
 For phone header and Grid updates, run `node scripts/captureLayoutGuide.mjs`
-against the isolated server below. It refreshes `wall-mobile.png`,
+against the isolated server below. It refreshes `home-mobile.png`, `wall-mobile.png`,
 `gallery-filmstrip.png`, `gallery-grid.png` and `help-overview.png` at 430 × 920,
-plus `wall.png` and `gallery-grid-desktop.png` at 1280 × 900.
+plus `home.png`, `wall.png` and `gallery-grid-desktop.png` at 1280 × 900. Home is `/`;
+the Wall is the default view at `/gallery`.
 
 For capture-only updates, run `node scripts/captureIntakeGuide.mjs`
 against the isolated server below. This refreshes `artist-capture.png` (430 × 920),
 `settings.png` with the iPhone-only Shortcut setup copy, and `help-overview.png`.
-Wall and Gallery now both use `AddArtistModal`; screenshot analysis must be started
+Artists (Wall and the other views) uses `AddArtistModal`; screenshot analysis must be started
 explicitly, never by silently adding a key or sending a paid request during capture.
 
 For Brief card changes, run `GUIDE_URL=http://localhost:15474 node scripts/captureBriefCardGuide.mjs`
@@ -36,7 +37,7 @@ Screenshots are captured against the dev server with Playwright at a phone viewp
 not `fullPage` — the fixed bottom nav floats to the middle on full-page captures.
 
 A phone *viewport* is not a phone: a resized desktop context still reports
-`hover: hover`, so the seven `can-hover:opacity-0` controls (Wall/Style Wall captions,
+`hover: hover`, so the seven `can-hover:opacity-0` controls (Wall captions,
 Brief's remove-photo ×, the filmstrip rank nudges) photograph as **hidden**, while a real
 iPhone shows them. To capture what a phone actually renders, use a mobile browser
 context — `browser.newContext({ viewport: { width: 430, height: 920 }, isMobile: true,
@@ -74,9 +75,9 @@ with Reorder **off** — that is the view people arrive in.
 
    | Route | Files |
    |---|---|
-   | `/` | `wall.png` (desktop), `wall-mobile.png` (phone), `wall-viewer.png` (desktop, viewer open with HUD visible), `nav-more.png` (desktop, More open) |
+   | `/` | `home.png` (desktop), `home-mobile.png` (phone), `nav-more.png` (desktop, More open) |
    | `/pipeline` | `dashboard.png`, `dashboard-desktop.png` |
-   | `/gallery` | `gallery-filmstrip.png`, `gallery-grid.png`, `gallery-grid-desktop.png`, `gallery-compare.png`, `gallery-stylewall.png`, `artist-detail.png`, `guest-spots.png` (`?artist=vesper_noctis`, seeded London trip), `ranking-swipe.png` |
+   | `/gallery` | `wall.png` (desktop, default Wall view), `wall-mobile.png` (phone), `wall-viewer.png` (desktop, a Wall photo open with HUD visible), `gallery-filmstrip.png`, `gallery-grid.png`, `gallery-grid-desktop.png`, `gallery-compare.png`, `artist-detail.png`, `guest-spots.png` (`?artist=vesper_noctis`, seeded London trip), `ranking-swipe.png` |
    | `/gallery?mode=manage` | `manage-list.png`, `manage-artist-expanded.png` |
    | `/brief` | `brief-list.png`, `brief-idea-editor.png` |
    | `/brief?tab=boards` | `boards-list.png`, `board-editor.png` |
@@ -86,7 +87,7 @@ with Reorder **off** — that is the view people arrive in.
    | `/settings` | `settings.png` |
    | `/help` | `help-overview.png` |
 
-   The v2 surfaces (`wall*`, `nav-more`, `concepts*`) are laptop-first — capture those at
+   The v2 surfaces (`home*`, `wall*`, `nav-more`, `concepts*`) are laptop-first — capture those at
    `1280 × 900`; the classic pages keep the phone viewport.
 
    (Doing this with the Playwright MCP: resize → navigate → `browser_evaluate` to seed → reload →

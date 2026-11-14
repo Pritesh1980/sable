@@ -39,7 +39,7 @@ try {
     const page = await context.newPage()
     const errors = []
     page.on('pageerror', (error) => errors.push(error.message))
-    await openDemo(page, '/', { storage })
+    await openDemo(page, '/gallery', { storage })
     if (!mobile) {
       await capture(page, 'wall')
       await page.getByRole('figure', { name: 'Mora Vane' }).first().click()
@@ -78,7 +78,7 @@ try {
       await capture(page, 'board-editor')
       await page.goto('/gallery')
       for (const [label, name] of [['Filmstrip view', 'gallery-filmstrip'], ['Grid view', 'gallery-grid'],
-        ['Compare artists', 'gallery-compare'], ['Style wall', 'gallery-stylewall']]) {
+        ['Compare artists', 'gallery-compare']]) {
         await page.getByRole('button', { name: label, exact: true }).click()
         if (name === 'gallery-compare') {
           await page.getByRole('button', { name: /Mora Vane/ }).click()

@@ -9,6 +9,8 @@ import Gallery from '../pages/Gallery'
 // flow, rather than silently doing nothing.
 vi.mock('../hooks/useImageUpload', () => ({
   compressImages: vi.fn(async () => ['data:image/jpeg;base64,SHOT']),
+  // The open wall photo uploads a pasted image to its artist.
+  uploadImages: vi.fn(async () => []),
 }))
 vi.mock('../data/screenshotIntake', () => ({
   analyzeScreenshotWithGemini: vi.fn(async () => null),
@@ -21,9 +23,9 @@ const baseArtists = [
   { id: 'zoia.ink', handle: 'zoia.ink', name: '', tags: ['surrealism'], images: [], rank: 1, status: 'contact-next', notes: '', studio: null },
 ]
 
-function renderGallery({ artists = baseArtists, setArtists = vi.fn() } = {}) {
+function renderGallery({ artists = baseArtists, setArtists = vi.fn(), route = '/gallery' } = {}) {
   render(
-    <MemoryRouter initialEntries={['/gallery']}>
+    <MemoryRouter initialEntries={[route]}>
       <Gallery artists={artists} setArtists={setArtists} />
     </MemoryRouter>
   )
@@ -45,6 +47,15 @@ describe('Artists page: paste anywhere (#46)', () => {
     pasteImageAt(document.body)
 
     await waitFor(() => expect(screen.getByText(/add an artist/i)).toBeInTheDocument())
+  })
+
+  // The full-screen wall photo adds a pasted image to its artist (#220).
+  it('leaves the paste to an open wall photo', async () => {
+    const artists = [{ ...baseArtists[0], images: ['images/zoia.ink/1.webp'] }]
+    renderGallery({ artists, route: '/gallery?photo=zoia.ink.1' })
+    pasteImageAt(document.body)
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(screen.queryByText(/add an artist/i)).not.toBeInTheDocument()
   })
 
   it('does not intercept a paste while a text input has focus', async () => {

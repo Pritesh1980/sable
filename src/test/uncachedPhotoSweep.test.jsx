@@ -29,13 +29,12 @@ const { default: ArtistTable } = await import('../components/ArtistTable')
 const { default: CompareView } = await import('../components/CompareView')
 const { default: FilmstripView } = await import('../components/FilmstripView')
 const { default: RankingMode } = await import('../components/RankingMode')
-const { default: StyleWall } = await import('../components/StyleWall')
 const { default: Top5Hero } = await import('../components/Top5Hero')
 const { default: TasteMap } = await import('../components/TasteMap')
 const { default: SimilarArtists } = await import('../components/SimilarArtists')
 const { default: WallPiece } = await import('../components/WallPiece')
 const { default: WallViewer } = await import('../components/WallViewer')
-const { default: Wall } = await import('../pages/Wall')
+const { default: WallView } = await import('../components/WallView')
 const { default: Gallery } = await import('../pages/Gallery')
 const { default: Dashboard } = await import('../pages/Dashboard')
 const { buildWallItems } = await import('../data/wall')
@@ -137,13 +136,6 @@ describe('uncached { key } photo across artist-photo surfaces (counts include of
     await settledMonogram(container)
   })
 
-  it('StyleWall: gives the offline photo a tile instead of the empty state', async () => {
-    const { container } = render(<StyleWall artists={[OFFLINE, NONE]} onOpenArtist={vi.fn()} />)
-    expect(screen.queryByText(/No images yet/)).not.toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: 'Open Zoia' })).toHaveLength(1)
-    await settledMonogram(container)
-  })
-
   it('Gallery: "N with photos" counts the offline photo and not the photo-less artist', () => {
     render(
       <MemoryRouter initialEntries={['/gallery?mode=manage']}>
@@ -172,16 +164,13 @@ describe('uncached { key } photo across artist-photo surfaces (counts include of
     expect(within(container).getAllByText('Z').length).toBeGreaterThan(0)
   })
 
-  it('Wall page: the offline photo is a piece of the masonry', async () => {
+  it('WallView: the offline photo is a piece of the masonry', async () => {
     const { container } = render(
       <MemoryRouter>
-        <Wall
-          artists={[OFFLINE, NONE]} setArtists={vi.fn()} onOpenArtist={vi.fn()}
-          onOpenDrawer={vi.fn()} onSwitchView={vi.fn()} activeView="artists"
-        />
+        <WallView artists={[OFFLINE, NONE]} setArtists={vi.fn()} />
       </MemoryRouter>,
     )
-    const main = within(container.querySelector('main'))
+    const main = within(container)
     await waitFor(() => expect(getUrl).toHaveBeenCalled())
     expect(main.getAllByText('Z').length).toBeGreaterThan(0)
     expect(main.queryByRole('img')).not.toBeInTheDocument()

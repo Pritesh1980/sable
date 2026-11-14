@@ -29,6 +29,7 @@ test('an artist photo that cannot load keeps its place as a tile', async ({ page
   }, MISSING)
   expect(patched).toBe(2)
   await page.goto('/gallery')
+  await page.getByRole('button', { name: 'Filmstrip view' }).tap()
   // The detail sheet snapshots its photos when it opens, so open it only once
   // the gallery has hydrated (real photos rendered, not monograms).
   await expect(page.locator('img[src*="vesper_noctis/"]').first()).toBeAttached()

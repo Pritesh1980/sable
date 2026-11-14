@@ -34,10 +34,11 @@ try {
       await page.screenshot({ path: `${output}${name}.png`, fullPage: false })
       console.log(`Captured ${name}`)
     }
-    await openDemo(page, '/')
-    await expect(page.getByRole('button', { name: /add artist/i }).first()).toBeVisible()
+    await openDemo(page, '/gallery')
+    await expect(page.getByRole('button', { name: '+ Add', exact: true })).toBeVisible()
     await capture(mobile ? 'wall-mobile' : 'wall')
     await page.goto('/gallery')
+    await page.getByRole('button', { name: 'Filmstrip view', exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Artists', exact: true })).toBeVisible()
     await expect(page.getByText('Vesper Ash', { exact: true }).first()).toBeVisible()
     if (mobile) await capture('gallery-filmstrip')
@@ -56,9 +57,9 @@ try {
     if (!mobile) {
       for (const viewport of [{ width: 844, height: 390 }, { width: 1280, height: 900 }]) {
         await page.setViewportSize(viewport)
-        await page.goto('/')
-        const header = page.locator('header').first()
-        await expect(header.getByRole('button', { name: /add artist/i })).toBeVisible()
+        await page.goto('/gallery')
+        const header = page.getByRole('main').locator('> div').first()
+        await expect(header.getByRole('button', { name: '+ Add', exact: true })).toBeVisible()
         await page.evaluate(() => document.fonts.ready)
         const bounds = await header.locator('button').evaluateAll((buttons) => buttons.map((button) => {
           const { x, y, width, height } = button.getBoundingClientRect()

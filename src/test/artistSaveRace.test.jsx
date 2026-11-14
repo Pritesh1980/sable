@@ -58,6 +58,7 @@ afterEach(() => { cleanup(); vi.clearAllMocks() })
 describe('a tag toggle survives a slower upload landing after it (#79)', () => {
   it('keeps the tag when the upload that started first resolves last', async () => {
     render(<Harness />)
+    fireEvent.click(screen.getByRole('button', { name: 'Filmstrip view' }))
     fireEvent.click(screen.getByText('Zoia'))
 
     // Start the upload — its closure captures the artist/draft as they are now.
@@ -82,6 +83,7 @@ describe('a tag toggle survives a slower upload landing after it (#79)', () => {
     // The reverse ordering: the upload settles first, the tag comes after —
     // this direction always worked, kept as a companion regression check.
     render(<Harness />)
+    fireEvent.click(screen.getByRole('button', { name: 'Filmstrip view' }))
     fireEvent.click(screen.getByText('Zoia'))
 
     fireEvent.change(detailSheet().querySelector('input[type="file"]'), {
@@ -101,6 +103,7 @@ describe('a tag toggle survives a slower upload landing after it (#79)', () => {
 describe('the explicit edit-form Save does not clobber a concurrent image change (#79)', () => {
   it('keeps an image added while the edit form was open', async () => {
     render(<Harness />)
+    fireEvent.click(screen.getByRole('button', { name: 'Filmstrip view' }))
     fireEvent.click(screen.getByText('Zoia'))
     fireEvent.click(screen.getByText('Edit details'))
 

@@ -9,10 +9,10 @@
 
 Sable gathers the artists you've collected — off Instagram, out of the camera roll — into a gallery built for browsing, then learns your taste by *looking* at their work instead of making you label it. It installs to your phone and works offline. Visual matching runs on-device; cloud-storage builds and explicit AI requests can send selected images off-device.
 
-![The Wall — Sable's home screen with the Top-5 dock and artist masonry](docs/images/wall.jpg)
+![The Wall, Sable's default Artists view, with the Top-5 dock and artist masonry](docs/images/wall.jpg)
 
 - **One place, organised by artist.** Not two hundred saved posts — each artist's work, handle, styles and your own notes together on one card.
-- **Built for looking.** Four ways through the collection (filmstrip, compare, grid, style wall) plus the Wall home. Their work at full size, on black.
+- **Built for looking.** Four ways through the collection (wall, filmstrip, compare, grid), plus a start page. Their work at full size, on black.
 - **It learns what you like.** Image embeddings computed on your device give every artist a visual fingerprint. Add someone new and Sable predicts roughly where they'd rank; open an artist and see who else in your collection sits closest to them.
 
 Then as much depth as you want: a ranked shortlist, tattoo ideas linked to artists, copyable artist-ready briefs, mood boards, AI concept generation, and convention and studio context.
@@ -51,8 +51,8 @@ The sign-in screen also links straight to it (**No account? View the demo →**)
 
 ## What It Includes
 
-- **Wall (home)**: Top-5 dock with rank nudges, consider shelf, and a visual masonry of the collection.
-- **Artists**: ranked artist gallery with four views — filmstrip, compare, grid, and style wall — plus browse and swipe-ranking modes.
+- **Home**: a start page with one suggested next step, top artists, open ideas and AI concepts.
+- **Artists**: ranked gallery with four views (wall, filmstrip, compare, grid) plus swipe-ranking. The Wall is the default: Top-5 dock with rank nudges, consider shelf, and a visual masonry of the collection.
 - **Brief**: tattoo ideas with descriptions, placements, style tags, reference images, linked artists, and copyable artist-ready briefs.
 - **Mood Boards**: grouped ideas that can be ordered and copied as a board brief.
 - **Convention Radar**: curated UK convention shortlist with distances from Milton Keynes and artist attendance override support. Each show also takes its published **artist index** (Big London 2026 ships with the app; a bookmarklet grabber handles other shows' lazy-loading lists) and its **competition winners** — pasted in, grouped by award category, cross-referenced against the gallery, with photos of the winning tattoos attached per winner.

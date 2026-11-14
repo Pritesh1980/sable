@@ -1,8 +1,8 @@
 import { test, expect, openDemo } from './fixtures'
 
 test('capture traps focus through the disclosure and restores it on Escape', async ({ page }) => {
-  await openDemo(page, '/')
-  const trigger = page.getByRole('button', { name: /^\+ Add artist$/i }).first()
+  await openDemo(page, '/gallery')
+  const trigger = page.getByRole('button', { name: /^\+ Add$/i }).first()
   await trigger.click()
   const dialog = page.getByRole('dialog', { name: 'Add an artist' })
   await dialog.getByLabel('Instagram *').focus()

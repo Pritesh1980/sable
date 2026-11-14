@@ -60,7 +60,7 @@ function RankTile({ artist, index }) {
   )
 }
 
-// Slim always-visible Top-5 dock on the Wall. One low row so it never pushes
+// Slim always-visible Top-5 dock on the wall. One low row so it never pushes
 // the image masonry below the fold. Reordering is drag-only, scoped to the
 // five visible tiles; demoting an artist out of the Top 5 entirely still
 // goes through the full Rank board (`Rank ⤢`, one tap away).
@@ -83,14 +83,12 @@ export default function RankRail({ artists = [], setArtists = () => {}, onOpenBo
     setArtists((prev) => moveToRank(prev, active.id, newIndex + 1))
   }
 
-  // Sticks flush under the Wall's header (`Bar` in pages/Wall.jsx), whose height
-  // is fixed by its rows: below `md` it is two rows (py-2 + 2×h-11 + gap-y-1),
-  // from `md` one (py-3.5 + h-11), plus a 1px border. rem, so the A+ font
-  // setting scales both. Change them together; e2e/layout.e2e.js checks (#161).
+  // Scrolls with the wall rather than sticking: on the Artists page the sticky
+  // filter bar already owns the top edge (#220).
   return (
     <section
       aria-label="Your top five"
-      className="sticky top-[calc(var(--nav-top)_+_3.75rem_+_1px)] z-[9] flex items-center gap-3 px-4 py-2 bg-v2-ink/[.92] backdrop-blur-md border-b border-v2-hairline"
+      className="flex items-center gap-3 px-4 py-2 bg-v2-ink/[.92] backdrop-blur-md border-b border-v2-hairline"
     >
       <span className="font-v2-ui text-[0.6875rem] tracking-[0.28em] uppercase text-v2-accent shrink-0">
         Top 5

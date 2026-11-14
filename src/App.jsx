@@ -1,9 +1,9 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
-import { Routes, Route, Navigate } from 'react-router'
+import { Routes, Route, Navigate, useLocation } from 'react-router'
 import { UndoProvider } from './context/UndoContext'
 import { watchUploadOutbox } from './data/imageStaging'
 import Nav from './components/Nav'
-import Wall from './pages/Wall'
+import Home from './pages/Home'
 import ProtectedRoute from './components/ProtectedRoute'
 import { useAuth } from './context/useAuth'
 import { useStorage } from './hooks/useStorage'
@@ -15,7 +15,7 @@ import { requestPortableExport } from './data/portableBackup'
 import { createRelayClient } from './data/imageJobs/relayClient'
 import { pendingImageJobs } from './data/imageJobs/pendingJobs'
 
-// The Wall (home) stays eager — it's the first paint. Every other page is
+// Home stays eager — it's the first paint. Every other page is
 // route-split so the initial bundle (and the SW precache built from it) stays
 // small; each page loads on first navigation and is cached thereafter.
 const Dashboard = lazy(() => import('./pages/Dashboard'))
@@ -39,6 +39,14 @@ export default function App() {
       <AppShell key={user?.id} />
     </ProtectedRoute>
   )
+}
+
+// The wall lived at `/` until #220, and a photo on it is a link people keep
+// (`/?photo=<artist>.<n>`, #159). Those now open on the wall inside Artists.
+function HomeRoute(props) {
+  const { search } = useLocation()
+  if (new URLSearchParams(search).has('photo')) return <Navigate to={`/gallery${search}`} replace />
+  return <Home {...props} />
 }
 
 function AppShell() {
@@ -93,16 +101,10 @@ function AppShell() {
           <Routes>
             <Route
               path="/"
-              element={(
-                <Wall
-                  artists={artists}
-                  setArtists={setArtists}
-                  ideas={ideas}
-                />
-              )}
+              element={<HomeRoute artists={artists} setArtists={setArtists} ideas={ideas} concepts={concepts} />}
             />
             <Route path="/pipeline" element={<Dashboard artists={artists} setArtists={setArtists} ideas={ideas} boards={boards} mergedConventions={mergedConventions} />} />
-            <Route path="/gallery" element={<Gallery artists={artists} setArtists={setArtists} mergedConventions={mergedConventions} />} />
+            <Route path="/gallery" element={<Gallery artists={artists} setArtists={setArtists} ideas={ideas} mergedConventions={mergedConventions} />} />
             <Route path="/brief" element={<Brief ideas={ideas} setIdeas={setIdeas} artists={artists} mergedConventions={mergedConventions} boards={boards} setBoards={setBoards} />} />
             <Route path="/conventions" element={<Conventions artists={artists} setArtists={setArtists} conventionOverrides={conventionOverrides} setConventionOverrides={setConventionOverrides} conventionLineups={conventionLineups} setConventionLineups={setConventionLineups} conventionWinners={conventionWinners} setConventionWinners={setConventionWinners} />} />
             <Route path="/studios" element={<Studios artists={artists} />} />

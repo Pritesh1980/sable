@@ -63,12 +63,12 @@ test('reads a guest spot announcement, reviews it and shows it nearby soon', asy
   await nearby.getByText('@ashgrove.tattoo').click()
   await expect(page.getByRole('list', { name: 'Upcoming guest spots' }).getByText('Oxford')).toBeInViewport()
 
-  // Home: one line, however many spots are coming up.
-  await page.goto('/')
-  const strip = page.getByRole('link', { name: /Nearby soon/ })
-  await expect(strip).toBeVisible()
-  const box = await strip.boundingBox()
+  // Artists header: one small chip, however many spots are coming up.
+  await page.goto('/gallery')
+  const chip = page.getByRole('link', { name: /Nearby soon/ })
+  await expect(chip).toBeVisible()
+  const box = await chip.boundingBox()
   expect(box.height).toBeLessThan(60)
-  await expect(page.getByRole('link', { name: /^\+\d+ more$/ })).toHaveAttribute('href', /\/pipeline$/)
+  await expect(page.getByRole('link', { name: /more nearby/ })).toHaveAttribute('href', /\/pipeline$/)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 })

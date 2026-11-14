@@ -62,6 +62,7 @@ afterEach(() => { cleanup(); vi.clearAllMocks() })
 describe('artist identity survives delete + re-add with the same handle (#80)', () => {
   it('a stale upload started before delete+re-add does not land on the recreated artist', async () => {
     render(<Harness />)
+    fireEvent.click(screen.getByRole('button', { name: 'Filmstrip view' }))
     fireEvent.click(screen.getByText('Zoia'))
 
     // Start an upload — its onSave closure captures the artist's identity now.
@@ -88,6 +89,7 @@ describe('artist identity survives delete + re-add with the same handle (#80)', 
 
   it('a live artist (same identity throughout) still saves normally', async () => {
     render(<Harness />)
+    fireEvent.click(screen.getByRole('button', { name: 'Filmstrip view' }))
     fireEvent.click(screen.getByText('Zoia'))
 
     fireEvent.change(detailSheet().querySelector('input[type="file"]'), {

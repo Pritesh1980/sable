@@ -2,18 +2,15 @@ import { useState } from 'react'
 import { isDemoSession, DEMO_INTRO_KEY } from '../data/demoSeed'
 
 // The demo is where the README badge and the Login page's "view the demo" link
-// both land, and it drops the visitor straight onto a fully populated Wall —
-// six invented artists, no explanation. This strip is the only place the
-// proposition reaches someone who never read the README.
+// both land. Home says what Sable is (#220); this strip, above it, only says
+// that the six artists are invented and where edits go.
 //
-// Demo sessions only: a real account gets no product copy on its own wall. And
-// dismissible, because it is an introduction rather than a banner — the whole
-// point of the Wall is the work, so this gets out of the way and stays gone.
+// Demo sessions only, and dismissible: it is a note, not a banner.
 export default function DemoIntro() {
   const [dismissed, setDismissed] = useState(() => localStorage.getItem(DEMO_INTRO_KEY) === '1')
 
-  // isDemoSession() re-reads storage rather than taking a prop: the Wall renders
-  // before any auth context settles, and a wrong answer here would flash product
+  // isDemoSession() re-reads storage rather than taking a prop: Home renders
+  // before any auth context settles, and a wrong answer here would flash demo
   // copy onto a real user's collection.
   if (dismissed || !isDemoSession()) return null
 
@@ -23,24 +20,23 @@ export default function DemoIntro() {
   }
 
   return (
-    <div className="border-b border-v2-hairline bg-v2-surface animate-slide-up">
+    <div className="border-b border-ink-border bg-ink-card animate-slide-up motion-reduce:animate-none">
       <div className="relative mx-auto max-w-3xl px-5 py-4 sm:px-8 sm:py-5">
         <button
           onClick={dismiss}
           aria-label="Dismiss introduction"
           title="Dismiss"
-          className="absolute top-1 right-1 w-11 h-11 flex items-center justify-center text-v2-muted hover:text-v2-cream text-sm leading-none transition-colors"
+          className="absolute top-1 right-1 w-11 h-11 flex items-center justify-center text-cream-muted hover:text-cream text-sm leading-none transition-colors"
         >
           ✕
         </button>
         {/* pr-8 keeps the copy clear of the dismiss control on a narrow phone,
             where the strip is at its tightest. */}
-        <p className="font-v2-display text-v2-cream text-base sm:text-lg tracking-wide pr-8">
-          Every tattoo artist you love, in one place.
+        <p className="font-display text-cream text-base sm:text-lg pr-8">
+          You are looking at the demo.
         </p>
-        {/* Kept to two lines on a phone: this strip sits above the masonry, and
-            the work is what the demo is here to show. */}
-        <p className="font-v2-ui text-v2-muted text-xs sm:text-sm mt-1.5 leading-relaxed pr-8">
+        {/* Kept to two lines on a phone. */}
+        <p className="font-body text-cream-muted text-xs sm:text-sm mt-1.5 leading-relaxed pr-8">
           Six invented artists with AI-generated imagery. Edits stay in this browser;
           demo updates reset artists and ideas.
         </p>

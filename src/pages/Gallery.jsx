@@ -24,7 +24,8 @@ import ArtistDetail from '../components/ArtistDetail'
 import TasteMap from '../components/TasteMap'
 import ArtistBrowse from '../components/ArtistBrowse'
 import RankingMode from '../components/RankingMode'
-import StyleWall from '../components/StyleWall'
+import WallView from '../components/WallView'
+import NearbySoon from '../components/NearbySoon'
 import FilmstripView from '../components/FilmstripView'
 import CompareView from '../components/CompareView'
 import TagPill from '../components/TagPill'
@@ -88,7 +89,7 @@ function ArtistGrid({ items, sensors, onDragStart, onDragEnd, onDragCancel, onOp
   )
 }
 
-export default function Gallery({ artists, setArtists, mergedConventions = [] }) {
+export default function Gallery({ artists, setArtists, ideas = [], mergedConventions = [] }) {
   const { user } = useAuth() || {}
   const [searchParams, setSearchParams] = useSearchParams()
   const userId = user?.id
@@ -100,7 +101,7 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
   const detail = useOverlayParam('artist')
   const selected = detail.value ? artists.find((a) => a.id === detail.value) || null : null
   const openArtist = (artist) => detail.open(artist.id)
-  const [viewMode, setViewMode] = useState('filmstrip')
+  const [viewMode, setViewMode] = useState('wall')
   // #70: grid cards are pure navigation until this is on. Only grid can reorder,
   // so leaving grid drops it — otherwise the state outlives its only switch.
   const [editing, setEditing] = useState(false)
@@ -124,17 +125,22 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
   // ?shared=1 is where /share lands: a screenshot arriving from the OS share
   // sheet (Android) or an iOS Shortcut. Open intake straight away — on iOS
   // there is no file to collect, so it opens empty and ready for a paste.
-  const [quickAdding, setQuickAdding] = useState(() => searchParams.get('shared') === '1')
+  // ?add=1 (Home's empty state) opens the same modal, but empty: no share-target stash to collect.
+  const [quickAdding, setQuickAdding] = useState(() => searchParams.get('shared') === '1' || searchParams.get('add') === '1')
   const [sharedFile, setSharedFile] = useState(null)
   const [sharedFilePending, setSharedFilePending] = useState(() => searchParams.get('shared') === '1')
   const [captureReceipt, setCaptureReceipt] = useState(null)
+  // A Consider-shelf suggestion on the wall opens quick-add prefilled.
+  const [addInitial, setAddInitial] = useState(null)
   function closeCapture() {
     setQuickAdding(false)
     setSharedFile(null)
     setSharedFilePending(false)
-    if (searchParams.has('shared')) {
+    setAddInitial(null)
+    if (searchParams.has('shared') || searchParams.has('add')) {
       const next = new URLSearchParams(searchParams)
       next.delete('shared')
+      next.delete('add')
       setSearchParams(next, { replace: true })
     }
   }
@@ -166,6 +172,9 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
   useEffect(() => {
     if (quickAdding) return undefined
     function handlePagePaste(e) {
+      // A wall photo open full-screen takes the paste itself: it adds the image
+      // to that artist, so it must not also open add-artist here (#220).
+      if (searchParams.has('photo')) return
       const active = document.activeElement
       if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return
       const file = [...(e.clipboardData?.files || [])].find((f) => f.type?.startsWith('image/'))
@@ -176,7 +185,7 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
     }
     document.addEventListener('paste', handlePagePaste)
     return () => document.removeEventListener('paste', handlePagePaste)
-  }, [quickAdding])
+  }, [quickAdding, searchParams])
 
   const artistsWithImages = artists.filter((a) => a.images?.length > 0)
 
@@ -309,6 +318,8 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
           <p className="font-mono text-xs text-accent tracking-[0.4em] uppercase mb-2">Your Collection</p>
           <h1 className="font-display text-5xl text-cream leading-none tracking-tight">Artists</h1>
           <GeneratedArtworkNotice images={artists.flatMap((artist) => artist.images || [])} className="mt-3" />
+          {/* A saved artist working near Milton Keynes soon (#183): one chip, nothing when none. */}
+          <NearbySoon artists={artists} compact className="mt-3" />
         </div>
         <div className="flex flex-wrap gap-2 mb-1">
           {artistsWithImages.length > 0 && !manageMode && (
@@ -336,7 +347,7 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
           {/* Always reachable — one-step onboarding for a new artist */}
           <button
             onClick={() => setQuickAdding(true)}
-            className="font-mono text-xs text-accent hover:text-cream border border-accent/40 hover:border-accent px-3 py-2 rounded-xs transition-colors tracking-widest uppercase"
+            className="font-mono text-xs text-accent hover:text-cream border border-accent/40 hover:border-accent px-3 min-h-11 rounded-xs transition-colors tracking-widest uppercase"
           >
             + Add
           </button>
@@ -374,7 +385,7 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
       {!manageMode && (
       <>
       {/* Sticky filter bar */}
-      <div className="sticky top-[var(--nav-top)] z-20 bg-ink-black/80 backdrop-blur-md border-b border-ink-border px-4 py-3 mb-8">
+      <div className={`sticky top-[var(--nav-top)] z-20 bg-ink-black/80 backdrop-blur-md border-b border-ink-border px-4 py-3 ${viewMode === 'wall' ? '' : 'mb-8'}`}>
         {/* #77: was three wrapped pill rows + a forced-onto-its-own-line
             switcher row (171px on a phone, ~23% of the usable viewport).
             #73 had the switcher claim its own full-width row specifically to
@@ -411,10 +422,10 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
               hit area, not the look). */}
           <div className="flex gap-1 shrink-0 ml-2">
             {[
+              { mode: 'wall', label: '▦', title: 'Wall view' },
               { mode: 'filmstrip', label: '☰', title: 'Filmstrip view' },
               { mode: 'compare', label: '⊟', title: 'Compare artists' },
               { mode: 'grid', label: '⊞', title: 'Grid view' },
-              { mode: 'wall', label: '▦', title: 'Style wall' },
             ].map(({ mode, label, title }) => (
               <button
                 key={mode}
@@ -477,7 +488,14 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
           </button>
         </div>
       ) : viewMode === 'wall' ? (
-        <StyleWall artists={artists} onOpenArtist={openArtist} />
+        <WallView
+          artists={artists}
+          wallArtists={sorted}
+          ideas={ideas}
+          setArtists={setArtists}
+          onAddArtist={(initial) => { setAddInitial(initial); setQuickAdding(true) }}
+          revealArtistId={captureReceipt?.kind === 'created' ? captureReceipt.artistId : null}
+        />
       ) : viewMode === 'filmstrip' ? (
         <FilmstripView artists={sorted} onOpenArtist={openArtist} onSetRank={setRank} onSetStatus={setStatus} />
       ) : viewMode === 'compare' ? (
@@ -543,6 +561,8 @@ export default function Gallery({ artists, setArtists, mergedConventions = [] })
 
       {quickAdding && (
         <AddArtistModal
+          key={addInitial?.handle || 'blank'}
+          initial={addInitial || undefined}
           artists={artists}
           setArtists={setArtists}
           userId={userId}

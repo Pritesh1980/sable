@@ -58,7 +58,6 @@ const LEGACY_ALLOWLIST = [
   'src/components/RankingMode.jsx',
   'src/components/ReliefStlDrawer.jsx',
   'src/components/SortableArtistCard.jsx',
-  'src/components/StyleWall.jsx',
   'src/components/TagPill.jsx',
   'src/components/Top5Coverflow.jsx',
   'src/components/Top5Hero.jsx',

@@ -77,3 +77,24 @@ describe('WallPiece keyboard access', () => {
     expect(screen.getByRole('button', { name: 'Open zoia.ink' }).closest('figure')).not.toBeNull()
   })
 })
+
+// #220: the name is always on the piece, on phone and laptop alike; only the
+// studio line waits for a hover-capable device.
+describe('WallPiece caption', () => {
+  const withStudio = { ...item, artistName: 'Zoia', studioName: 'No Regrets London' }
+
+  it('always shows the artist name, with no hover gate on the plate', () => {
+    render(<WallPiece item={withStudio} onOpen={vi.fn()} />)
+    const caption = screen.getByText('Zoia', { selector: 'span' }).closest('figcaption')
+    expect(caption.className).not.toMatch(/opacity-0/)
+    expect(caption.className).toMatch(/pointer-events-none/)
+  })
+
+  it('hides only the studio name until hover, and only where hover exists', () => {
+    render(<WallPiece item={withStudio} onOpen={vi.fn()} />)
+    const studio = screen.getByText('No Regrets London')
+    expect(studio.tagName).toBe('SMALL')
+    expect(studio.className).toMatch(/can-hover:opacity-0/)
+    expect(studio.className).toMatch(/group-hover:opacity-100/)
+  })
+})

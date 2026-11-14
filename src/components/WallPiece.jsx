@@ -2,8 +2,9 @@ import { useState } from 'react'
 import ArtistImage from './ArtistImage'
 import GeneratedArtworkNotice from './GeneratedArtworkNotice'
 
-// A single image on the Wall — full-bleed, no chrome. The caption is an
-// engraved plate that only appears on hover; it never intercepts the click
+// A single image on the Wall — full-bleed, no chrome. The artist's name always
+// sits on a quiet plate (phone and laptop alike, #220); only the studio name
+// waits for hover on a hover-capable device. The plate never intercepts the click
 // (pointer-events: none) so the whole piece stays clickable. Also a drop
 // target: dragging an image file over a piece adds it to that piece's artist.
 export default function WallPiece({ item, onOpen, onDropImage }) {
@@ -62,13 +63,13 @@ export default function WallPiece({ item, onOpen, onDropImage }) {
       )}
 
       <figcaption
-        className="absolute inset-x-0 bottom-0 flex flex-col gap-0.5 px-3 pt-10 pb-2.5 pointer-events-none can-hover:opacity-0 group-hover:opacity-100 transition-opacity duration-150 bg-gradient-to-t from-v2-ink/95 via-v2-ink/60 to-transparent"
+        className="absolute inset-x-0 bottom-0 flex flex-col gap-0.5 px-3 pt-5 pb-2 pointer-events-none bg-gradient-to-t from-v2-ink/80 to-transparent"
       >
-        <span className="font-v2-display text-v2-cream text-base uppercase tracking-[0.18em] leading-tight truncate [text-shadow:0_1px_6px_rgba(0,0,0,0.9)]">
+        <span className="font-v2-display text-v2-cream text-[0.7rem] uppercase tracking-[0.16em] leading-tight truncate [text-shadow:0_1px_6px_rgba(0,0,0,0.9)]">
           {item.artistName}
         </span>
         {item.studioName && (
-          <small className="font-v2-ui text-v2-cream/80 text-[0.7rem] tracking-[0.08em] truncate [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]">
+          <small className="font-v2-ui text-v2-cream/80 text-[0.7rem] tracking-[0.08em] truncate can-hover:opacity-0 group-hover:opacity-100 transition-opacity duration-150 [text-shadow:0_1px_4px_rgba(0,0,0,0.9)]">
             {item.studioName}
           </small>
         )}

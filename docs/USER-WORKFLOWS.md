@@ -65,7 +65,7 @@ flowchart TB
   DUP{"Artist already saved?"}
   APPEND["Add new images to<br/>the existing artist"]
   ADD["Add artist"]
-  WALL["See work on the Wall"]
+  WALL["See work on the Wall in Artists"]
   VIEW["Open full-screen<br/>browse their portfolio"]
   INDEX{"Style index built?"}
   SIMILAR["Review Similar ink<br/>and taste fit"]
