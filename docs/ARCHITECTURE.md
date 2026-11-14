@@ -204,7 +204,7 @@ libraries start empty and cannot inherit legacy unclassified image caches.
 two device-only convention collections,
 and passes them down to route-level pages. It is keyed by the user's id, so signing in
 as someone else remounts it, and every collection store with it, rather than handing
-one user's in-memory data to the next (§10). The Wall is eager for first paint; every
+one user's in-memory data to the next (§10). Home is eager for first paint; every
 other page is lazy-loaded on first navigation and cached by the service worker after
 delivery.
 
@@ -220,7 +220,7 @@ flowchart TB
   UNDO["UndoProvider<br/>one shared offer above routes"]
 
   subgraph PRIMARY["Primary navigation"]
-    WALL["/ — Wall"]
+    WALL["/ — Home"]
     GALLERY["/gallery — Artists"]
     BRIEF["/brief — Ideas and Boards"]
     CONCEPTS["/concepts — AI Concepts"]
@@ -767,7 +767,7 @@ worker that ships beside them.
 flowchart TB
   SOURCE["React source<br/>public/sw.js"]
   CONFIG["Vite build<br/>base = VITE_BASE or /"]
-  SPLIT["Eager Wall shell<br/>lazy route chunks"]
+  SPLIT["Eager Home shell<br/>lazy route chunks"]
   DIST[("dist/<br/>hashed assets")]
   MANIFEST["precachePlugin<br/>select emitted assets"]
   WORKER["dist/sw.js<br/>injected BUILD_MANIFEST"]

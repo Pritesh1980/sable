@@ -8,8 +8,7 @@
 
 ## Add an artist — the quick way
 
-Tap **+** in the phone Wall header (**+ Add artist** on wider screens), or **+ Add** on the Artists page. Both open the
-same capture form.
+Tap **+ Add** on the Artists page, or open `/gallery?add=1`. It opens the capture form.
 
 ![The compact artist capture form](../public/guide/artist-capture.png)
 
@@ -23,7 +22,7 @@ same capture form.
 **Details** starts collapsed and holds display name, tags, status and a style note.
 You can add or edit those later. **Artist saved** confirms the local library update;
 it does not claim cloud sync or an off-device backup. A new artist starts unranked, so
-their photos join the end of the Wall; saved from the Wall, it scrolls down to them.
+their photos join the end of the Wall, which scrolls down to them.
 
 For an existing handle, attach photos and tap **Add images to … instead**. Sable
 preserves the artist's existing details and confirms the number of photos added.

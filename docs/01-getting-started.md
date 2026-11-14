@@ -1,6 +1,6 @@
 # Getting started
 
-*The Wall, the full-screen viewer, and how to move around.*
+*Home, the Wall, the full-screen viewer, and how to move around.*
 
 ← [Back to contents](README.md)
 
@@ -8,7 +8,7 @@
 
 ## Signing in — or just looking
 
-Sable opens on a sign-in screen. Enter your account details and you land on the Wall
+Sable opens on a sign-in screen. Enter your account details and you land on Home
 with your own collection.
 
 Private builds use invite-only login and allow only the configured owner account.
@@ -34,40 +34,55 @@ The favourites-first update resets older demo artists and ideas to those samples
 including removing extra demo artists. Real accounts are unchanged.
 
 The artwork is synthetic, not a real tattoo artist's portfolio. An **AI-generated
-imagery** label remains on the Wall, gallery, image viewer, ranking and image-bearing
+imagery** label remains on the Wall, Artists, image viewer, ranking and image-bearing
 editors even after you dismiss the introduction. Lettering examples are concepts,
 not language-verified stencils.
 
-The demo opens with a short strip across the top of the Wall explaining what you're
-looking at. Close it with **✕** and it stays closed on that device — it's an
+The demo opens with a short strip across the top of Home that says
+*You are looking at the demo.* Close it with **✕** and it stays closed on that device — it's an
 introduction, not a banner. It never appears on a real account.
 
 ---
 
-## The Wall — your artists, edge to edge
+## Home
 
-Open Sable and you're on **the Wall**: every photo from every artist in your collection,
-tiled edge to edge. No panels, no stats — the work itself is the interface.
+Sable opens on **Home**, a short start page:
+
+![Home](../public/guide/home.png)
+
+- **Sable**, with one sentence on what it is.
+- **Next**: one suggested step. In order: add your first artist, a nearby guest spot by
+  an artist you saved, write your first idea, pick an artist for an idea that has none,
+  make a first AI concept. Once all that is done, it points you to the Wall.
+- **Top artists**: up to six, by rank, one photo each, the number one largest. Tap one to
+  open that artist. **See all** goes to Artists.
+- **Ideas**: up to three open ideas, and **New idea**.
+- **AI concepts**: up to four, and **New concept**.
+
+An empty section says what an artist, idea or concept is here and has a button to make
+the first one. Home follows the light or dark theme.
+
+![Home on a phone](../public/guide/home-mobile.png)
+
+## The Wall, in Artists
+
+The **Wall** is the first view on the **Artists** page: every photo from every artist,
+tiled edge to edge. The work itself is the interface.
 
 ![The Wall](../public/guide/wall.png)
 
-- **Whose photo is it?** On a phone or tablet the artist's name (and their studio, when
-  one is set) sits along the bottom edge of every tile. With a mouse it stays out of the
-  way and fades in on hover.
-- A **red dot** on a photo means it's new — added within the last 14 days.
-- Pinned just under the bar is your **Top 5** — the five artists you've ranked highest,
-  as a slim strip. **Drag the rank number** on any tile to reorder the five, or tap
-  **Rank ⤢** to open the full ranking board (see
+- The artist's name sits on every tile. With a mouse, the studio shows on hover.
+- A **red dot** means the photo is new: added within the last 14 days.
+- Your **Top 5** is pinned above it. **Drag the rank number** on any tile to reorder the
+  five, or tap **Rank ⤢** for the full ranking board (see
   [Gallery & ranking](03-gallery-and-ranking.md)).
-- The Wall's own bar holds just its name and the **+** add-artist button. Getting
-  around is the navigation's job (see [Moving around](#moving-around)).
-- Just below the Top 5 strip, above the photos, a quiet **Consider** shelf suggests artists matched
-  to the styles you already collect. Open the Instagram profile to judge for yourself,
-  then **+ Add** (the form comes pre-filled) or **Not for me** (never suggested again).
-  **Find more like this** asks AI for a fresh batch — those arrive marked *unverified*
-  until you've looked at the profile. With a Gemini key saved, a **↻ Refresh** control
-  in the shelf header re-runs AI discovery in one tap, skipping everyone you already
-  have or have dismissed.
+- The style filter narrows the Wall too. Add an artist with **+ Add**.
+- A **Consider** shelf suggests artists matched to the styles you already collect. Open
+  the Instagram profile to judge for yourself, then **+ Add** (the form comes pre-filled)
+  or **Not for me** (never suggested again). **Find more like this** asks AI for a fresh
+  batch, marked *unverified* until you have looked. With a Gemini key saved, **↻ Refresh**
+  in the shelf header re-runs discovery in one tap, skipping artists you already have or
+  have dismissed.
 
 ![The Wall on a phone](../public/guide/wall-mobile.png)
 
@@ -90,7 +105,7 @@ The keyboard does the driving:
 
 Outside the viewer, **Esc** closes whatever is on top (the add-artist sheet, the More
 menu, a full-screen photo on an artist's page, the status picker), one layer per press.
-Wall photos, concepts, artist cards, thumbnails, Style Wall tiles and ideas open with **Tab** then **Enter**.
+Wall photos, concepts, artist cards, thumbnails and ideas open with **Tab** then **Enter**.
 
 **On a phone** the photo opens clean, with just **× Close** and the photo count along the
 top and a small **Details** handle at the bottom. Swipe instead of using the arrow keys:
@@ -123,8 +138,8 @@ artist's photos and gets a red *new* dot on the Wall.
 Every page has the same navigation: a bar along the **bottom on a phone**, and the
 same list along the **top on a laptop**.
 
-- **Home** — the Wall and viewer, above.
-- **Artists** — filmstrip, compare, grid and style-wall views, ranking, and Manage mode.
+- **Home** — the start page, above.
+- **Artists** — Wall, filmstrip, compare and grid views, ranking, and Manage mode.
 - **Ideas** — tattoo ideas, with Boards as a tab.
 - **AI** — your generated concepts (see [AI concepts](06-concepts.md)).
 - **More** — everything else, in two groups:
@@ -138,12 +153,11 @@ same list along the **top on a laptop**.
 
 ## The Pipeline page
 
-The old Home dashboard lives on at **More → Pipeline**, titled *Pipeline* (Home is the
-Wall): the Top 5 coverflow,
+The old dashboard lives on at **More → Pipeline**: the Top 5 coverflow,
 the shortlist pipeline (researching → shortlisted → contact next), idea stats, **Nearby soon**
 (guest spots by your artists coming up near Milton Keynes) and idea matches.
 The viewer's `I` panel shows each artist's status in place, so you'll mostly need Pipeline
-when planning outreach.
+when planning outreach. A small **Nearby soon** chip also sits in the Artists heading.
 
 ![The Pipeline page](../public/guide/dashboard.png)
 

@@ -16,7 +16,7 @@ send their selected image or instructions with consent; they are not background 
 Image refinement is covered in [AI concepts](06-concepts.md#refine-an-image).
 Private paid activation remains an [unactivated approval checklist](RELAY-ACTIVATION.md).
 
-![The Wall — Sable's home](../public/guide/wall.png)
+![Home — Sable's start page](../public/guide/home.png)
 
 ---
 
@@ -42,15 +42,16 @@ Use the numbered sections below to learn individual features, the
 
 ## How the app is organised
 
-Sable opens on **the Wall** — every photo from every artist you follow, edge to edge.
+Sable opens on **Home**: your top artists, ideas and concepts, and one suggested next step.
+The **Wall**, in Artists, shows every photo from every artist you follow, edge to edge.
 Click any photo and it fills the screen; from there the keyboard drives everything,
 including generating a concept in that artist's style (`G`). One navigation is on every
 page: a bottom bar on a phone, a top bar on a laptop.
 
 | The bar | | Under More |
 |---|---|---|
-| **Home** — the Wall & full-screen viewer | | **Plan**: **Pipeline** — the shortlist dashboard |
-| **Artists** — four browse views, ranking & Manage | | **Plan**: **Radar** · **Studios** |
+| **Home** — start page and next step | | **Plan**: **Pipeline** — the shortlist dashboard |
+| **Artists** — Wall, filmstrip, compare, grid, ranking & Manage | | **Plan**: **Radar** · **Studios** |
 | **Ideas** — tattoo ideas, with Boards as a tab | | **App**: **Settings** · **Help** |
 | **AI** — generated concepts on their own wall | | |
 
@@ -71,7 +72,7 @@ This index, the numbered guides, architecture/workflow maps and in-app Help desc
 the current code. Dated files under `plans/` and `superpowers/` are historical design
 records, not activation instructions. The shared guide screenshots use fictional data.
 
-1. **[Getting started](01-getting-started.md)** — the Wall, the full-screen viewer, moving around.
+1. **[Getting started](01-getting-started.md)** — Home, the Wall, the full-screen viewer, moving around.
 2. **[Managing artists](02-managing-artists.md)** — add artists, photos, tags, status, notes.
 3. **[Gallery & ranking](03-gallery-and-ranking.md)** — the classic browse views, filtering, and ranking.
 4. **[Ideas & boards](04-brief-and-boards.md)** — capture ideas, link artists, build boards.
@@ -102,7 +103,7 @@ records, not activation instructions. The shared guide screenshots use fictional
 
 The pieces are designed to feed each other:
 
-1. **Find** an artist on Instagram and tap **+ Add artist** on the Wall — paste the handle
+1. **Find** an artist on Instagram and tap **+ Add** on the Artists page — paste the handle
    or URL, tick their styles, drop in a few screenshots. Done in one form.
 2. **Look.** Click a photo, arrow through their work, `↑`/`↓` to drift between artists.
    New photos you add wear a red dot for two weeks.

@@ -7,7 +7,7 @@ do not enable a relay or send paid requests as part of this walkthrough.
 - Start the app:
   - Run `npm run dev`.
   - Open the local URL shown by Vite.
-  - Home is the artwork Wall; open the drawer for **Pipeline**.
+  - Home is the start page and the Wall is in Artists; open the drawer for **Pipeline**.
 
 - Try AI Concepts prompt packs:
   - Go to **AI**.
