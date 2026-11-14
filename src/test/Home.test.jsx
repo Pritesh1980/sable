@@ -71,7 +71,7 @@ describe('Home start page (#220)', () => {
   // seeding on (not the demo build), so it stays hidden: see demoSeed.test.js.
   it('keeps the demo offer hidden on a build that ships the curated seed', () => {
     renderHome({ artists: [] })
-    expect(screen.queryByRole('button', { name: /view the demo/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /view the full demo/i })).toBeNull()
   })
 
   it('introduces the demo on a demo session only', () => {

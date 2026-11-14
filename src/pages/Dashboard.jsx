@@ -2,6 +2,8 @@ import { Link } from 'react-router'
 import Logo from '../components/Logo'
 import TagPill from '../components/TagPill'
 import HowItWorksStrip from '../components/HowItWorksStrip'
+import StartChecklist from '../components/StartChecklist'
+import SampleArtistNotice from '../components/SampleArtistNotice'
 import Top5Hero from '../components/Top5Hero'
 import ArtistImage from '../components/ArtistImage'
 import NearbySoon from '../components/NearbySoon'
@@ -47,6 +49,16 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
         <h1 className="font-display text-5xl text-cream leading-none tracking-tight">Pipeline</h1>
       </div>
 
+      {pipelineEmpty ? (
+        <>
+          <p className="font-body text-sm text-cream-muted leading-relaxed max-w-prose mb-6">
+            Pipeline shows where each saved artist stands. It fills in once you have someone to put in it.
+          </p>
+          <StartChecklist ideas={ideas} setArtists={setArtists} />
+        </>
+      ) : (
+      <>
+      <SampleArtistNotice artists={artists} setArtists={setArtists} className="mb-6" />
       <HowItWorksStrip />
 
       {/* Top 5 — the marquee "who am I prioritising" view, hero of Pipeline */}
@@ -62,18 +74,7 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
       {/* Shortlist pipeline — the artist-first loop at a glance */}
       <div className="mb-2">
         <p className="font-mono text-xs text-cream-muted tracking-widest uppercase mb-3">Shortlist pipeline</p>
-        {pipelineEmpty ? (
-          <div className="bg-ink-card border border-ink-border rounded-xs p-6 text-center">
-            <p className="text-cream-muted/90 text-sm font-body mb-2">No artists in your collection yet.</p>
-            <Link
-              to="/gallery?mode=manage"
-              className="text-accent hover:text-accent-hover font-body text-sm underline underline-offset-4"
-            >
-              Add artists to start your shortlist
-            </Link>
-          </div>
-        ) : (
-          <>
+        <>
             <div className="grid grid-cols-3 gap-2">
               {stages.map(({ status, label, count, artists: stageArtists }) => (
                 <Link
@@ -102,8 +103,7 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
                 {parked > 0 && <>parked (maybe / pass): {parked}</>}
               </p>
             )}
-          </>
-        )}
+        </>
       </div>
 
       {/* Ideas at a glance */}
@@ -208,6 +208,8 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
           </p>
         )}
       </Panel>
+      </>
+      )}
 
     </div>
   )

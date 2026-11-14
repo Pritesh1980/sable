@@ -114,7 +114,7 @@ describe('WallView (#220)', () => {
   it('has no add-artist or demo chrome of its own', () => {
     renderWall()
     expect(screen.queryByRole('button', { name: /add artist/i })).toBeNull()
-    expect(screen.queryByRole('button', { name: /view the demo/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /view the full demo/i })).toBeNull()
   })
 
   describe('drop-zone and paste wiring', () => {

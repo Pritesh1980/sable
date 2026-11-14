@@ -36,6 +36,9 @@ import {
 } from '../data/planning'
 import { itemIdentity } from '../data/undoableRemoval'
 import { activateOnKey } from '../a11y/activate'
+import EmptyState from '../components/EmptyState'
+import ExampleFigure from '../components/ExampleFigure'
+import { resolveAssetPath } from '../data/assetPath'
 import { useFocusOnOpen } from '../hooks/useDialogFocus'
 
 const STATUS_DOTS = {
@@ -74,6 +77,35 @@ function IdeaCard({ idea, onOpen }) {
           {idea.linkedArtists.length} artist{idea.linkedArtists.length !== 1 ? 's' : ''} linked
         </p>
       )}
+    </div>
+  )
+}
+
+// What a filled idea looks like, for the empty page (#220). Same shape as
+// IdeaCard but plain markup: an illustration, never a control. The photo is
+// shipped AI-generated demo artwork.
+function ExampleIdea() {
+  return (
+    <div className="flex gap-3 bg-ink-card rounded-xs p-3">
+      <img
+        src={resolveAssetPath('images/demo/mora.blackfern/fern-v4-thumb.webp')}
+        alt=""
+        width="72"
+        height="108"
+        loading="lazy"
+        className="w-[72px] h-[108px] object-cover rounded-xs shrink-0"
+      />
+      <div className="min-w-0">
+        <p className="font-display text-cream text-lg leading-tight">Botanical forearm study</p>
+        <p className="text-cream-muted text-sm font-body leading-relaxed line-clamp-2 mt-1 mb-2">
+          A fern unfolding along the forearm, with delicate veins and soft shading.
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          <TagPill tag="fine-line" active small />
+          <TagPill tag="forearm" small />
+        </div>
+        <p className="text-cream-muted text-xs font-mono mt-2 tracking-widest">2 artists fit</p>
+      </div>
     </div>
   )
 }
@@ -850,15 +882,19 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
       )}
 
       {filtered.length === 0 && ideas.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-center">
-          <span className="text-5xl mb-4 opacity-10">◇</span>
-          <p className="text-cream-muted/90 font-body text-sm">No ideas yet.</p>
-          <button
+        <div className="max-w-xl">
+          <EmptyState
+            definition="An idea is a tattoo you want: a title, where on the body it goes, the styles it suits and any reference photos. Sable then suggests which of your artists fit it."
             onClick={() => setModal({ idea: BLANK_IDEA, isNew: true })}
-            className="text-accent hover:text-accent-hover font-body text-xs mt-1 underline underline-offset-4"
-          >
-            Capture your first idea — tag it to see matching artists
-          </button>
+            cta="Write your first idea"
+          />
+          <ExampleFigure className="mt-8">
+            <ExampleIdea />
+          </ExampleFigure>
+          <p className="font-mono text-[0.6875rem] text-cream-muted tracking-[0.3em] uppercase mt-8 mb-2">Boards</p>
+          <p className="font-body text-sm text-cream-muted leading-relaxed max-w-prose">
+            A board groups ideas that belong together, such as the pieces of one sleeve, so you can share them with an artist as a single brief.
+          </p>
         </div>
       ) : filtered.length === 0 ? (
         <p className="text-cream-muted/90 text-center text-xs font-mono tracking-widest py-16">No ideas with this status.</p>
