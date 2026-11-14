@@ -20,7 +20,7 @@ export default function DemoIntro() {
   }
 
   return (
-    <div className="border-b border-ink-border bg-ink-card animate-slide-up">
+    <div className="border-b border-ink-border bg-ink-card animate-slide-up motion-reduce:animate-none">
       <div className="relative mx-auto max-w-3xl px-5 py-4 sm:px-8 sm:py-5">
         <button
           onClick={dismiss}

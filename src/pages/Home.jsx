@@ -4,7 +4,7 @@ import { LogoMark } from '../components/Logo'
 import ArtistImage from '../components/ArtistImage'
 import RefImage from '../components/RefImage'
 import DemoIntro from '../components/DemoIntro'
-import { nextStep, topArtists } from '../data/homeNext'
+import { nextStep, topArtists, homeIdeas } from '../data/homeNext'
 import { useAuth } from '../context/useAuth'
 import { backend } from '../backend'
 import { OWNER_SEED_ENABLED } from '../backend/owner'
@@ -80,7 +80,7 @@ function DemoOffer() {
 export default function Home({ artists = [], ideas = [], concepts = [] }) {
   const top = topArtists(artists, 6)
   const next = nextStep({ artists, ideas, concepts })
-  const shownIdeas = ideas.filter((idea) => idea.status !== 'done').slice(0, 3)
+  const shownIdeas = homeIdeas(ideas, 3)
   const shownConcepts = concepts.slice(0, 4)
 
   return (
@@ -149,7 +149,7 @@ export default function Home({ artists = [], ideas = [], concepts = [] }) {
                       alt=""
                       loading={i === 0 ? 'eager' : 'lazy'}
                       sizes={i === 0 ? '(max-width: 768px) 66vw, 500px' : '(max-width: 768px) 33vw, 250px'}
-                      className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
+                      className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500 motion-reduce:transition-none"
                       fallbackClassName="w-full h-full"
                     />
                     <span className="absolute inset-x-0 bottom-0 flex items-baseline gap-2 px-2.5 pt-8 pb-2 bg-gradient-to-t from-black/85 to-transparent">
@@ -192,8 +192,8 @@ export default function Home({ artists = [], ideas = [], concepts = [] }) {
                       </span>
                       <span className="min-w-0">
                         <span className="block font-display text-base text-cream leading-tight truncate group-hover:text-accent transition-colors">{idea.title || 'Untitled idea'}</span>
-                        <span className="block font-mono text-[0.625rem] text-cream-muted/70 tracking-widest uppercase mt-1">
-                          {idea.status === 'booked' ? 'Booked' : idea.linkedArtists?.length > 0 ? `${idea.linkedArtists.length} ${idea.linkedArtists.length === 1 ? 'artist' : 'artists'}` : 'No artist yet'}
+                        <span className="block font-mono text-[0.625rem] text-cream-muted tracking-widest uppercase mt-1">
+                          {idea.status === 'done' ? 'Done' : idea.status === 'booked' ? 'Booked' : idea.linkedArtists?.length > 0 ? `${idea.linkedArtists.length} ${idea.linkedArtists.length === 1 ? 'artist' : 'artists'}` : 'No artist yet'}
                         </span>
                       </span>
                     </Link>

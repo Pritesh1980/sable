@@ -6,7 +6,7 @@ const artistLabel = (artist) => artist?.name || `@${artist?.handle}`
 // Deliberately not the contact pipeline: the owner does not work that way.
 export function nextStep({ artists = [], ideas = [], concepts = [], today = todayIso() } = {}) {
   if (artists.length === 0) {
-    return { kind: 'add-artist', label: 'Add your first artist', detail: 'One photo of their work is enough to start.', to: '/gallery' }
+    return { kind: 'add-artist', label: 'Add your first artist', detail: 'One photo of their work is enough to start.', to: '/gallery?add=1' }
   }
 
   // The only step with a date on it, so it outranks the rest while it lasts.
@@ -42,10 +42,15 @@ export function nextStep({ artists = [], ideas = [], concepts = [], today = toda
   return { kind: 'browse', label: 'Look through your wall', detail: 'Every photo you have saved, in one place.', to: '/gallery' }
 }
 
-// Home shows one photo per artist, so an artist with nothing to show goes last.
+// Strict rank order, photo or not: the tiles are numbered, and a number one
+// shown as sixth reads as a ranking that did not save.
 export function topArtists(artists = [], count = 6) {
-  const byRank = artists.slice().sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity))
-  const withPhoto = byRank.filter((a) => a.images?.length > 0)
-  const without = byRank.filter((a) => !(a.images?.length > 0))
-  return [...withPhoto, ...without].slice(0, count)
+  return artists.slice().sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity)).slice(0, count)
+}
+
+// Open ideas first; finished ones only fill the row when little else is left.
+export function homeIdeas(ideas = [], count = 3) {
+  const open = ideas.filter((idea) => idea.status !== 'done')
+  const done = ideas.filter((idea) => idea.status === 'done')
+  return [...open, ...done].slice(0, count)
 }

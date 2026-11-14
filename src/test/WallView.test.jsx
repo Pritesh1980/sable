@@ -47,6 +47,11 @@ describe('WallView (#220)', () => {
     expect(main().getAllByRole('img')).toHaveLength(3)
   })
 
+  it('says so when a style filter leaves nothing to show', () => {
+    renderWall({ wallArtists: [] })
+    expect(screen.getByText(/no artists match this filter/i)).toBeInTheDocument()
+  })
+
   it('is not a landmark of its own: the Artists page owns <main>', () => {
     renderWall()
     expect(screen.queryByRole('main')).toBeNull()

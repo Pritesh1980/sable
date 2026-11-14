@@ -112,6 +112,13 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
       )}
 
 
+      {/* A style filter can leave nothing to show; say so rather than go blank. */}
+      {items.length === 0 && (
+        <p className="px-6 py-20 text-center font-v2-ui text-sm text-v2-muted">
+          {wallArtists.length === 0 ? 'No artists match this filter.' : 'No photos here yet. Add some from an artist’s page.'}
+        </p>
+      )}
+
       <div className="columns-[300px] gap-[6px] p-[6px]">
         {items.map((item) => (
           <WallPiece

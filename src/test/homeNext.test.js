@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { nextStep, topArtists } from '../data/homeNext'
+import { nextStep, topArtists, homeIdeas } from '../data/homeNext'
 
 const artist = (id, rank, extra = {}) => ({ id, handle: id, name: '', rank, images: [`images/${id}/1.webp`], tags: [], ...extra })
 const idea = (id, extra = {}) => ({ id, title: `Idea ${id}`, linkedArtists: [], images: [], status: 'idea', ...extra })
@@ -8,7 +8,7 @@ const TODAY = '2026-11-14'
 describe('nextStep', () => {
   it('asks for a first artist when the collection is empty', () => {
     expect(nextStep({ artists: [], ideas: [], concepts: [], today: TODAY }))
-      .toMatchObject({ kind: 'add-artist', to: '/gallery' })
+      .toMatchObject({ kind: 'add-artist', to: '/gallery?add=1' })
   })
 
   it('puts a nearby guest spot first: it is the only step with a date on it', () => {
@@ -57,13 +57,16 @@ describe('nextStep', () => {
 })
 
 describe('topArtists', () => {
-  it('orders by rank and prefers artists with a photo to show', () => {
+  it('keeps strict rank order, so a number one with no photo yet still leads', () => {
     const list = [artist('c', 3), artist('bare', 1, { images: [] }), artist('a', 2)]
-    expect(topArtists(list, 2).map((a) => a.id)).toEqual(['a', 'c'])
+    expect(topArtists(list, 2).map((a) => a.id)).toEqual(['bare', 'a'])
   })
+})
 
-  it('fills with photo-less artists rather than showing fewer', () => {
-    const list = [artist('bare', 1, { images: [] }), artist('a', 2)]
-    expect(topArtists(list, 6).map((a) => a.id)).toEqual(['a', 'bare'])
+describe('homeIdeas', () => {
+  it('shows open ideas before finished ones, and never an empty row while ideas exist', () => {
+    const ideas = [idea('d1', { status: 'done' }), idea('o1'), idea('b1', { status: 'booked' })]
+    expect(homeIdeas(ideas).map((i) => i.id)).toEqual(['o1', 'b1', 'd1'])
+    expect(homeIdeas([idea('d1', { status: 'done' })]).map((i) => i.id)).toEqual(['d1'])
   })
 })
