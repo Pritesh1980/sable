@@ -111,6 +111,19 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
         />
       )}
 
+
+      <div className="columns-[300px] gap-[6px] p-[6px]">
+        {items.map((item) => (
+          <WallPiece
+            key={`${item.artistId}-${item.imageIndex}`}
+            item={item}
+            onOpen={handleOpen}
+            onDropImage={addImageToArtist}
+          />
+        ))}
+      </div>
+
+      {/* Suggestions sit under the photos: on a phone they pushed the first one off the screen (#220). */}
       {!viewerOpen && items.length > 0 && (
         <ConsiderShelf
           artists={artists}
@@ -137,17 +150,6 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
           />
         </ConsiderShelf>
       )}
-
-      <div className="columns-[300px] gap-[6px] p-[6px]">
-        {items.map((item) => (
-          <WallPiece
-            key={`${item.artistId}-${item.imageIndex}`}
-            item={item}
-            onOpen={handleOpen}
-            onDropImage={addImageToArtist}
-          />
-        ))}
-      </div>
 
       {viewerOpen && (
         <WallViewer

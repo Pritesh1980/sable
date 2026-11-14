@@ -187,7 +187,7 @@ export default function Home({ artists = [], ideas = [], concepts = [] }) {
                       to={`/brief?idea=${encodeURIComponent(idea.id)}`}
                       className="group flex items-center gap-3 p-2 min-h-16 bg-ink-card border border-ink-border hover:border-accent/50 rounded-xs transition-colors"
                     >
-                      <span className="w-12 h-12 shrink-0 overflow-hidden rounded-xs bg-ink-muted flex items-center justify-center text-cream-muted/40" aria-hidden="true">
+                      <span className="w-12 h-12 shrink-0 overflow-hidden rounded-xs bg-ink-muted flex items-center justify-center text-cream-muted" aria-hidden="true">
                         <RefImage src={idea.images?.[0]} alt="" className="w-full h-full object-cover" fallback="◇" />
                       </span>
                       <span className="min-w-0">
