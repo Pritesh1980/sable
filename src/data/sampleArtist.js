@@ -7,8 +7,11 @@
 // purpose (see assetPath.js): they are stored and synced verbatim.
 
 import { DEMO_ARTWORK } from './demoArtwork'
+import { randomId } from './randomId'
 
-export const SAMPLE_ARTIST_ID = 'sample-artist'
+// Every add gets its own id. A re-added sample is then a new record, so the
+// photo tombstones and in-flight uploads of a removed one cannot reach it.
+export const SAMPLE_ARTIST_PREFIX = 'sample-artist-'
 
 const SAMPLE_SOURCE = 'mora.blackfern'
 
@@ -19,12 +22,12 @@ export function findSampleArtist(artists = []) {
 }
 
 export function addSampleArtist(artists = []) {
-  if (artists.some((a) => isSample(a) || a.id === SAMPLE_ARTIST_ID)) return artists
+  if (artists.some(isSample)) return artists
   const lastRank = artists.reduce((max, a) => Math.max(max, a.rank ?? 0), 0)
   return [
     ...artists,
     {
-      id: SAMPLE_ARTIST_ID,
+      id: SAMPLE_ARTIST_PREFIX + randomId(),
       sample: true,
       handle: SAMPLE_SOURCE,
       name: 'Mora Vane',
@@ -40,5 +43,11 @@ export function addSampleArtist(artists = []) {
 }
 
 export function removeSampleArtists(artists = []) {
-  return artists.some(isSample) ? artists.filter((a) => !isSample(a)) : artists
+  if (!artists.some(isSample)) return artists
+  // Close the gap the sample leaves: rank controls assume 1..n with no holes.
+  const gone = artists.filter(isSample).map((a) => a.rank).filter((r) => r != null)
+  return artists.filter((a) => !isSample(a)).map((a) => {
+    const below = gone.filter((r) => r < a.rank).length
+    return below > 0 ? { ...a, rank: a.rank - below } : a
+  })
 }

@@ -7,7 +7,7 @@ import Concepts from '../pages/Concepts'
 import Dashboard from '../pages/Dashboard'
 import SampleArtistNotice from '../components/SampleArtistNotice'
 import { AuthProvider } from '../context/AuthContext'
-import { addSampleArtist, SAMPLE_ARTIST_ID } from '../data/sampleArtist'
+import { addSampleArtist } from '../data/sampleArtist'
 
 // Group C of #220: an empty page says what the thing is, shows an example of a
 // filled one, and gives one way to start.
@@ -102,7 +102,15 @@ describe('empty pages (#220, group C)', () => {
       const setArtists = vi.fn()
       renderPipeline({ setArtists })
       fireEvent.click(screen.getByRole('button', { name: /add a sample artist/i }))
-      expect(setArtists.mock.calls[0][0]([])[0].id).toBe(SAMPLE_ARTIST_ID)
+      expect(setArtists.mock.calls[0][0]([])[0].sample).toBe(true)
+    })
+
+    it('marks the sample on the pipeline it fills, with the way out', () => {
+      const setArtists = vi.fn()
+      const artists = addSampleArtist([])
+      renderPipeline({ artists, setArtists })
+      fireEvent.click(within(screen.getByRole('note', { name: /sample artist/i })).getByRole('button', { name: /remove sample/i }))
+      expect(setArtists.mock.calls[0][0](artists)).toEqual([])
     })
 
     it('shows the full pipeline once an artist exists', () => {
@@ -119,7 +127,7 @@ describe('empty pages (#220, group C)', () => {
       fireEvent.click(screen.getByRole('button', { name: /add a sample artist/i }))
       const next = setArtists.mock.calls[0][0]([])
       expect(next).toHaveLength(1)
-      expect(next[0]).toMatchObject({ id: SAMPLE_ARTIST_ID, sample: true })
+      expect(next[0]).toMatchObject({ sample: true, name: 'Mora Vane' })
     })
 
     it('is marked on Home while it is in the library, and leaves in one tap', () => {

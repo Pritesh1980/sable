@@ -57,7 +57,7 @@ function DemoOffer() {
       }}
       className="block min-h-11 mt-2 font-mono text-[0.6875rem] text-cream-muted hover:text-accent tracking-widest uppercase transition-colors"
     >
-      Or view the demo →
+      Or sign out and view the full demo →
     </button>
   )
 }

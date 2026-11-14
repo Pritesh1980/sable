@@ -3,6 +3,7 @@ import Logo from '../components/Logo'
 import TagPill from '../components/TagPill'
 import HowItWorksStrip from '../components/HowItWorksStrip'
 import StartChecklist from '../components/StartChecklist'
+import SampleArtistNotice from '../components/SampleArtistNotice'
 import Top5Hero from '../components/Top5Hero'
 import ArtistImage from '../components/ArtistImage'
 import NearbySoon from '../components/NearbySoon'
@@ -57,6 +58,7 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
         </>
       ) : (
       <>
+      <SampleArtistNotice artists={artists} setArtists={setArtists} className="mb-6" />
       <HowItWorksStrip />
 
       {/* Top 5 — the marquee "who am I prioritising" view, hero of Pipeline */}

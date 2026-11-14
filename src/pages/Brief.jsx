@@ -891,7 +891,8 @@ export default function Brief({ ideas, setIdeas, artists, mergedConventions = []
           <ExampleFigure className="mt-8">
             <ExampleIdea />
           </ExampleFigure>
-          <p className="font-body text-sm text-cream-muted leading-relaxed max-w-prose mt-8">
+          <p className="font-mono text-[0.6875rem] text-cream-muted tracking-[0.3em] uppercase mt-8 mb-2">Boards</p>
+          <p className="font-body text-sm text-cream-muted leading-relaxed max-w-prose">
             A board groups ideas that belong together, such as the pieces of one sleeve, so you can share them with an artist as a single brief.
           </p>
         </div>
