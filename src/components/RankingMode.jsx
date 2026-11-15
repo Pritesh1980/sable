@@ -300,7 +300,7 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
             style={{ opacity: labelOpacity }}
           >
             <span
-              className={`font-display text-5xl font-bold border-4 px-5 py-2 rotate-[-12deg] ${
+              className={`font-display text-5xl border-4 px-5 py-2 rotate-[-12deg] ${
                 dragX > 0
                   ? 'text-accent border-accent'
                   : 'text-cream-muted/60 border-cream-muted/40'

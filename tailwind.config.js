@@ -29,10 +29,12 @@ export default {
         'v2-hairline': '#35312b',
       },
       fontFamily: {
-        display: ['"Playfair Display"', 'Georgia', 'serif'],
-        body: ['"DM Sans"', 'system-ui', 'sans-serif'],
-        mono: ['"DM Mono"', 'monospace'],
-        // v2 redesign fonts — namespaced so the legacy `display`/`body` keys are untouched
+        // One pair everywhere (#220 G): Marcellus for display, Archivo for text. The
+        // small uppercase labels that use `font-mono` are Archivo too, so every page matches.
+        display: ['Marcellus', 'serif'],
+        body: ['Archivo', 'sans-serif'],
+        mono: ['Archivo', 'sans-serif'],
+        // v2 names kept: v2-tokens.spec.js asserts them
         'v2-display': ['Marcellus', 'serif'],
         'v2-ui': ['Archivo', 'sans-serif'],
       },
