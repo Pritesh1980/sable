@@ -663,7 +663,7 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
             {draftConcepts.map((c) => (
               <div key={c.id} className="bg-v2-surface border border-v2-hairline rounded-xs p-4">
                 <p className="font-v2-ui text-[0.625rem] tracking-widest uppercase text-v2-muted mb-1">Concept</p>
-                <p className="font-v2-display text-v2-cream text-sm italic mb-3">"{c.prompt}"</p>
+                <p className="font-v2-display text-v2-cream text-sm mb-3">"{c.prompt}"</p>
                 <SavedPromptPack promptPack={c.promptPack} />
                 <ConceptVariantLab
                   concepts={concepts}

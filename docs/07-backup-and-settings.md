@@ -76,8 +76,8 @@ still import; a backup from a *newer* version is refused with a message to updat
 
 ## Appearance
 
-**More → Settings → Appearance** has two switches: **Theme** (Dark / Light) and
-**Text size** (Normal / Large). Both are per-device and don't sync.
+**More → Settings → Appearance** has one switch: **Text size** (Normal / Large). It is
+per-device and doesn't sync. Sable is dark only, so there is no theme switch.
 
 ## When to back up
 

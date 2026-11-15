@@ -36,36 +36,20 @@
 /* rgb(var(--x) / <alpha-value>) opacity modifier syntax to work.          */
 
 :root {
-  /* Dark theme (default) — warm charcoal */
-  --ink-black: 20 18 16;
-  --ink-dark: 26 24 21;
-  --ink-card: 30 28 25;
-  --ink-border: 46 43 38;
+  /* Dark only. Black, card, border, cream and cream-muted are the v2 values
+     (v2-tokens: ink, surface, hairline, cream, muted); a test keeps them equal. */
+  --ink-black: 19 17 16;
+  --ink-dark: 25 22 20;
+  --ink-card: 29 26 23;
+  --ink-border: 53 49 43;
   --ink-muted: 58 54 48;
-  --cream: 240 235 224;
-  --cream-muted: 158 154 142;
+  --cream: 239 233 220;
+  --cream-muted: 168 162 148;
 
-  --bg-html: #141210;
-  --scrollbar-track: #141210;
+  --bg-html: #131110;
+  --scrollbar-track: #131110;
   --scrollbar-thumb: #3a3630;
-  --selection-text: #f0ebe0;
-}
-
-[data-theme='light'] {
-  /* Silver theme */
-  --ink-black: 244 244 246;
-  --ink-dark: 232 232 238;
-  --ink-card: 255 255 255;
-  --ink-border: 209 209 218;
-  --ink-muted: 224 224 230;
-  --cream: 22 22 28;
-  /* Near-black muted — ensures legibility even at reduced opacity on light bg */
-  --cream-muted: 18 18 32;
-
-  --bg-html: #f4f4f6;
-  --scrollbar-track: #f4f4f6;
-  --scrollbar-thumb: #c8c8d4;
-  --selection-text: #16161c;
+  --selection-text: #efe9dc;
 }
 
 /* ── Font size ─────────────────────────────────────────────────────────── */

@@ -317,7 +317,7 @@ describe('layoutBriefCard', () => {
       },
     )
 
-    expect(measuredSpecs.some((spec) => spec.startsWith('600 56px'))).toBe(true)
+    expect(measuredSpecs.some((spec) => spec.startsWith('400 56px'))).toBe(true)
     expect(layout.header.artistTruncated).toBe(true)
     expect(layout.header.artistLine.endsWith('…')).toBe(true)
   })
@@ -545,9 +545,9 @@ describe('brief card review fixes (#198)', () => {
         { title: 'Fonts', images: [] },
         { createCanvas: () => canvas, download: vi.fn(), nav: {} },
       )
-      expect(loaded.some((s) => /600 .*Playfair Display/.test(s))).toBe(true)
-      expect(loaded.some((s) => /DM Sans/.test(s))).toBe(true)
-      expect(loaded.some((s) => /DM Mono/.test(s))).toBe(true)
+      expect(loaded.some((s) => /400 .*Marcellus/.test(s))).toBe(true)
+      expect(loaded.some((s) => /Archivo/.test(s))).toBe(true)
+      expect(loaded.some((s) => /Archivo/.test(s))).toBe(true)
     } finally {
       Object.defineProperty(document, 'fonts', { configurable: true, value: origFonts })
     }

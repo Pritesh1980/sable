@@ -32,7 +32,7 @@ function Choice({ label, value, options, onPick }) {
 
 export default function Settings({ artists, setArtists, ideas, setIdeas, boards, setBoards, concepts, setConcepts, conventionOverrides, setConventionOverrides, onExportBackup }) {
   const auth = useAuth()
-  const { theme, toggle: toggleTheme, fontSize, toggleFont } = useTheme()
+  const { fontSize, toggleFont } = useTheme()
   const onIOS = isIOS()
   const shortcutUrl = onIOS ? getShareShortcutUrl() : ''
 
@@ -123,10 +123,9 @@ export default function Settings({ artists, setArtists, ideas, setIdeas, boards,
       {/* Appearance (#220): these were unlabelled chips at the end of the nav. */}
       <div className="bg-ink-card border border-ink-border rounded-xs p-4">
         <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-3">Appearance</p>
-        <Choice label="Theme" value={theme} onPick={toggleTheme} options={[['dark', 'Dark'], ['light', 'Light']]} />
         <Choice label="Text size" value={fontSize} onPick={toggleFont} options={[['normal', 'Normal'], ['large', 'Large']]} />
         <p className="text-cream-muted/90 text-xs font-body leading-relaxed mt-1">
-          Both are per-device and don't sync.
+          Text size is per-device and doesn't sync.
         </p>
       </div>
     </div>

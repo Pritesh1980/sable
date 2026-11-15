@@ -150,9 +150,9 @@ Seed data lives in `src/data/`, with the artist list in `src/data/artists.js` an
 
 Runtime edits are stored locally in the browser and mirrored to the selected backend:
 
-- `localStorage`: artist metadata, ideas, boards, concepts, theme, font size, convention overrides, convention line-ups and winner boards
+- `localStorage`: artist metadata, ideas, boards, concepts, text size, convention overrides, convention line-ups and winner boards
 - IndexedDB: artist image arrays and blob bytes, the on-device style index, and winner-tattoo photos (bulky, so only an id goes in `localStorage`)
-- Device-local only (never synced): theme, font size, API keys, the style index, convention line-ups and winner boards
+- Device-local only (never synced): text size, API keys, the style index, convention line-ups and winner boards
 
 Use **Settings → Export Backup** before clearing browser data or moving a device-local
 library. The portable JSON embeds canonical saved image bytes, including paid results;

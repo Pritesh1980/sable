@@ -60,7 +60,7 @@ Sable opens on **Home**, a short start page:
 - **AI concepts**: up to four, and **New concept**.
 
 An empty section says what an artist, idea or concept is here and has a button to make
-the first one. Home follows the light or dark theme.
+the first one.
 
 ### Starting from nothing
 
@@ -166,7 +166,7 @@ same list along the **top on a laptop**.
 
 - **Plan** — **Pipeline** (the shortlist dashboard, below), **Radar** (upcoming
   conventions) and **Studios** (where your artists work).
-- **App** — **Settings** (backup, account, theme and text size) and **Help** (this
+- **App** — **Settings** (backup, account and text size) and **Help** (this
   guide, in the app).
 
 ## The Pipeline page

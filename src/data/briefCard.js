@@ -10,9 +10,9 @@ export const BRIEF_CARD_HEIGHT = 1350
 export const MAX_BRIEF_CARD_PHOTOS = 4
 
 export const DEFAULT_BRIEF_FONTS = {
-  display: '"Playfair Display", Georgia, serif',
-  body: '"DM Sans", system-ui, sans-serif',
-  mono: '"DM Mono", monospace',
+  display: 'Marcellus, serif',
+  body: 'Archivo, sans-serif',
+  mono: 'Archivo, sans-serif',
 }
 
 export const BRIEF_CARD_THEME = {
@@ -359,7 +359,7 @@ export function layoutBriefCard(
   const wrappedTitle = wrapTextLines(titleText, {
     maxWidth: contentWidth,
     maxLines: maxTitleLines,
-    measure: (t) => measure(t, titleFontSize, fonts.display, { weight: 600 }),
+    measure: (t) => measure(t, titleFontSize, fonts.display, { weight: 400 }),
   })
   const titleLines = wrappedTitle.lines.length ? wrappedTitle.lines : [defaultTitle]
   const title = {
@@ -367,7 +367,7 @@ export function layoutBriefCard(
     truncated: wrappedTitle.truncated,
     fontSize: titleFontSize,
     lineHeight: titleLineHeight,
-    font: `600 ${titleFontSize}px ${fonts.display}`,
+    font: `400 ${titleFontSize}px ${fonts.display}`,
     box: {
       x: padX,
       y: cursorY,
@@ -778,7 +778,7 @@ async function loadBriefCardFonts(fonts) {
   if (!faces) return
   if (typeof faces.load === 'function') {
     await Promise.allSettled([
-      `600 64px ${fonts.display}`,
+      `400 64px ${fonts.display}`,
       `400 28px ${fonts.body}`,
       `400 20px ${fonts.mono}`,
       `500 20px ${fonts.mono}`,

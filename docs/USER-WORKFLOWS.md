@@ -374,7 +374,7 @@ flowchart TB
   LOSS -- no --> RETURN
 ```
 
-API keys, theme, font size, and the derived Taste Engine index are device-local and are
+API keys, text size, and the derived Taste Engine index are device-local and are
 not restored by account sync. Neither are the composer draft, imported lineups,
 winners boards or winner photos. The index can be rebuilt from images; provider keys
 must be entered separately on each device.

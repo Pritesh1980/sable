@@ -63,21 +63,15 @@ describe('Settings page', () => {
     expect(await screen.findByText('Download requested—check the file was saved.')).toBeInTheDocument()
   })
 
-  // #220: theme and text size are set here, not from unlabelled chips in the nav.
-  it('switches the theme and the text size from Appearance, in words', () => {
+  // #220: text size is set here, not from unlabelled chips in the nav.
+  it('switches the text size from Appearance, in words', () => {
     localStorage.clear()
     renderSettings()
-    fireEvent.click(screen.getByRole('button', { name: 'Light' }))
-    expect(document.documentElement).toHaveAttribute('data-theme', 'light')
-    expect(screen.getByRole('button', { name: 'Light' })).toHaveAttribute('aria-pressed', 'true')
-    fireEvent.click(screen.getByRole('button', { name: 'Dark' }))
-    expect(document.documentElement).toHaveAttribute('data-theme', '')
-
     fireEvent.click(screen.getByRole('button', { name: 'Large' }))
     expect(document.documentElement).toHaveAttribute('data-font', 'large')
     fireEvent.click(screen.getByRole('button', { name: 'Normal' }))
     expect(document.documentElement).toHaveAttribute('data-font', '')
-    expect(screen.getByText(/per-device and don't sync/i)).toBeInTheDocument()
+    expect(screen.getByText(/per-device and doesn't sync/i)).toBeInTheDocument()
   })
 
   it('describes device-only and cloud sign-in restoration separately', () => {
