@@ -189,7 +189,7 @@ Three projects: **iphone** (390×844, `isMobile`, touch; runs almost everything)
 
 | File | Guards |
 |---|---|
-| `layout` | No route or gallery view wider than the screen at 320/375/390/414px; Wall controls do not collide and phone Grid labels wrap within two columns |
+| `layout` | No route or gallery view wider than the screen at 320/375/390/414/440px; Wall controls do not collide and phone Grid labels wrap within two columns |
 | `viewers` | Swipe/tap/close in both viewers; delete + undo; drawers paint above the viewer; Escape peels **one** layer |
 | `stl` | Real canvas → mesh → download for relief, line art (+ mask pixels) and lithophane; WebGL preview |
 | `tryon` | Gemini request shape (key in header, three parts); fake-camera drag + pinch; refused-camera photo fallback |

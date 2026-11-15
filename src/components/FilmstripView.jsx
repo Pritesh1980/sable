@@ -146,11 +146,11 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onNudge, onSetStatus, 
               role="button"
               tabIndex={0}
               aria-label={`Open ${displayName}`}
-              className="shrink-0 w-44 h-44 md:w-52 md:h-52 xl:w-60 xl:h-60 rounded-xs overflow-hidden bg-ink-muted cursor-pointer hover:ring-1 hover:ring-cream-muted/30 transition-all"
+              className="shrink-0 w-[58vw] h-[58vw] md:w-52 md:h-52 xl:w-60 xl:h-60 rounded-xs overflow-hidden bg-ink-muted cursor-pointer hover:ring-1 hover:ring-cream-muted/30 transition-all"
               onClick={() => onOpen(artist)}
               onKeyDown={activateOnKey(() => onOpen(artist))}
             >
-              <ArtistImage src={src} sizes="(min-width: 1280px) 240px, (min-width: 768px) 208px, 176px" label={displayName} className="w-full h-full object-cover" monogramClassName="text-3xl" />
+              <ArtistImage src={src} sizes="(min-width: 1280px) 240px, (min-width: 768px) 208px, 58vw" label={displayName} className="w-full h-full object-cover" monogramClassName="text-3xl" />
             </div>
           ))
         ) : (

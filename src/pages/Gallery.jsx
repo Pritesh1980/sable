@@ -327,9 +327,10 @@ export default function Gallery({ artists, setArtists, ideas = [], mergedConvent
       {/* Page header */}
       {/* #220 E: the title and its two buttons share one row at every width, so
           the Tools menu always opens from the right edge. */}
-      <div className="px-4 pt-10 pb-4">
+      <div className="px-4 pt-5 md:pt-10 pb-4">
         <Logo size={28} className="mb-3 md:hidden" />
-        <p className="font-mono text-xs text-accent tracking-[0.4em] uppercase mb-2">Your Collection</p>
+        {/* Phones show the logo above instead: one line fewer before the photos. */}
+        <p className="hidden md:block font-mono text-xs text-accent tracking-[0.4em] uppercase mb-2">Your Collection</p>
         {/* Wraps under the title at 320px, staying on the right edge. */}
         <div className="flex flex-wrap items-end justify-between gap-3">
           <h1 className="font-display text-5xl text-cream leading-none tracking-tight">Artists</h1>

@@ -19,7 +19,8 @@ const ROUTES = [
   '/help',
 ]
 
-const WIDTHS = [320, 375, 390, 414]
+// 440 is the owner's phone (iPhone 17 Pro Max, 440 x 956).
+const WIDTHS = [320, 375, 390, 414, 440]
 
 test('a returning demo resets to six favourites without resurrecting extra entries', async ({ page }) => {
   await openDemo(page, '/gallery')

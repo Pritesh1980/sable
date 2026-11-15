@@ -143,7 +143,10 @@ describe('Filmstrip rows', () => {
   it('show large photos', () => {
     const row = renderStrip()
     const photo = within(row).getByTestId('filmstrip-photo')
-    expect(photo.className).toMatch(/\bw-44\b/)
+    // Sized from the screen's width, so a bigger phone gets bigger photos:
+    // 255px on a 440px iPhone Pro Max, 226px at 390px.
+    expect(photo.className).toMatch(/w-\[58vw\]/)
+    expect(photo.className).toMatch(/h-\[58vw\]/)
     expect(photo.className).not.toMatch(/\bw-24\b/)
   })
 })
@@ -161,6 +164,9 @@ describe('Compare columns', () => {
     expect(within(column).queryByText('@ana_ink')).toBeNull()
     expect(within(column).queryByText('surrealism')).toBeNull()
     expect(within(column).getByTestId('compare-photos').className).not.toMatch(/grid-cols-2/)
+    // Columns scroll with the page, side by side, not each in its own box.
+    expect(column.innerHTML).not.toMatch(/overflow-y-auto/)
+    expect(column.parentElement.style.height).toBe('')
     expect(within(column).getByRole('button', { name: 'Remove Ana from comparison' })).toBeInTheDocument()
     // The name and every photo open the artist.
     expect(within(column).getAllByRole('button', { name: 'Open Ana' })).toHaveLength(2)
