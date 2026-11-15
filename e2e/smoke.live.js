@@ -34,8 +34,24 @@ test('every route deep-links and renders, with no broken same-origin requests', 
 test('demo artist images load from the deployed base', async ({ page }) => {
   await page.goto('gallery')
   await page.waitForLoadState('networkidle')
-  const images = await page.locator('img[src*="images/demo/"]').evaluateAll((els) =>
-    els.map((img) => ({ src: img.src, loaded: img.complete && img.naturalWidth > 0 })))
+  // The Wall is the default Artists view since #220 and lazy-loads what is below
+  // the fold, so "complete right now" failed images the browser had not asked
+  // for yet. Each one is brought on screen and given the chance to load.
+  const images = await page.locator('img[src*="images/demo/"]').evaluateAll(async (els) => {
+    const results = []
+    for (const img of els) {
+      if (!img.complete) {
+        img.scrollIntoView({ block: 'center' })
+        await new Promise((resolve) => {
+          img.addEventListener('load', resolve, { once: true })
+          img.addEventListener('error', resolve, { once: true })
+          setTimeout(resolve, 10000)
+        })
+      }
+      results.push({ src: img.src, loaded: img.complete && img.naturalWidth > 0 })
+    }
+    return results
+  })
   expect(images.length).toBeGreaterThan(0)
   for (const image of images) expect(image.loaded, image.src).toBe(true)
 })
