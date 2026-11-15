@@ -127,7 +127,7 @@ describe('empty pages (#220, group C)', () => {
       fireEvent.click(screen.getByRole('button', { name: /add a sample artist/i }))
       const next = setArtists.mock.calls[0][0]([])
       expect(next).toHaveLength(1)
-      expect(next[0]).toMatchObject({ sample: true, name: 'Mora Vane' })
+      expect(next[0]).toMatchObject({ sample: true, name: 'Vesper Ash' })
     })
 
     it('is marked on Home while it is in the library, and leaves in one tap', () => {

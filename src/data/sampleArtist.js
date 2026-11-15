@@ -13,7 +13,7 @@ import { randomId } from './randomId'
 // photo tombstones and in-flight uploads of a removed one cannot reach it.
 export const SAMPLE_ARTIST_PREFIX = 'sample-artist-'
 
-const SAMPLE_SOURCE = 'mora.blackfern'
+const SAMPLE_SOURCE = 'vesper_noctis'
 
 const isSample = (artist) => artist?.sample === true
 
@@ -30,9 +30,9 @@ export function addSampleArtist(artists = []) {
       id: SAMPLE_ARTIST_PREFIX + randomId(),
       sample: true,
       handle: SAMPLE_SOURCE,
-      name: 'Mora Vane',
-      tags: ['dark-illustrative', 'fine-line'],
-      styleNote: 'Sample artist, not a real person. Botanical fine-line: fern fronds, magnolia petals and meadow grasses in black and grey.',
+      name: 'Vesper Ash',
+      tags: ['surrealism', 'realism'],
+      styleNote: 'Sample artist, not a real person. Surreal black and grey: an ocean inside an hourglass, fractured marble and stairways into impossible spaces.',
       images: DEMO_ARTWORK.filter((piece) => piece.artistId === SAMPLE_SOURCE).map((piece) => piece.src),
       rank: lastRank + 1,
       status: 'researching',
