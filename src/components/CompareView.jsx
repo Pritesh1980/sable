@@ -3,7 +3,9 @@ import ArtistImage from './ArtistImage'
 import useMediaQuery from '../hooks/useMediaQuery'
 import { activateOnKey } from '../a11y/activate'
 
-// #220 E: a column is a name and one run of large photos. The handle, studio and
+// #220 E: a column is a name and one run of large photos. Columns grow with
+// their photos and the page scrolls them together: each used to scroll inside
+// its own fixed-height box, which on a phone ran under the tab bar. The handle, studio and
 // tag pills that sat on every card are on the artist's own page.
 function CompareColumn({ artist, onOpen, onRemove }) {
   const displayName = artist.name || `@${artist.handle}`
@@ -32,7 +34,7 @@ function CompareColumn({ artist, onOpen, onRemove }) {
       </div>
 
       {/* Scrollable images */}
-      <div className="flex-1 overflow-y-auto p-1.5">
+      <div className="p-1.5">
         {artist.images?.length > 0 ? (
           <div data-testid="compare-photos" className="flex flex-col gap-1.5">
             {artist.images.map((src, i) => (
@@ -141,10 +143,9 @@ export default function CompareView({ artists, onOpenArtist }) {
     <div className="px-4">
       {/* Comparison grid */}
       <div
-        className="grid gap-2 md:gap-3"
+        className="grid items-start gap-2 md:gap-3 pb-6"
         style={{
           gridTemplateColumns: `repeat(${Math.min(selected.length + (selected.length < maxCompare ? 1 : 0), maxCompare)}, minmax(0, 1fr))`,
-          height: 'calc(100vh - 200px)',
         }}
       >
         {selected.map((artist) => (
