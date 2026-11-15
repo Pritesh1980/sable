@@ -26,7 +26,8 @@ describe('Artists page: taste map', () => {
         <Gallery artists={artists} setArtists={vi.fn()} />
       </MemoryRouter>
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Map' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Tools' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Map' }))
     expect(screen.getByTestId('taste-map')).toHaveAttribute('data-count', '2')
 
     fireEvent.click(screen.getByRole('button', { name: 'open second' }))

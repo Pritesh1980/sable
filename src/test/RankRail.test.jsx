@@ -59,7 +59,7 @@ it('renders even when no artist has images', () => {
 it('opens the board', () => {
   const onOpenBoard = vi.fn()
   render(<RankRail artists={artists} setArtists={vi.fn()} onOpenBoard={onOpenBoard} />)
-  fireEvent.click(screen.getByRole('button', { name: /rank ⤢/i }))
+  fireEvent.click(screen.getByRole('button', { name: /reorder top 5/i }))
   expect(onOpenBoard).toHaveBeenCalled()
 })
 

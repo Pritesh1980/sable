@@ -92,7 +92,7 @@ enable cloud sync.
 ## The manage table
 
 Deeper upkeep lives on the classic Artists page — **Artists**, then the
-**Manage** button in the header (or deep-link to `/gallery?mode=manage`). A count of
+**Tools → Manage** in the header (or deep-link to `/gallery?mode=manage`). A count of
 artists and photos sits at the top.
 
 ![Manage mode on the Artists page](../public/guide/manage-list.png)
@@ -126,7 +126,7 @@ link, status and photo count. Type in the **search** box to filter by name or ha
 
 > **Tip:** you can also upload photos and edit tags/status/studio from an artist's full
 > detail card in the [gallery views](03-gallery-and-ranking.md) — whichever is handier.
-> Tap **Manage** again to flip back to the visual views. Backups now live in
+> Tap **Done managing** to flip back to the visual views. Backups now live in
 > [More → Settings](07-backup-and-settings.md).
 
 ---

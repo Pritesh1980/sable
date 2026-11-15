@@ -24,6 +24,7 @@ import ArtistDetail from '../components/ArtistDetail'
 import TasteMap from '../components/TasteMap'
 import ArtistBrowse from '../components/ArtistBrowse'
 import RankingMode from '../components/RankingMode'
+import ToolsMenu from '../components/ToolsMenu'
 import WallView from '../components/WallView'
 import NearbySoon from '../components/NearbySoon'
 import FilmstripView from '../components/FilmstripView'
@@ -96,6 +97,16 @@ export default function Gallery({ artists, setArtists, ideas = [], mergedConvent
   const [searchParams, setSearchParams] = useSearchParams()
   const userId = user?.id
   const [activeTag, setActiveTag] = useState(null)
+  const [filterOpen, setFilterOpen] = useState(false)
+  // Picking a style closes the row: the chip in the bar then shows what is on.
+  const filterBarRef = useRef(null)
+  function pickTag(tag) {
+    setActiveTag(tag)
+    setFilterOpen(false)
+    // The pill that had focus is about to unmount; hand focus to whatever
+    // replaces the row (the chip, or Filter) so a keyboard keeps its place (codex).
+    requestAnimationFrame(() => filterBarRef.current?.querySelector('[data-filter-control]')?.focus())
+  }
   // The open artist lives in the URL (?artist=<id>, #159): the browser's Back
   // closes the detail instead of leaving the gallery, and a detail can be
   // linked. Read from the live list, so the sheet always shows the newest
@@ -314,57 +325,48 @@ export default function Gallery({ artists, setArtists, ideas = [], mergedConvent
   return (
     <main className="min-h-screen bg-ink-black pt-safe-top">
       {/* Page header */}
-      <div className="px-4 pt-10 pb-4 flex flex-wrap items-end justify-between gap-y-4">
-        <div>
-          <Logo size={28} className="mb-3 md:hidden" />
-          <p className="font-mono text-xs text-accent tracking-[0.4em] uppercase mb-2">Your Collection</p>
+      {/* #220 E: the title and its two buttons share one row at every width, so
+          the Tools menu always opens from the right edge. */}
+      <div className="px-4 pt-10 pb-4">
+        <Logo size={28} className="mb-3 md:hidden" />
+        <p className="font-mono text-xs text-accent tracking-[0.4em] uppercase mb-2">Your Collection</p>
+        {/* Wraps under the title at 320px, staying on the right edge. */}
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <h1 className="font-display text-5xl text-cream leading-none tracking-tight">Artists</h1>
-          <GeneratedArtworkNotice images={artists.flatMap((artist) => artist.images || [])} className="mt-3" />
-          {/* A saved artist working near Milton Keynes soon (#183): one chip, nothing when none. */}
-          <NearbySoon artists={artists} compact className="mt-3" />
+          <div className="flex gap-2 shrink-0 ml-auto">
+            {/* Always reachable — one-step onboarding for a new artist */}
+            <button
+              onClick={() => setQuickAdding(true)}
+              className="font-mono text-xs text-accent hover:text-cream border border-accent/40 hover:border-accent px-3 min-h-11 rounded-xs transition-colors tracking-widest uppercase"
+            >
+              + Add
+            </button>
+            {manageMode ? (
+              <button
+                onClick={() => changeManage(false)}
+                disabled={dragActive}
+                className="font-mono text-xs px-3 min-h-11 rounded-xs transition-colors tracking-widest uppercase border text-cream border-accent/50 bg-accent/10 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Done managing
+              </button>
+            ) : (
+              <ToolsMenu
+                disabled={dragActive}
+                tools={[
+                  ...(artistsWithImages.length > 0 ? [
+                    { label: 'Rank', hint: 'Judge each artist in turn: pass, maybe or top', onSelect: () => setRanking(true) },
+                    { label: 'Browse', hint: 'Flip through your artists one at a time', onSelect: () => setBrowsing(true) },
+                    { label: 'Map', hint: 'See your artists laid out by how their work looks', onSelect: () => setMapOpen(true) },
+                  ] : []),
+                  { label: 'Manage', hint: 'Add, edit and remove artists and their photos', onSelect: () => changeManage(true) },
+                ]}
+              />
+            )}
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2 mb-1">
-          {artistsWithImages.length > 0 && !manageMode && (
-            <>
-              <button
-                onClick={() => setRanking(true)}
-                className="font-mono text-xs text-accent hover:text-cream border border-accent/40 hover:border-accent px-3 py-2 rounded-xs transition-colors tracking-widest uppercase"
-              >
-                Rank
-              </button>
-              <button
-                onClick={() => setBrowsing(true)}
-                className="font-mono text-xs text-cream-muted hover:text-cream border border-ink-border hover:border-cream-muted/40 px-3 py-2 rounded-xs transition-colors tracking-widest uppercase"
-              >
-                Browse
-              </button>
-              <button
-                onClick={() => setMapOpen(true)}
-                className="font-mono text-xs text-cream-muted hover:text-cream border border-ink-border hover:border-cream-muted/40 px-3 py-2 rounded-xs transition-colors tracking-widest uppercase"
-              >
-                Map
-              </button>
-            </>
-          )}
-          {/* Always reachable — one-step onboarding for a new artist */}
-          <button
-            onClick={() => setQuickAdding(true)}
-            className="font-mono text-xs text-accent hover:text-cream border border-accent/40 hover:border-accent px-3 min-h-11 rounded-xs transition-colors tracking-widest uppercase"
-          >
-            + Add
-          </button>
-          <button
-            onClick={() => changeManage(!manageMode)}
-            disabled={dragActive}
-            className={`font-mono text-xs px-3 py-2 rounded-xs transition-colors tracking-widest uppercase border disabled:opacity-40 disabled:cursor-not-allowed ${
-              manageMode
-                ? 'text-cream border-accent/50 bg-accent/10'
-                : 'text-cream-muted hover:text-cream border-ink-border hover:border-cream-muted/40'
-            }`}
-          >
-            <span aria-hidden="true">⊞ </span>Manage
-          </button>
-        </div>
+        <GeneratedArtworkNotice images={artists.flatMap((artist) => artist.images || [])} className="mt-3" />
+        {/* A saved artist working near Milton Keynes soon (#183): one chip, nothing when none. */}
+        <NearbySoon artists={artists} compact className="mt-3" />
       </div>
 
       {/* Maintenance mode replaces the browsing views entirely */}
@@ -386,25 +388,79 @@ export default function Gallery({ artists, setArtists, ideas = [], mergedConvent
       {/* Browsing chrome — hidden while managing */}
       {!manageMode && (
       <>
-      {/* Sticky filter bar */}
-      <div className={`sticky top-[var(--nav-top)] z-20 bg-ink-black/80 backdrop-blur-md border-b border-ink-border px-4 py-3 ${viewMode === 'wall' ? '' : 'mb-8'}`}>
-        {/* #77: was three wrapped pill rows + a forced-onto-its-own-line
-            switcher row (171px on a phone, ~23% of the usable viewport).
-            #73 had the switcher claim its own full-width row specifically to
-            stop it crushing the pills into single-file wrapping when they
-            shared a line — but a horizontally-scrolling pill row sidesteps
-            that fight entirely, so both now share one row and the bar is a
-            single ~44pt line regardless of how many style tags exist. */}
-        <div className="flex items-center gap-2">
-          <div className="flex gap-2 overflow-x-auto scrollbar-thin flex-1 min-w-0">
-            {/* #76: minTapHeight grows each pill's own hit box to 44pt — the
-                row is already that tall because of the view switcher beside
-                it (#77), so this is absorbed invisibly rather than growing
-                the bar. */}
+      {/* Sticky view bar. #220 E: the style pills used to fill this row on every
+          view, and the owner never used them. They now open from Filter, and an
+          active filter shows as a chip in the button's place. */}
+      <div className={`sticky top-[var(--nav-top)] z-20 bg-ink-black/80 backdrop-blur-md border-b border-ink-border px-4 py-2 ${viewMode === 'wall' ? '' : 'mb-6'}`}>
+        <div ref={filterBarRef} className="flex items-center gap-2">
+          {/* View toggle: words, not glyphs. Each button is a 44pt target (#73). */}
+          <div className="flex gap-0.5 flex-1 min-w-0 overflow-x-auto scrollbar-thin">
+            {[
+              { mode: 'wall', label: 'Wall', title: 'Wall view' },
+              { mode: 'filmstrip', label: 'Strip', title: 'Filmstrip view' },
+              { mode: 'compare', label: 'Compare', title: 'Compare artists' },
+              { mode: 'grid', label: 'Grid', title: 'Grid view' },
+            ].map(({ mode, label, title }) => (
+              <button
+                key={mode}
+                onClick={() => changeView(mode)}
+                disabled={dragActive}
+                title={title}
+                aria-label={title}
+                aria-pressed={viewMode === mode}
+                // The fill belongs on the 44pt box, so it shows what is
+                // actually tappable (agy review).
+                className={`min-w-11 h-11 px-2 shrink-0 flex items-center justify-center rounded-xs font-mono text-xs transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40 disabled:cursor-not-allowed ${
+                  viewMode === mode ? 'text-cream bg-ink-card' : 'text-cream-muted hover:text-cream'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {activeTag && !filterOpen ? (
+            // Two targets in one chip: the name reopens the styles to pick
+            // another, the cross clears it (agy review).
+            <div className="min-w-0 h-11 flex items-stretch rounded-xs border border-accent/50 bg-accent/10 font-mono text-xs text-cream">
+              <button
+                data-filter-control
+                onClick={() => setFilterOpen(true)}
+                disabled={dragActive}
+                aria-label={`Change filter: ${activeTag}`}
+                className="min-w-0 pl-2.5 pr-1 flex items-center rounded-xs disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <span className="truncate">{activeTag}</span>
+              </button>
+              <button
+                onClick={() => setActiveTag(null)}
+                disabled={dragActive}
+                aria-label={`Clear filter: ${activeTag}`}
+                className="shrink-0 w-9 flex items-center justify-center rounded-xs disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <span aria-hidden="true">×</span>
+              </button>
+            </div>
+          ) : (
+            <button
+              data-filter-control
+              onClick={() => setFilterOpen((v) => !v)}
+              disabled={dragActive}
+              aria-expanded={filterOpen}
+              aria-controls={filterOpen ? 'artist-style-filter' : undefined}
+              className={`shrink-0 h-11 px-2.5 rounded-xs font-mono text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
+                filterOpen ? 'text-cream bg-ink-card' : 'text-cream-muted hover:text-cream'
+              }`}
+            >
+              Filter
+            </button>
+          )}
+        </div>
+        {filterOpen && (
+          <div id="artist-style-filter" className="flex gap-2 overflow-x-auto scrollbar-thin mt-2">
             <TagPill
               tag="All"
               active={!activeTag}
-              onClick={() => setActiveTag(null)}
+              onClick={() => pickTag(null)}
               disabled={dragActive}
               minTapHeight
             />
@@ -413,67 +469,13 @@ export default function Gallery({ artists, setArtists, ideas = [], mergedConvent
                 key={tag}
                 tag={tag}
                 active={activeTag === tag}
-                onClick={() => setActiveTag(activeTag === tag ? null : tag)}
+                onClick={() => pickTag(activeTag === tag ? null : tag)}
                 disabled={dragActive}
                 minTapHeight
               />
             ))}
           </div>
-          {/* View toggle. The button is the 44pt target (#73); the chip inside
-              keeps the size the bar has always had (#51's pattern — grow the
-              hit area, not the look). */}
-          <div className="flex gap-1 shrink-0 ml-2">
-            {[
-              { mode: 'wall', label: '▦', title: 'Wall view' },
-              { mode: 'filmstrip', label: '☰', title: 'Filmstrip view' },
-              { mode: 'compare', label: '⊟', title: 'Compare artists' },
-              { mode: 'grid', label: '⊞', title: 'Grid view' },
-            ].map(({ mode, label, title }) => (
-              <button
-                key={mode}
-                onClick={() => changeView(mode)}
-                disabled={dragActive}
-                title={title}
-                // Not decoration: accessible-name computation prefers element
-                // content over `title`, so without this these announce as
-                // "⊞ button" (codex review).
-                aria-label={title}
-                aria-pressed={viewMode === mode}
-                // The fill belongs on the 44pt box, not on the glyph: a
-                // highlight smaller than the target reads as a badge floating in
-                // an empty square, and stops showing what is actually tappable
-                // (agy review).
-                className={`w-11 h-11 flex items-center justify-center rounded-xs transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40 disabled:cursor-not-allowed ${
-                  viewMode === mode ? 'text-cream bg-ink-card' : 'text-cream-muted/50 hover:text-cream-muted'
-                }`}
-              >
-                <span className="text-[0.8125rem] font-mono">{label}</span>
-              </button>
-            ))}
-            {/* #70: only grid has cards to drag, so the toggle only appears
-                there. A glyph rather than a text label keeps this group
-                narrow, leaving more of the row for the scrollable pills. */}
-            {viewMode === 'grid' && (
-              <button
-                onClick={() => setEditing((v) => !v)}
-                disabled={dragActive}
-                aria-pressed={editing}
-                // Names both jobs: the mode reveals the quick-upload + as well
-                // as the drag handle, and "Reorder" alone does not imply
-                // "add photos" (agy review).
-                aria-label="Reorder and add photos"
-                title={editing ? 'Done — back to browsing' : 'Reorder and add photos'}
-                // Divided off from the view switcher: those four are mutually
-                // exclusive views, this is a toggle on top of one of them.
-                className={`ml-1 w-11 h-11 flex items-center justify-center rounded-xs border-l border-ink-border transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40 disabled:cursor-not-allowed ${
-                  editing ? 'text-cream bg-accent/20' : 'text-cream-muted/50 hover:text-cream-muted'
-                }`}
-              >
-                <span className="text-[0.8125rem] font-mono">⇅</span>
-              </button>
-            )}
-          </div>
-        </div>
+        )}
       </div>
 
       <SampleArtistNotice artists={artists} setArtists={setArtists} className="mx-4 md:mx-8 my-3" />
@@ -504,6 +506,23 @@ export default function Gallery({ artists, setArtists, ideas = [], mergedConvent
         <CompareView artists={artists} onOpenArtist={openArtist} />
       ) : (
         <div className="px-4 max-w-7xl mx-auto">
+          {/* #70: only grid has cards to drag, so the toggle lives with the grid.
+              It was a bare ⇅ in the view bar until #220 E gave it a word. */}
+          <div className="flex justify-end mb-3">
+            <button
+              onClick={() => setEditing((v) => !v)}
+              disabled={dragActive}
+              aria-pressed={editing}
+              // Names both jobs: the mode reveals the quick-upload + as well
+              // as the drag handle (agy review).
+              aria-label="Reorder and add photos"
+              className={`min-w-11 h-11 px-3 rounded-xs border font-mono text-xs transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40 disabled:cursor-not-allowed ${
+                editing ? 'text-cream border-accent/50 bg-accent/10' : 'text-cream-muted hover:text-cream border-ink-border'
+              }`}
+            >
+              <span aria-hidden="true">⇅ </span>{editing ? 'Done reordering' : 'Reorder'}
+            </button>
+          </div>
           <ArtistGrid
             items={sorted}
             sensors={sensors}

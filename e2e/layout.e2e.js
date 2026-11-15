@@ -127,7 +127,7 @@ test.describe('ranking board at 320px with A+', () => {
   test('keeps every artist name readable', async ({ page }) => {
     await openDemo(page, '/gallery', { storage: { tattoo_font: 'large' } })
     await settle(page)
-    await page.getByRole('button', { name: 'Rank ⤢' }).click()
+    await page.getByRole('button', { name: 'Reorder top 5' }).click()
     const board = page.getByRole('dialog', { name: 'Rank artists' })
     await expect(board).toBeVisible()
     const widths = await board.getByTestId('rank-board-row').evaluateAll((rows) => rows.map((row) => {

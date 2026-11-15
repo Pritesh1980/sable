@@ -88,7 +88,7 @@ tiled edge to edge. The work itself is the interface.
 - The artist's name sits on every tile. With a mouse, the studio shows on hover.
 - A **red dot** means the photo is new: added within the last 14 days.
 - Your **Top 5** is pinned above it. **Drag the rank number** on any tile to reorder the
-  five, or tap **Rank ⤢** for the full ranking board (see
+  five, or tap **Reorder top 5** for the full ranking board (see
   [Gallery & ranking](03-gallery-and-ranking.md)).
 - The style filter narrows the Wall too. Add an artist with **+ Add**.
 - A **Consider** shelf suggests artists matched to the styles you already collect. Open

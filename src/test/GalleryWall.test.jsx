@@ -49,6 +49,7 @@ describe('Artists page wall (#220)', () => {
 
   it('a style filter narrows the wall', () => {
     renderGallery()
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }))
     fireEvent.click(screen.getByRole('button', { name: 'realism' }))
     expect(pieces()).toHaveLength(1)
     expect(pieces()[0]).toHaveAccessibleName('Open Carl')

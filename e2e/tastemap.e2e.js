@@ -48,7 +48,8 @@ test('maps every indexed artist, marks your taste, and taps through to an artist
   await openDemo(page, '/')
   await seedStyleIndex(page)
   await page.goto('/gallery')
-  await page.getByRole('button', { name: 'Map' }).tap()
+  await page.getByRole('button', { name: 'Tools' }).tap()
+  await page.getByRole('menuitem', { name: 'Map' }).tap()
 
   const map = page.getByRole('dialog', { name: 'Taste map' })
   await expect(map).toBeVisible()
@@ -86,7 +87,8 @@ test('maps every indexed artist, marks your taste, and taps through to an artist
 
 test('without an index it offers to build one instead of an empty map', async ({ page }) => {
   await openDemo(page, '/gallery')
-  await page.getByRole('button', { name: 'Map' }).tap()
+  await page.getByRole('button', { name: 'Tools' }).tap()
+  await page.getByRole('menuitem', { name: 'Map' }).tap()
   const map = page.getByRole('dialog', { name: 'Taste map' })
   await expect(map.getByRole('button', { name: 'Build style index' })).toBeVisible()
   await expect(map.getByRole('button', { name: / — / })).toHaveCount(0)
