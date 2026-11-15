@@ -72,7 +72,7 @@ Every empty page says what it holds and gives one way to start:
 - **Pipeline** shows three steps instead of its panels: add an artist, put them in
   order, write an idea. Only the current step has a button.
 - **Add a sample artist** (empty Home, Artists and Pipeline) saves one invented artist,
-  Mora Vane, with three AI-generated photos, so you can try the wall, the viewer and
+  Vesper Ash, with three AI-generated photos, so you can try the wall, the viewer and
   ranking. It is a normal artist record and syncs like one. A note on Home and Artists
   marks it, and **Remove sample** takes it out in one tap.
 
