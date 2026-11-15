@@ -262,8 +262,10 @@ tap **Save as variant** (**Add to references** from an idea) to keep the clean d
     places the ink on top of the silhouette base.
   - **Export format:** **Two-colour 3MF** bundles aligned `base` and `ink` objects in one
     `.3mf` file for dual-extruder slicers such as Cura; **Split STLs** saves `base.stl` and
-    `ink.stl` separately; **Single-extruder STL** merges the raised plate and shows the
-    exact Cura *Pause at height* layer height (`2.4mm` by default) for a manual filament swap.
+    `ink.stl` separately (select both in Cura and choose **Merge Models** so they snap to
+    their shared origin); **Single-extruder STL** merges the raised plate and shows the
+    exact Cura *Pause at height* layer height (`2.4mm` by default, the first ink layer) for
+    a manual filament swap.
   - *Personal keepsakes of your own ink only — please don't share or sell prints of an artist's design.*
 
 Tick **Add a border** in Relief, Line art or Lithophane for a 3mm full-height frame round

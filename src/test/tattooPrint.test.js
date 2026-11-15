@@ -178,6 +178,41 @@ describe('tattoo silhouette & two-tone print geometry', () => {
     expect(mask.baseMask[0]).toBe(0)
   })
 
+  it('thickens sub-minStrokeMm 1px strokes without bloating solid fills, and memoizes mask calls', () => {
+    // 256x64 image spanning x=20..201: ~0.41mm/px at 80mm, so minStrokeMm=0.45 requires >=2px strokes.
+    const heightmap = makeGrid(256, 64, (x, y) => {
+      if (x === 20 && y >= 16 && y <= 47) return 0
+      if (x >= 190 && x <= 201 && y >= 24 && y <= 35) return 0
+      return 1
+    })
+
+    const settings = { widthMm: 80, minStrokeMm: 0.45, marginMm: 3, minIslandMm2: 0 }
+    const mask = prepareTattooPrintMask(heightmap, settings)
+    expect(mask.hasInk).toBe(true)
+
+    // Middle row contains both the thickened vertical line and the unchanged 12x12 square.
+    const midY = Math.floor(mask.height / 2)
+    const runs = []
+    let runStart = -1
+    for (let x = 0; x < mask.width; x += 1) {
+      const ink = mask.inkMask[midY * mask.width + x] === 1
+      if (ink && runStart === -1) runStart = x
+      if (!ink && runStart !== -1) {
+        runs.push(x - runStart)
+        runStart = -1
+      }
+    }
+    if (runStart !== -1) runs.push(mask.width - runStart)
+
+    expect(runs).toHaveLength(2)
+    expect(runs[0]).toBeGreaterThanOrEqual(2)
+    expect(runs[0] * mask.pxMm).toBeGreaterThanOrEqual(0.45)
+    expect(runs[1]).toBe(12)
+
+    // Repeated calls for the same heightmap + settings hit the WeakMap cache.
+    expect(prepareTattooPrintMask(heightmap, settings)).toBe(mask)
+  })
+
   it('closes sub-minStrokeMm gaps so narrow slivers do not vanish or fail extrusion', () => {
     // High-res vertical stripe with a 1-pixel white hairline slit down its middle at 120mm (~0.3mm slit < 0.45mm).
     const heightmap = makeGrid(200, 60, (x, y) => {
@@ -274,6 +309,7 @@ describe('tattoo silhouette & two-tone print geometry', () => {
     const built = buildTattooPrintMeshes(blank, { finish: 'inlay', widthMm: 80, baseMm: 3, maxReliefMm: 0.6 })
     assertClosedOutwardManifold(built.baseMesh)
     expect(built.inkMesh.faces).toHaveLength(0)
+    expect(built.mask.hasInk).toBe(false)
     const threeMf = serializeTwoPart3mf({ baseMesh: built.baseMesh, inkMesh: built.inkMesh, name: 'Blank' })
     const entries = readZipEntries(threeMf)
     expect(entries.get('3D/3dmodel.model')).toContain('name="base"')
@@ -305,7 +341,8 @@ describe('two-object 3MF & split STL packaging', () => {
     expect(modelXml).toContain('<metadata name="Title">Raven Ink</metadata>')
     expect(modelXml).toContain('<object id="2" name="base" type="model"')
     expect(modelXml).toContain('<object id="3" name="ink" type="model"')
-    expect(modelXml).toContain('<build><item objectid="2" /><item objectid="3" /></build>')
+    expect(modelXml).toContain('<object id="4" name="Raven Ink" type="model"><components><component objectid="2" /><component objectid="3" /></components></object>')
+    expect(modelXml).toContain('<build><item objectid="4" /></build>')
 
     // Split STLs from the same two meshes are well-formed binary STLs.
     const baseStl = serializeBinaryStl(built.baseMesh, 'raven_base')

@@ -455,5 +455,45 @@ describe('ReliefStlDrawer', () => {
       expect(screen.getByText('Ink depth must leave at least 0.4mm of backing plate.')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Download 2-colour 3MF' })).toBeDisabled()
     })
+
+    it('resets thin lithophane base when switching from lithophane to Print this tattoo', async () => {
+      render(<ReliefStlDrawer source={source} onClose={() => {}} />)
+      fireEvent.load(screen.getByRole('img', { name: 'Raven Chest STL source' }))
+
+      fireEvent.change(screen.getByLabelText('Style'), { target: { value: 'lithophane' } })
+      expect(screen.getByLabelText('Base thickness in millimetres')).toHaveValue(0.8)
+
+      fireEvent.change(screen.getByLabelText('Style'), { target: { value: 'tattoo' } })
+      expect(screen.getByLabelText('Plate thickness in millimetres')).toHaveValue(3)
+      expect(screen.getByLabelText('Ink depth in millimetres')).toHaveValue(0.6)
+      expect(screen.queryByText(/plate thickness must be|backing plate/i)).not.toBeInTheDocument()
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Download 2-colour 3MF' })).toBeEnabled())
+    })
+
+    it('discards a stale in-flight Gemini lift when the user picks another image mid-lift', async () => {
+      let resolveLift
+      liftTattooWithGemini.mockImplementationOnce(() => new Promise((r) => { resolveLift = r }))
+      photo.load.mockResolvedValueOnce('data:image/png;base64,second-photo')
+
+      render(<ReliefStlDrawer source={source} apiKey="SECRET" onClose={() => {}} />)
+      fireEvent.load(screen.getByRole('img', { name: 'Raven Chest STL source' }))
+
+      fireEvent.click(screen.getByRole('button', { name: 'Lift the tattoo' }))
+      await waitFor(() => expect(liftTattooWithGemini).toHaveBeenCalledTimes(1))
+
+      const file = new File(['png-bytes'], 'Second.png', { type: 'image/png' })
+      fireEvent.change(screen.getByLabelText('Use another image'), { target: { files: [file] } })
+
+      const secondImg = await screen.findByAltText('Second STL source')
+      fireEvent.load(secondImg)
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Download STL' })).toBeEnabled())
+
+      resolveLift('data:image/png;base64,stale-lifted')
+      await Promise.resolve()
+
+      expect(screen.getByAltText('Second STL source')).toHaveAttribute('src', 'data:image/png;base64,second-photo')
+      expect(screen.queryByRole('button', { name: 'Lifted design' })).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Download STL' })).toBeEnabled()
+    })
   })
 })

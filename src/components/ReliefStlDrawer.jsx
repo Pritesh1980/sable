@@ -106,7 +106,6 @@ function validateSettings(settings) {
 }
 
 function shouldShrinkDataUrl(dataUrl) {
-  if (typeof navigator !== 'undefined' && /jsdom/i.test(navigator.userAgent || '')) return false
   return typeof dataUrl === 'string' && dataUrl.length > 300_000
 }
 
@@ -134,7 +133,23 @@ function imageElementToDataUrl(image, maxSide = LIFT_MAX_SIDE) {
 function applyTattooDefaults(current) {
   const next = { ...current, mode: 'tattoo', invert: false }
   for (const [field, preset] of Object.entries(TATTOO_DEFAULTS)) {
-    if (current[field] === DEFAULT_DRAWER_SETTINGS[field]) next[field] = preset
+    if (
+      current[field] === DEFAULT_DRAWER_SETTINGS[field]
+      || current[field] === LINEART_DEFAULTS[field]
+      || current[field] === LITHOPHANE_DEFAULTS[field]
+    ) {
+      next[field] = preset
+    }
+  }
+  if (!Number.isFinite(Number(next.baseMm)) || Number(next.baseMm) < 1.2) {
+    next.baseMm = TATTOO_DEFAULTS.baseMm
+  }
+  if (
+    !Number.isFinite(Number(next.maxReliefMm))
+    || Number(next.maxReliefMm) < 0.2
+    || Number(next.maxReliefMm) > Number(next.baseMm) - 0.4 + 1e-6
+  ) {
+    next.maxReliefMm = TATTOO_DEFAULTS.maxReliefMm
   }
   return next
 }
@@ -160,6 +175,11 @@ function ReliefStlDrawerContent({ source, apiKey, onSave, saveLabel, onClose }) 
   // alone can't key the preview's heightmap; the src that loaded can.
   const [loadedSrc, setLoadedSrc] = useState('')
   const photoPickRef = useRef(0)
+  const liftGenRef = useRef(0)
+
+  useEffect(() => {
+    liftGenRef.current += 1
+  }, [source?.imageUrl])
 
   const resolvedApiKey = (
     apiKey !== undefined
@@ -260,6 +280,7 @@ function ReliefStlDrawerContent({ source, apiKey, onSave, saveLabel, onClose }) 
         depthMm: Number(mask.depthMm.toFixed(1)),
         heightMm: Number(reliefSettings.baseMm.toFixed(1)),
         pauseAtHeightMm: pauseMm,
+        hasInk: mask.hasInk !== false,
       }
     } catch {
       return null
@@ -303,9 +324,11 @@ function ReliefStlDrawerContent({ source, apiKey, onSave, saveLabel, onClose }) 
     event.target.value = ''
     if (!file) return
     // Nothing downloadable until the new photo has loaded, and only the most
-    // recent pick may land.
+    // recent pick may land; any in-flight Gemini lift for the previous photo is stale.
     const pick = photoPickRef.current + 1
     photoPickRef.current = pick
+    liftGenRef.current += 1
+    setLifting(false)
     setImageElement(null)
     setLoadedSrc('')
     setLifted(null)
@@ -363,20 +386,25 @@ function ReliefStlDrawerContent({ source, apiKey, onSave, saveLabel, onClose }) 
   async function handleLiftTattoo() {
     if (!resolvedApiKey || lifting || (!showingLifted && !imageElement)) return
     const targetRef = rawSourceRef
+    const liftGen = liftGenRef.current + 1
+    liftGenRef.current = liftGen
     setLifting(true)
     setError('')
     try {
       const photoDataUrl = await resolveOriginalPhotoDataUrl()
+      if (liftGenRef.current !== liftGen) return
       const resultUrl = await liftTattooWithGemini(resolvedApiKey, { photoDataUrl })
+      if (liftGenRef.current !== liftGen) return
       setImageElement(null)
       setLoadedSrc('')
       setLifted({ url: resultUrl, fromRef: targetRef, saved: false })
       setUseLifted(true)
       setSettings((current) => (current.mode === 'tattoo' ? current : applyTattooDefaults(current)))
     } catch (liftError) {
+      if (liftGenRef.current !== liftGen) return
       setError(liftError.message || 'Could not lift the tattoo design from this photo.')
     } finally {
-      setLifting(false)
+      if (liftGenRef.current === liftGen) setLifting(false)
     }
   }
 
@@ -425,7 +453,7 @@ function ReliefStlDrawerContent({ source, apiKey, onSave, saveLabel, onClose }) 
     if (downloadDisabled) return
 
     try {
-      const heightmap = imageToHeightmap(imageElement, settings.detail)
+      const heightmap = activeHeightmap.heightmap || imageToHeightmap(imageElement, settings.detail)
       if (reliefSettings.mode === 'tattoo') {
         const built = buildTattooPrintMeshes(heightmap, reliefSettings)
         if (reliefSettings.exportFormat === 'split-stl') {
@@ -855,6 +883,11 @@ function ReliefStlDrawerContent({ source, apiKey, onSave, saveLabel, onClose }) 
 
             {settings.mode === 'tattoo' && (
               <div className="space-y-1.5 rounded-xs border border-ink-border bg-ink-black/20 px-3 py-2.5 text-xs text-cream-muted">
+                {tattooMetrics && !tattooMetrics.hasInk && (
+                  <p className="text-accent">
+                    No ink detected at this threshold — raise the ink threshold or tick Light ink on dark ground.
+                  </p>
+                )}
                 {tattooMetrics && (
                   <p className="font-mono text-[0.6875rem] text-cream">
                     Silhouette: {tattooMetrics.widthMm} × {tattooMetrics.depthMm} × {tattooMetrics.heightMm} mm
@@ -862,7 +895,7 @@ function ReliefStlDrawerContent({ source, apiKey, onSave, saveLabel, onClose }) 
                 )}
                 {settings.exportFormat === 'merged-stl' ? (
                   <p>
-                    Single extruder: pause at height {tattooMetrics ? tattooMetrics.pauseAtHeightMm : Number((validation.baseMm - validation.maxReliefMm).toFixed(2))} mm in Cura to swap filament.
+                    Single extruder: pause at height {tattooMetrics ? tattooMetrics.pauseAtHeightMm : Number((validation.baseMm - validation.maxReliefMm).toFixed(2))} mm (first ink layer) in Cura to swap filament.
                   </p>
                 ) : settings.finish === 'inlay' ? (
                   <p>

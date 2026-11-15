@@ -18,6 +18,7 @@ export const DEFAULT_TATTOO_PRINT_SETTINGS = {
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 const finite = (value, fallback) => (Number.isFinite(value) ? value : fallback)
+const MASK_CACHE = new WeakMap()
 
 export function buildLiftTattooPrompt() {
   return [
@@ -202,27 +203,82 @@ function removeTinyIslands(mask, width, height, minAreaPx) {
   return cleaned
 }
 
+function buildStrokeDiskOffsets(diameterPx) {
+  const offsets = []
+  if (diameterPx % 2 === 0) {
+    const r = diameterPx / 2
+    const rSq = r * r + 1e-6
+    for (let dy = -(r - 1); dy <= r; dy += 1) {
+      for (let dx = -(r - 1); dx <= r; dx += 1) {
+        if ((dx - 0.5) * (dx - 0.5) + (dy - 0.5) * (dy - 0.5) <= rSq) {
+          offsets.push([dx, dy])
+        }
+      }
+    }
+  } else {
+    const r = (diameterPx - 1) / 2
+    const rSq = r * r + 1e-6
+    for (let dy = -r; dy <= r; dy += 1) {
+      for (let dx = -r; dx <= r; dx += 1) {
+        if (dx * dx + dy * dy <= rSq) {
+          offsets.push([dx, dy])
+        }
+      }
+    }
+  }
+  return offsets
+}
+
 function enforceMinimumInkAndGaps(mask, width, height, pxMm, minStrokeMm) {
   if (minStrokeMm <= 0 || pxMm <= 0) return new Uint8Array(mask)
   let current = new Uint8Array(mask)
 
-  // If a pixel is narrower than minStrokeMm, dilate thin strokes radially.
-  if (minStrokeMm > pxMm) {
-    const strokeRadiusPx = ((minStrokeMm / pxMm) - 1) * 0.5
-    if (strokeRadiusPx > 0.05) {
-      const distSq = edt2dSq(current, width, height, 1)
-      const rSq = strokeRadiusPx * strokeRadiusPx + 1e-6
-      const dilated = new Uint8Array(width * height)
-      for (let i = 0; i < dilated.length; i += 1) {
-        dilated[i] = distSq[i] <= rSq ? 1 : 0
+  // Quantize conservatively so 1-px features thinner than minStrokeMm expand
+  // onto discrete pixels without growing solid fills wider than needed.
+  const minStrokePx = Math.ceil(minStrokeMm / pxMm - 1e-6)
+  if (minStrokePx >= 2) {
+    const kernel = buildStrokeDiskOffsets(minStrokePx)
+    const opened = new Uint8Array(width * height)
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        if (current[y * width + x] !== 1) continue
+        let fits = true
+        for (let k = 0; k < kernel.length; k += 1) {
+          const nx = x + kernel[k][0]
+          const ny = y + kernel[k][1]
+          if (nx < 0 || nx >= width || ny < 0 || ny >= height || current[ny * width + nx] !== 1) {
+            fits = false
+            break
+          }
+        }
+        if (fits) {
+          for (let k = 0; k < kernel.length; k += 1) {
+            opened[(y + kernel[k][1]) * width + (x + kernel[k][0])] = 1
+          }
+        }
       }
-      current = dilated
     }
+
+    const dilated = new Uint8Array(current)
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const idx = y * width + x
+        if (current[idx] !== 1 || opened[idx] === 1) continue
+        for (let k = 0; k < kernel.length; k += 1) {
+          const nx = x + kernel[k][0]
+          const ny = y + kernel[k][1]
+          if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+            dilated[ny * width + nx] = 1
+          }
+        }
+      }
+    }
+    current = dilated
   }
 
   // Fill sub-minStrokeMm gaps so narrow slivers that cannot take base filament
   // close cleanly instead of creating unprintable needles.
-  const maxGapPx = Math.floor(minStrokeMm / pxMm - 1e-6)
+  const maxGapPx = Math.max(0, minStrokePx - 1)
   if (maxGapPx >= 1) {
     const closed = new Uint8Array(current)
     for (let y = 0; y < height; y += 1) {
@@ -246,6 +302,17 @@ function enforceMinimumInkAndGaps(mask, width, height, pxMm, minStrokeMm) {
             for (let gy = lastInk + 1; gy < y; gy += 1) closed[gy * width + x] = 1
           }
           lastInk = y
+        }
+      }
+    }
+    for (let y = 0; y < height - 2; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        if (current[y * width + x] !== 1) continue
+        if (x + 2 < width && current[(y + 2) * width + (x + 2)] === 1 && current[(y + 1) * width + (x + 1)] === 0) {
+          closed[(y + 1) * width + (x + 1)] = 1
+        }
+        if (x >= 2 && current[(y + 2) * width + (x - 2)] === 1 && current[(y + 1) * width + (x - 1)] === 0) {
+          closed[(y + 1) * width + (x - 1)] = 1
         }
       }
     }
@@ -413,9 +480,24 @@ function mirrorHorizontal(mask, width, height) {
   return flipped
 }
 
+function cacheMaskResult(heightmap, settingsKey, result) {
+  let map = MASK_CACHE.get(heightmap)
+  if (!map) {
+    map = new Map()
+    MASK_CACHE.set(heightmap, map)
+  }
+  if (map.size > 16) map.clear()
+  map.set(settingsKey, result)
+  return result
+}
+
 export function prepareTattooPrintMask(heightmap, rawSettings = {}) {
   validateHeightmap(heightmap)
   const settings = normalizeTattooPrintSettings(rawSettings)
+  const settingsKey = JSON.stringify(settings)
+  const cached = MASK_CACHE.get(heightmap)?.get(settingsKey)
+  if (cached) return cached
+
   const { width, height, values } = heightmap
 
   const rawInk = new Uint8Array(width * height)
@@ -434,38 +516,33 @@ export function prepareTattooPrintMask(heightmap, rawSettings = {}) {
   if (!bbox) {
     // Fallback on a completely blank image: produce a small centered placeholder plate
     // with zero ink so export never crashes on degenerate inputs.
-    const cx = Math.floor(width / 2)
-    const cy = Math.floor(height / 2)
-    const baseFallback = new Uint8Array(width * height)
     const rx = Math.max(1, Math.floor(width * 0.25))
     const ry = Math.max(1, Math.floor(height * 0.25))
-    for (let y = Math.max(0, cy - ry); y <= Math.min(height - 1, cy + ry); y += 1) {
-      for (let x = Math.max(0, cx - rx); x <= Math.min(width - 1, cx + rx); x += 1) {
-        baseFallback[y * width + x] = 1
-      }
-    }
     const cropW = Math.min(width, rx * 2 + 1)
     const cropH = Math.min(height, ry * 2 + 1)
     const inkOut = new Uint8Array(cropW * cropH)
     const baseOut = new Uint8Array(cropW * cropH).fill(1)
     const pxMm = settings.widthMm / cropW
-    return {
+    return cacheMaskResult(heightmap, settingsKey, {
       width: cropW,
       height: cropH,
       inkMask: inkOut,
       baseMask: baseOut,
+      hasInk: false,
       pxMm,
       widthMm: cropW * pxMm,
       depthMm: cropH * pxMm,
       settings,
-    }
+    })
   }
 
   // Estimate pixel pitch based on how wide the finished silhouette will be.
   const inkSpanX = Math.max(1, bbox.maxX - bbox.minX + 1)
-  const designWidthMm = Math.max(10, settings.widthMm - 2 * settings.marginMm)
-  const estPxMm = Math.max(settings.widthMm / width, designWidthMm / inkSpanX)
+  const effectiveMarginMm = Math.min(settings.marginMm, settings.widthMm * 0.35)
+  const designWidthMm = Math.max(4, settings.widthMm - 2 * effectiveMarginMm)
+  const estPxMm = designWidthMm / inkSpanX
   const marginPx = Math.max(2, Math.ceil(settings.marginMm / estPxMm))
+  const strokePxMm = Math.max(estPxMm, settings.widthMm / Math.max(1, inkSpanX + 2 * marginPx))
 
   // Pad around the source bounds by marginPx + 1 so the 3 mm silhouette never clips
   // against the edges of the input image.
@@ -483,7 +560,7 @@ export function prepareTattooPrintMask(heightmap, rawSettings = {}) {
     ? Math.max(1, Math.floor(settings.minIslandMm2 / (estPxMm * estPxMm)))
     : 1
   const cleanInk = removeTinyIslands(paddedInk, padW, padH, minIslandPx)
-  const printableInk = enforceMinimumInkAndGaps(cleanInk, padW, padH, estPxMm, settings.minStrokeMm)
+  const printableInk = enforceMinimumInkAndGaps(cleanInk, padW, padH, strokePxMm, settings.minStrokeMm)
 
   // Cut base plate to silhouette + marginMm and fill interior holes.
   const inkDistSq = edt2dSq(printableInk, padW, padH, 1)
@@ -500,26 +577,29 @@ export function prepareTattooPrintMask(heightmap, rawSettings = {}) {
   const cropH = baseBbox.maxY - baseBbox.minY + 1
   const inkMask = new Uint8Array(cropW * cropH)
   const baseMask = new Uint8Array(cropW * cropH)
+  let hasInk = false
   for (let y = 0; y < cropH; y += 1) {
     for (let x = 0; x < cropW; x += 1) {
       const srcIdx = (baseBbox.minY + y) * padW + (baseBbox.minX + x)
       const dstIdx = y * cropW + x
       inkMask[dstIdx] = normalized.inkMask[srcIdx]
       baseMask[dstIdx] = normalized.baseMask[srcIdx]
+      if (inkMask[dstIdx] === 1) hasInk = true
     }
   }
 
   const pxMm = settings.widthMm / cropW
-  return {
+  return cacheMaskResult(heightmap, settingsKey, {
     width: cropW,
     height: cropH,
     inkMask,
     baseMask,
+    hasInk,
     pxMm,
     widthMm: settings.widthMm,
     depthMm: cropH * pxMm,
     settings,
-  }
+  })
 }
 
 // Builds a closed, watertight 3D triangle mesh from S stacked 2D voxel slabs
@@ -829,12 +909,22 @@ export function serializeTwoPart3mf({ baseMesh, inkMesh, name = 'tattoo_print' }
 
   const objects = []
   const items = []
-  if (baseMesh?.faces?.length) {
+  const hasBase = Boolean(baseMesh?.faces?.length)
+  const hasInk = Boolean(inkMesh?.faces?.length)
+  if (hasBase) {
     objects.push(serialize3mfObject(2, 'base', 0, baseMesh))
-    items.push('<item objectid="2" />')
   }
-  if (inkMesh?.faces?.length) {
+  if (hasInk) {
     objects.push(serialize3mfObject(3, 'ink', 1, inkMesh))
+  }
+  if (hasBase && hasInk) {
+    objects.push(
+      `<object id="4" name="${escapeXml(cleanName)}" type="model"><components><component objectid="2" /><component objectid="3" /></components></object>`,
+    )
+    items.push('<item objectid="4" />')
+  } else if (hasBase) {
+    items.push('<item objectid="2" />')
+  } else if (hasInk) {
     items.push('<item objectid="3" />')
   }
 
