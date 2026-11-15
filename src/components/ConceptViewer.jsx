@@ -282,7 +282,7 @@ export default function ConceptViewer({
         style={touch ? { touchAction: zoomed ? 'auto' : 'pinch-zoom' } : undefined}
         {...(touch ? gestures : {})}
       >
-        {/* t9: WebGL crossfade/ripple chosen once per open; 'css' keeps <img>. */}
+        {/* t9: WebGL crossfade chosen once per open; 'css' keeps <img>. No rippleKey: plain fade. */}
         {transitionMode === 'webgl' ? (
           <div className="absolute inset-0">
             <GlCrossfade

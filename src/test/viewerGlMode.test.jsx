@@ -8,7 +8,7 @@ import { resolveTransitionMode } from '../lib/gl'
 // viewer renders. The mode gate itself (resolveTransitionMode) is unit-tested
 // in gl.spec.js; here we only assert the wiring picks the right stage.
 vi.mock('../components/GlCrossfade', () => ({
-  default: ({ src }) => <div data-testid="gl-crossfade" data-src={typeof src === 'string' ? src : JSON.stringify(src)} />,
+  default: ({ src, rippleKey }) => <div data-testid="gl-crossfade" data-ripple-key={rippleKey ?? ''} data-src={typeof src === 'string' ? src : JSON.stringify(src)} />,
 }))
 
 vi.mock('../lib/gl', async (importOriginal) => {
@@ -42,6 +42,8 @@ describe('WallViewer transition-mode wiring', () => {
     const stage = screen.getByTestId('gl-crossfade')
     expect(stage).toBeInTheDocument()
     expect(stage).toHaveAttribute('data-src', '/images/victorportugal/1.jpg')
+    // Only a change of artist ripples.
+    expect(stage).toHaveAttribute('data-ripple-key', 'victorportugal')
   })
 
   it('keeps the plain <img> stage when mode is css', () => {
@@ -79,6 +81,8 @@ describe('ConceptViewer transition-mode wiring', () => {
     const stage = screen.getByTestId('gl-crossfade')
     expect(stage).toBeInTheDocument()
     expect(stage).toHaveAttribute('data-src', '/concepts/1.png')
+    // No key: concepts always use the plain fade.
+    expect(stage).toHaveAttribute('data-ripple-key', '')
   })
 
   it('keeps the plain <img> stage when mode is css', () => {

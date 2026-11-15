@@ -12,10 +12,6 @@ import useViewportZoomed from '../hooks/useViewportZoomed'
 import { resolveTransitionMode } from '../lib/gl'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
 
-function pad2(n) {
-  return String(n).padStart(2, '0')
-}
-
 // Resolves the full artist record (status/notes) for the currently viewed
 // item — prefers the `artists` list when given, falls back to the single
 // `artist` prop otherwise.
@@ -64,15 +60,39 @@ function InfoPanel({ artist, ideas, onClose }) {
 }
 
 const KBD = 'border border-v2-hairline rounded px-1.5 py-0.5 mr-1 text-v2-cream text-[0.66rem]'
+// The dark fade that rises behind the bottom HUD (inside the HUD wrapper, so it
+// leaves with the idle fade). Not interactive.
+const FADE = 'absolute inset-x-0 bottom-0 h-56 bg-gradient-to-t from-v2-ink via-v2-ink/70 to-transparent pointer-events-none'
+
+// Previous / next photo of the current artist (touch). It sits in the caption
+// bar (44px target, disabled rather than removed with a single photo so the
+// bar does not jump).
+function PhotoArrow({ dir, disabled, onGo }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onGo(dir)}
+      disabled={disabled}
+      aria-label={dir < 0 ? 'Previous photo' : 'Next photo'}
+      className={`flex items-center justify-center w-12 h-12 mx-2 rounded-full border border-v2-hairline bg-v2-ink/60 text-3xl leading-none pb-1 pointer-events-auto transition-colors text-v2-cream active:border-v2-accent disabled:text-v2-muted/50`}
+    >
+      <span aria-hidden="true">{dir < 0 ? '‹' : '›'}</span>
+    </button>
+  )
+}
+
 const PANEL_BUTTON = 'flex items-center justify-center gap-3 bg-v2-ink/70 backdrop-blur-md border border-v2-hairline hover:border-v2-accent rounded-xs px-4 py-3 text-v2-cream font-v2-ui text-sm transition-colors'
 
 // Full-screen wall viewer. The image owns the screen.
 // Mouse/keyboard: the HUD (index, artist plate, filmstrip, keys legend) fades
 // away after a couple of seconds of stillness and returns on any activity.
-// Touch (#93): only Close, the counter and a Details handle stay up; a tap on
-// the image (or the handle) toggles a bottom sheet with everything else.
+// A dark fade rises behind the bottom HUD so the plate reads on any photo.
+// Touch (#93, #220): Close, the photo count and a slim caption bar stay up
+// (artist name, ‹ / › photo arrows, a More handle); a tap on the image (or the
+// handle) toggles a bottom sheet with everything else.
 // Swipe left/right = photos, up = next artist, down = close (the iOS
 // convention for a full-screen photo); Previous artist lives in the sheet.
+// Only a change of artist ripples in the GL stage; photos of one artist fade.
 export default function WallViewer({
   items,
   initialIndex = 0,
@@ -178,8 +198,8 @@ export default function WallViewer({
         Close
       </button>
 
-      <div className="absolute right-[max(1rem,env(safe-area-inset-right))] sm:right-[max(2rem,env(safe-area-inset-right))] top-[max(1.5rem,env(safe-area-inset-top))] font-v2-display text-sm tracking-[0.2em] text-v2-muted pointer-events-auto">
-        <b className="text-v2-cream font-normal">{pad2(positionInArtist + 1)}</b> / {artistImageCount} · artist {artistOrdinal} of {artistCount}
+      <div className="absolute right-[max(1rem,env(safe-area-inset-right))] sm:right-[max(2rem,env(safe-area-inset-right))] top-[max(1.5rem,env(safe-area-inset-top))] font-v2-display text-sm tracking-[0.2em] text-v2-cream [text-shadow:0_1px_8px_rgba(19,17,16,0.9)] pointer-events-none">
+        Photo {positionInArtist + 1} of {artistImageCount}
       </div>
     </>
   )
@@ -189,15 +209,18 @@ export default function WallViewer({
       <h1 className="font-v2-display text-[1.6rem] tracking-[0.24em] uppercase text-v2-cream [text-shadow:0_1px_12px_rgba(19,17,16,0.8)]">
         {current.artistName}
       </h1>
-      <a
-        href={instagramUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="font-v2-ui text-xs tracking-[0.12em] text-v2-muted hover:text-v2-cream"
-      >
-        @{current.handle} ↗
-      </a>
-      <div className="mt-1 font-v2-ui text-[0.68rem] tracking-[0.14em] uppercase text-v2-muted">
+      <div className="font-v2-ui text-xs tracking-[0.12em] text-v2-cream/90">
+        Artist {artistOrdinal} of {artistCount} ·{' '}
+        <a
+          href={instagramUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-v2-cream hover:underline"
+        >
+          @{current.handle} ↗
+        </a>
+      </div>
+      <div className="mt-1 font-v2-ui text-[0.68rem] tracking-[0.14em] uppercase text-v2-cream">
         {current.styles.join(' · ')}
       </div>
     </>
@@ -240,6 +263,7 @@ export default function WallViewer({
             <GlCrossfade
               src={current.image}
               label={`${current.artistName} — ${current.styles.join(', ')}`}
+              rippleKey={current.artistId}
               className="w-full h-full block"
               fallbackImageClassName="max-w-[100vw] max-h-[100vh] object-contain animate-fade-in"
               monogramClassName="text-8xl"
@@ -270,12 +294,22 @@ export default function WallViewer({
           {topRow}
 
           {!sheetOpen && (
-            <ViewerSheetToggle
-              open={false}
-              onToggle={() => setSheetOpen(true)}
-              controls={sheetId}
-              className="absolute left-1/2 -translate-x-1/2 bottom-[max(0.5rem,env(safe-area-inset-bottom))]"
-            />
+            <div className="absolute inset-x-0 bottom-0 pt-10 pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] pb-[max(0.25rem,env(safe-area-inset-bottom))] [@media(max-height:500px)]:pt-4">
+              <div aria-hidden="true" className={FADE} />
+              <div className="relative px-3 flex items-baseline justify-between gap-3">
+                <h1 className="min-w-0 font-v2-display text-lg tracking-[0.18em] uppercase text-v2-cream truncate [text-shadow:0_1px_12px_rgba(19,17,16,0.8)] [@media(max-height:500px)]:text-base">
+                  {current.artistName}
+                </h1>
+                <p className="shrink-0 font-v2-ui text-xs tracking-[0.12em] text-v2-cream/90">
+                  Artist {artistOrdinal} of {artistCount}
+                </p>
+              </div>
+              <div className="relative flex items-center justify-between">
+                <PhotoArrow dir={-1} disabled={artistImageCount < 2} onGo={goWithinArtist} />
+                <ViewerSheetToggle open={false} onToggle={() => setSheetOpen(true)} controls={sheetId} />
+                <PhotoArrow dir={1} disabled={artistImageCount < 2} onGo={goWithinArtist} />
+              </div>
+            </div>
           )}
 
           {sheetOpen && (
@@ -322,6 +356,7 @@ export default function WallViewer({
 
           <button
             onClick={() => goWithinArtist(-1)}
+            aria-label="Previous photo"
             title="Previous image (←)"
             className="absolute left-2 top-1/2 -translate-y-1/2 text-v2-muted hover:text-v2-cream text-4xl px-4 py-8 pointer-events-auto transition-colors"
           >
@@ -329,11 +364,14 @@ export default function WallViewer({
           </button>
           <button
             onClick={() => goWithinArtist(1)}
+            aria-label="Next photo"
             title="Next image (→)"
             className="absolute right-2 top-1/2 -translate-y-1/2 text-v2-muted hover:text-v2-cream text-4xl px-4 py-8 pointer-events-auto transition-colors"
           >
             ›
           </button>
+
+          <div aria-hidden="true" className={FADE} />
 
           <div className="absolute left-8 bottom-7 pointer-events-auto">{plate}</div>
 

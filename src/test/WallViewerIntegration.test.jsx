@@ -80,7 +80,7 @@ describe('Artists wall → WallViewer integration', () => {
 
     // The viewer overlay is up, showing the clicked artist's plate.
     expect(screen.getByRole('heading', { name: 'zoia.ink' })).toBeInTheDocument()
-    expect(screen.getByText(/artist 1 of 2/)).toBeInTheDocument()
+    expect(screen.getByText(/artist 1 of 2/i)).toBeInTheDocument()
   })
 
   it('opens at the right index for a deep (non-first) artist', () => {
@@ -88,7 +88,7 @@ describe('Artists wall → WallViewer integration', () => {
     clickPiece('Carlos Valera')
 
     expect(screen.getByRole('heading', { name: 'Carlos Valera' })).toBeInTheDocument()
-    expect(screen.getByText(/artist 2 of 2/)).toBeInTheDocument()
+    expect(screen.getByText(/artist 2 of 2/i)).toBeInTheDocument()
   })
 
   it('hides the rank rail while the viewer is open', () => {
@@ -254,7 +254,8 @@ describe('Artists wall → WallViewer integration', () => {
     it('a deep link opens that photo, and closing it stays on the Wall', () => {
       renderApp({}, { entries: ['/brief', '/gallery?photo=zoia.ink.2'] })
       expect(viewerHeading('zoia.ink')).toBeInTheDocument()
-      expect(screen.getByText(/artist 1 of 2/)).toHaveTextContent('02')
+      expect(screen.getByText(/artist 1 of 2/i)).toBeInTheDocument()
+      expect(screen.getByText('Photo 2 of 2')).toBeInTheDocument()
 
       fireEvent.click(screen.getByRole('button', { name: /close viewer/i }))
       expect(here()).toBe('/gallery')
