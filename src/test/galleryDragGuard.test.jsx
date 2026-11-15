@@ -58,7 +58,9 @@ function renderGallery({ artists = baseArtists, setArtists = vi.fn() } = {}) {
 
 const toGrid = () => fireEvent.click(screen.getByTitle('Grid view'))
 const editToggle = () => screen.getByRole('button', { name: /reorder/i })
-const manageToggle = () => screen.getByRole('button', { name: /^manage$/i })
+// Manage lives in the Tools menu (#220 E), so the menu button is what a drag locks.
+const manageToggle = () => screen.getByRole('button', { name: 'Tools' })
+const filterToggle = () => screen.getByRole('button', { name: 'Filter' })
 
 beforeEach(() => {
   localStorage.clear()
@@ -70,6 +72,7 @@ describe('guards transitions that would orphan an active keyboard drag (#74)', (
     renderGallery()
     toGrid()
     fireEvent.click(editToggle())
+    fireEvent.click(filterToggle())
 
     expect(screen.getByTitle('Filmstrip view')).not.toBeDisabled()
 
@@ -81,6 +84,7 @@ describe('guards transitions that would orphan an active keyboard drag (#74)', (
     expect(screen.getByTitle('Wall view')).toBeDisabled()
     expect(editToggle()).toBeDisabled()
     expect(manageToggle()).toBeDisabled()
+    expect(filterToggle()).toBeDisabled()
     expect(screen.getByRole('button', { name: 'All' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'surrealism' })).toBeDisabled()
   })
@@ -113,6 +117,6 @@ describe('guards transitions that would orphan an active keyboard drag (#74)', (
     toGrid()
     expect(editToggle()).not.toBeDisabled()
     expect(manageToggle()).not.toBeDisabled()
-    expect(screen.getByRole('button', { name: 'All' })).not.toBeDisabled()
+    expect(filterToggle()).not.toBeDisabled()
   })
 })

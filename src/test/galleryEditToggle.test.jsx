@@ -72,10 +72,10 @@ describe('Gallery edit toggle (#70)', () => {
     fireEvent.click(editToggle())
     expect(handles()).toHaveLength(baseArtists.length)
 
-    // The ⊞ in the label is aria-hidden, so the accessible name is just "Manage".
-    fireEvent.click(screen.getByRole('button', { name: /^manage$/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Tools' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Manage' }))
     expect(screen.getByText('Add New Artist')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /^manage$/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Done managing' }))
 
     expect(handles()).toHaveLength(0)
   })

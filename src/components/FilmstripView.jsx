@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import TagPill from './TagPill'
 import ArtistImage from './ArtistImage'
-import { DEFAULT_STUDIOS } from '../data/artists'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
 import { useEscapeToClose, useFocusOnOpen } from '../hooks/useDialogFocus'
 import { activateOnKey } from '../a11y/activate'
@@ -33,9 +31,7 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onNudge, onSetStatus, 
   const [rankInput, setRankInput] = useState('')
   const [statusOpen, setStatusOpen] = useState(false)
   const displayName = artist.name || `@${artist.handle}`
-  const studio = artist.studio ? DEFAULT_STUDIOS.find((s) => s.id === artist.studio) : null
   const hasImages = artist.images?.length > 0
-  const instagramUrl = `https://www.instagram.com/${artist.handle}/`
   const currentStatus = ARTIST_STATUSES.find((s) => s.value === normalizeArtistStatus(artist.status))
 
   function startEdit() {
@@ -52,30 +48,25 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onNudge, onSetStatus, 
   }
 
   return (
+    // #220 E: stacked. The row used to be a rank column, a 160px info column and
+    // 96px photos, which on a phone left the pictures about half the width. Now
+    // one thin line names the artist and the photos get the full row. The handle,
+    // studio and style tags live on the artist's own page.
     <div
       data-testid="filmstrip-row"
       style={{ animationDelay: `${index * 0.04}s` }}
-      className="animate-slide-up opacity-0 [animation-fill-mode:forwards] flex border-b border-ink-border/50 hover:bg-ink-card/30 transition-colors group"
+      className="animate-slide-up opacity-0 [animation-fill-mode:forwards] flex flex-col border-b border-ink-border/50 hover:bg-ink-card/30 transition-colors group"
       onMouseLeave={onRowMouseLeave}
     >
-      {/* Rank controls */}
-      <div className="w-12 shrink-0 flex flex-col items-center justify-center border-r border-ink-border/30 py-2">
-        <button
-          onClick={() => !isFirst && onNudge(artist, index, -1)}
-          aria-label={`Move ${displayName} up`}
-          className={`text-[0.625rem] leading-none w-11 h-11 flex items-center justify-center transition-colors ${
-            isFirst ? 'text-transparent cursor-default' : 'text-cream-muted/30 hover:text-cream can-hover:opacity-0 group-hover:opacity-100'
-          }`}
-        >
-          ▲
-        </button>
+      <div className="flex items-center gap-1 pl-1 pr-2">
         {editingRank ? (
           <input
             ref={rankInputRef}
             type="number"
             min={1}
             max={totalArtists}
-            className="w-8 text-center bg-ink-muted border border-cream-muted/40 rounded-xs text-xs font-mono text-cream outline-hidden focus-visible:ring-2 focus-visible:ring-accent py-0.5"
+            aria-label={`Rank for ${displayName}`}
+            className="w-11 text-center bg-ink-muted border border-cream-muted/40 rounded-xs text-xs font-mono text-cream outline-hidden focus-visible:ring-2 focus-visible:ring-accent py-0.5"
             value={rankInput}
             onChange={(e) => setRankInput(e.target.value)}
             onBlur={commitRank}
@@ -88,56 +79,28 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onNudge, onSetStatus, 
           <button
             onClick={startEdit}
             title="Click to set rank"
-            className="text-xs font-mono text-cream-muted/50 hover:text-cream hover:bg-ink-card/60 w-11 h-11 rounded-xs transition-colors flex items-center justify-center"
+            className="shrink-0 text-xs font-mono text-cream-muted hover:text-cream hover:bg-ink-card/60 w-11 h-11 rounded-xs transition-colors flex items-center justify-center"
           >
             {artist.rank}
           </button>
         )}
-        <button
-          onClick={() => !isLast && onNudge(artist, index, 1)}
-          aria-label={`Move ${displayName} down`}
-          className={`text-[0.625rem] leading-none w-11 h-11 flex items-center justify-center transition-colors ${
-            isLast ? 'text-transparent cursor-default' : 'text-cream-muted/30 hover:text-cream can-hover:opacity-0 group-hover:opacity-100'
-          }`}
-        >
-          ▼
-        </button>
-      </div>
 
-      {/* Artist info */}
-      <div
-        role="button"
-        tabIndex={0}
-        aria-label={`Open ${displayName}`}
-        className="w-40 shrink-0 px-3 py-3 border-r border-ink-border/30 cursor-pointer flex flex-col justify-center"
-        onClick={() => onOpen(artist)}
-        onKeyDown={activateOnKey(() => onOpen(artist))}
-      >
-        <h3 className="font-display text-cream text-base leading-tight truncate mb-0.5">{displayName}</h3>
-        {/* #76: audited at 79-106 wide but only 17 tall. A negative margin to
-            cancel the growth was tried and reverted (guarded by
-            a11yAffordances.spec.js) — it pulled the enlarged box over the
-            artist name above, swallowing taps meant to open the artist. Real
-            layout growth instead: the row gets a little taller. */}
-        <a
-          href={instagramUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="font-mono text-[0.6875rem] text-cream-muted/60 hover:text-accent transition-colors mb-1.5 w-fit inline-flex items-center min-h-11"
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label={`Open ${displayName}`}
+          className="flex-1 min-w-0 min-h-11 flex items-center cursor-pointer"
+          onClick={() => onOpen(artist)}
+          onKeyDown={activateOnKey(() => onOpen(artist))}
         >
-          @{artist.handle}
-        </a>
-        {studio && (
-          <p className="font-mono text-[0.625rem] text-cream-muted/40 tracking-widest mb-1.5">{studio.name}</p>
-        )}
+          <h3 className="font-display text-cream text-base leading-tight truncate">{displayName}</h3>
+        </div>
 
         {/* Status chip — tap to change */}
-        {/* Only keeps the chip's clicks from opening the artist; not a control. */}
-        <div role="presentation" className="relative" onClick={(e) => e.stopPropagation()}>
+        <div className="relative shrink-0">
           <button
             onClick={() => setStatusOpen((v) => !v)}
-            className={`min-h-11 flex items-center text-[0.625rem] font-mono tracking-widest uppercase transition-opacity hover:opacity-70 ${currentStatus.tone}`}
+            className={`min-h-11 px-1 flex items-center text-[0.625rem] font-mono tracking-widest uppercase transition-opacity hover:opacity-70 ${currentStatus.tone}`}
           >
             {currentStatus.label}
           </button>
@@ -150,33 +113,49 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onNudge, onSetStatus, 
           )}
         </div>
 
-        <div className="flex flex-wrap gap-1 mt-2">
-          {artist.tags?.map((t) => <TagPill key={t} tag={t} active small />)}
-        </div>
+        <button
+          onClick={() => !isFirst && onNudge(artist, index, -1)}
+          aria-label={`Move ${displayName} up`}
+          className={`shrink-0 text-[0.625rem] leading-none w-11 h-11 flex items-center justify-center transition-colors ${
+            isFirst ? 'text-transparent cursor-default' : 'text-cream-muted/60 hover:text-cream can-hover:opacity-0 group-hover:opacity-100'
+          }`}
+        >
+          ▲
+        </button>
+        <button
+          onClick={() => !isLast && onNudge(artist, index, 1)}
+          aria-label={`Move ${displayName} down`}
+          className={`shrink-0 text-[0.625rem] leading-none w-11 h-11 flex items-center justify-center transition-colors ${
+            isLast ? 'text-transparent cursor-default' : 'text-cream-muted/60 hover:text-cream can-hover:opacity-0 group-hover:opacity-100'
+          }`}
+        >
+          ▼
+        </button>
       </div>
 
       {/* Scrollable image strip */}
       <div
         ref={scrollRef}
-        className="flex-1 flex items-center gap-2 px-3 py-3 overflow-x-auto scrollbar-thin"
+        className="flex items-center gap-2 px-3 pb-3 overflow-x-auto scrollbar-thin"
       >
         {hasImages ? (
           artist.images.map((src, i) => (
             <div
               key={i}
+              data-testid="filmstrip-photo"
               role="button"
               tabIndex={0}
               aria-label={`Open ${displayName}`}
-              className="shrink-0 w-24 h-24 lg:w-28 lg:h-28 xl:w-32 xl:h-32 rounded-xs overflow-hidden bg-ink-muted cursor-pointer hover:ring-1 hover:ring-cream-muted/30 transition-all"
+              className="shrink-0 w-44 h-44 md:w-52 md:h-52 xl:w-60 xl:h-60 rounded-xs overflow-hidden bg-ink-muted cursor-pointer hover:ring-1 hover:ring-cream-muted/30 transition-all"
               onClick={() => onOpen(artist)}
               onKeyDown={activateOnKey(() => onOpen(artist))}
             >
-              <ArtistImage src={src} sizes="128px" label={artist.name || `@${artist.handle}`} className="w-full h-full object-cover" monogramClassName="text-2xl" />
+              <ArtistImage src={src} sizes="(min-width: 1280px) 240px, (min-width: 768px) 208px, 176px" label={displayName} className="w-full h-full object-cover" monogramClassName="text-3xl" />
             </div>
           ))
         ) : (
-          <div className="flex items-center justify-center h-24 lg:h-28 xl:h-32 w-full">
-            <span className="text-cream-muted/20 font-mono text-xs tracking-widest">No images yet</span>
+          <div className="flex items-center justify-center h-20 w-full">
+            <span className="text-cream-muted/40 font-mono text-xs tracking-widest">No images yet</span>
           </div>
         )}
       </div>

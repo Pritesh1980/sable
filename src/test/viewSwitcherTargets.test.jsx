@@ -59,22 +59,12 @@ describe('view switcher touch targets (#73)', () => {
     expect(declares44pt(screen.getByRole('button', { name: /reorder/i }).className)).toBe(true)
   })
 
-  // #51's pattern: grow the hit area, not the chip. A 44x44 block of accent
-  // behind a 13px glyph would change the look of the bar, which is not what
-  // this issue asks for.
-  it('keeps the visible chip small inside the larger target', () => {
-    renderGallery()
-    const button = screen.getByTitle('Grid view')
-    const chip = button.querySelector('span')
-    expect(chip).not.toBeNull()
-    expect(declares44pt(chip.className)).toBe(false)
-  })
-
   // #76: audited at 43-161 wide (already fine) but only 26 tall. The row is
   // already 44pt tall because of the view switcher beside it (#77), so this
   // height is absorbed invisibly rather than growing the bar.
   it('gives each style filter pill a 44pt hit area', () => {
     renderGallery()
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }))
     const pill = screen.getByRole('button', { name: 'All' })
     expect(declares44pt(pill.className)).toBe(true)
   })
@@ -86,19 +76,15 @@ describe('view switcher touch targets (#73)', () => {
     expect(screen.getByRole('button', { name: /reorder/i })).toBeInTheDocument()
   })
 
-  // #77: five 44pt buttons plus gaps is ~236px. Sharing one flex line with the
-  // style filters used to squeeze them into single-file rows on a phone (the
-  // same failure #70's re-captured screenshot caught), which #73 solved by
-  // forcing the switcher onto its own full-width line — but that made the bar
-  // 171px tall (three wrapped pill rows + a switcher row). The fix now is a
-  // horizontally-scrolling pill row instead: the switcher can share the line
-  // without crushing anything, because the pills scroll rather than wrap.
-  it('lets the filters scroll horizontally instead of wrapping or crushing the switcher', () => {
+  // #77 then #220 E: the pills first wrapped into three rows, then shared the
+  // switcher's line as a scrolling row. They now open from Filter on a row of
+  // their own, which still scrolls sideways and never wraps.
+  it('opens the filters as one scrolling row under the switcher', () => {
     renderGallery()
-    const group = screen.getByTitle('Grid view').parentElement
-    expect(group.className).not.toMatch(/w-full/)
-    const pillsRow = group.previousElementSibling
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }))
+    const pillsRow = screen.getByRole('button', { name: 'All' }).parentElement
     expect(pillsRow.className).toMatch(/overflow-x-auto/)
     expect(pillsRow.className).not.toMatch(/flex-wrap/)
+    expect(pillsRow.contains(screen.getByTitle('Grid view'))).toBe(false)
   })
 })

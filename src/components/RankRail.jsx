@@ -63,7 +63,7 @@ function RankTile({ artist, index }) {
 // Slim always-visible Top-5 dock on the wall. One low row so it never pushes
 // the image masonry below the fold. Reordering is drag-only, scoped to the
 // five visible tiles; demoting an artist out of the Top 5 entirely still
-// goes through the full Rank board (`Rank ⤢`, one tap away).
+// goes through the full Rank board (`Reorder top 5`, one tap away).
 export default function RankRail({ artists = [], setArtists = () => {}, onOpenBoard = () => {} }) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -108,7 +108,7 @@ export default function RankRail({ artists = [], setArtists = () => {}, onOpenBo
         onClick={onOpenBoard}
         className="shrink-0 font-v2-ui text-xs text-v2-cream border border-v2-hairline hover:border-v2-accent rounded-xs px-3 min-h-11 transition-colors"
       >
-        Rank ⤢
+        Reorder top 5
       </button>
     </section>
   )

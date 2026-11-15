@@ -29,10 +29,15 @@ describe('keyboard-operable click targets', () => {
     expect(onOpenArtist).toHaveBeenCalledTimes(3)
   })
 
-  it('a key pressed on the filmstrip @handle link does not also open the artist', () => {
+  // #220 E: the row lost its @handle link (it is on the artist's page), so the
+  // nested control that must not open the artist is now the status chip.
+  it('a key pressed on the filmstrip status chip does not also open the artist', () => {
     const onOpenArtist = vi.fn()
     render(<FilmstripView artists={[artist]} onOpenArtist={onOpenArtist} onSetRank={vi.fn()} onSetStatus={vi.fn()} />)
-    fireEvent.keyDown(screen.getByRole('link', { name: /@zoia\.ink/i }), { key: 'Enter' })
+    const row = screen.getByTestId('filmstrip-row')
+    const chip = [...row.querySelectorAll('button')].find((b) => /tracking-widest/.test(b.className))
+    fireEvent.keyDown(chip, { key: 'Enter' })
+    fireEvent.click(chip)
     expect(onOpenArtist).not.toHaveBeenCalled()
   })
 

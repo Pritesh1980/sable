@@ -11,8 +11,10 @@ Japanese-inspired, tribal, colour-realism and brush-lettering styles. Its
 ---
 
 The **Artists** page is where browsing and organising live. A sticky bar at the top holds the
-**style filter** (tap a tag to show only artists with it; tap **All** to clear; it narrows
-every view, the Wall included) and a **view toggle** on the right with four modes. The
+**view switch** (**Wall**, **Strip**, **Compare**, **Grid**) and a **Filter** button. Tap
+**Filter** to open the style tags and pick one: it narrows every view, the Wall included,
+and shows as a chip in the bar. Tap the chip to clear it. The header's **Tools** menu holds
+**Rank**, **Browse**, **Map** and **Manage**, each with a line saying what it does. The
 **Wall** is the default. Everyday ranking happens on it: see
 [Ranking your favourites](#ranking-your-favourites) below. With no artists saved yet, every
 view shows **+ Add artist**, which opens the same capture form as **+ Add** in the header.
@@ -22,19 +24,20 @@ with **+N** linking to Pipeline.
 
 ## The four views
 
-### ▦ Wall
+### Wall
 Every photo from every artist, edge to edge, with your Top 5 pinned above. It is the
 default view; see [Getting started](01-getting-started.md#the-wall-in-artists).
 
 ![The Wall](../public/guide/wall.png)
 
-### ☰ Filmstrip
-A scrollable row per artist — rank controls on the left, details and a strip of their work
-on the right.
+### Strip (filmstrip)
+One artist per row: a thin line with their rank, name, status and **▲ / ▼**, then a strip
+of large photos to swipe sideways. Tap the name or a photo to open the artist, where the
+handle and style tags live.
 
 ![Filmstrip view](../public/guide/gallery-filmstrip.png)
 
-### ⊞ Grid
+### Grid
 A continuous two-column grid on phones, with names and handles wrapping inside
 each card. Wider screens retain a featured top-three row. Tapping anywhere on a card opens that
 artist — the whole tile is the target, with nothing else competing for it.
@@ -53,8 +56,9 @@ On a wider screen the grid expands to show more artists per row:
 
 ![Grid view on desktop](../public/guide/gallery-grid-desktop.png)
 
-### ⊟ Compare
-Add up to four artists side by side to weigh them against each other, portfolios and all.
+### Compare
+Put artists side by side, each as a name and one column of large photos: two on a phone,
+up to four on a wider screen.
 
 ![Compare view](../public/guide/gallery-compare.png)
 
@@ -113,7 +117,7 @@ nudge when it disagrees with where you've actually ranked them.
 
 ### Taste map
 
-Tap **Map** in the Artists header to see your whole collection laid out by what the
+Tap **Tools → Map** in the Artists header to see your whole collection laid out by what the
 work looks like: artists whose ink looks alike sit closer together, each ringed in the
 colour of their main style (the key is underneath). **✦ You** marks your taste — the
 blend of everyone's work weighted by your ranking and shortlist statuses — so you can
@@ -128,7 +132,7 @@ Similar ink; if you haven't built it yet, the map offers **Build style index**.
 Everything below sets the **same single ranking** — one ordered list of every artist.
 
 The quickest place to rank is the **Wall**, the default Artists view. Your **Top 5** is pinned at the top:
-**drag the rank number** on any tile to reorder the five, or tap **Rank ⤢** to open the
+**drag the rank number** on any tile to reorder the five, or tap **Reorder top 5** to open the
 full **ranking board** — your Top 5 pinned up top, everyone else below, with **▲ / ▼** on
 every row, **Drop ↓** to push an artist out of the Top 5, and **↑ To top 5** to pull one
 in. Close it (or press **Esc**) to return to the Wall.
@@ -137,7 +141,7 @@ The Artists page keeps its own ranking tools for when you're already there organ
 
 1. **Drag** in Grid view, with **⇅ Reorder** turned on.
 2. **Nudge** the rank number up/down in Filmstrip view.
-3. **Swipe-compare** — tap **Rank** (top-right of the Artists page) to judge artists one at
+3. **Swipe-compare** — tap **Tools → Rank** (top-right of the Artists page) to judge artists one at
    a time as **Pass / Maybe / Top**, with a scrollable row of all their reference images
    to browse before you decide. Made a mistake? **Undo** reverses your last decision.
 

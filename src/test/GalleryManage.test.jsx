@@ -25,21 +25,24 @@ describe('Gallery manage mode', () => {
 
   it('keeps the generated-art notice visible inside Browse', () => {
     renderGallery({ artists: [{ ...baseArtists[0], images: ['images/demo/mora.blackfern/fern-v4.webp'] }] })
-    fireEvent.click(screen.getByRole('button', { name: 'Browse' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Tools' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Browse' }))
     expect(within(screen.getByRole('button', { name: /back/i }).closest('.fixed')).getByText(/AI-generated imagery/)).toBeInTheDocument()
   })
 
   it('keeps the generated-art notice visible inside Rank', () => {
     renderGallery({ artists: [{ ...baseArtists[0], images: ['images/demo/mora.blackfern/fern-v4.webp'] }] })
-    fireEvent.click(screen.getByRole('button', { name: 'Rank' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Tools' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Rank' }))
     expect(within(screen.getByRole('button', { name: 'Cancel' }).closest('.fixed')).getByText(/AI-generated imagery/)).toBeInTheDocument()
   })
 
   beforeEach(() => localStorage.clear())
 
-  it('shows a Manage button even when there are no artists', () => {
+  it('offers Manage even when there are no artists', () => {
     renderGallery({ artists: [] })
-    expect(screen.getByRole('button', { name: /manage/i })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Tools' }))
+    expect(screen.getByRole('menuitem', { name: 'Manage' })).toBeInTheDocument()
   })
 
   // #161: an empty collection showed only filters and view buttons, in every view.
@@ -64,17 +67,19 @@ describe('Gallery manage mode', () => {
     renderGallery()
     expect(screen.queryByText('Add New Artist')).not.toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: /manage/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Tools' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Manage' }))
     expect(screen.getByText('Add New Artist')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('Search artists…')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: /^manage$/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Done managing' }))
     expect(screen.queryByText('Add New Artist')).not.toBeInTheDocument()
   })
 
   it('adds an artist with the next rank via the form', () => {
     const { setArtists } = renderGallery()
-    fireEvent.click(screen.getByRole('button', { name: /manage/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Tools' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Manage' }))
 
     fireEvent.change(screen.getByPlaceholderText('@handle'), { target: { value: 'new_artist' } })
     fireEvent.click(screen.getByRole('button', { name: /add artist/i }))

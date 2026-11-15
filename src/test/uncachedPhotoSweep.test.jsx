@@ -151,7 +151,8 @@ describe('uncached { key } photo across artist-photo surfaces (counts include of
         <Gallery artists={[OFFLINE, NONE]} setArtists={vi.fn()} />
       </MemoryRouter>,
     )
-    fireEvent.click(screen.getByRole('button', { name: 'Rank' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Tools' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Rank' }))
     expect(await screen.findByText('1 / 1')).toBeInTheDocument()
   })
 
