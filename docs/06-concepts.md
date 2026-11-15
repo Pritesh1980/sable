@@ -60,7 +60,7 @@ an image** strip under the wall until you paste a result in.
 Wall, same keys (`←` `→`, `Esc`, or tap **× Close** top-left; the controls fade when your mouse is still).
 With the details panel open, the first `Esc` closes just the panel.
 On a phone, swipe left / right between concepts, swipe down to close, and tap the image (or
-**Details**) to show **Delete** and **Variants & STL export**. Press **`I`**
+**More**) to show **Delete** and **Variants & STL export**. Press **`I`**
 (or the on-screen button) for everything attached to it:
 
 ![A concept full-screen with its details open](../public/guide/concept-card.png)

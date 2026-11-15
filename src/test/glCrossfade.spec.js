@@ -154,6 +154,42 @@ describe('createGlEngine', () => {
     expect(requestAnimationFrame).toHaveBeenCalled()
   })
 
+  it('ripples and takes 600ms by default; ripple:false is a plain 400ms fade', async () => {
+    const { THREE } = makeThree()
+    const mount = makeMount()
+    let material
+    const Orig = THREE.ShaderMaterial
+    THREE.ShaderMaterial = class extends Orig { constructor(o) { super(o); material = this } }
+    const engine = createGlEngine(THREE, mount)
+    engine.setImage('a.jpg')
+    await flush()
+    const raf = globalThis.requestAnimationFrame
+    let frame
+    raf.mockImplementation((cb) => { frame = cb; return 1 })
+
+    engine.transitionTo('b.jpg')
+    await flush()
+    expect(material.uniforms.uRipple.value).toBe(1)
+    frame(1000)
+    frame(1300) // 300 of 600ms
+    expect(material.uniforms.uProgress.value).toBeCloseTo(0.5, 2)
+    frame(1600)
+    expect(material.uniforms.uProgress.value).toBe(1)
+
+    engine.transitionTo('c.jpg', { ripple: false })
+    await flush()
+    expect(material.uniforms.uRipple.value).toBe(0)
+    frame(2000)
+    frame(2200) // 200 of 400ms
+    expect(material.uniforms.uProgress.value).toBeCloseTo(0.5, 2)
+    frame(2400)
+    expect(material.uniforms.uProgress.value).toBe(1)
+
+    engine.transitionTo('d.jpg', { durationMs: 1000 })
+    await flush()
+    expect(material.uniforms.uRipple.value).toBe(1)
+  })
+
   it('notifies onContextLost when the canvas loses its WebGL context', () => {
     const { THREE, canvas } = makeThree()
     const onContextLost = vi.fn()

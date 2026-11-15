@@ -39,6 +39,26 @@ test.describe('wall viewer', () => {
     await expect(viewer).toBeHidden()
   })
 
+  test('the caption bar arrows step through photos at 440x956 and are 44px targets', async ({ page }) => {
+    await page.setViewportSize({ width: 440, height: 956 })
+    await openDemo(page, '/gallery')
+    await page.getByRole('button', { name: 'Open Mora Vane' }).first().click()
+    const viewer = page.getByRole('dialog', { name: imageLabel })
+    await expect(viewer).toBeVisible()
+    const next = page.getByRole('button', { name: 'Next photo' })
+    const prev = page.getByRole('button', { name: 'Previous photo' })
+    for (const b of [next, prev]) {
+      const box = await b.boundingBox()
+      expect(box.width).toBeGreaterThanOrEqual(44)
+      expect(box.height).toBeGreaterThanOrEqual(44)
+      expect(await isOnTop(b)).toBe(true)
+    }
+    const before = await viewer.getAttribute('aria-label')
+    await next.tap()
+    await expect(viewer).not.toHaveAttribute('aria-label', before)
+    await expect(page.getByRole('button', { name: /Next artist/ })).toBeHidden() // tapping an arrow does not open the sheet
+  })
+
   test('the Close button is on top and closes it', async ({ page }) => {
     await openDemo(page, '/gallery')
     await page.getByRole('button', { name: 'Open Vesper Ash' }).first().click()

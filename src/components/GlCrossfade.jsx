@@ -3,8 +3,10 @@ import ArtistImage from './ArtistImage'
 import { createGlEngine } from '../lib/glCrossfade'
 import useImageBytes from '../hooks/useImageBytes'
 
-// A WebGL image stage that crossfades between images with a subtle depth
-// ripple. three.js is loaded on demand (dynamic import) so it never enters the
+// A WebGL image stage that crossfades between images. The subtle depth ripple
+// plays only when `rippleKey` (e.g. the artist id) differs from the one of the
+// image last shown; otherwise, and always when no key is given, it is a plain
+// fade. three.js is loaded on demand (dynamic import) so it never enters the
 // main bundle. If three fails to load, the renderer can't be created, or the
 // WebGL context is lost, it degrades to the same <img>/monogram used elsewhere
 // — the artwork always shows, the flourish is optional.
@@ -15,6 +17,7 @@ export default function GlCrossfade({
   fallbackImageClassName = '',
   monogramClassName = 'text-4xl',
   durationMs = 600,
+  rippleKey,
 }) {
   const mountRef = useRef(null)
   const engineRef = useRef(null)
@@ -24,11 +27,21 @@ export default function GlCrossfade({
   const { src: glSrc, status } = useImageBytes(src)
   const srcRef = useRef(glSrc)
   const shownRef = useRef(false) // whether the engine has been given a first image
+  // The ripple key of the newest `src`, and of the image actually on screen.
+  // glSrc resolves later than src, so the decision is made at transition time
+  // against these two, not against whatever the prop is by then.
+  const keyRef = useRef(rippleKey)
+  const shownKeyRef = useRef(rippleKey)
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     srcRef.current = glSrc
   }, [glSrc])
+
+  // Declared before the transition effect so a same-commit change sees it.
+  useEffect(() => {
+    keyRef.current = rippleKey
+  }, [src, rippleKey])
 
   // Initialise the engine once. Dynamic import keeps three out of the initial
   // bundle; any failure flips to the CSS/img fallback.
@@ -55,6 +68,7 @@ export default function GlCrossfade({
         if (srcRef.current) {
           engine.setImage(srcRef.current)
           shownRef.current = true
+          shownKeyRef.current = keyRef.current
         }
       })
       .catch(() => {
@@ -78,12 +92,15 @@ export default function GlCrossfade({
   useEffect(() => {
     const engine = engineRef.current
     if (!engine || !glSrc) return
+    const key = keyRef.current
     if (shownRef.current) {
-      engine.transitionTo(glSrc)
+      const ripple = key !== undefined && key !== shownKeyRef.current
+      engine.transitionTo(glSrc, { ripple })
     } else {
       engine.setImage(glSrc)
       shownRef.current = true
     }
+    shownKeyRef.current = key
   }, [glSrc])
 
   // The plain image still shows a photo whose bytes cannot be read for WebGL.

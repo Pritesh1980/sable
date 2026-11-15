@@ -32,7 +32,26 @@ describe('GlCrossfade', () => {
     const { rerender } = render(<GlCrossfade src="a.jpg" label="Victor" />)
     await waitFor(() => expect(h.createGlEngine).toHaveBeenCalled())
     rerender(<GlCrossfade src="b.jpg" label="Victor" />)
-    await waitFor(() => expect(h.engine.transitionTo).toHaveBeenCalledWith('/b.jpg'))
+    await waitFor(() => expect(h.engine.transitionTo).toHaveBeenCalledWith('/b.jpg', { ripple: false }))
+  })
+
+  it('ripples only when rippleKey changed, and never without a key', async () => {
+    const { rerender } = render(<GlCrossfade src="a.jpg" rippleKey="x" />)
+    await waitFor(() => expect(h.engine.setImage).toHaveBeenCalledWith('/a.jpg'))
+    rerender(<GlCrossfade src="b.jpg" rippleKey="x" />)
+    await waitFor(() => expect(h.engine.transitionTo).toHaveBeenLastCalledWith('/b.jpg', { ripple: false }))
+    rerender(<GlCrossfade src="c.jpg" rippleKey="y" />)
+    await waitFor(() => expect(h.engine.transitionTo).toHaveBeenLastCalledWith('/c.jpg', { ripple: true }))
+    // The key moved on with the shown image: staying on y is a plain fade.
+    rerender(<GlCrossfade src="d.jpg" rippleKey="y" />)
+    await waitFor(() => expect(h.engine.transitionTo).toHaveBeenLastCalledWith('/d.jpg', { ripple: false }))
+  })
+
+  it('never ripples when no rippleKey is given', async () => {
+    const { rerender } = render(<GlCrossfade src="a.jpg" />)
+    await waitFor(() => expect(h.engine.setImage).toHaveBeenCalled())
+    rerender(<GlCrossfade src="b.jpg" />)
+    await waitFor(() => expect(h.engine.transitionTo).toHaveBeenLastCalledWith('/b.jpg', { ripple: false }))
   })
 
   it('disposes the engine on unmount (no leaked WebGL context)', async () => {
@@ -100,7 +119,7 @@ describe('GlCrossfade with a cross-origin source (#114)', () => {
     const { rerender } = render(<GlCrossfade src={remote} label="Victor" />)
     await waitFor(() => expect(h.engine.setImage).toHaveBeenCalledWith('blob:copy-1'))
     rerender(<GlCrossfade src="https://signed.example/b.jpg" label="Victor" />)
-    await waitFor(() => expect(h.engine.transitionTo).toHaveBeenCalledWith('blob:copy-2'))
+    await waitFor(() => expect(h.engine.transitionTo).toHaveBeenCalledWith('blob:copy-2', { ripple: false }))
   })
 
   it('falls back to the plain image when the bytes cannot be read', async () => {

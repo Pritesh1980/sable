@@ -54,13 +54,47 @@ const surface = () => screen.getByTestId('viewer-surface')
 const dialogLabel = () => screen.getByRole('dialog').getAttribute('aria-label')
 
 describe('WallViewer on a touch screen (#93)', () => {
-  it('opens clean: Close and the counter, but no sheet, arrows or keys legend', () => {
+  it('opens with Close, the photo count and a caption bar, but no sheet or keys legend', () => {
     renderWall()
     expect(screen.getByRole('button', { name: /close viewer/i })).toBeInTheDocument()
-    expect(screen.getByText(/artist 1 of 2/)).toBeInTheDocument()
+    expect(screen.getByText('Photo 1 of 2')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Mora Lane' })).toBeInTheDocument()
+    expect(screen.queryByText(/artist 1 of 2/i)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /generate a concept/i })).not.toBeInTheDocument()
     expect(screen.queryByTitle(/next image/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/back to wall/i)).not.toBeInTheDocument()
+  })
+
+  it('the handle says More, and the sheet plate carries Artist N of M', () => {
+    renderWall()
+    expect(screen.getByRole('button', { name: /show controls/i })).toHaveTextContent('More')
+    fireEvent.click(screen.getByRole('button', { name: /show controls/i }))
+    expect(screen.getByText(/Artist 1 of 2 ·/)).toBeInTheDocument()
+    // The caption bar gives way to the sheet.
+    expect(screen.queryByRole('button', { name: 'Next photo' })).not.toBeInTheDocument()
+  })
+
+  it('photo arrows move and wrap within the artist, and never reach the swipe surface', () => {
+    renderWall()
+    const next = screen.getByRole('button', { name: 'Next photo' })
+    const prev = screen.getByRole('button', { name: 'Previous photo' })
+    expect(next).not.toBeDisabled()
+    fireEvent.click(next)
+    expect(screen.getByText('Photo 2 of 2')).toBeInTheDocument()
+    fireEvent.click(next)
+    expect(screen.getByText('Photo 1 of 2')).toBeInTheDocument()
+    fireEvent.click(prev)
+    expect(screen.getByText('Photo 2 of 2')).toBeInTheDocument()
+    expect(surface().contains(next)).toBe(false)
+    // Still the same artist, sheet still closed.
+    expect(screen.getByRole('heading', { name: 'Mora Lane' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /generate a concept/i })).not.toBeInTheDocument()
+  })
+
+  it('the arrows stay, disabled, when the artist has one photo', () => {
+    renderWall({ initialIndex: 2 })
+    expect(screen.getByRole('button', { name: 'Next photo' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Previous photo' })).toBeDisabled()
   })
 
   it('a tap on the image toggles the sheet', () => {

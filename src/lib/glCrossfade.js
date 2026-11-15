@@ -7,7 +7,9 @@
 // vertex positions are used directly as clip-space coordinates (no camera
 // matrices), so the shader stays short. Aspect is handled by a `contain` helper
 // that letterboxes to transparent, so the ink background shows through and the
-// artwork is never cropped — a subtle radial ripple is the only flourish.
+// artwork is never cropped — a subtle radial ripple is the only flourish, and
+// it is optional per transition (`uRipple`): the viewer keeps it for a change of
+// artist and uses a plain, shorter crossfade between one artist's photos.
 
 const VERTEX_SHADER = `
 varying vec2 vUv;
@@ -26,6 +28,7 @@ uniform float uProgress;
 uniform vec2 uViewport;
 uniform vec2 uFromRes;
 uniform vec2 uToRes;
+uniform float uRipple;
 
 // Fit an image inside the viewport (letterbox) and report whether the sampled
 // point falls inside the image rect (1.0) or in the letterbox bars (0.0).
@@ -48,7 +51,7 @@ void main() {
   // A soft radial ripple: zero at both endpoints, peaking mid-transition.
   vec2 c = vUv - 0.5;
   float d = length(c);
-  float amp = 0.018 * sin(uProgress * 3.14159265);
+  float amp = 0.018 * uRipple * sin(uProgress * 3.14159265);
   vec2 disp = normalize(c + 1e-5) * sin(d * 22.0 - uProgress * 9.0) * amp;
 
   float t = smoothstep(0.0, 1.0, uProgress);
@@ -59,10 +62,13 @@ void main() {
 }
 `
 
+const PLAIN_FADE_MS = 400
+
 // Create the engine. `THREE` is injected. Returns null if a WebGL renderer
 // can't be constructed (caller should fall back to the CSS/img path). The
-// returned handle exposes setImage (immediate), transitionTo (animated),
-// resize and dispose.
+// returned handle exposes setImage (immediate), transitionTo (animated; takes
+// { ripple = true, durationMs } per call, a plain fade being 400ms), resize and
+// dispose. `durationMs` here is the default for a rippling transition.
 export function createGlEngine(THREE, mount, { durationMs = 600, onContextLost } = {}) {
   const width = mount.clientWidth || 1
   const height = mount.clientHeight || 1
@@ -97,6 +103,7 @@ export function createGlEngine(THREE, mount, { durationMs = 600, onContextLost }
     uFrom: { value: null },
     uTo: { value: null },
     uProgress: { value: 1 },
+    uRipple: { value: 1 },
     uViewport: { value: new THREE.Vector2(width, height) },
     uFromRes: { value: new THREE.Vector2(1, 1) },
     uToRes: { value: new THREE.Vector2(1, 1) },
@@ -114,6 +121,7 @@ export function createGlEngine(THREE, mount, { durationMs = 600, onContextLost }
   loader.setCrossOrigin?.('anonymous')
 
   let raf = 0
+  let activeDuration = durationMs
   let startTs = 0
   let animating = false
   let currentTex = null // the settled, displayed texture
@@ -166,7 +174,7 @@ export function createGlEngine(THREE, mount, { durationMs = 600, onContextLost }
   function tick(ts) {
     if (disposed) return
     if (!startTs) startTs = ts
-    const p = Math.min(1, (ts - startTs) / durationMs)
+    const p = Math.min(1, (ts - startTs) / activeDuration)
     uniforms.uProgress.value = p
     renderOnce()
     if (p < 1) {
@@ -207,7 +215,9 @@ export function createGlEngine(THREE, mount, { durationMs = 600, onContextLost }
   }
 
   // Animate a crossfade from the current image to `src`.
-  function transitionTo(src) {
+  function transitionTo(src, opts = {}) {
+    const ripple = opts.ripple !== false
+    const duration = opts.durationMs ?? (ripple ? durationMs : PLAIN_FADE_MS)
     loadToken += 1
     const token = loadToken
     load(src).then((tex) => {
@@ -229,6 +239,8 @@ export function createGlEngine(THREE, mount, { durationMs = 600, onContextLost }
       uniforms.uTo.value = toTex
       uniforms.uFromRes.value.set(...texRes(fromTex))
       uniforms.uToRes.value.set(...texRes(toTex))
+      uniforms.uRipple.value = ripple ? 1 : 0
+      activeDuration = duration
       uniforms.uProgress.value = 0
       startTs = 0
       animating = true

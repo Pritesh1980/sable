@@ -63,9 +63,22 @@ describe('WallViewer', () => {
     expect(screen.getByText('dark-illustrative · blackwork')).toBeInTheDocument()
   })
 
-  it('renders the index label', () => {
+  it('counts photos in words at the top right, and the artist in the plate', () => {
     renderViewer()
-    expect(screen.getByText(/artist 1 of 2/)).toBeInTheDocument()
+    expect(screen.getByText('Photo 1 of 2')).toBeInTheDocument()
+    const line = screen.getByText(/Artist 1 of 2 ·/)
+    expect(line).toContainElement(screen.getByText('@victorportugal ↗'))
+    expect(screen.queryByText('01')).not.toBeInTheDocument()
+  })
+
+  it('labels the desktop arrows and wraps within the artist', () => {
+    renderViewer()
+    fireEvent.click(screen.getByRole('button', { name: 'Next photo' }))
+    expect(screen.getByText('Photo 2 of 2')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Next photo' }))
+    expect(screen.getByText('Photo 1 of 2')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Previous photo' }))
+    expect(screen.getByText('Photo 2 of 2')).toBeInTheDocument()
   })
 
   it('renders a filmstrip of the current artist\'s images', () => {
@@ -78,8 +91,8 @@ describe('WallViewer', () => {
   it('jumps to the clicked filmstrip image', () => {
     renderViewer()
     fireEvent.click(screen.getByAltText('Victor Portugal thumbnail 2'))
-    expect(screen.getByText(/artist 1 of 2/)).toBeInTheDocument()
-    expect(screen.getByText('02')).toBeInTheDocument()
+    expect(screen.getByText(/Artist 1 of 2/)).toBeInTheDocument()
+    expect(screen.getByText('Photo 2 of 2')).toBeInTheDocument()
   })
 
   it('calls onGenerate with the current item when the generate button is clicked', () => {

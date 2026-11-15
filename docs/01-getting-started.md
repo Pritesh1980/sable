@@ -121,15 +121,19 @@ Outside the viewer, **Esc** closes whatever is on top (the add-artist sheet, the
 menu, a full-screen photo on an artist's page, the status picker), one layer per press.
 Wall photos, concepts, artist cards, thumbnails and ideas open with **Tab** then **Enter**.
 
-**On a phone** the photo opens clean, with just **× Close** and the photo count along the
-top and a small **Details** handle at the bottom. Swipe instead of using the arrow keys:
+The top right reads **Photo 1 of 3**; the plate shows **Artist 2 of 26 · @handle**. Moving
+to a different artist ripples the photo in; moving between one artist's photos is a plain fade.
+
+**On a phone** the photo opens with **× Close** and the photo count along the top, and a
+slim bar at the bottom: the artist's name, **‹** and **›** buttons for the previous and next
+photo, and a **More** handle between them. You can also swipe:
 
 | Gesture | Does |
 |---|---|
 | swipe left / right | next / previous photo by **this artist** |
 | swipe up | **next artist** |
 | swipe down | close the viewer, back to the Wall |
-| tap the photo (or **Details**) | show or hide the panel: filmstrip, the artist's name and `@handle`, **‹ Previous artist** / **Next artist ›**, **Generate a concept** and **Info & notes** |
+| tap the photo (or **More**) | show or hide the panel: filmstrip, the artist's name and `@handle`, **‹ Previous artist** / **Next artist ›**, **Generate a concept** and **Info & notes** |
 
 Pinch to zoom in on the linework as usual; swipes pause while you're zoomed in.
 
