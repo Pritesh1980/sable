@@ -21,10 +21,10 @@ function makeLabelTexture(label) {
   canvas.height = 346
   const ctx = canvas.getContext('2d')
   if (ctx) {
-    ctx.fillStyle = '#131110'
+    ctx.fillStyle = '#141210'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     ctx.fillStyle = 'rgba(245, 240, 232, 0.18)'
-    ctx.font = '400 140px Marcellus, Georgia, serif'
+    ctx.font = '600 140px Georgia, "Times New Roman", serif'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText(String(label ?? ''), canvas.width / 2, canvas.height / 2)
