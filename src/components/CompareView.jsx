@@ -36,7 +36,15 @@ function CompareColumn({ artist, onOpen, onRemove }) {
         {artist.images?.length > 0 ? (
           <div data-testid="compare-photos" className="flex flex-col gap-1.5">
             {artist.images.map((src, i) => (
-              <div key={i} className="aspect-square bg-ink-muted rounded-xs overflow-hidden">
+              <div
+                key={i}
+                role="button"
+                tabIndex={0}
+                aria-label={`Open ${displayName}`}
+                className="aspect-square bg-ink-muted rounded-xs overflow-hidden cursor-pointer"
+                onClick={() => onOpen(artist)}
+                onKeyDown={activateOnKey(() => onOpen(artist))}
+              >
                 <ArtistImage src={src} sizes="(max-width: 767px) 50vw, 25vw" label={displayName} className="w-full h-full object-cover" monogramClassName="text-2xl" />
               </div>
             ))}
@@ -103,9 +111,11 @@ export default function CompareView({ artists, onOpenArtist }) {
     .filter(Boolean)
     .slice(0, maxCompare)
 
+  // Built from what is on screen, not the raw ids, so an artist hidden by a
+  // narrower screen or since removed never blocks or jumps into a slot.
   function addArtist(id) {
-    if (selectedIds.length < maxCompare) {
-      setSelectedIds((prev) => [...prev, id])
+    if (selected.length < maxCompare) {
+      setSelectedIds([...selected.map((a) => a.id), id])
     }
   }
 
@@ -113,7 +123,7 @@ export default function CompareView({ artists, onOpenArtist }) {
     setSelectedIds((prev) => prev.filter((x) => x !== id))
   }
 
-  if (selectedIds.length === 0) {
+  if (selected.length === 0) {
     return (
       <div className="px-4">
         <div className="flex flex-col items-center justify-center py-16 text-center">

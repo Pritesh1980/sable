@@ -99,9 +99,13 @@ export default function Gallery({ artists, setArtists, ideas = [], mergedConvent
   const [activeTag, setActiveTag] = useState(null)
   const [filterOpen, setFilterOpen] = useState(false)
   // Picking a style closes the row: the chip in the bar then shows what is on.
+  const filterBarRef = useRef(null)
   function pickTag(tag) {
     setActiveTag(tag)
     setFilterOpen(false)
+    // The pill that had focus is about to unmount; hand focus to whatever
+    // replaces the row (the chip, or Filter) so a keyboard keeps its place (codex).
+    requestAnimationFrame(() => filterBarRef.current?.querySelector('[data-filter-control]')?.focus())
   }
   // The open artist lives in the URL (?artist=<id>, #159): the browser's Back
   // closes the detail instead of leaving the gallery, and a detail can be
@@ -326,9 +330,10 @@ export default function Gallery({ artists, setArtists, ideas = [], mergedConvent
       <div className="px-4 pt-10 pb-4">
         <Logo size={28} className="mb-3 md:hidden" />
         <p className="font-mono text-xs text-accent tracking-[0.4em] uppercase mb-2">Your Collection</p>
-        <div className="flex items-end justify-between gap-3">
+        {/* Wraps under the title at 320px, staying on the right edge. */}
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <h1 className="font-display text-5xl text-cream leading-none tracking-tight">Artists</h1>
-          <div className="flex gap-2 shrink-0">
+          <div className="flex gap-2 shrink-0 ml-auto">
             {/* Always reachable — one-step onboarding for a new artist */}
             <button
               onClick={() => setQuickAdding(true)}
@@ -387,9 +392,9 @@ export default function Gallery({ artists, setArtists, ideas = [], mergedConvent
           view, and the owner never used them. They now open from Filter, and an
           active filter shows as a chip in the button's place. */}
       <div className={`sticky top-[var(--nav-top)] z-20 bg-ink-black/80 backdrop-blur-md border-b border-ink-border px-4 py-2 ${viewMode === 'wall' ? '' : 'mb-6'}`}>
-        <div className="flex items-center gap-2">
+        <div ref={filterBarRef} className="flex items-center gap-2">
           {/* View toggle: words, not glyphs. Each button is a 44pt target (#73). */}
-          <div className="flex gap-1 flex-1 min-w-0">
+          <div className="flex gap-0.5 flex-1 min-w-0 overflow-x-auto scrollbar-thin">
             {[
               { mode: 'wall', label: 'Wall', title: 'Wall view' },
               { mode: 'filmstrip', label: 'Strip', title: 'Filmstrip view' },
@@ -405,43 +410,39 @@ export default function Gallery({ artists, setArtists, ideas = [], mergedConvent
                 aria-pressed={viewMode === mode}
                 // The fill belongs on the 44pt box, so it shows what is
                 // actually tappable (agy review).
-                className={`min-w-11 h-11 px-2.5 shrink-0 flex items-center justify-center rounded-xs font-mono text-xs transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40 disabled:cursor-not-allowed ${
+                className={`min-w-11 h-11 px-2 shrink-0 flex items-center justify-center rounded-xs font-mono text-xs transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40 disabled:cursor-not-allowed ${
                   viewMode === mode ? 'text-cream bg-ink-card' : 'text-cream-muted hover:text-cream'
                 }`}
               >
                 {label}
               </button>
             ))}
-            {/* #70: only grid has cards to drag, so the toggle only appears there. */}
-            {viewMode === 'grid' && (
-              <button
-                onClick={() => setEditing((v) => !v)}
-                disabled={dragActive}
-                aria-pressed={editing}
-                // Names both jobs: the mode reveals the quick-upload + as well
-                // as the drag handle (agy review).
-                aria-label="Reorder and add photos"
-                title={editing ? 'Done — back to browsing' : 'Reorder and add photos'}
-                className={`ml-1 w-11 h-11 shrink-0 flex items-center justify-center rounded-xs border-l border-ink-border transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40 disabled:cursor-not-allowed ${
-                  editing ? 'text-cream bg-accent/20' : 'text-cream-muted/50 hover:text-cream-muted'
-                }`}
-              >
-                <span className="text-[0.8125rem] font-mono">⇅</span>
-              </button>
-            )}
           </div>
           {activeTag && !filterOpen ? (
-            <button
-              onClick={() => setActiveTag(null)}
-              disabled={dragActive}
-              aria-label={`Clear filter: ${activeTag}`}
-              className="min-w-0 h-11 px-2.5 flex items-center gap-1.5 rounded-xs border border-accent/50 bg-accent/10 font-mono text-xs text-cream disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
-            >
-              <span className="truncate">{activeTag}</span>
-              <span aria-hidden="true">×</span>
-            </button>
+            // Two targets in one chip: the name reopens the styles to pick
+            // another, the cross clears it (agy review).
+            <div className="min-w-0 h-11 flex items-stretch rounded-xs border border-accent/50 bg-accent/10 font-mono text-xs text-cream">
+              <button
+                data-filter-control
+                onClick={() => setFilterOpen(true)}
+                disabled={dragActive}
+                aria-label={`Change filter: ${activeTag}`}
+                className="min-w-0 pl-2.5 pr-1 flex items-center rounded-xs disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <span className="truncate">{activeTag}</span>
+              </button>
+              <button
+                onClick={() => setActiveTag(null)}
+                disabled={dragActive}
+                aria-label={`Clear filter: ${activeTag}`}
+                className="shrink-0 w-9 flex items-center justify-center rounded-xs disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
+              >
+                <span aria-hidden="true">×</span>
+              </button>
+            </div>
           ) : (
             <button
+              data-filter-control
               onClick={() => setFilterOpen((v) => !v)}
               disabled={dragActive}
               aria-expanded={filterOpen}
@@ -505,6 +506,23 @@ export default function Gallery({ artists, setArtists, ideas = [], mergedConvent
         <CompareView artists={artists} onOpenArtist={openArtist} />
       ) : (
         <div className="px-4 max-w-7xl mx-auto">
+          {/* #70: only grid has cards to drag, so the toggle lives with the grid.
+              It was a bare ⇅ in the view bar until #220 E gave it a word. */}
+          <div className="flex justify-end mb-3">
+            <button
+              onClick={() => setEditing((v) => !v)}
+              disabled={dragActive}
+              aria-pressed={editing}
+              // Names both jobs: the mode reveals the quick-upload + as well
+              // as the drag handle (agy review).
+              aria-label="Reorder and add photos"
+              className={`min-w-11 h-11 px-3 rounded-xs border font-mono text-xs transition-colors focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-40 disabled:cursor-not-allowed ${
+                editing ? 'text-cream border-accent/50 bg-accent/10' : 'text-cream-muted hover:text-cream border-ink-border'
+              }`}
+            >
+              <span aria-hidden="true">⇅ </span>{editing ? 'Done reordering' : 'Reorder'}
+            </button>
+          </div>
           <ArtistGrid
             items={sorted}
             sensors={sensors}

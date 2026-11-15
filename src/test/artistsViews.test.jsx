@@ -60,6 +60,18 @@ describe('Artists header', () => {
     expect(screen.getByRole('button', { name: 'Tools' })).toBeInTheDocument()
   })
 
+  it('hands focus back to Tools before a tool opens, and closes on Escape from the trigger', () => {
+    renderGallery()
+    const tools = screen.getByRole('button', { name: 'Tools' })
+    fireEvent.click(tools)
+    tools.focus()
+    fireEvent.keyDown(tools, { key: 'Escape' })
+    expect(screen.queryByRole('menu')).toBeNull()
+    fireEvent.click(tools)
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Manage' }))
+    expect(document.activeElement === tools || !document.body.contains(tools)).toBe(true)
+  })
+
   it('leaves + Add outside the menu', () => {
     renderGallery()
     expect(screen.getByRole('button', { name: '+ Add' })).toBeInTheDocument()
@@ -88,6 +100,23 @@ describe('Artists style filter', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Clear filter: blackwork' }))
     expect(screen.getAllByTestId('filmstrip-row')).toHaveLength(3)
     expect(screen.getByRole('button', { name: 'Filter' })).toBeInTheDocument()
+  })
+
+  it('lets the chip reopen the styles to pick another', () => {
+    renderGallery()
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }))
+    fireEvent.click(screen.getByRole('button', { name: 'blackwork' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Change filter: blackwork' }))
+    fireEvent.click(screen.getByRole('button', { name: 'fine-line' }))
+    expect(screen.getByRole('button', { name: 'Clear filter: fine-line' })).toBeInTheDocument()
+  })
+
+  it('names the grid reorder switch in words, with the grid', () => {
+    renderGallery()
+    fireEvent.click(screen.getByRole('button', { name: 'Grid view' }))
+    const toggle = screen.getByRole('button', { name: 'Reorder and add photos' })
+    expect(toggle).toHaveTextContent('Reorder')
+    expect(toggle.parentElement.contains(screen.getByRole('button', { name: 'Grid view' }))).toBe(false)
   })
 })
 
@@ -133,6 +162,8 @@ describe('Compare columns', () => {
     expect(within(column).queryByText('surrealism')).toBeNull()
     expect(within(column).getByTestId('compare-photos').className).not.toMatch(/grid-cols-2/)
     expect(within(column).getByRole('button', { name: 'Remove Ana from comparison' })).toBeInTheDocument()
+    // The name and every photo open the artist.
+    expect(within(column).getAllByRole('button', { name: 'Open Ana' })).toHaveLength(2)
   })
 
   it('compare two on a phone: no third slot once two are picked', () => {

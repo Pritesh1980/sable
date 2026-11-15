@@ -32,7 +32,12 @@ export default function ToolsMenu({ tools, disabled = false }) {
   }
 
   return (
-    <div className="relative">
+    // Focus leaving the trigger and the menu closes it, so its backdrop never
+    // outlives it (codex).
+    <div
+      className="relative"
+      onBlur={(e) => { if (open && e.relatedTarget && !e.currentTarget.contains(e.relatedTarget)) setOpen(false) }}
+    >
       <button
         ref={buttonRef}
         aria-haspopup="menu"
@@ -40,6 +45,7 @@ export default function ToolsMenu({ tools, disabled = false }) {
         aria-controls={open ? id : undefined}
         disabled={disabled}
         onClick={() => setOpen((v) => !v)}
+        onKeyDown={(e) => { if (open && e.key === 'Escape') { e.preventDefault(); setOpen(false) } }}
         className={`font-mono text-xs px-3 min-h-11 rounded-xs transition-colors tracking-widest uppercase border disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent ${
           open ? 'text-cream border-cream-muted' : 'text-cream-muted hover:text-cream border-ink-border hover:border-cream-muted'
         }`}
@@ -64,7 +70,9 @@ export default function ToolsMenu({ tools, disabled = false }) {
                 role="menuitem"
                 aria-label={tool.label}
                 aria-describedby={`${id}-hint-${i}`}
-                onClick={() => { setOpen(false); tool.onSelect() }}
+                // Focus goes back to the trigger first: a dialog the tool opens
+                // records it as the place to return to (codex).
+                onClick={() => { buttonRef.current?.focus(); setOpen(false); tool.onSelect() }}
                 className="w-full text-left px-4 py-2.5 min-h-11 hover:bg-ink-muted focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent transition-colors"
               >
                 <span className="block font-mono text-xs text-cream tracking-widest uppercase">{tool.label}</span>

@@ -13,7 +13,7 @@ Japanese-inspired, tribal, colour-realism and brush-lettering styles. Its
 The **Artists** page is where browsing and organising live. A sticky bar at the top holds the
 **view switch** (**Wall**, **Strip**, **Compare**, **Grid**) and a **Filter** button. Tap
 **Filter** to open the style tags and pick one: it narrows every view, the Wall included,
-and shows as a chip in the bar. Tap the chip to clear it. The header's **Tools** menu holds
+and shows as a chip in the bar. Tap the chip's name to pick another style, or its **×** to clear it. The header's **Tools** menu holds
 **Rank**, **Browse**, **Map** and **Manage**, each with a line saying what it does. The
 **Wall** is the default. Everyday ranking happens on it: see
 [Ranking your favourites](#ranking-your-favourites) below. With no artists saved yet, every
@@ -42,7 +42,7 @@ A continuous two-column grid on phones, with names and handles wrapping inside
 each card. Wider screens retain a featured top-three row. Tapping anywhere on a card opens that
 artist — the whole tile is the target, with nothing else competing for it.
 
-To reorder or add photos, turn on **⇅ Reorder** (next to the view toggle). Each card
+To reorder or add photos, turn on **⇅ Reorder** (above the grid). Each card
 grows a drag handle in its top corner and a **+** for adding photos; **drag a card** to
 reorder and its new position becomes its rank. Turn Reorder off to go back to browsing.
 Switching to another view turns it off for you.
