@@ -74,7 +74,7 @@ function PhotoArrow({ dir, disabled, onGo }) {
       onClick={() => onGo(dir)}
       disabled={disabled}
       aria-label={dir < 0 ? 'Previous photo' : 'Next photo'}
-      className={`flex items-center justify-center min-w-11 min-h-11 text-3xl leading-none pointer-events-auto transition-colors text-v2-cream disabled:text-v2-muted/50`}
+      className={`flex items-center justify-center w-12 h-12 mx-2 rounded-full border border-v2-hairline bg-v2-ink/60 text-3xl leading-none pb-1 pointer-events-auto transition-colors text-v2-cream active:border-v2-accent disabled:text-v2-muted/50`}
     >
       <span aria-hidden="true">{dir < 0 ? '‹' : '›'}</span>
     </button>
