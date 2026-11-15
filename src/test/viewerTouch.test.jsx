@@ -68,6 +68,8 @@ describe('WallViewer on a touch screen (#93)', () => {
   it('the handle says More, and the sheet plate carries Artist N of M', () => {
     renderWall()
     expect(screen.getByRole('button', { name: /show controls/i })).toHaveTextContent('More')
+    // The always-on bar says where you are among the artists without opening the sheet.
+    expect(screen.getByText('Artist 1 of 2')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /show controls/i }))
     expect(screen.getByText(/Artist 1 of 2 ·/)).toBeInTheDocument()
     // The caption bar gives way to the sheet.

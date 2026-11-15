@@ -198,7 +198,7 @@ export default function WallViewer({
         Close
       </button>
 
-      <div className="absolute right-[max(1rem,env(safe-area-inset-right))] sm:right-[max(2rem,env(safe-area-inset-right))] top-[max(1.5rem,env(safe-area-inset-top))] font-v2-display text-sm tracking-[0.2em] text-v2-muted pointer-events-auto">
+      <div className="absolute right-[max(1rem,env(safe-area-inset-right))] sm:right-[max(2rem,env(safe-area-inset-right))] top-[max(1.5rem,env(safe-area-inset-top))] font-v2-display text-sm tracking-[0.2em] text-v2-cream [text-shadow:0_1px_8px_rgba(19,17,16,0.9)] pointer-events-none">
         Photo {positionInArtist + 1} of {artistImageCount}
       </div>
     </>
@@ -296,9 +296,14 @@ export default function WallViewer({
           {!sheetOpen && (
             <div className="absolute inset-x-0 bottom-0 pt-10 pl-[max(0.5rem,env(safe-area-inset-left))] pr-[max(0.5rem,env(safe-area-inset-right))] pb-[max(0.25rem,env(safe-area-inset-bottom))] [@media(max-height:500px)]:pt-4">
               <div aria-hidden="true" className={FADE} />
-              <h1 className="relative px-3 font-v2-display text-lg tracking-[0.18em] uppercase text-v2-cream truncate [text-shadow:0_1px_12px_rgba(19,17,16,0.8)] [@media(max-height:500px)]:text-base">
-                {current.artistName}
-              </h1>
+              <div className="relative px-3 flex items-baseline justify-between gap-3">
+                <h1 className="min-w-0 font-v2-display text-lg tracking-[0.18em] uppercase text-v2-cream truncate [text-shadow:0_1px_12px_rgba(19,17,16,0.8)] [@media(max-height:500px)]:text-base">
+                  {current.artistName}
+                </h1>
+                <p className="shrink-0 font-v2-ui text-xs tracking-[0.12em] text-v2-cream/90">
+                  Artist {artistOrdinal} of {artistCount}
+                </p>
+              </div>
               <div className="relative flex items-center justify-between">
                 <PhotoArrow dir={-1} disabled={artistImageCount < 2} onGo={goWithinArtist} />
                 <ViewerSheetToggle open={false} onToggle={() => setSheetOpen(true)} controls={sheetId} />
