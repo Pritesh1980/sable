@@ -59,7 +59,7 @@ describe('WallViewer on a touch screen (#93)', () => {
     expect(screen.getByRole('button', { name: /close viewer/i })).toBeInTheDocument()
     expect(screen.getByText('Photo 1 of 2')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Mora Lane' })).toBeInTheDocument()
-    expect(screen.queryByText(/artist 1 of 2/i)).not.toBeInTheDocument()
+    expect(screen.getByText('Artist 1 of 2')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /generate a concept/i })).not.toBeInTheDocument()
     expect(screen.queryByTitle(/next image/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/back to wall/i)).not.toBeInTheDocument()
