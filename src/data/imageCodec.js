@@ -1,6 +1,7 @@
 import { warmImageCache } from './imageResolver'
 import { stageInlineOnce } from './imageStaging'
 import { normalizeReferenceImages } from './referenceImages'
+import { canonicalizeImages } from './artistsPolicy'
 
 // Image codecs for the document collections that carry images (ideas, concepts).
 //
@@ -40,6 +41,35 @@ export const ideasCodec = {
       next.push(images === idea.images ? idea : { ...idea, images })
     }
     return { value: moved ? next : ideas, moved }
+  },
+}
+
+// ── saved: photos saved without an artist (#220 K). Each record holds one stored
+// ref in `image` ({ key } once staged), resolved where it renders ───────────────
+
+export const savedCodec = {
+  toCanonical: (saved = []) => saved.flatMap((row) => {
+    // Never drop a row: an inline photo that isn't staged yet stays, so
+    // ensureUploaded can stage it later.
+    const [image] = canonicalizeImages([row.image], { keepInline: true })
+    return [{ ...row, image: image ?? row.image }]
+  }),
+  toDisplay: async (saved = []) => {
+    warmImageCache(saved.map((row) => row.image))
+    return saved
+  },
+  ensureUploaded: async (saved = [], { userId }) => {
+    let moved = 0
+    const next = []
+    for (const row of saved) {
+      const url = typeof row.image === 'string' ? row.image : row.image?.url
+      if (row.image?.key || typeof url !== 'string' || !url.startsWith('data:')) { next.push(row); continue }
+      const key = await stageInlineOnce(url, { userId, scope: 'saved', id: row.id || 'misc' })
+      if (!key) { next.push(row); continue }
+      moved += 1
+      next.push({ ...row, image: { key } })
+    }
+    return { value: moved ? next : saved, moved }
   },
 }
 

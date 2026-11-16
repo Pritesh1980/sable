@@ -51,8 +51,29 @@ function studioNameOf(studioId) {
 // (`image`), never a resolved string: the render boundary (ArtistImage /
 // useImageSrc) resolves it, so a blob key that is not cached yet is "loading"
 // rather than indistinguishable from "no image" (#113).
-export function buildWallItems(artists = [], { now = new Date() } = {}) {
-  const items = []
+export const NO_ARTIST_LABEL = 'No artist yet'
+
+// Photos saved without an artist (#220 K) hang on the wall first, newest first,
+// unattributed. They have no artistId, so every artist check treats them as
+// their own group.
+function savedItems(saved, now) {
+  return [...saved]
+    .sort((a, b) => String(b.addedAt || '').localeCompare(String(a.addedAt || '')))
+    .map((record) => ({
+      artistId: null,
+      savedId: record.id,
+      artistName: NO_ARTIST_LABEL,
+      handle: undefined,
+      styles: [],
+      image: record.image,
+      imageIndex: 0,
+      addedAt: record.addedAt,
+      isRecent: isRecent(record.addedAt, now),
+    }))
+}
+
+export function buildWallItems(artists = [], { now = new Date(), saved = [] } = {}) {
+  const items = savedItems(saved, now)
   for (const artist of artists) {
     const images = artist.images || []
     const studioName = studioNameOf(artist.studio)
@@ -78,6 +99,8 @@ export function buildWallItems(artists = [], { now = new Date() } = {}) {
 // n counting from 1 like the viewer's own counter. Artist ids are handles and
 // can hold dots ("zoia.ink"), so the number is whatever follows the last dot.
 export function photoParam(item) {
+  // Handles can't hold ':', so `s:<id>` never collides with an artist link.
+  if (item.savedId) return `s:${item.savedId}`
   return `${item.artistId}.${item.imageIndex + 1}`
 }
 
@@ -85,6 +108,7 @@ export function photoParam(item) {
 // photo (artist removed, photo deleted, a malformed link).
 export function findPhotoIndex(items, value) {
   if (!value) return -1
+  if (value.startsWith('s:')) return items.findIndex((item) => item.savedId === value.slice(2))
   const dot = value.lastIndexOf('.')
   const n = Number(value.slice(dot + 1))
   if (dot <= 0 || !Number.isInteger(n) || n < 1) return -1

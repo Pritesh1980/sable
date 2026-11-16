@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import ArtistImage from './ArtistImage'
 import GeneratedArtworkNotice from './GeneratedArtworkNotice'
 import GlCrossfade from './GlCrossfade'
@@ -11,6 +11,8 @@ import useSwipeTap from '../hooks/useSwipeTap'
 import useViewportZoomed from '../hooks/useViewportZoomed'
 import { resolveTransitionMode } from '../lib/gl'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
+
+const SAVED_FIELD = 'min-h-11 bg-v2-ink border border-v2-hairline rounded-xs px-3 text-v2-cream font-v2-ui text-sm outline-hidden focus:border-v2-accent'
 
 // Resolves the full artist record (status/notes) for the currently viewed
 // item — prefers the `artists` list when given, falls back to the single
@@ -81,6 +83,78 @@ function PhotoArrow({ dir, disabled, onGo }) {
   )
 }
 
+// What a photo saved without an artist can do (#220 K): be given one, or go.
+// Choosing is a select plus an explicit Give, so a slip on a phone's picker
+// cannot move the photo.
+function SavedActions({ artists, onAssign, onRemove, onAddNewArtist, className = '' }) {
+  const [choosing, setChoosing] = useState(false)
+  const [artistId, setArtistId] = useState('')
+  const toggleRef = useRef(null)
+  function stop() {
+    setChoosing(false)
+    toggleRef.current?.focus()
+  }
+  return (
+    <div className={`flex flex-col gap-2 ${className}`}>
+      {choosing && artists.length === 0 && (
+        <p className="font-v2-ui text-sm text-v2-cream pointer-events-auto">
+          Add the artist first, then give them this photo.
+        </p>
+      )}
+      {choosing && artists.length > 0 && (
+        <div className="flex gap-2 pointer-events-auto">
+          <select
+            aria-label="Choose an artist"
+            value={artistId}
+            autoFocus
+            onChange={(e) => setArtistId(e.target.value)}
+            onKeyDown={(e) => {
+              // One layer per Escape: this closes the picker, not the viewer.
+              if (e.key !== 'Escape') return
+              e.preventDefault()
+              e.stopPropagation()
+              stop()
+            }}
+            className={`${SAVED_FIELD} min-w-0 flex-1`}
+          >
+            <option value="">Choose an artist…</option>
+            {artists.map((a) => (
+              <option key={a.id} value={a.id}>{a.name || `@${a.handle}`}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            disabled={!artistId}
+            onClick={() => onAssign(artistId)}
+            className={`${PANEL_BUTTON} disabled:opacity-40`}
+          >
+            Give
+          </button>
+        </div>
+      )}
+      {choosing && onAddNewArtist && (
+        <button type="button" onClick={onAddNewArtist} className={`${PANEL_BUTTON} pointer-events-auto`}>
+          Add a new artist…
+        </button>
+      )}
+      <div className="flex gap-2 pointer-events-auto">
+        <button
+          ref={toggleRef}
+          type="button"
+          aria-expanded={choosing}
+          onClick={() => setChoosing((c) => !c)}
+          className={`${PANEL_BUTTON} flex-1`}
+        >
+          Give this an artist
+        </button>
+        <button type="button" onClick={onRemove} className={PANEL_BUTTON}>
+          Remove photo
+        </button>
+      </div>
+    </div>
+  )
+}
+
 const PANEL_BUTTON = 'flex items-center justify-center gap-3 bg-v2-ink/70 backdrop-blur-md border border-v2-hairline hover:border-v2-accent rounded-xs px-4 py-3 text-v2-cream font-v2-ui text-sm transition-colors'
 
 // Full-screen wall viewer. The image owns the screen.
@@ -104,6 +178,9 @@ export default function WallViewer({
   onGenerate,
   onPasteImage,
   onIndexChange,
+  onAssignSaved,
+  onRemoveSaved,
+  onAddNewArtist,
 }) {
   const [showInfo, setShowInfo] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -137,6 +214,10 @@ export default function WallViewer({
 
   const idle = useIdleFade(2000)
 
+  // Info & notes belongs to an artist: on a photo with none it stays shut, so a
+  // stray I cannot leave a hidden panel state that eats the next Escape.
+  if (current?.savedId && showInfo) setShowInfo(false)
+
   const gestures = useSwipeTap({
     enabled: !zoomed,
     onTap: () => setSheetOpen((s) => !s),
@@ -158,7 +239,7 @@ export default function WallViewer({
   // Paste (⌘V) with the viewer open adds the pasted image to the artist
   // currently in view.
   useEffect(() => {
-    if (!open || !onPasteImage || !current) return undefined
+    if (!open || !onPasteImage || !current?.artistId) return undefined
     function handlePaste(e) {
       const file = Array.from(e.clipboardData?.files || [])[0]
       if (file) onPasteImage(current.artistId, file)
@@ -174,7 +255,8 @@ export default function WallViewer({
 
   if (!open || !current) return null
 
-  const activeArtist = resolveArtist(current.artistId, artist, artists)
+  const isSaved = Boolean(current.savedId)
+  const activeArtist = isSaved ? undefined : resolveArtist(current.artistId, artist, artists)
   const instagramUrl = `https://www.instagram.com/${current.handle}/`
 
   function goWithinArtist(delta) {
@@ -209,28 +291,43 @@ export default function WallViewer({
       <h1 className="font-v2-display text-[1.6rem] tracking-[0.24em] uppercase text-v2-cream [text-shadow:0_1px_12px_rgba(19,17,16,0.8)]">
         {current.artistName}
       </h1>
-      <div className="font-v2-ui text-xs tracking-[0.12em] text-v2-cream/90">
-        Artist {artistOrdinal} of {artistCount} ·{' '}
-        <a
-          href={instagramUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hover:text-v2-cream hover:underline"
-        >
-          @{current.handle} ↗
-        </a>
-      </div>
-      <div className="mt-1 font-v2-ui text-[0.68rem] tracking-[0.14em] uppercase text-v2-cream">
-        {current.styles.join(' · ')}
-      </div>
+      {!isSaved && (
+        <div className="font-v2-ui text-xs tracking-[0.12em] text-v2-cream/90">
+          Artist {artistOrdinal} of {artistCount} ·{' '}
+          <a
+            href={instagramUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-v2-cream hover:underline"
+          >
+            @{current.handle} ↗
+          </a>
+        </div>
+      )}
+      {current.styles.length > 0 && (
+        <div className="mt-1 font-v2-ui text-[0.68rem] tracking-[0.14em] uppercase text-v2-cream">
+          {current.styles.join(' · ')}
+        </div>
+      )}
     </>
   )
 
+  // Keyed by photo so the picker starts closed on each one.
+  const savedActions = isSaved ? (
+    <SavedActions
+      key={current.savedId}
+      artists={artists || []}
+      onAssign={(artistId) => onAssignSaved?.(current, artistId)}
+      onRemove={() => onRemoveSaved?.(current)}
+      onAddNewArtist={onAddNewArtist}
+    />
+  ) : null
+
   const thumbnails = artistItems.map((item) => (
     <ArtistImage
-      key={item.imageIndex}
+      key={item.savedId || item.imageIndex}
       src={item.image}
-      label={`${item.artistName} thumbnail ${item.imageIndex + 1}`}
+      label={`${item.artistName} thumbnail ${(item.savedId ? artistItems.indexOf(item) : item.imageIndex) + 1}`}
       sizes="42px"
       onClick={() => setIndex(items.indexOf(item))}
       className={`h-14 w-[42px] shrink-0 object-cover rounded-xs cursor-pointer transition-opacity ${
@@ -263,7 +360,7 @@ export default function WallViewer({
             <GlCrossfade
               src={current.image}
               label={`${current.artistName} — ${current.styles.join(', ')}`}
-              rippleKey={current.artistId}
+              rippleKey={isSaved ? null : current.artistId}
               className="w-full h-full block"
               fallbackImageClassName="max-w-[100vw] max-h-[100vh] object-contain animate-fade-in"
               monogramClassName="text-8xl"
@@ -272,7 +369,7 @@ export default function WallViewer({
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
             <ArtistImage
-              key={`${current.artistId}-${current.imageIndex}`}
+              key={`${current.savedId || current.artistId}-${current.imageIndex}`}
               loading="eager"
               sizes="100vw"
               src={current.image}
@@ -300,9 +397,11 @@ export default function WallViewer({
                 <h1 className="min-w-0 font-v2-display text-lg tracking-[0.18em] uppercase text-v2-cream truncate [text-shadow:0_1px_12px_rgba(19,17,16,0.8)] [@media(max-height:500px)]:text-base">
                   {current.artistName}
                 </h1>
-                <p className="shrink-0 font-v2-ui text-xs tracking-[0.12em] text-v2-cream/90">
-                  Artist {artistOrdinal} of {artistCount}
-                </p>
+                {!isSaved && (
+                  <p className="shrink-0 font-v2-ui text-xs tracking-[0.12em] text-v2-cream/90">
+                    Artist {artistOrdinal} of {artistCount}
+                  </p>
+                )}
               </div>
               <div className="relative flex items-center justify-between">
                 <PhotoArrow dir={-1} disabled={artistImageCount < 2} onGo={goWithinArtist} />
@@ -319,7 +418,7 @@ export default function WallViewer({
                 <div className="flex gap-1 overflow-x-auto p-1 [@media(max-height:500px)]:hidden">{thumbnails}</div>
               )}
               <div>{plate}</div>
-              <div className="flex justify-between font-v2-ui text-xs tracking-widest uppercase">
+              {!isSaved && <div className="flex justify-between font-v2-ui text-xs tracking-widest uppercase">
                 <button
                   onClick={() => jumpArtist(-1)}
                   disabled={artistOrdinal <= 1}
@@ -334,15 +433,17 @@ export default function WallViewer({
                 >
                   Next artist ›
                 </button>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => onGenerate?.(current)} className={`${PANEL_BUTTON} flex-1`}>
-                  Generate a concept in this style
-                </button>
-                <button onClick={() => setShowInfo((s) => !s)} className={PANEL_BUTTON}>
-                  Info & notes
-                </button>
-              </div>
+              </div>}
+              {isSaved ? savedActions : (
+                <div className="flex gap-2">
+                  <button onClick={() => onGenerate?.(current)} className={`${PANEL_BUTTON} flex-1`}>
+                    Generate a concept in this style
+                  </button>
+                  <button onClick={() => setShowInfo((s) => !s)} className={PANEL_BUTTON}>
+                    Info & notes
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -381,25 +482,31 @@ export default function WallViewer({
             </div>
           )}
 
-          <button
-            onClick={() => onGenerate?.(current)}
-            className={`absolute right-8 bottom-7 ${PANEL_BUTTON} pointer-events-auto`}
-          >
-            Generate a concept in this style
-            <kbd className="text-[0.7rem] text-v2-accent border border-v2-accent rounded px-1.5 py-0.5">G</kbd>
-          </button>
+          {isSaved ? (
+            <div className="absolute right-8 bottom-7 w-80">{savedActions}</div>
+          ) : (
+            <button
+              onClick={() => onGenerate?.(current)}
+              className={`absolute right-8 bottom-7 ${PANEL_BUTTON} pointer-events-auto`}
+            >
+              Generate a concept in this style
+              <kbd className="text-[0.7rem] text-v2-accent border border-v2-accent rounded px-1.5 py-0.5">G</kbd>
+            </button>
+          )}
 
           <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-5 font-v2-ui text-[0.68rem] tracking-[0.1em] text-v2-muted pointer-events-auto">
-            <span><kbd className={KBD}>←</kbd><kbd className={KBD}>→</kbd>this artist</span>
+            {isSaved
+              ? artistItems.length > 1 && <span><kbd className={KBD}>←</kbd><kbd className={KBD}>→</kbd>photos</span>
+              : <span><kbd className={KBD}>←</kbd><kbd className={KBD}>→</kbd>this artist</span>}
             <span><kbd className={KBD}>↑</kbd><kbd className={KBD}>↓</kbd>next artist</span>
-            <span><kbd className={KBD}>G</kbd>generate</span>
-            <span><kbd className={KBD}>I</kbd>info & notes</span>
+            {!isSaved && <span><kbd className={KBD}>G</kbd>generate</span>}
+            {!isSaved && <span><kbd className={KBD}>I</kbd>info & notes</span>}
             <span><kbd className={KBD}>Esc</kbd>back to wall</span>
           </div>
         </div>
       )}
 
-      {showInfo && (
+      {showInfo && !isSaved && (
         <InfoPanel artist={activeArtist} ideas={ideas} onClose={() => setShowInfo(false)} />
       )}
     </div>

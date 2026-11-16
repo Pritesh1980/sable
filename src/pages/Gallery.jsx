@@ -92,7 +92,7 @@ function ArtistGrid({ items, sensors, onDragStart, onDragEnd, onDragCancel, onOp
   )
 }
 
-export default function Gallery({ artists, setArtists, ideas = [], mergedConventions = [] }) {
+export default function Gallery({ artists, setArtists, saved = [], setSaved = () => {}, ideas = [], mergedConventions = [] }) {
   const { user } = useAuth() || {}
   const [searchParams, setSearchParams] = useSearchParams()
   const userId = user?.id
@@ -482,7 +482,7 @@ export default function Gallery({ artists, setArtists, ideas = [], mergedConvent
       <SampleArtistNotice artists={artists} setArtists={setArtists} className="mx-4 md:mx-8 my-3" />
 
       {/* #161: with nobody saved, every view was blank under its filters. */}
-      {artists.length === 0 ? (
+      {artists.length === 0 && saved.length === 0 ? (
         <div className="max-w-xl mx-auto px-4 py-12">
           <EmptyState
             definition="Save the tattooists whose work you would wear. Each one keeps their photos, styles and where they work, and you put them in order as your taste settles."
@@ -492,11 +492,13 @@ export default function Gallery({ artists, setArtists, ideas = [], mergedConvent
             <SampleArtistButton setArtists={setArtists} />
           </EmptyState>
         </div>
-      ) : viewMode === 'wall' ? (
+      ) : viewMode === 'wall' || artists.length === 0 ? (
         <WallView
           artists={artists}
           wallArtists={sorted}
           ideas={ideas}
+          saved={activeTag ? [] : saved}
+          setSaved={setSaved}
           setArtists={setArtists}
           onAddArtist={(initial) => { setAddInitial(initial); setQuickAdding(true) }}
           revealArtistId={captureReceipt?.kind === 'created' ? captureReceipt.artistId : null}
@@ -587,6 +589,7 @@ export default function Gallery({ artists, setArtists, ideas = [], mergedConvent
           initial={addInitial || undefined}
           artists={artists}
           setArtists={setArtists}
+          setSaved={setSaved}
           userId={userId}
           onClose={closeCapture}
           onManage={() => changeManage(true)}
@@ -597,7 +600,7 @@ export default function Gallery({ artists, setArtists, ideas = [], mergedConvent
       )}
 
       {captureReceipt && <p role="status" className="fixed bottom-24 left-4 right-4 sm:left-auto sm:max-w-md z-40 bg-v2-surface border border-v2-hairline px-3 flex items-center gap-3 font-v2-ui text-sm text-v2-cream">
-        <span className="min-w-0 break-words">{captureReceipt.kind === 'created' ? 'Artist saved' : `${captureReceipt.imageCount} ${captureReceipt.imageCount === 1 ? 'photo' : 'photos'} added to @${artists.find((a) => a.id === captureReceipt.artistId)?.handle || captureReceipt.artistId}`}</span>
+        <span className="min-w-0 break-words">{captureReceipt.kind === 'saved-photo' ? `${captureReceipt.imageCount === 1 ? 'Photo' : `${captureReceipt.imageCount} photos`} saved to the wall` : captureReceipt.kind === 'created' ? 'Artist saved' : `${captureReceipt.imageCount} ${captureReceipt.imageCount === 1 ? 'photo' : 'photos'} added to @${artists.find((a) => a.id === captureReceipt.artistId)?.handle || captureReceipt.artistId}`}</span>
         <button type="button" aria-label="Dismiss save confirmation" title="Dismiss confirmation" className="shrink-0 w-11 h-11 flex items-center justify-center text-v2-muted" onClick={() => setCaptureReceipt(null)}><X size={18} /></button>
       </p>}
 

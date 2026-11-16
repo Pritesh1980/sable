@@ -11,7 +11,7 @@ export default function WallPiece({ item, onOpen, onDropImage }) {
   const [dragOver, setDragOver] = useState(false)
 
   function handleDragOver(e) {
-    if (!onDropImage) return
+    if (!onDropImage || !item.artistId) return
     e.preventDefault()
     setDragOver(true)
   }
@@ -21,7 +21,7 @@ export default function WallPiece({ item, onOpen, onDropImage }) {
   }
 
   function handleDrop(e) {
-    if (!onDropImage) return
+    if (!onDropImage || !item.artistId) return
     e.preventDefault()
     setDragOver(false)
     const file = e.dataTransfer.files?.[0]

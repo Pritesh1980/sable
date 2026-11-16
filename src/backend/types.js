@@ -36,7 +36,7 @@
 
 /**
  * One document store for every collection
- * (ideas | concepts | boards | artistsMeta | conventionOverrides).
+ * (ideas | concepts | boards | saved | artistsMeta | conventionOverrides).
  * Scoped per-user by the adapter (RLS on Supabase, API authorizer on AWS).
  * @typedef {Object} RemoteStore
  * @property {(collection: string) => Promise<Record[]>} list

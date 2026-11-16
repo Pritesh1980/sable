@@ -47,6 +47,19 @@ describe('GlCrossfade', () => {
     await waitFor(() => expect(h.engine.transitionTo).toHaveBeenLastCalledWith('/d.jpg', { ripple: false }))
   })
 
+  it('a null rippleKey (a photo with no artist) never ripples, into or out of it', async () => {
+    const { rerender } = render(<GlCrossfade src="a.jpg" rippleKey="x" />)
+    await waitFor(() => expect(h.engine.setImage).toHaveBeenCalled())
+    rerender(<GlCrossfade src="b.jpg" rippleKey={null} />)
+    await waitFor(() => expect(h.engine.transitionTo).toHaveBeenLastCalledWith('/b.jpg', { ripple: false }))
+    rerender(<GlCrossfade src="c.jpg" rippleKey={null} />)
+    await waitFor(() => expect(h.engine.transitionTo).toHaveBeenLastCalledWith('/c.jpg', { ripple: false }))
+    rerender(<GlCrossfade src="d.jpg" rippleKey="y" />)
+    await waitFor(() => expect(h.engine.transitionTo).toHaveBeenLastCalledWith('/d.jpg', { ripple: false }))
+    rerender(<GlCrossfade src="e.jpg" rippleKey="z" />)
+    await waitFor(() => expect(h.engine.transitionTo).toHaveBeenLastCalledWith('/e.jpg', { ripple: true }))
+  })
+
   it('never ripples when no rippleKey is given', async () => {
     const { rerender } = render(<GlCrossfade src="a.jpg" />)
     await waitFor(() => expect(h.engine.setImage).toHaveBeenCalled())

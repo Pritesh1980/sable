@@ -28,6 +28,7 @@ function buildArtistGroups(items) {
 }
 
 function photoKey(item) {
+  if (item?.savedId) return `saved\u0000${item.savedId}`
   return item ? `${item.artistId}\u0000${item.imageIndex}` : undefined
 }
 
@@ -142,7 +143,10 @@ export default function useWallKeyboard({
   }, [enabled, moveWithinArtist, jumpArtist, onGenerate, onToggleInfo, onClose, items, index, dialogRef])
 
   const group = groupForIndex(groups, index)
-  const groupIndex = group ? groups.indexOf(group) : -1
+  // Photos saved without an artist (#220 K) form a run of their own at the front;
+  // it is not an artist, so it does not count in "Artist N of M".
+  const artistGroups = groups.filter((g) => g.artistId !== null)
+  const groupIndex = group && group.artistId !== null ? artistGroups.indexOf(group) : -1
 
   return {
     index,
@@ -153,6 +157,6 @@ export default function useWallKeyboard({
     positionInArtist: group ? index - group.startIndex : 0,
     artistImageCount: group ? group.endIndex - group.startIndex : 0,
     artistOrdinal: groupIndex + 1,
-    artistCount: groups.length,
+    artistCount: artistGroups.length,
   }
 }

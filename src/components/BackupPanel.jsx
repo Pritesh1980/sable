@@ -4,7 +4,7 @@ import { useAuth } from '../context/useAuth'
 
 // Compact: a v2 backup carries every photo as base64, so indentation would only
 // add weight to a file that is already large.
-export default function BackupPanel({ artists, setArtists, ideas, setIdeas, boards, setBoards, concepts, setConcepts, conventionOverrides, setConventionOverrides, onExport }) {
+export default function BackupPanel({ artists, setArtists, ideas, setIdeas, boards, setBoards, concepts, setConcepts, saved = [], setSaved, conventionOverrides, setConventionOverrides, onExport }) {
   const fileRef = useRef()
   const userId = useAuth()?.user?.id || null
   const [message, setMessage] = useState('')
@@ -23,7 +23,7 @@ export default function BackupPanel({ artists, setArtists, ideas, setIdeas, boar
         return
       }
       const { backup, skipped } = await createBackupWithImages(
-        { artists, ideas, boards, concepts, conventionOverrides },
+        { artists, ideas, boards, concepts, saved, conventionOverrides },
         { onProgress: (done, total) => setMessage(`Exporting photos… ${done} of ${total}`) },
       )
       requestBackupDownload(backup)
@@ -48,7 +48,7 @@ export default function BackupPanel({ artists, setArtists, ideas, setIdeas, boar
       // Validated first, so a bad file shows its error without a question. Asked
       // before any photo is staged: declining must leave nothing behind (#158).
       const question = replaceLibraryQuestion(
-        { artists, ideas, boards, concepts, conventionOverrides }, parsed, raw.exportedAt)
+        { artists, ideas, boards, concepts, saved, conventionOverrides }, parsed, raw.exportedAt)
       if (question && !window.confirm(question)) {
         setMessage('Import cancelled. Your library is unchanged.')
         return
@@ -60,6 +60,7 @@ export default function BackupPanel({ artists, setArtists, ideas, setIdeas, boar
       setIdeas(data.ideas)
       setBoards(data.boards)
       setConcepts(data.concepts)
+      setSaved?.(data.saved)
       setConventionOverrides(data.conventionOverrides)
       setMessage(failed
         ? `Backup imported. ${photos(failed)} couldn't be saved and ${failed === 1 ? 'was' : 'were'} left out.`

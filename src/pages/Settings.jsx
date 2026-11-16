@@ -30,7 +30,7 @@ function Choice({ label, value, options, onPick }) {
   )
 }
 
-export default function Settings({ artists, setArtists, ideas, setIdeas, boards, setBoards, concepts, setConcepts, conventionOverrides, setConventionOverrides, onExportBackup }) {
+export default function Settings({ artists, setArtists, ideas, setIdeas, boards, setBoards, concepts, setConcepts, saved, setSaved, conventionOverrides, setConventionOverrides, onExportBackup }) {
   const auth = useAuth()
   const { fontSize, toggleFont } = useTheme()
   const onIOS = isIOS()
@@ -116,6 +116,8 @@ export default function Settings({ artists, setArtists, ideas, setIdeas, boards,
         setBoards={setBoards}
         concepts={concepts}
         setConcepts={setConcepts}
+        saved={saved}
+        setSaved={setSaved}
         conventionOverrides={conventionOverrides}
         setConventionOverrides={setConventionOverrides}
       />
