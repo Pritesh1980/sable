@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { buildReliefMesh } from '../data/reliefStl'
+import { buildTattooPrintMeshes } from '../data/tattooPrint'
 import { createReliefPreview } from '../lib/reliefPreview'
 
 const REBUILD_DELAY_MS = 200
@@ -43,7 +44,16 @@ export default function ReliefPreview({ heightmap, settings }) {
     if (!engineReady || !heightmap || !settings) return undefined
     const timer = setTimeout(() => {
       try {
-        engineRef.current?.setMesh(buildReliefMesh(heightmap, settings))
+        if (settings.mode === 'tattoo') {
+          const built = buildTattooPrintMeshes(heightmap, settings)
+          engineRef.current?.setMesh({
+            ...built.previewBaseMesh,
+            size: built.size,
+            accentMesh: built.previewInkMesh,
+          })
+        } else {
+          engineRef.current?.setMesh(buildReliefMesh(heightmap, settings))
+        }
       } catch {
         setFailed(true)
       }

@@ -28,7 +28,7 @@ export const DETAIL_PRESETS = {
 }
 
 const VALID_SMOOTHING = new Set(['off', 'light'])
-const VALID_MODES = new Set(['relief', 'lineart', 'lithophane'])
+const VALID_MODES = new Set(['relief', 'lineart', 'lithophane', 'tattoo'])
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 

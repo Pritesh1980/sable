@@ -2,9 +2,9 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 
 // Relief mesh → three.js buffers, centred in x/y so the plate orbits about
 // its middle. Indexed (shared vertices) so computeVertexNormals smooth-shades.
-export function meshToGeometryArrays(mesh) {
-  const cx = mesh.size.widthMm / 2
-  const cy = mesh.size.depthMm / 2
+export function meshToGeometryArrays(mesh, size = mesh.size) {
+  const cx = size.widthMm / 2
+  const cy = size.depthMm / 2
   const positions = new Float32Array(mesh.vertices.length * 3)
   mesh.vertices.forEach(([x, y, z], i) => {
     positions[i * 3] = x - cx
@@ -14,9 +14,10 @@ export function meshToGeometryArrays(mesh) {
   return { positions, indices: Uint32Array.from(mesh.faces.flat()) }
 }
 
-// A small on-demand WebGL stage for the relief: one mesh, a raking light to
-// show the depth, drag to orbit. Renders only when something changes (no
-// animation loop). Returns null if WebGL is unavailable, so callers fall back.
+// A small on-demand WebGL stage for the relief: one mesh (or base + ink pair
+// in two-tone tattoo mode), a raking light to show the depth, drag to orbit.
+// Renders only when something changes (no animation loop). Returns null if WebGL
+// is unavailable, so callers fall back.
 export function createReliefPreview(THREE, mount) {
   let renderer
   try {
@@ -49,8 +50,11 @@ export function createReliefPreview(THREE, mount) {
   scene.add(key)
 
   const material = new THREE.MeshStandardMaterial({ color: 0xd9d2c5, roughness: 0.85, metalness: 0 })
+  let accentMaterial = null
   let geometry = null
   let object = null
+  let accentGeometry = null
+  let accentObject = null
   let radius = 50
   let centreZ = 0
   let yaw = -0.6
@@ -67,17 +71,39 @@ export function createReliefPreview(THREE, mount) {
     renderer.render(scene, camera)
   }
 
+  function buildGeometry(part, sharedSize) {
+    const { positions, indices } = meshToGeometryArrays(part, sharedSize)
+    const buffer = new THREE.BufferGeometry()
+    buffer.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+    buffer.setIndex(new THREE.BufferAttribute(indices, 1))
+    buffer.computeVertexNormals()
+    return buffer
+  }
+
   function setMesh(mesh) {
-    const { positions, indices } = meshToGeometryArrays(mesh)
-    const next = new THREE.BufferGeometry()
-    next.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-    next.setIndex(new THREE.BufferAttribute(indices, 1))
-    next.computeVertexNormals()
+    const next = buildGeometry(mesh, mesh.size)
     if (object) scene.remove(object)
     geometry?.dispose()
     geometry = next
     object = new THREE.Mesh(geometry, material)
     scene.add(object)
+
+    if (accentObject) {
+      scene.remove(accentObject)
+      accentObject = null
+    }
+    accentGeometry?.dispose()
+    accentGeometry = null
+
+    if (mesh.accentMesh?.faces?.length) {
+      if (!accentMaterial) {
+        accentMaterial = new THREE.MeshStandardMaterial({ color: 0x1e1c1a, roughness: 0.9, metalness: 0 })
+      }
+      accentGeometry = buildGeometry(mesh.accentMesh, mesh.size)
+      accentObject = new THREE.Mesh(accentGeometry, accentMaterial)
+      scene.add(accentObject)
+    }
+
     radius = Math.max(mesh.size.widthMm, mesh.size.depthMm) / 2
     centreZ = mesh.size.heightMm / 2
     render()
@@ -124,7 +150,9 @@ export function createReliefPreview(THREE, mount) {
     canvas.removeEventListener('pointerup', onPointerUp)
     canvas.removeEventListener('pointercancel', onPointerUp)
     geometry?.dispose()
+    accentGeometry?.dispose()
     material.dispose()
+    accentMaterial?.dispose()
     renderer.dispose()
     renderer.forceContextLoss?.()
     canvas.parentNode?.removeChild(canvas)

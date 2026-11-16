@@ -381,6 +381,7 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
 
   function makeStlFromVariant(input) {
     setStlSource({
+      conceptId: input.conceptId,
       imageUrl: input.imageUrl,
       label: input.variantLabel,
       filenameSeed: `${input.conceptLabel} ${input.variantLabel}`,
@@ -753,6 +754,8 @@ export default function Concepts({ concepts, setConcepts, commitConcepts, artist
 
       <ReliefStlDrawer
         source={stlSource}
+        apiKey={geminiKey}
+        onSave={stlSource?.conceptId ? addVariant : undefined}
         onClose={() => setStlSource(null)}
       />
 

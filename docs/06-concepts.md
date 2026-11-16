@@ -230,9 +230,18 @@ image…** inside the drawer. (Images pasted as a link from another website may 
 by the browser; upload them instead.) Your saved photos are read from a copy the browser
 can always use, so they work however they're stored. If a photo can't be read right now —
 for example, it isn't downloaded to this device and you're offline — the drawer says it is
-**available when online** and keeps **Download STL** disabled until you reconnect.
+**available when online** and keeps the download button disabled until you reconnect.
 
-Pick a **Style**:
+### From a photo of a tattoo (Prepare from photo)
+
+Turning a photo of an existing tattoo into a clean print? With a Gemini key saved (under
+**AI setup**), tap **Lift the tattoo**: Gemini redraws only the ink as flat black lines
+and stippling on pure white, stripping away skin, hair, shadows and the curve of the
+limb. The drawer switches to **Print this tattoo** automatically; switch between
+**Lifted design** and **Original photo** to compare, **Retry lift** for another pass, or
+tap **Save as variant** (**Add to references** from an idea) to keep the clean design.
+
+### Pick a Style
 
 - **Relief** — brightness becomes height, so shading turns into a sculpted surface.
 - **Line art** — every point is either the flat plate or full height, so line work prints as
@@ -244,18 +253,33 @@ Pick a **Style**:
 - **Lithophane** — a thin plate that shows the image when held up to a light: dark areas
   are printed thick (up to `3mm`), highlights thin (down to `0.8mm`). Print it standing
   upright in white or natural filament at 100% infill. Invert and threshold don't apply.
+- **Print this tattoo (2-colour silhouette)** — cleans tiny specks, enforces a printable
+  minimum stroke and gap (default `0.45mm`), and cuts the base plate to the tattoo's
+  silhouette plus a `3mm` margin instead of a rectangular frame (inspect it with **Cutout
+  mask**). Defaults: width `120mm`, ink depth `0.6mm`, plate thickness `3mm`.
+  - **Finish:** **Inlay** (default) puts the `0.6mm` ink face-down at `z = 0` and mirrors X
+    so the finished surface comes off a smooth bed flush and the right way round; **Raised**
+    places the ink on top of the silhouette base.
+  - **Export format:** **Two-colour 3MF** bundles aligned `base` and `ink` objects in one
+    `.3mf` file for dual-extruder slicers such as Cura; **Split STLs** saves `base.stl` and
+    `ink.stl` separately (select both in Cura and choose **Merge Models** so they snap to
+    their shared origin); **Single-extruder STL** merges the raised plate and shows the
+    exact Cura *Pause at height* layer height (`2.4mm` by default, the first ink layer) for
+    a manual filament swap.
+  - *Personal keepsakes of your own ink only — please don't share or sell prints of an artist's design.*
 
-Tick **Add a border** for a 3mm full-height frame round the edge — it stiffens a thin
-lithophane and neatens any plaque. There's no hanging hole yet; add one in your slicer
-(or drill it) if you want to hang the print. Transparent PNGs work: the background counts as white.
+Tick **Add a border** in Relief, Line art or Lithophane for a 3mm full-height frame round
+the edge — it stiffens a thin lithophane and neatens any plaque. There's no hanging hole yet;
+add one in your slicer (or drill it) if you want to hang the print. Transparent PNGs work:
+the background counts as white.
 
-Defaults: width `80mm`, max relief `3mm`, base `1.2mm`, detail `medium`, smoothing
+Relief defaults: width `80mm`, max relief `3mm`, base `1.2mm`, detail `medium`, smoothing
 `light`. **Fine** detail samples about every 0.3mm at 80mm wide — close to a 0.4mm
 nozzle — for fine-line work, at the cost of a larger file.
 
-Switch to **3D preview** to see exactly what will print and drag to rotate it; it updates
-as you change settings. The download is a binary STL, which is much smaller than the old
-text format and loads quickly in Cura or any other slicer.
+Switch to **3D preview** to see both colours or the sculpted plate and drag to rotate it;
+it updates as you change settings. Binary STLs and two-object `.3mf` archives load quickly
+in Cura or any other slicer.
 
 > **Tip:** the concept tags use the same six styles as the rest of the app, so a well-tagged
 > concept points straight at the artists already in your collection.

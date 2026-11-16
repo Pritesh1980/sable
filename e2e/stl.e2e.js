@@ -94,6 +94,26 @@ test.describe('relief STL export', () => {
     expectPrintable(stl, { widthMm: 80, topMm: 3.0 })
   })
 
+  test('print this tattoo: shows the cutout mask and exports a two-object 3MF', async ({ page }) => {
+    await page.getByRole('combobox', { name: 'Style' }).selectOption('tattoo')
+    await page.getByRole('button', { name: 'Cutout mask' }).tap()
+    const mask = page.getByRole('img', { name: /^Cutout mask/ })
+    await expect(mask).toBeVisible()
+
+    const [file] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: 'Download 2-colour 3MF' }).tap(),
+    ])
+    expect(file.suggestedFilename()).toMatch(/\.3mf$/)
+    const buffer = fs.readFileSync(await file.path())
+    expect(buffer[0]).toBe(0x50)
+    expect(buffer[1]).toBe(0x4b)
+    const text = buffer.toString('utf8')
+    expect(text).toContain('3D/3dmodel.model')
+    expect(text).toContain('<object id="2" name="base"')
+    expect(text).toContain('<object id="3" name="ink"')
+  })
+
   test('3D preview renders a WebGL canvas', async ({ page }) => {
     await page.getByRole('button', { name: '3D preview' }).tap()
     const preview = page.getByRole('img', { name: '3D preview of the relief' })

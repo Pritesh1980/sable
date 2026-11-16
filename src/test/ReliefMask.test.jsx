@@ -24,4 +24,34 @@ describe('ReliefMask', () => {
     expect(luminance(0)).toBeGreaterThan(180)
     expect(drawn.data[3]).toBe(255)
   })
+
+  it('draws the silhouette cutout mask in tattoo mode with ink darkest and outside muted', () => {
+    let drawn = null
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+      createImageData: (w, h) => ({ width: w, height: h, data: new Uint8ClampedArray(w * h * 4) }),
+      putImageData: (image) => { drawn = image },
+    })
+    const values = new Float32Array(20 * 20).fill(1)
+    for (let y = 8; y <= 11; y += 1) {
+      for (let x = 8; x <= 11; x += 1) values[y * 20 + x] = 0
+    }
+    render(
+      <ReliefMask
+        heightmap={{ width: 20, height: 20, values }}
+        settings={{ mode: 'tattoo', threshold: 0.55, invert: false, widthMm: 80, marginMm: 3, minStrokeMm: 0 }}
+      />,
+    )
+
+    const canvas = screen.getByRole('img', { name: /cutout mask/i })
+    expect(canvas.width).toBeGreaterThan(4)
+    expect(canvas.height).toBeGreaterThan(4)
+    let hasDarkInk = false
+    let hasLightPlate = false
+    for (let i = 0; i < drawn.data.length; i += 4) {
+      if (drawn.data[i] === 24) hasDarkInk = true
+      if (drawn.data[i] === 236) hasLightPlate = true
+    }
+    expect(hasDarkInk).toBe(true)
+    expect(hasLightPlate).toBe(true)
+  })
 })
