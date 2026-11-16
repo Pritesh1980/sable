@@ -86,7 +86,7 @@ function PhotoArrow({ dir, disabled, onGo }) {
 // What a photo saved without an artist can do (#220 K): be given one, or go.
 // Choosing is a select plus an explicit Give, so a slip on a phone's picker
 // cannot move the photo.
-function SavedActions({ artists, onAssign, onRemove, className = '' }) {
+function SavedActions({ artists, onAssign, onRemove, onAddNewArtist, className = '' }) {
   const [choosing, setChoosing] = useState(false)
   const [artistId, setArtistId] = useState('')
   const toggleRef = useRef(null)
@@ -96,7 +96,12 @@ function SavedActions({ artists, onAssign, onRemove, className = '' }) {
   }
   return (
     <div className={`flex flex-col gap-2 ${className}`}>
-      {choosing && (
+      {choosing && artists.length === 0 && (
+        <p className="font-v2-ui text-sm text-v2-cream pointer-events-auto">
+          Add the artist first, then give them this photo.
+        </p>
+      )}
+      {choosing && artists.length > 0 && (
         <div className="flex gap-2 pointer-events-auto">
           <select
             aria-label="Choose an artist"
@@ -126,6 +131,11 @@ function SavedActions({ artists, onAssign, onRemove, className = '' }) {
             Give
           </button>
         </div>
+      )}
+      {choosing && onAddNewArtist && (
+        <button type="button" onClick={onAddNewArtist} className={`${PANEL_BUTTON} pointer-events-auto`}>
+          Add a new artist…
+        </button>
       )}
       <div className="flex gap-2 pointer-events-auto">
         <button
@@ -170,6 +180,7 @@ export default function WallViewer({
   onIndexChange,
   onAssignSaved,
   onRemoveSaved,
+  onAddNewArtist,
 }) {
   const [showInfo, setShowInfo] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -202,6 +213,10 @@ export default function WallViewer({
   })
 
   const idle = useIdleFade(2000)
+
+  // Info & notes belongs to an artist: on a photo with none it stays shut, so a
+  // stray I cannot leave a hidden panel state that eats the next Escape.
+  if (current?.savedId && showInfo) setShowInfo(false)
 
   const gestures = useSwipeTap({
     enabled: !zoomed,
@@ -304,6 +319,7 @@ export default function WallViewer({
       artists={artists || []}
       onAssign={(artistId) => onAssignSaved?.(current, artistId)}
       onRemove={() => onRemoveSaved?.(current)}
+      onAddNewArtist={onAddNewArtist}
     />
   ) : null
 
@@ -479,10 +495,12 @@ export default function WallViewer({
           )}
 
           <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-5 font-v2-ui text-[0.68rem] tracking-[0.1em] text-v2-muted pointer-events-auto">
-            <span><kbd className={KBD}>←</kbd><kbd className={KBD}>→</kbd>this artist</span>
+            {isSaved
+              ? artistItems.length > 1 && <span><kbd className={KBD}>←</kbd><kbd className={KBD}>→</kbd>photos</span>
+              : <span><kbd className={KBD}>←</kbd><kbd className={KBD}>→</kbd>this artist</span>}
             <span><kbd className={KBD}>↑</kbd><kbd className={KBD}>↓</kbd>next artist</span>
-            <span><kbd className={KBD}>G</kbd>generate</span>
-            <span><kbd className={KBD}>I</kbd>info & notes</span>
+            {!isSaved && <span><kbd className={KBD}>G</kbd>generate</span>}
+            {!isSaved && <span><kbd className={KBD}>I</kbd>info & notes</span>}
             <span><kbd className={KBD}>Esc</kbd>back to wall</span>
           </div>
         </div>

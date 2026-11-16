@@ -49,8 +49,10 @@ export const ideasCodec = {
 
 export const savedCodec = {
   toCanonical: (saved = []) => saved.flatMap((row) => {
-    const [image] = canonicalizeImages([row.image])
-    return image ? [{ ...row, image }] : []
+    // Never drop a row: an inline photo that isn't staged yet stays, so
+    // ensureUploaded can stage it later.
+    const [image] = canonicalizeImages([row.image], { keepInline: true })
+    return [{ ...row, image: image ?? row.image }]
   }),
   toDisplay: async (saved = []) => {
     warmImageCache(saved.map((row) => row.image))

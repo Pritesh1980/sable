@@ -209,6 +209,7 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
           onIndexChange={handleIndexChange}
           onAssignSaved={handleAssignSaved}
           onRemoveSaved={handleRemoveSaved}
+          onAddNewArtist={() => { photo.close(); onAddArtist({}) }}
         />
       )}
 

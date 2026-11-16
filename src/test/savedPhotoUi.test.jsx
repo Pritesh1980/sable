@@ -75,6 +75,39 @@ describe('saved photos on the wall', () => {
     expect(spy.state.artists).toEqual(ARTISTS)
   })
 
+  it('ignores I on a saved photo, so Escape still closes the viewer, and hides artist-only hints', () => {
+    renderWall('/gallery?photo=s:s1')
+    expect(screen.queryByText('generate')).toBeNull()
+    expect(screen.queryByText('info & notes')).toBeNull()
+    expect(screen.queryByText('this artist')).toBeNull()
+    fireEvent.keyDown(window, { key: 'i' })
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('offers a way forward with no artists: say so, and open the add form', () => {
+    render(
+      <MemoryRouter initialEntries={['/gallery?photo=s:s1']}>
+        <Gallery artists={[]} setArtists={vi.fn()} saved={SAVED} setSaved={vi.fn()} ideas={[]} />
+      </MemoryRouter>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Give this an artist' }))
+    expect(screen.getByText('Add the artist first, then give them this photo.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Add a new artist…' }))
+    expect(screen.getByRole('dialog', { name: /add an artist/i })).toBeInTheDocument()
+  })
+
+  it('stays on the wall with no artists, whatever view is picked', () => {
+    render(
+      <MemoryRouter initialEntries={['/gallery']}>
+        <Gallery artists={[]} setArtists={vi.fn()} saved={SAVED} setSaved={vi.fn()} ideas={[]} />
+      </MemoryRouter>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /grid/i }))
+    expect(screen.queryByText(/no artists match/i)).toBeNull()
+    expect(screen.getAllByRole('button', { name: 'Open No artist yet' }).length).toBeGreaterThan(0)
+  })
+
   it('shows saved photos on the wall even with no artists', () => {
     render(
       <MemoryRouter initialEntries={['/gallery']}>
@@ -119,8 +152,19 @@ describe('Save without artist', () => {
     expect(next[0].image).toEqual({ key: `user/u1/saved/${next[0].id}/x.jpg` })
     expect(next[0].id).toBeTruthy()
     expect(next[0].addedAt).toMatch(/^\d{4}-/)
+    expect(next[0]).not.toHaveProperty('note')
     expect(setArtists).not.toHaveBeenCalled()
     expect(onSaved).toHaveBeenCalledWith({ kind: 'saved-photo', imageCount: 2 })
     expect(onClose).toHaveBeenCalled()
+  })
+
+  it('carries a typed style note onto the saved record', async () => {
+    const { setSaved, onSaved } = renderModal()
+    fireEvent.change(screen.getByLabelText(/choose files/i), { target: { files: [new File(['x'], 'a.png', { type: 'image/png' })] } })
+    fireEvent.click(screen.getByText('Details'))
+    fireEvent.change(screen.getByLabelText('Style note'), { target: { value: 'Thigh piece' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save without artist' }))
+    await waitFor(() => expect(onSaved).toHaveBeenCalled())
+    expect(setSaved.mock.calls[0][0]([])[0].note).toBe('Thigh piece')
   })
 })

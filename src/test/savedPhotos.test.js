@@ -60,8 +60,9 @@ describe('savedCodec', () => {
     const out = savedCodec.toCanonical([{ id: 'a', image: { key: 'user/u1/saved/a/x.jpg', addedAt: 'z' }, addedAt: 'z' }])
     expect(out[0].image).toEqual({ key: 'user/u1/saved/a/x.jpg', addedAt: 'z' })
   })
-  it('drops inline data from the persisted form', () => {
-    expect(savedCodec.toCanonical([{ id: 'a', image: 'data:image/png;base64,AAAA', addedAt: 'z' }])).toEqual([])
+  it('keeps a row with an unstaged inline photo so it can be staged later', () => {
+    const row = { id: 'a', image: 'data:image/png;base64,AAAA', addedAt: 'z' }
+    expect(savedCodec.toCanonical([row])).toEqual([row])
   })
   it('toDisplay returns the stored form', async () => {
     expect(await savedCodec.toDisplay(saved)).toEqual(saved)
@@ -95,5 +96,14 @@ describe('saved in backups', () => {
       { ownerId: 'u1', blobs: { getUrl: async () => dataUrl } },
     )
     expect(backup.data.saved).toEqual([{ id: 's', image: { url: dataUrl }, addedAt: 'z' }])
+  })
+})
+
+describe('savedCodec never drops a row', () => {
+  it('keeps a row whose image is an unstaged non-base64 data url, and leaves it alone when staging fails', async () => {
+    const row = { id: 'a', image: 'data:image/svg+xml,%3Csvg/%3E', addedAt: 'z' }
+    expect(savedCodec.toCanonical([row])).toEqual([row])
+    const out = await savedCodec.ensureUploaded([row], { userId: 'u1' })
+    expect(out).toEqual({ value: [row], moved: 0 })
   })
 })

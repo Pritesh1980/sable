@@ -387,7 +387,7 @@ export default function AddArtistModal({ artists = [], setArtists, setSaved, use
         const id = randomId()
         const [ref] = await stageImageRefs([dataUrl], { userId: owner, scope: 'saved', id })
         if (!ref?.key) throw new Error('Could not store this photo')
-        return { id, image: ref, addedAt }
+        return { id, image: ref, addedAt, ...(styleNote.trim() ? { note: styleNote.trim() } : {}) }
       }))
       if (!alive.current) return
       if (currentUserId.current !== owner) throw new Error('Owner changed')
@@ -520,7 +520,7 @@ export default function AddArtistModal({ artists = [], setArtists, setSaved, use
             Full manage view
           </Link>
         </div>
-        <div className="sticky bottom-0 bg-v2-surface flex flex-wrap justify-end gap-x-3 px-5 py-3 border-t border-v2-hairline">
+        <div className="sticky bottom-0 bg-v2-surface flex flex-wrap justify-end gap-x-3 gap-y-2 px-5 py-3 border-t border-v2-hairline">
           <button type="button" onClick={dismiss} disabled={saving}
             className="min-h-11 px-3 font-v2-ui text-sm text-v2-muted disabled:opacity-40">Cancel</button>
           {setSaved && staged.length > 0 && (
