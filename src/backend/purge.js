@@ -15,6 +15,7 @@ const PURGE_KEYS = [
   'tattoo_ideas',
   'tattoo_concepts',
   'tattoo_boards',
+  'tattoo_saved',
   'tattoo_artists_meta',
   'tattoo_convention_attending',
   // Winners, but not tattoo_convention_lineups: a line-up is a show's published

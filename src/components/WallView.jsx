@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { X } from 'lucide-react'
 import { buildWallItems, stampAddedAt, photoParam, findPhotoIndex } from '../data/wall'
 import useOverlayParam from '../hooks/useOverlayParam'
 import WallPiece from './WallPiece'
@@ -12,18 +13,23 @@ import { discoverArtistsWithGemini } from '../data/discovery'
 import { uploadImages } from '../hooks/useImageUpload'
 import { useAuth } from '../context/useAuth'
 import { useStorage } from '../hooks/useStorage'
+import { useUndoableRemoval } from '../hooks/useUndoableRemoval'
+
+const savedId = (record) => record.id
 
 // The Wall: full-bleed masonry of every artist reference image, the default
 // view on the Artists page (#220). Getting around is the app nav's job and the
 // page header belongs to Gallery; this is only the wall and what hangs off it.
-export default function WallView({ artists = [], wallArtists = artists, ideas = [], setArtists = () => {}, onAddArtist = () => {}, revealArtistId = null }) {
-  const items = buildWallItems(wallArtists)
+export default function WallView({ artists = [], wallArtists = artists, ideas = [], saved = [], setSaved = () => {}, setArtists = () => {}, onAddArtist = () => {}, revealArtistId = null }) {
+  const items = buildWallItems(wallArtists, { saved })
   // The open photo lives in the URL (?photo=<artistId>.<n>, #159): the browser's
   // Back closes the viewer instead of leaving the Wall, and a photo can be
   // linked to. A link to a photo that has gone just shows the Wall.
   const photo = useOverlayParam('photo')
   const viewerIndex = findPhotoIndex(items, photo.value)
   const [rankBoardOpen, setRankBoardOpen] = useState(false)
+  const [notice, setNotice] = useState('')
+  const { remove: removeSavedAt } = useUndoableRemoval(saved, setSaved, { message: 'Photo removed', durable: true, identify: savedId })
   const [dismissedSuggestions, setDismissedSuggestions] = useStorage('tattoo_dismissed_suggestions', [])
   const [aiSuggestions, setAiSuggestions] = useStorage('tattoo_ai_suggestions', [])
   const suggestionPool = [...SUGGESTED_ARTISTS, ...aiSuggestions]
@@ -83,6 +89,8 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
   }
 
   function handleGenerate(item) {
+    // A photo with no artist has no style to steer from.
+    if (!item.artistId) return
     // The viewer's entry is dropped on the way out so back-nav from Concepts
     // returns to the wall, not to the viewer.
     // t7: Concepts composer reads `steer` to pre-select this artist's style.
@@ -99,6 +107,26 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
     setArtists((prev) =>
       prev.map((a) => (a.id === artistId ? { ...a, images: [...(a.images || []), stamped] } : a))
     )
+  }
+
+  // A saved photo (#220 K) joins the artist's images in one update, keeping
+  // when it was added; the record it leaves behind is removed in the same go.
+  function handleAssignSaved(item, artistId) {
+    const record = saved.find((s) => s.id === item.savedId)
+    const target = artists.find((a) => a.id === artistId)
+    if (!record || !target) return
+    const image = stampAddedAt(record.image, record.addedAt || undefined)
+    setArtists((prev) => prev.map((a) => (a.id === artistId ? { ...a, images: [...(a.images || []), image] } : a)))
+    setSaved((prev) => prev.filter((s) => s.id !== record.id))
+    photo.close()
+    setNotice(`Photo given to ${target.name || `@${target.handle}`}`)
+  }
+
+  function handleRemoveSaved(item) {
+    const index = saved.findIndex((s) => s.id === item.savedId)
+    if (index === -1) return
+    removeSavedAt(index)
+    photo.close()
   }
 
   // #161: a new artist is unranked, so it lands at the foot of the wall, out of
@@ -132,7 +160,7 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
       <div className="columns-[300px] gap-[6px] p-[6px]">
         {items.map((item) => (
           <WallPiece
-            key={`${item.artistId}-${item.imageIndex}`}
+            key={item.savedId ? `saved-${item.savedId}` : `${item.artistId}-${item.imageIndex}`}
             item={item}
             onOpen={handleOpen}
             onDropImage={addImageToArtist}
@@ -179,7 +207,16 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
           onPasteImage={addImageToArtist}
           onGenerate={handleGenerate}
           onIndexChange={handleIndexChange}
+          onAssignSaved={handleAssignSaved}
+          onRemoveSaved={handleRemoveSaved}
         />
+      )}
+
+      {notice && (
+        <p role="status" className="fixed bottom-24 left-4 right-4 sm:left-auto sm:max-w-md z-40 bg-v2-surface border border-v2-hairline px-3 flex items-center gap-3 font-v2-ui text-sm text-v2-cream">
+          <span className="min-w-0 break-words">{notice}</span>
+          <button type="button" aria-label="Dismiss message" title="Dismiss message" className="shrink-0 w-11 h-11 flex items-center justify-center text-v2-muted" onClick={() => setNotice('')}><X size={18} /></button>
+        </p>
       )}
 
       {rankBoardOpen && (

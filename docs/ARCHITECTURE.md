@@ -266,6 +266,7 @@ determines whether a value syncs.
 | Ideas | `tattoo_ideas` | `ideas` |
 | Concepts | `tattoo_concepts` | `concepts` |
 | Boards | `tattoo_boards` | `boards` |
+| Photos saved without an artist | `tattoo_saved` | `saved` |
 | Convention attendance overrides | `tattoo_convention_attending` | `conventionOverrides` |
 | Imported lineups | `tattoo_convention_lineups` | Not synced |
 | Imported winners | `tattoo_convention_winners` | Not synced |
@@ -277,7 +278,7 @@ determines whether a value syncs.
 
 Here, “sync” means the selected backend protocol. The local adapter's simulated remote
 is still on this device; only a configured remote adapter enables cross-device data.
-The seven `tattoo_*` keys above are localStorage metadata stores. Attendance overrides sync as
+The eight `tattoo_*` keys above are localStorage metadata stores. Attendance overrides sync as
 one singleton map with whole-map last-write-wins; the other synced collections use
 individual records. `readmeClaims.test.js` compares this table with the runtime sync
 mapping, including the two device-only convention stores. It does not validate every

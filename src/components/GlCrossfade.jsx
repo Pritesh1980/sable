@@ -94,7 +94,8 @@ export default function GlCrossfade({
     if (!engine || !glSrc) return
     const key = keyRef.current
     if (shownRef.current) {
-      const ripple = key !== undefined && key !== shownKeyRef.current
+      // null marks a photo with no artist (#220 K): never a ripple into or out of one.
+      const ripple = key !== undefined && key !== null && shownKeyRef.current !== null && key !== shownKeyRef.current
       engine.transitionTo(glSrc, { ripple })
     } else {
       engine.setImage(glSrc)

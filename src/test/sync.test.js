@@ -26,13 +26,14 @@ describe('collectionFor / KEY_TO_COLLECTION', () => {
     expect(collectionFor('tattoo_nearby_radius')).toBeNull() // #183 radius preference
   })
 
-  it('only the five expected keys are synced', () => {
+  it('only the six expected keys are synced', () => {
     expect(Object.keys(KEY_TO_COLLECTION).sort()).toEqual([
       'tattoo_artists_meta',
       'tattoo_boards',
       'tattoo_concepts',
       'tattoo_convention_attending',
       'tattoo_ideas',
+      'tattoo_saved',
     ])
   })
 })

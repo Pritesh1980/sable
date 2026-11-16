@@ -8,7 +8,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import { useAuth } from './context/useAuth'
 import { useStorage } from './hooks/useStorage'
 import { useArtistStorage } from './hooks/useArtistStorage'
-import { ideasCodec, conceptsCodec } from './data/imageCodec'
+import { ideasCodec, conceptsCodec, savedCodec } from './data/imageCodec'
 import { mergeConventionOverrides } from './data/conventions'
 import { backend } from './backend'
 import { requestPortableExport } from './data/portableBackup'
@@ -67,6 +67,8 @@ function AppShell() {
   const [ideas, setIdeas] = useStorage('tattoo_ideas', [], ideasCodec)
   const [concepts, setConcepts, commitConcepts] = useStorage('tattoo_concepts', [], conceptsCodec)
   const [boards, setBoards] = useStorage('tattoo_boards', [])
+  // Photos saved without an artist; they hang on the wall until given one (#220 K).
+  const [saved, setSaved] = useStorage('tattoo_saved', [], savedCodec)
   const [conventionOverrides, setConventionOverrides] = useStorage('tattoo_convention_attending', {})
   // Device-local on purpose (no sync collection): a show's line-up is hundreds
   // of rows of someone else's data, re-imported from the source in seconds, and
@@ -87,7 +89,7 @@ function AppShell() {
     const ownerId = auth?.user?.id
     const ownerSnapshot = backend.ownerScope.capture()
     if (!ownerId || ownerSnapshot.ownerId !== ownerId) throw new Error('Sign in before exporting a portable backup.')
-    await requestPortableExport({ artists, ideas, boards, concepts, conventionOverrides },
+    await requestPortableExport({ artists, ideas, boards, concepts, saved, conventionOverrides },
       { ownerId, blobs: backend.blobs, assertCurrent: () => backend.ownerScope.assertCurrent(ownerSnapshot) })
     setBackupRevision((value) => value + 1)
   }
@@ -104,7 +106,7 @@ function AppShell() {
               element={<HomeRoute artists={artists} setArtists={setArtists} ideas={ideas} concepts={concepts} />}
             />
             <Route path="/pipeline" element={<Dashboard artists={artists} setArtists={setArtists} ideas={ideas} boards={boards} mergedConventions={mergedConventions} />} />
-            <Route path="/gallery" element={<Gallery artists={artists} setArtists={setArtists} ideas={ideas} mergedConventions={mergedConventions} />} />
+            <Route path="/gallery" element={<Gallery artists={artists} setArtists={setArtists} saved={saved} setSaved={setSaved} ideas={ideas} mergedConventions={mergedConventions} />} />
             <Route path="/brief" element={<Brief ideas={ideas} setIdeas={setIdeas} artists={artists} mergedConventions={mergedConventions} boards={boards} setBoards={setBoards} />} />
             <Route path="/conventions" element={<Conventions artists={artists} setArtists={setArtists} conventionOverrides={conventionOverrides} setConventionOverrides={setConventionOverrides} conventionLineups={conventionLineups} setConventionLineups={setConventionLineups} conventionWinners={conventionWinners} setConventionWinners={setConventionWinners} />} />
             <Route path="/studios" element={<Studios artists={artists} />} />
@@ -126,6 +128,8 @@ function AppShell() {
                   setBoards={setBoards}
                   concepts={concepts}
                   setConcepts={setConcepts}
+                  saved={saved}
+                  setSaved={setSaved}
                   conventionOverrides={conventionOverrides}
                   setConventionOverrides={setConventionOverrides}
                 />

@@ -24,6 +24,17 @@ You can add or edit those later. **Artist saved** confirms the local library upd
 it does not claim cloud sync or an off-device backup. A new artist starts unranked, so
 their photos join the end of the Wall, which scrolls down to them.
 
+### Save a photo without an artist
+
+Found a tattoo but not who made it? Attach the photo, then tap **Save without artist**
+instead of **Save**. You do not need a handle. The photo goes to the front of the Wall,
+marked **No artist yet**, and Sable says **Photo saved to the wall**.
+
+Open it on the Wall to find the artist later. **Give this an artist** lets you pick
+someone from your list; the photo moves to their page. **Remove photo** takes it off,
+with an Undo bar for a few seconds. A photo with no artist has no Artist count, handle
+or Generate button. A style filter hides these photos.
+
 For an existing handle, attach photos and tap **Add images to … instead**. Sable
 preserves the artist's existing details and confirms the number of photos added.
 With no photos, **Already in your collection** appears and the append action is disabled.

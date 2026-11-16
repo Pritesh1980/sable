@@ -127,6 +127,9 @@ export async function createPortableBackup(data, { ownerId, blobs, fetchImpl = g
       url: await image(entry), note: typeof entry === 'object' ? entry.note || '' : '',
     })))
   }
+  for (const row of backup.data.saved) {
+    if (row.image != null) row.image = { url: await image(row.image) }
+  }
   for (const board of backup.data.boards) {
     if (board.cover) board.cover = await image(board.cover)
   }

@@ -5,6 +5,8 @@ import useDialogFocus, { isTopmostDialog } from '../hooks/useDialogFocus'
 import { readCaptureClipboard } from '../data/clipboardIntake'
 import { STYLE_TAGS, parseInstagramHandle, createArtist } from '../data/artists'
 import { uploadImages, compressImages } from '../hooks/useImageUpload'
+import { stageImageRefs } from '../data/imageStaging'
+import { randomId } from '../data/randomId'
 import { stampAddedAt } from '../data/wall'
 import { normalizeArtistImages } from '../data/artistsPolicy'
 import { refIdentity } from '../data/imageRef'
@@ -36,7 +38,7 @@ function StagedImage({ file, index, onRemove }) {
 }
 
 // One capture surface for the Wall, Gallery and share landing route.
-export default function AddArtistModal({ artists = [], setArtists, userId, onClose, onManage, initial, initialFile = null, initialFilePending = false, onSaved }) {
+export default function AddArtistModal({ artists = [], setArtists, setSaved, userId, onClose, onManage, initial, initialFile = null, initialFilePending = false, onSaved }) {
   const [handle, setHandle] = useState(initial?.handle || '')
   const [name, setName] = useState(initial?.name || '')
   const [tags, setTags] = useState(initial?.tags || [])
@@ -368,6 +370,40 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
     await saveCapture(duplicate)
   }
 
+  // Keeps the photos on the wall with no artist yet (#220 K). Each is staged
+  // first, so what reaches state is a key, never a display url.
+  async function handleSaveWithoutArtist() {
+    if (!setSaved || !staged.length || initialFilePending || intakeBusy || clipboardBusy || saveLock.current) return
+    saveLock.current = true
+    setSaving(true)
+    setError('')
+    try {
+      const owner = userId
+      if (!owner) throw new Error('Photo owner unavailable')
+      const files = stagedRef.current
+      const dataUrls = await compressImages(files)
+      const addedAt = new Date().toISOString()
+      const records = await Promise.all(dataUrls.map(async (dataUrl) => {
+        const id = randomId()
+        const [ref] = await stageImageRefs([dataUrl], { userId: owner, scope: 'saved', id })
+        if (!ref?.key) throw new Error('Could not store this photo')
+        return { id, image: ref, addedAt }
+      }))
+      if (!alive.current) return
+      if (currentUserId.current !== owner) throw new Error('Owner changed')
+      if (stagedRef.current !== files) throw new Error('Capture changed during upload')
+      setSaved((prev) => [...prev, ...records])
+      onSaved?.({ kind: 'saved-photo', imageCount: records.length })
+      onClose()
+    } catch {
+      if (!alive.current) return
+      setError('Could not save these photos. They are still here; try again.')
+    } finally {
+      saveLock.current = false
+      if (alive.current) setSaving(false)
+    }
+  }
+
   async function saveCapture(target) {
     saveLock.current = true
     setSaving(true)
@@ -484,9 +520,16 @@ export default function AddArtistModal({ artists = [], setArtists, userId, onClo
             Full manage view
           </Link>
         </div>
-        <div className="sticky bottom-0 bg-v2-surface flex justify-end gap-3 px-5 py-3 border-t border-v2-hairline">
+        <div className="sticky bottom-0 bg-v2-surface flex flex-wrap justify-end gap-x-3 px-5 py-3 border-t border-v2-hairline">
           <button type="button" onClick={dismiss} disabled={saving}
             className="min-h-11 px-3 font-v2-ui text-sm text-v2-muted disabled:opacity-40">Cancel</button>
+          {setSaved && staged.length > 0 && (
+            <button type="button" onClick={handleSaveWithoutArtist}
+              disabled={initialFilePending || saving || intakeBusy || clipboardBusy}
+              className="min-h-11 px-3 border border-v2-hairline text-v2-cream font-v2-ui text-sm rounded-xs disabled:opacity-40">
+              Save without artist
+            </button>
+          )}
           <button type="submit" disabled={initialFilePending || saving || intakeBusy || clipboardBusy || !!duplicate}
             className="min-h-11 bg-v2-accent text-v2-cream font-v2-ui text-sm rounded-xs px-5 disabled:opacity-30">
             {saving ? 'Saving...' : 'Save'}

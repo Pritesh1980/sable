@@ -31,6 +31,7 @@ Tap **Export Backup**. A JSON download is requested — named with the date, e.g
 - artists, their tags, status, studio, notes and ranks
 - canonical local saved images embedded as image bytes, including paid concept results
 - ideas, boards and AI concepts
+- photos saved without an artist
 - any convention attendance you've recorded
 
 In private builds, Sable reports **“Download requested—check the file was saved”** only after it has
