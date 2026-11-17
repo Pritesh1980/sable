@@ -5,7 +5,7 @@ import { MemoryRouter, Routes, Route } from 'react-router'
 import Gallery from '../pages/Gallery'
 
 const ARTISTS = [
-  { id: 'zoia.ink', handle: 'zoia.ink', name: 'Zoia', rank: 1, tags: [], images: [{ key: 'user/u1/artists/zoia/a.jpg' }, { key: 'user/u1/artists/zoia/b.jpg' }] },
+  { id: 'zoia.ink', handle: 'zoia.ink', name: 'Zoia', rank: 1, tags: ['fine-line'], images: [{ key: 'user/u1/artists/zoia/a.jpg' }, { key: 'user/u1/artists/zoia/b.jpg' }] },
   { id: 'carl', handle: 'carl245tattoo', name: 'Carlos', rank: 2, tags: [], images: [{ key: 'user/u1/artists/carl/c.jpg' }] },
 ]
 const SAVED = [{ id: 's1', image: { key: 'user/u1/saved/s1/a.jpg' }, addedAt: '2026-07-03T00:00:00.000Z' }]
@@ -84,6 +84,7 @@ describe('Favourites filter', () => {
     turnOn()
     const names = [...document.querySelectorAll('figure')].map((f) => within(f).getByRole('button').getAttribute('aria-label'))
     expect(names).toEqual(['Open No artist yet', 'Open Zoia'])
+    fireEvent.click(screen.getByRole('button', { name: 'Filter' }))
     expect(screen.getByRole('button', { name: /Clear filter: Favourites/ })).toBeInTheDocument()
   })
   it('says so when there are none', () => {
@@ -106,5 +107,25 @@ describe('Favourites filter', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open Carlos' }))
     fireEvent.click(screen.getByRole('button', { name: 'Remove from favourites' }))
     expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+  it('keeps every photo un-favourited in the viewer in place until it closes', () => {
+    renderWall('/gallery', [FAV('user/u1/artists/zoia/a.jpg'), FAV('user/u1/artists/zoia/b.jpg')])
+    turnOn()
+    fireEvent.click(screen.getAllByRole('button', { name: 'Open Zoia' })[0])
+    fireEvent.click(screen.getByRole('button', { name: 'Remove from favourites' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Next photo' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove from favourites' }))
+    expect(screen.getByRole('dialog')).toHaveAccessibleName(/image 2 of 2/)
+    fireEvent.click(screen.getByRole('button', { name: 'Previous photo' }))
+    expect(screen.getByRole('dialog')).toHaveAccessibleName(/image 1 of 2/)
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(screen.getByText('No favourites yet. Tap the heart on a photo to add it.')).toBeInTheDocument()
+  })
+  it('names the style when a tag hides every favourite, and the pill leaves the filter row open', () => {
+    renderWall('/gallery', [FAV('user/u1/saved/s1/a.jpg')])
+    turnOn()
+    expect(screen.getByRole('button', { name: /fine-line/i })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /fine-line/i }))
+    expect(screen.getByText('No favourites in fine-line.')).toBeInTheDocument()
   })
 })

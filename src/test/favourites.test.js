@@ -122,3 +122,26 @@ describe('favourites survive a backup restore', () => {
     expect(isFavourite(data.favourites, 'user/u1/saved/s/x.jpg')).toBe(true)
   })
 })
+
+describe('restore keeps scopes apart', () => {
+  const DATA = 'data:image/png;base64,iVBORw0KGgoAAA=='
+  const DATA2 = 'data:image/png;base64,iVBORw0KGgoBBB=='
+  it('a concept with the same bytes stays under /concepts/, a favourite still matches the artist and saved photo', async () => {
+    const { canonicalizeImages } = await import('../data/artistsPolicy')
+    const { data } = await restoreBackupImages({
+      artists: [{ id: 'z', images: [{ url: DATA }] }], ideas: [],
+      concepts: [{ id: 'c', imageUrl: DATA }],
+      saved: [{ id: 's', image: { url: DATA }, addedAt: NOW }],
+      favourites: [{ id: 'f', image: { url: DATA }, addedAt: NOW }],
+    }, { userId: 'u1' })
+    expect(data.concepts[0].imageUrl).toMatch(/^user\/u1\/concepts\//)
+    expect(data.favourites[0].image.key).not.toContain('/favourites/')
+    expect(isFavourite(data.favourites, canonicalizeImages(data.artists[0].images)[0])).toBe(true)
+    expect(isFavourite(data.favourites, data.saved[0].image)).toBe(true)
+  })
+  it('stages a favourite under its own scope only when no photo has those bytes', async () => {
+    const { data } = await restoreBackupImages({ artists: [], ideas: [], concepts: [], saved: [],
+      favourites: [{ id: 'f', image: { url: DATA2 }, addedAt: NOW }] }, { userId: 'u1' })
+    expect(data.favourites[0].image.key).toMatch(/^user\/u1\/favourites\//)
+  })
+})

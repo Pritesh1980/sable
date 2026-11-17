@@ -22,7 +22,7 @@ const savedId = (record) => record.id
 // The Wall: full-bleed masonry of every artist reference image, the default
 // view on the Artists page (#220). Getting around is the app nav's job and the
 // page header belongs to Gallery; this is only the wall and what hangs off it.
-export default function WallView({ artists = [], wallArtists = artists, ideas = [], saved = [], setSaved = () => {}, favourites = [], setFavourites = () => {}, favouritesOnly = false, setArtists = () => {}, onAddArtist = () => {}, revealArtistId = null }) {
+export default function WallView({ artists = [], wallArtists = artists, ideas = [], saved = [], setSaved = () => {}, favourites = [], setFavourites = () => {}, favouritesOnly = false, styleFilter = null, setArtists = () => {}, onAddArtist = () => {}, revealArtistId = null }) {
   // Photos matched to favourites by image ref (#220 K). A favourite whose photo
   // is gone matches nothing, so it never shows.
   const favIds = favouriteIdentities(favourites)
@@ -33,9 +33,9 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
   }))
   // Un-favouriting the photo you are looking at must not pull it out from under
   // the viewer: it stays until the viewer closes.
-  const [keptParam, setKeptParam] = useState(null)
+  const [keptParams, setKeptParams] = useState(() => new Set())
   const items = favouritesOnly
-    ? allItems.filter((item) => item.isFavourite || photoParam(item) === keptParam)
+    ? allItems.filter((item) => item.isFavourite || keptParams.has(photoParam(item)))
     : allItems
   // The open photo lives in the URL (?photo=<artistId>.<n>, #159): the browser's
   // Back closes the viewer instead of leaving the Wall, and a photo can be
@@ -80,11 +80,11 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
   const { user } = useAuth() || {}
 
   const viewerOpen = viewerIndex !== -1
-  if (!viewerOpen && keptParam !== null) setKeptParam(null)
+  if (!viewerOpen && keptParams.size > 0) setKeptParams(new Set())
 
   function handleToggleFavourite(item) {
     if (!item?.canFavourite) return
-    if (item.isFavourite) setKeptParam(photoParam(item))
+    if (item.isFavourite) setKeptParams((prev) => new Set(prev).add(photoParam(item)))
     setFavourites((prev) => toggleFavourite(prev, item.image))
   }
 
@@ -175,7 +175,7 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
       {/* A style filter can leave nothing to show; say so rather than go blank. */}
       {items.length === 0 && (
         <p className="px-6 py-20 text-center font-v2-ui text-sm text-v2-muted">
-          {favouritesOnly ? 'No favourites yet. Tap the heart on a photo to add it.' : wallArtists.length === 0 ? 'No artists match this filter.' : 'No photos here yet. Add some from an artist’s page.'}
+          {favouritesOnly ? (styleFilter ? `No favourites in ${styleFilter}.` : 'No favourites yet. Tap the heart on a photo to add it.') : wallArtists.length === 0 ? 'No artists match this filter.' : 'No photos here yet. Add some from an artist’s page.'}
         </p>
       )}
 

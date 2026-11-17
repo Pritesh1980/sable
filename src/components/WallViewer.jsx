@@ -302,8 +302,11 @@ export default function WallViewer({
         Close
       </button>
 
-      <div className="absolute right-[max(1rem,env(safe-area-inset-right))] sm:right-[max(2rem,env(safe-area-inset-right))] top-[max(1.5rem,env(safe-area-inset-top))] font-v2-display text-sm tracking-[0.2em] text-v2-cream [text-shadow:0_1px_8px_rgba(19,17,16,0.9)] pointer-events-none">
-        Photo {positionInArtist + 1} of {artistImageCount}
+      <div className={`absolute right-[max(1rem,env(safe-area-inset-right))] sm:right-[max(2rem,env(safe-area-inset-right))] flex items-center gap-2 pointer-events-none ${touch ? 'top-[max(1rem,env(safe-area-inset-top))]' : 'top-[max(1.5rem,env(safe-area-inset-top))]'}`}>
+        <span className="font-v2-display text-sm tracking-[0.2em] text-v2-cream [text-shadow:0_1px_8px_rgba(19,17,16,0.9)]">
+          Photo {positionInArtist + 1} of {artistImageCount}
+        </span>
+        {touch && <FavouriteButton item={current} onToggle={onToggleFavourite} />}
       </div>
     </>
   )
@@ -425,9 +428,7 @@ export default function WallViewer({
                   </p>
                 )}
               </div>
-              <div className="relative flex justify-end px-1 pt-1">
-                <FavouriteButton item={current} onToggle={onToggleFavourite} />
-              </div>
+
               <div className="relative flex items-center justify-between">
                 <PhotoArrow dir={-1} disabled={artistImageCount < 2} onGo={goWithinArtist} />
                 <ViewerSheetToggle open={false} onToggle={() => setSheetOpen(true)} controls={sheetId} />
@@ -442,10 +443,7 @@ export default function WallViewer({
               {artistItems.length > 1 && (
                 <div className="flex gap-1 overflow-x-auto p-1 [@media(max-height:500px)]:hidden">{thumbnails}</div>
               )}
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">{plate}</div>
-                <FavouriteButton item={current} onToggle={onToggleFavourite} />
-              </div>
+              <div>{plate}</div>
               {!isSaved && <div className="flex justify-between font-v2-ui text-xs tracking-widest uppercase">
                 <button
                   onClick={() => jumpArtist(-1)}

@@ -159,21 +159,34 @@ describe('restoreBackupImages', () => {
     expect(out.ideas[0].images).toEqual([{ key: 'user/u2/new.jpg', note: 'x' }])
     expect(out.concepts[0].imageUrl).toBe('user/u2/new.jpg')
     expect(out.concepts[0].variants[0].imageUrl).toBe('user/u2/new.jpg')
-    // Identical bytes are staged once per restore (so favourites keep matching).
-    expect(stageImage).toHaveBeenCalledTimes(1)
-    expect(stageImage).toHaveBeenCalledWith(PNG, expect.objectContaining({ userId: 'u2' }))
+    // Artist photos share staging for identical bytes; ideas and concepts keep their scope.
+    expect(stageImage).toHaveBeenCalledWith(PNG, { userId: 'u2', scope: 'artists', id: 'a' })
+    expect(stageImage).toHaveBeenCalledWith(PNG, { userId: 'u2', scope: 'ideas', id: 'i' })
+    expect(stageImage).toHaveBeenCalledWith(PNG, { userId: 'u2', scope: 'concepts', id: 'c' })
+    expect(stageImage).toHaveBeenCalledTimes(4)
   })
 
-  it('gives ideas and concepts the key of a photo this session already knows, never its base64', async () => {
+  it('gives ideas the key of a photo this session already knows, but a concept stays under /concepts/ (never base64)', async () => {
     registerBlobUrl('user/u2/known.jpg', PNG)
+    stageImage.mockResolvedValue({ key: 'user/u2/concepts/c/new.jpg', url: 'staged' })
     const { data: out } = await restoreBackupImages({
       artists: [], boards: [], conventionOverrides: {},
       ideas: [{ id: 'i', images: [{ url: PNG, note: 'x' }] }],
       concepts: [{ id: 'c', imageUrl: PNG, variants: [{ id: 'v', imageUrl: PNG }] }],
     }, ctx)
     expect(out.ideas[0].images).toEqual([{ key: 'user/u2/known.jpg', note: 'x' }])
-    expect(out.concepts[0].imageUrl).toBe('user/u2/known.jpg')
-    expect(out.concepts[0].variants[0].imageUrl).toBe('user/u2/known.jpg')
+    expect(out.concepts[0].imageUrl).toBe('user/u2/concepts/c/new.jpg')
+    expect(out.concepts[0].variants[0].imageUrl).toBe('user/u2/concepts/c/new.jpg')
+    expect(stageImage).toHaveBeenCalledWith(PNG, { userId: 'u2', scope: 'concepts', id: 'c', registerIdentity: false })
+  })
+
+  it('reuses a known key for a concept when it is already under /concepts/', async () => {
+    registerBlobUrl('user/u2/concepts/c/known.jpg', PNG)
+    const { data: out } = await restoreBackupImages({
+      artists: [], boards: [], conventionOverrides: {}, ideas: [],
+      concepts: [{ id: 'c', imageUrl: PNG }],
+    }, ctx)
+    expect(out.concepts[0].imageUrl).toBe('user/u2/concepts/c/known.jpg')
     expect(stageImage).not.toHaveBeenCalled()
   })
 

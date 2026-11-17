@@ -474,7 +474,7 @@ export default function Gallery({ artists, setArtists, saved = [], setSaved = ()
               <TagPill
                 tag="Favourites"
                 active={favOnly}
-                onClick={() => { setFavOnly((v) => !v); setFilterOpen(false) }}
+                onClick={() => setFavOnly((v) => !v)}
                 disabled={dragActive}
                 minTapHeight
               />
@@ -516,6 +516,7 @@ export default function Gallery({ artists, setArtists, saved = [], setSaved = ()
           favourites={favourites}
           setFavourites={setFavourites}
           favouritesOnly={favActive}
+          styleFilter={activeTag}
           setArtists={setArtists}
           onAddArtist={(initial) => { setAddInitial(initial); setQuickAdding(true) }}
           revealArtistId={captureReceipt?.kind === 'created' ? captureReceipt.artistId : null}
