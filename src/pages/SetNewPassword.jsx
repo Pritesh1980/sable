@@ -13,7 +13,8 @@ const labelClass = 'block text-xs font-mono text-cream-muted tracking-widest upp
 export default function SetNewPassword() {
   const passwordId = useId()
   const confirmId = useId()
-  const { updatePassword, signOut } = useAuth()
+  const { user, updatePassword, signOut } = useAuth()
+  const [signingOut, setSigningOut] = useState(false)
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [show, setShow] = useState(false)
@@ -45,7 +46,8 @@ export default function SetNewPassword() {
   }
 
   async function onCancel() {
-    try { await signOut() } catch { setError('Could not sign out. Please try again.') }
+    setSigningOut(true)
+    try { await signOut() } catch { setError('Could not sign out. Please try again.'); setSigningOut(false) }
   }
 
   const type = show ? 'text' : 'password'
@@ -62,6 +64,16 @@ export default function SetNewPassword() {
         </div>
 
         <form onSubmit={onSubmit} className="space-y-4">
+          {/* Lets the password manager file the new password under this account. */}
+          <input
+            type="text"
+            autoComplete="username"
+            value={user?.email || ''}
+            readOnly
+            tabIndex={-1}
+            aria-hidden="true"
+            className="sr-only"
+          />
           <div>
             <label htmlFor={passwordId} className={labelClass}>New password</label>
             <input
@@ -95,7 +107,6 @@ export default function SetNewPassword() {
           <button
             type="button"
             onClick={() => setShow((s) => !s)}
-            aria-pressed={show}
             className="min-h-11 font-mono text-cream-muted hover:text-accent text-[0.6875rem] tracking-widest uppercase transition-colors"
           >
             {show ? 'Hide passwords' : 'Show passwords'}
@@ -105,7 +116,7 @@ export default function SetNewPassword() {
 
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || signingOut}
             className="w-full min-h-11 px-4 py-2.5 bg-accent hover:bg-accent-hover disabled:opacity-50 text-cream text-sm font-body rounded-xs transition-colors tracking-wide"
           >
             {submitting ? 'Saving…' : 'Save password'}
@@ -116,9 +127,10 @@ export default function SetNewPassword() {
           <button
             type="button"
             onClick={onCancel}
+            disabled={submitting || signingOut}
             className="min-h-11 px-3 font-mono text-cream-muted hover:text-accent text-[0.6875rem] tracking-widest uppercase transition-colors"
           >
-            Cancel
+            Cancel and sign out
           </button>
         </p>
       </div>

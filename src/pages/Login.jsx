@@ -3,6 +3,15 @@ import { LogoMark, Wordmark } from '../components/Logo'
 import { useAuth } from '../context/useAuth'
 import { backend } from '../backend'
 
+// The adapter's consume is one-shot, but useState initialisers run twice under
+// StrictMode, so the code is kept at module level until a reset is sent.
+let linkErrorCode = null
+function takeLinkError() {
+  const code = backend.auth.consumeAuthLinkError?.()
+  if (code) linkErrorCode = code
+  return linkErrorCode
+}
+
 // Email + password sign-in. Invite-only — no sign-up link (accounts are created
 // admin-side). The password field reuses the masked-input pattern from the
 // Concepts KeyField.
@@ -14,8 +23,10 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
+  // An expired/used reset link opens straight on the reset view with a note.
+  const [linkError, setLinkError] = useState(takeLinkError)
   // 'signin' | 'reset' | 'sent'
-  const [mode, setMode] = useState('signin')
+  const [mode, setMode] = useState(() => (linkError && canResetPassword ? 'reset' : 'signin'))
 
   function switchMode(next) {
     setError(null)
@@ -30,6 +41,8 @@ export default function Login() {
     setSubmitting(true)
     try {
       await requestPasswordReset({ email: email.trim() })
+      linkErrorCode = null
+      setLinkError(null)
       setMode('sent')
     } catch (err) {
       // Never reveal whether an account exists: "not found" looks like success.
@@ -111,7 +124,11 @@ export default function Login() {
                 placeholder="you@example.com"
               />
             </div>
-            {error && <p className="text-accent text-xs font-body" role="alert">{error}</p>}
+            {(error || linkError) && (
+              <p className="text-accent text-xs font-body" role="alert">
+                {error || 'That reset link has expired or was already used. Send yourself a new one.'}
+              </p>
+            )}
             <button
               type="submit"
               disabled={submitting}
@@ -144,7 +161,7 @@ export default function Login() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/50 font-mono placeholder-cream-muted/40"
+              className="w-full min-h-11 bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/50 font-mono placeholder-cream-muted/40"
               placeholder="you@example.com"
             />
           </div>
@@ -160,7 +177,7 @@ export default function Login() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/50 font-mono placeholder-cream-muted/40"
+              className="w-full min-h-11 bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/50 font-mono placeholder-cream-muted/40"
               placeholder="••••••••"
             />
           </div>
@@ -172,7 +189,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full px-4 py-2.5 bg-accent hover:bg-accent-hover disabled:opacity-50 text-cream text-sm font-body rounded-xs transition-colors tracking-wide"
+            className="w-full min-h-11 px-4 py-2.5 bg-accent hover:bg-accent-hover disabled:opacity-50 text-cream text-sm font-body rounded-xs transition-colors tracking-wide"
           >
             {submitting ? 'Signing in…' : 'Sign in'}
           </button>

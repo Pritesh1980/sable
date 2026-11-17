@@ -29,6 +29,8 @@ afterEach(() => {
   vi.restoreAllMocks()
   delete backend.auth.requestPasswordReset
   delete backend.auth.updatePassword
+  delete backend.auth.consumeAuthLinkError
+  delete backend.auth.recoveryPending
   localStorage.clear()
 })
 beforeEach(() => localStorage.clear())
@@ -68,6 +70,38 @@ describe('AuthContext reset support', () => {
     expect(screen.getByTestId('p').textContent).toBe('true|true')
     await act(async () => { emit(null, { recovery: false }) })
     expect(screen.getByTestId('p').textContent).toBe('true|false')
+  })
+})
+
+describe('recovery that arrives without the event', () => {
+  it('initial session with recoveryPending shows SetNewPassword, never the app', async () => {
+    installReset({ session: account })
+    backend.auth.recoveryPending = vi.fn().mockReturnValue(true)
+    render(<AuthProvider><ProtectedRoute><p>the app</p></ProtectedRoute></AuthProvider>)
+    await screen.findByRole('heading', { name: /set a new password/i })
+    expect(screen.queryByText('the app')).not.toBeInTheDocument()
+    delete backend.auth.recoveryPending
+  })
+
+  it('a plain session without pending opens the app', async () => {
+    installReset({ session: account })
+    backend.auth.recoveryPending = vi.fn().mockReturnValue(false)
+    render(<AuthProvider><ProtectedRoute><p>the app</p></ProtectedRoute></AuthProvider>)
+    await screen.findByText('the app')
+    delete backend.auth.recoveryPending
+  })
+})
+
+describe('Login expired link', () => {
+  it('opens the reset view with an alert when the link failed', async () => {
+    installReset()
+    backend.auth.consumeAuthLinkError = vi.fn().mockReturnValue('otp_expired')
+    render(<AuthProvider><Login /></AuthProvider>)
+    expect((await screen.findByRole('alert')).textContent).toMatch(/expired or was already used/)
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'me@example.com' } })
+    fireEvent.click(screen.getByRole('button', { name: /send reset link/i }))
+    // sending a fresh link clears the stale note (and the module-level memo)
+    await screen.findByText(/If an account exists/)
   })
 })
 

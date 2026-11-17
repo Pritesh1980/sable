@@ -31,7 +31,9 @@ export function AuthProvider({ children }) {
     function applyIdentity(nextSession, meta) {
       if (!mounted) return
       const nextUserId = nextSession?.user?.id || null
-      if (meta?.recovery && nextUserId) setRecovering(true)
+      // Checked on every identity, including the initial session, so the app
+      // never mounts before the set-new-password screen.
+      if (nextUserId && (meta?.recovery || backend.auth.recoveryPending?.())) setRecovering(true)
       else if (!nextUserId) setRecovering(false)
       const currentRevision = ++revision
       if (!baselineSet) {
