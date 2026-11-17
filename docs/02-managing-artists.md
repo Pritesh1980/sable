@@ -35,6 +35,18 @@ someone from your list; the photo moves to their page. **Remove photo** takes it
 with an Undo bar for a few seconds. A photo with no artist has no Artist count, handle
 or Generate button. A style filter hides these photos.
 
+### Favourite a photo
+
+Open any photo on the Wall and tap the heart, or press **F** on a laptop. This works for
+an artist's photo and for a photo with no artist. A favourited photo shows a small heart
+on the Wall. Tap the heart again to remove it. The heart is off until the photo has
+finished saving.
+
+Tap **Filter**, then **Favourites**, to show only those photos. Open one and the arrows
+move only through your favourites. With none yet, the Wall says how to add one.
+Favourites sync with your account and are in your backup. A favourite stays when you give
+a photo an artist. If you delete the photo, its favourite is hidden.
+
 For an existing handle, attach photos and tap **Add images to … instead**. Sable
 preserves the artist's existing details and confirms the number of photos added.
 With no photos, **Already in your collection** appears and the append action is disabled.

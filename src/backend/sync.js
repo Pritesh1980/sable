@@ -15,6 +15,7 @@ export const KEY_TO_COLLECTION = {
   tattoo_concepts: 'concepts',
   tattoo_boards: 'boards',
   tattoo_saved: 'saved',
+  tattoo_favourites: 'favourites',
   tattoo_convention_attending: 'conventionOverrides',
 }
 

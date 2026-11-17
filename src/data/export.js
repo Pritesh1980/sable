@@ -46,7 +46,7 @@ function formatImageList(images = []) {
 
 // The structure of a backup, with images left as the refs/urls in memory (a v1
 // document). createBackupWithImages turns it into a self-contained v2 one.
-export function createBackup({ artists = [], ideas = [], boards = [], concepts = [], saved = [], conventionOverrides = {} }, exportedAt = new Date().toISOString()) {
+export function createBackup({ artists = [], ideas = [], boards = [], concepts = [], saved = [], favourites = [], conventionOverrides = {} }, exportedAt = new Date().toISOString()) {
   return {
     version: REFS_ONLY_VERSION,
     exportedAt,
@@ -56,6 +56,7 @@ export function createBackup({ artists = [], ideas = [], boards = [], concepts =
       boards: stripRows(boards),
       concepts: stripRows(concepts),
       saved: stripRows(saved),
+      favourites: stripRows(favourites),
       conventionOverrides,
     },
   }
@@ -117,6 +118,11 @@ async function mapBackupImages(data, map) {
     const next = row?.image == null ? row : await map(row.image, { scope: 'saved', id: row.id })
     if (next !== null) saved.push(row?.image == null ? row : { ...row, image: next })
   }
+  const favourites = []
+  for (const row of data.favourites || []) {
+    const next = row?.image == null ? row : await map(row.image, { scope: 'favourites', id: row.id })
+    if (next !== null) favourites.push(row?.image == null ? row : { ...row, image: next })
+  }
   const concepts = []
   for (const concept of data.concepts || []) {
     const ctx = { scope: 'concepts', id: concept.id }
@@ -140,6 +146,7 @@ async function mapBackupImages(data, map) {
     ideas: await withImages(data.ideas, 'ideas'),
     concepts,
     saved,
+    favourites,
   }
 }
 
@@ -188,7 +195,7 @@ function storedRef(image, scope, key) {
   if (!key) return image
   if (scope === 'ideas') return normalizeReferenceImages([{ ...(typeof image === 'object' ? image : {}), key }])[0]
   if (scope === 'concepts') return key
-  if (scope === 'saved') return { key }
+  if (scope === 'saved' || scope === 'favourites') return { key }
   return image
 }
 
@@ -222,6 +229,7 @@ const LIBRARY_PARTS = [
   { count: (lib) => lib.boards?.length || 0, label: (n) => `${n} board${n === 1 ? '' : 's'}` },
   { count: (lib) => lib.concepts?.length || 0, label: (n) => `${n} concept${n === 1 ? '' : 's'}` },
   { count: (lib) => lib.saved?.length || 0, label: (n) => `${n} saved photo${n === 1 ? '' : 's'}` },
+  { count: (lib) => lib.favourites?.length || 0, label: (n) => `${n} favourite${n === 1 ? '' : 's'}` },
   {
     count: (lib) => Object.keys(lib.conventionOverrides || {}).length,
     label: (n) => `attendance at ${n} convention${n === 1 ? '' : 's'}`,
@@ -251,7 +259,7 @@ export function parseBackup(raw) {
   }
 
   const data = parsed.data || parsed
-  const arrayKeys = ['artists', 'ideas', 'boards', 'concepts', 'saved']
+  const arrayKeys = ['artists', 'ideas', 'boards', 'concepts', 'saved', 'favourites']
   const out = {}
 
   arrayKeys.forEach((key) => {

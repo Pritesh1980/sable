@@ -267,6 +267,7 @@ determines whether a value syncs.
 | Concepts | `tattoo_concepts` | `concepts` |
 | Boards | `tattoo_boards` | `boards` |
 | Photos saved without an artist | `tattoo_saved` | `saved` |
+| Favourite photos (any photo, matched by image ref) | `tattoo_favourites` | `favourites` |
 | Convention attendance overrides | `tattoo_convention_attending` | `conventionOverrides` |
 | Imported lineups | `tattoo_convention_lineups` | Not synced |
 | Imported winners | `tattoo_convention_winners` | Not synced |
