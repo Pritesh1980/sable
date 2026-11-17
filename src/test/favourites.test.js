@@ -97,3 +97,28 @@ describe('favourites in a portable backup', () => {
     expect(backup.data.favourites).toEqual([{ id: 'f', image: { url: dataUrl }, addedAt: 'z' }])
   })
 })
+
+describe('favourites survive a backup restore', () => {
+  const DATA = 'data:image/png;base64,iVBORw0KGgo='
+  it('an embedded photo shared by an artist, a saved photo and a favourite keeps one identity', async () => {
+    const { canonicalizeImages } = await import('../data/artistsPolicy')
+    const backup = {
+      artists: [{ id: 'z', images: [{ url: DATA, addedAt: NOW }] }],
+      ideas: [], concepts: [],
+      saved: [{ id: 's', image: { url: DATA }, addedAt: NOW }],
+      favourites: [{ id: 'f', image: { url: DATA }, addedAt: NOW }],
+    }
+    const { data, failed } = await restoreBackupImages(backup, { userId: 'u1' })
+    expect(failed).toBe(0)
+    const [artistImage] = canonicalizeImages(data.artists[0].images)
+    const fav = data.favourites
+    expect(fav[0].image.key).toMatch(/^user\/u1\//)
+    expect(isFavourite(fav, artistImage)).toBe(true)
+    expect(isFavourite(fav, data.saved[0].image)).toBe(true)
+  })
+  it('keeps a favourite whose image is a plain stored key', async () => {
+    const { data } = await restoreBackupImages({ artists: [], ideas: [], concepts: [], saved: [],
+      favourites: [{ id: 'f', image: { key: 'user/u1/saved/s/x.jpg' }, addedAt: NOW }] }, { userId: 'u1' })
+    expect(isFavourite(data.favourites, 'user/u1/saved/s/x.jpg')).toBe(true)
+  })
+})

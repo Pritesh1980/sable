@@ -206,9 +206,17 @@ function storedRef(image, scope, key) {
 export async function restoreBackupImages(data, { userId } = {}) {
   if (!userId) return { data, failed: 0 }
   let failed = 0
+  // Identical bytes get one key within a restore, so a favourite still matches
+  // the artist or saved copy of the same photo. The promise is shared, so
+  // concurrent slots do not each stage it.
+  const stagedByUrl = new Map()
+  const stageOnce = (url, ctx) => {
+    if (!stagedByUrl.has(url)) stagedByUrl.set(url, stageImage(url, ctx))
+    return stagedByUrl.get(url)
+  }
   const out = await mapBackupImages(data, async (image, { scope, id }) => {
     if (!needsStaging(image, { userId })) return storedRef(image, scope, keyForUrl(urlOf(image)))
-    const staged = await stageImage(urlOf(image), { userId, scope, id })
+    const staged = await stageOnce(urlOf(image), { userId, scope, id })
     if (staged.failed) {
       failed += 1
       return null
