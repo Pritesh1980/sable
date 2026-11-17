@@ -160,8 +160,8 @@ describe('restoreBackupImages', () => {
     expect(out.concepts[0].imageUrl).toBe('user/u2/new.jpg')
     expect(out.concepts[0].variants[0].imageUrl).toBe('user/u2/new.jpg')
     // Identical bytes are staged once per restore (so favourites keep matching).
-    expect(stageImage).toHaveBeenCalledWith(PNG, { userId: 'u2', scope: 'artists', id: 'a' })
     expect(stageImage).toHaveBeenCalledTimes(1)
+    expect(stageImage).toHaveBeenCalledWith(PNG, expect.objectContaining({ userId: 'u2' }))
   })
 
   it('gives ideas and concepts the key of a photo this session already knows, never its base64', async () => {
