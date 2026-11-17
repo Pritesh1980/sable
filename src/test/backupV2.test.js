@@ -159,10 +159,9 @@ describe('restoreBackupImages', () => {
     expect(out.ideas[0].images).toEqual([{ key: 'user/u2/new.jpg', note: 'x' }])
     expect(out.concepts[0].imageUrl).toBe('user/u2/new.jpg')
     expect(out.concepts[0].variants[0].imageUrl).toBe('user/u2/new.jpg')
+    // Identical bytes are staged once per restore (so favourites keep matching).
     expect(stageImage).toHaveBeenCalledWith(PNG, { userId: 'u2', scope: 'artists', id: 'a' })
-    expect(stageImage).toHaveBeenCalledWith(PNG, { userId: 'u2', scope: 'ideas', id: 'i' })
-    expect(stageImage).toHaveBeenCalledWith(PNG, { userId: 'u2', scope: 'concepts', id: 'c' })
-    expect(stageImage).toHaveBeenCalledTimes(5)
+    expect(stageImage).toHaveBeenCalledTimes(1)
   })
 
   it('gives ideas and concepts the key of a photo this session already knows, never its base64', async () => {
