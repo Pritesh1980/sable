@@ -7,7 +7,7 @@ import { randomId } from './randomId'
 // survives a photo being given an artist (the ref does not change). The record
 // id is random; refIdentity is only ever computed at runtime to match.
 
-const NOT_STORABLE = /^(?:data:|blob:)|\/storage\/v1\/object\//i
+const NOT_STORABLE = /(?:^(?:data:|blob:))|(?:\/storage\/v1\/object\/)/i
 
 // The ref to persist for a photo, or null when it is not stored yet (inline
 // data, a local blob, an expiring display URL): the heart is disabled then.
