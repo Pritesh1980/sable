@@ -11,6 +11,12 @@
 Sable opens on a sign-in screen. Enter your account details and you land on Home
 with your own collection.
 
+**Forgot your password?** On a real-account build, tap **Forgot password?** under the
+form, enter your email and send the link. The message is the same whether or not the
+address has an account. The link signs you in and asks for a new password (at least 8
+characters, entered twice) before opening the app; **Cancel** signs you out instead.
+The device-local demo has no passwords, so it has no such link.
+
 Private builds use invite-only login and allow only the configured owner account.
 Another account sees **Access denied** and can sign out; if no owner is configured,
 the library stays closed. These builds do not offer the public demo.

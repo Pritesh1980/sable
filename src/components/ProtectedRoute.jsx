@@ -2,12 +2,13 @@ import { Fragment, useState } from 'react'
 import { useAuth } from '../context/useAuth'
 import { backend } from '../backend'
 import Login from '../pages/Login'
+import SetNewPassword from '../pages/SetNewPassword'
 import { LogoMark } from './Logo'
 
 // Gate: spinner while the session is resolving, the Login screen when signed
 // out, the app when signed in.
 export default function ProtectedRoute({ children }) {
-  const { user, loading, signOut } = useAuth()
+  const { user, loading, signOut, recovering } = useAuth()
   const [signOutError, setSignOutError] = useState(false)
 
   if (loading) {
@@ -40,6 +41,10 @@ export default function ProtectedRoute({ children }) {
       </div>
     )
   }
+
+  // A reset link has signed the user in: they must choose a new password
+  // before the app (and its data hooks) mounts.
+  if (recovering) return <SetNewPassword />
 
   return <Fragment key={user.id}>{children}</Fragment>
 }

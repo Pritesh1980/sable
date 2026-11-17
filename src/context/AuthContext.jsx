@@ -16,6 +16,9 @@ const LAST_USER_KEY = 'tattoo_last_user_id'
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
+  // True from a password-reset link signing the user in until they set a new
+  // password (or sign out). Set synchronously from the adapter's recovery flag.
+  const [recovering, setRecovering] = useState(false)
   const transitionQueue = useRef(Promise.resolve())
 
   useEffect(() => {
@@ -25,9 +28,11 @@ export function AuthProvider({ children }) {
     let requestedUserId
     let revision = 0
 
-    function applyIdentity(nextSession) {
+    function applyIdentity(nextSession, meta) {
       if (!mounted) return
       const nextUserId = nextSession?.user?.id || null
+      if (meta?.recovery && nextUserId) setRecovering(true)
+      else if (!nextUserId) setRecovering(false)
       const currentRevision = ++revision
       if (!baselineSet) {
         baselineSet = true
@@ -99,12 +104,25 @@ export function AuthProvider({ children }) {
     await transitionQueue.current
   }, [])
 
+  const canResetPassword =
+    typeof backend.auth.requestPasswordReset === 'function' &&
+    typeof backend.auth.updatePassword === 'function'
+  const requestPasswordReset = useCallback((args) => backend.auth.requestPasswordReset(args), [])
+  const updatePassword = useCallback(async (args) => {
+    await backend.auth.updatePassword(args)
+    setRecovering(false)
+  }, [])
+
   const value = {
     user: session?.user || null,
     session,
     loading,
     signIn,
     signOut,
+    canResetPassword,
+    requestPasswordReset,
+    updatePassword,
+    recovering,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

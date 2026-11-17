@@ -28,8 +28,20 @@ export function createSupabaseAuth() {
       const { error } = await sb.auth.signOut()
       if (error) throw new Error(error.message)
     },
+    // The reset link lands on the app root; the SDK reads the recovery token
+    // from the URL hash and signs the user in. Allowlist the origin in Supabase.
+    async requestPasswordReset({ email }) {
+      const redirectTo = window.location.origin + import.meta.env.BASE_URL
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo })
+      if (error) throw new Error(error.message)
+    },
+    async updatePassword({ password }) {
+      const { error } = await sb.auth.updateUser({ password })
+      if (error) throw new Error(error.message)
+    },
     onAuthStateChange(cb) {
-      const { data } = sb.auth.onAuthStateChange((_event, session) => cb(toSession(session)))
+      const { data } = sb.auth.onAuthStateChange((event, session) =>
+        cb(toSession(session), { recovery: event === 'PASSWORD_RECOVERY' }))
       return () => data.subscription.unsubscribe()
     },
   }
