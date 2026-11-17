@@ -3,17 +3,59 @@ import { LogoMark, Wordmark } from '../components/Logo'
 import { useAuth } from '../context/useAuth'
 import { backend } from '../backend'
 
+// The adapter's consume is one-shot, but useState initialisers run twice under
+// StrictMode, so the code is kept at module level until a reset is sent.
+let linkErrorCode = null
+function takeLinkError() {
+  const code = backend.auth.consumeAuthLinkError?.()
+  if (code) linkErrorCode = code
+  return linkErrorCode
+}
+
 // Email + password sign-in. Invite-only — no sign-up link (accounts are created
 // admin-side). The password field reuses the masked-input pattern from the
 // Concepts KeyField.
 export default function Login() {
   const emailId = useId()
   const passwordId = useId()
-  const { signIn } = useAuth()
+  const { signIn, canResetPassword, requestPasswordReset } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
+  // An expired/used reset link opens straight on the reset view with a note.
+  const [linkError, setLinkError] = useState(takeLinkError)
+  // 'signin' | 'reset' | 'sent'
+  const [mode, setMode] = useState(() => (linkError && canResetPassword ? 'reset' : 'signin'))
+
+  function switchMode(next) {
+    setError(null)
+    setSubmitting(false)
+    setMode(next)
+  }
+
+  async function onReset(e) {
+    e.preventDefault()
+    if (submitting) return
+    setError(null)
+    setSubmitting(true)
+    try {
+      await requestPasswordReset({ email: email.trim() })
+      linkErrorCode = null
+      setLinkError(null)
+      setMode('sent')
+    } catch (err) {
+      // Never reveal whether an account exists: "not found" looks like success.
+      // Rate-limit and network errors still surface.
+      if (/not found|no user|does not exist|unknown user/i.test(err?.message || '')) {
+        setMode('sent')
+      } else {
+        setError(err?.message || 'Could not send the reset email. Please try again.')
+      }
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   async function onSubmit(e) {
     e.preventDefault()
@@ -45,10 +87,68 @@ export default function Login() {
             A gallery built for browsing — that learns your taste by looking at the work.
           </p>
           <p className="font-mono text-cream-muted/60 text-[0.625rem] tracking-widest uppercase mt-6">
-            Sign in to continue
+            {mode === 'signin' ? 'Sign in to continue' : 'Reset password'}
           </p>
         </div>
 
+        {mode === 'sent' && (
+          <div className="space-y-4 text-center">
+            <p className="text-cream text-sm font-body leading-relaxed" role="status">
+              If an account exists for that address, a reset link is on its way.
+            </p>
+            <button
+              type="button"
+              onClick={() => switchMode('signin')}
+              className="min-h-11 px-3 font-mono text-cream-muted hover:text-accent text-[0.6875rem] tracking-widest uppercase transition-colors"
+            >
+              Back to sign in
+            </button>
+          </div>
+        )}
+
+        {mode === 'reset' && (
+          <form onSubmit={onReset} className="space-y-4">
+            <div>
+              <label htmlFor={emailId} className="block text-xs font-mono text-cream-muted tracking-widest uppercase mb-1">
+                Email
+              </label>
+              <input
+                id={emailId}
+                type="email"
+                autoComplete="username"
+                required
+                autoFocus
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full min-h-11 bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/50 font-mono placeholder-cream-muted/40"
+                placeholder="you@example.com"
+              />
+            </div>
+            {(error || linkError) && (
+              <p className="text-accent text-xs font-body" role="alert">
+                {error || 'That reset link has expired or was already used. Send yourself a new one.'}
+              </p>
+            )}
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full min-h-11 px-4 py-2.5 bg-accent hover:bg-accent-hover disabled:opacity-50 text-cream text-sm font-body rounded-xs transition-colors tracking-wide"
+            >
+              {submitting ? 'Sending…' : 'Send reset link'}
+            </button>
+            <p className="text-center">
+              <button
+                type="button"
+                onClick={() => switchMode('signin')}
+                className="min-h-11 px-3 font-mono text-cream-muted hover:text-accent text-[0.6875rem] tracking-widest uppercase transition-colors"
+              >
+                Back to sign in
+              </button>
+            </p>
+          </form>
+        )}
+
+        {mode === 'signin' && (
         <form onSubmit={onSubmit} className="space-y-4">
           <div>
             <label htmlFor={emailId} className="block text-xs font-mono text-cream-muted tracking-widest uppercase mb-1">
@@ -61,7 +161,7 @@ export default function Login() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/50 font-mono placeholder-cream-muted/40"
+              className="w-full min-h-11 bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/50 font-mono placeholder-cream-muted/40"
               placeholder="you@example.com"
             />
           </div>
@@ -77,7 +177,7 @@ export default function Login() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/50 font-mono placeholder-cream-muted/40"
+              className="w-full min-h-11 bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/50 font-mono placeholder-cream-muted/40"
               placeholder="••••••••"
             />
           </div>
@@ -89,11 +189,24 @@ export default function Login() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full px-4 py-2.5 bg-accent hover:bg-accent-hover disabled:opacity-50 text-cream text-sm font-body rounded-xs transition-colors tracking-wide"
+            className="w-full min-h-11 px-4 py-2.5 bg-accent hover:bg-accent-hover disabled:opacity-50 text-cream text-sm font-body rounded-xs transition-colors tracking-wide"
           >
             {submitting ? 'Signing in…' : 'Sign in'}
           </button>
+
+          {canResetPassword && (
+            <p className="text-center">
+              <button
+                type="button"
+                onClick={() => switchMode('reset')}
+                className="min-h-11 px-3 font-mono text-cream-muted hover:text-accent text-[0.6875rem] tracking-widest uppercase transition-colors"
+              >
+                Forgot password?
+              </button>
+            </p>
+          )}
         </form>
+        )}
 
         {/* The backend-free build (GitHub Pages) has no account to sign into,
             so the form alone is a dead end. `?demo=1` is what seeds the demo

@@ -72,6 +72,15 @@ can use Supabase auth while keeping documents and blobs device-local:
 not email. Private libraries do not seed artists through an email match. Ownership
 epochs fence awaited work and display caches even across A -> signed out -> A.
 
+**Password reset (Supabase auth).** Owner setup: in the Supabase project, Auth -> URL
+Configuration must allowlist every app origin as a redirect URL (for example
+`http://localhost:5173/` and the real deployed origin, with its base path). The reset
+email uses Supabase's default template. The adapter's optional `requestPasswordReset` /
+`updatePassword` send and complete the reset; its `onAuthStateChange` callback passes
+`{ recovery: true }` on the SDK's `PASSWORD_RECOVERY` event, which makes
+`ProtectedRoute` show `SetNewPassword` before the app mounts. The local adapter
+implements neither, so the UI hides the link.
+
 The integration with the current collection engine was checked on 21 October 2026.
 `useStorage` exposes its checked concept writer as a third return value. The engine
 owns lifecycle and write serialization; `src/sync/privateConceptPersistence.js`

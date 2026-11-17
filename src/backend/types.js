@@ -24,8 +24,19 @@
  *   SDK-managed token for transport only; never included in a UI Session.
  * @property {(creds: {email: string, password: string}) => Promise<Session>} signIn
  * @property {() => Promise<void>} signOut
- * @property {(cb: (session: Session|null) => void) => (() => void)} onAuthStateChange
- *   Subscribe to auth changes; returns an unsubscribe fn.
+ * @property {(cb: (session: Session|null, meta?: {recovery: boolean}) => void) => (() => void)} onAuthStateChange
+ *   Subscribe to auth changes; returns an unsubscribe fn. `meta.recovery` is true
+ *   when a password-reset link just signed the user in (the SDK event never leaks).
+ * @property {(args: {email: string}) => Promise<void>} [requestPasswordReset]
+ *   OPTIONAL. Email a reset link. Absent on the local adapter (no passwords).
+ * @property {() => boolean} [recoveryPending]
+ *   OPTIONAL. True while a reset link has signed the user in but no new password has
+ *   been set (persisted, so it survives the SDK's late event and a reload).
+ * @property {() => (string|null)} [consumeAuthLinkError]
+ *   OPTIONAL. One-shot short code (e.g. `otp_expired`) when the page was opened from
+ *   an expired/used auth link; null otherwise.
+ * @property {(args: {password: string}) => Promise<void>} [updatePassword]
+ *   OPTIONAL. Set a new password for the signed-in (recovering) user.
  */
 
 /**
