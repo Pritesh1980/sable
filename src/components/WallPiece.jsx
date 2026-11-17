@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import ArtistImage from './ArtistImage'
+import { Heart } from 'lucide-react'
 import GeneratedArtworkNotice from './GeneratedArtworkNotice'
 
 // A single image on the Wall — full-bleed, no chrome. The artist's name always
@@ -60,6 +61,13 @@ export default function WallPiece({ item, onOpen, onDropImage }) {
           title="New since your last visit"
           className="pointer-events-none absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-v2-accent ring-[3px] ring-v2-ink/60"
         />
+      )}
+
+      {item.isFavourite && (
+        <span className="pointer-events-none absolute top-2 left-2 text-v2-accent drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]">
+          <Heart aria-hidden="true" size={16} fill="currentColor" />
+          <span className="sr-only">Favourite</span>
+        </span>
       )}
 
       <figcaption

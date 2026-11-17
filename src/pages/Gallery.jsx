@@ -92,12 +92,14 @@ function ArtistGrid({ items, sensors, onDragStart, onDragEnd, onDragCancel, onOp
   )
 }
 
-export default function Gallery({ artists, setArtists, saved = [], setSaved = () => {}, ideas = [], mergedConventions = [] }) {
+export default function Gallery({ artists, setArtists, saved = [], setSaved = () => {}, favourites = [], setFavourites = () => {}, ideas = [], mergedConventions = [] }) {
   const { user } = useAuth() || {}
   const [searchParams, setSearchParams] = useSearchParams()
   const userId = user?.id
   const [activeTag, setActiveTag] = useState(null)
   const [filterOpen, setFilterOpen] = useState(false)
+  // Favourites filter (#220 K): the Wall only, shown as part of the filter chip.
+  const [favOnly, setFavOnly] = useState(false)
   // Picking a style closes the row: the chip in the bar then shows what is on.
   const filterBarRef = useRef(null)
   function pickTag(tag) {
@@ -115,6 +117,9 @@ export default function Gallery({ artists, setArtists, saved = [], setSaved = ()
   const selected = detail.value ? artists.find((a) => a.id === detail.value) || null : null
   const openArtist = (artist) => detail.open(artist.id)
   const [viewMode, setViewMode] = useState('wall')
+  const showsWall = viewMode === 'wall' || artists.length === 0
+  const favActive = favOnly && showsWall
+  const chipLabel = [favActive && 'Favourites', activeTag].filter(Boolean).join(' · ')
   // #70: grid cards are pure navigation until this is on. Only grid can reorder,
   // so leaving grid drops it — otherwise the state outlives its only switch.
   const [editing, setEditing] = useState(false)
@@ -419,7 +424,7 @@ export default function Gallery({ artists, setArtists, saved = [], setSaved = ()
               </button>
             ))}
           </div>
-          {activeTag && !filterOpen ? (
+          {chipLabel && !filterOpen ? (
             // Two targets in one chip: the name reopens the styles to pick
             // another, the cross clears it (agy review).
             <div className="min-w-0 h-11 flex items-stretch rounded-xs border border-accent/50 bg-accent/10 font-mono text-xs text-cream">
@@ -427,15 +432,15 @@ export default function Gallery({ artists, setArtists, saved = [], setSaved = ()
                 data-filter-control
                 onClick={() => setFilterOpen(true)}
                 disabled={dragActive}
-                aria-label={`Change filter: ${activeTag}`}
+                aria-label={`Change filter: ${chipLabel}`}
                 className="min-w-0 pl-2.5 pr-1 flex items-center rounded-xs disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
               >
-                <span className="truncate">{activeTag}</span>
+                <span className="truncate">{chipLabel}</span>
               </button>
               <button
-                onClick={() => setActiveTag(null)}
+                onClick={() => { setActiveTag(null); setFavOnly(false) }}
                 disabled={dragActive}
-                aria-label={`Clear filter: ${activeTag}`}
+                aria-label={`Clear filter: ${chipLabel}`}
                 className="shrink-0 w-9 flex items-center justify-center rounded-xs disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-accent"
               >
                 <span aria-hidden="true">×</span>
@@ -460,11 +465,20 @@ export default function Gallery({ artists, setArtists, saved = [], setSaved = ()
           <div id="artist-style-filter" className="flex gap-2 overflow-x-auto scrollbar-thin mt-2">
             <TagPill
               tag="All"
-              active={!activeTag}
-              onClick={() => pickTag(null)}
+              active={!activeTag && !favActive}
+              onClick={() => { setFavOnly(false); pickTag(null) }}
               disabled={dragActive}
               minTapHeight
             />
+            {showsWall && (
+              <TagPill
+                tag="Favourites"
+                active={favOnly}
+                onClick={() => setFavOnly((v) => !v)}
+                disabled={dragActive}
+                minTapHeight
+              />
+            )}
             {STYLE_TAGS.map((tag) => (
               <TagPill
                 key={tag}
@@ -499,6 +513,10 @@ export default function Gallery({ artists, setArtists, saved = [], setSaved = ()
           ideas={ideas}
           saved={activeTag ? [] : saved}
           setSaved={setSaved}
+          favourites={favourites}
+          setFavourites={setFavourites}
+          favouritesOnly={favActive}
+          styleFilter={activeTag}
           setArtists={setArtists}
           onAddArtist={(initial) => { setAddInitial(initial); setQuickAdding(true) }}
           revealArtistId={captureReceipt?.kind === 'created' ? captureReceipt.artistId : null}

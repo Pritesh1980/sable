@@ -46,7 +46,7 @@ function formatImageList(images = []) {
 
 // The structure of a backup, with images left as the refs/urls in memory (a v1
 // document). createBackupWithImages turns it into a self-contained v2 one.
-export function createBackup({ artists = [], ideas = [], boards = [], concepts = [], saved = [], conventionOverrides = {} }, exportedAt = new Date().toISOString()) {
+export function createBackup({ artists = [], ideas = [], boards = [], concepts = [], saved = [], favourites = [], conventionOverrides = {} }, exportedAt = new Date().toISOString()) {
   return {
     version: REFS_ONLY_VERSION,
     exportedAt,
@@ -56,6 +56,7 @@ export function createBackup({ artists = [], ideas = [], boards = [], concepts =
       boards: stripRows(boards),
       concepts: stripRows(concepts),
       saved: stripRows(saved),
+      favourites: stripRows(favourites),
       conventionOverrides,
     },
   }
@@ -134,13 +135,16 @@ async function mapBackupImages(data, map) {
     }
     concepts.push(next)
   }
-  return {
-    ...data,
-    artists: await withImages(data.artists, 'artists'),
-    ideas: await withImages(data.ideas, 'ideas'),
-    concepts,
-    saved,
+  const artists = await withImages(data.artists, 'artists')
+  const ideas = await withImages(data.ideas, 'ideas')
+  // Favourites go last: on restore they reuse the key the artist or saved copy
+  // of the same photo was staged under.
+  const favourites = []
+  for (const row of data.favourites || []) {
+    const next = row?.image == null ? row : await map(row.image, { scope: 'favourites', id: row.id })
+    if (next !== null) favourites.push(row?.image == null ? row : { ...row, image: next })
   }
+  return { ...data, artists, ideas, concepts, saved, favourites }
 }
 
 // The self-contained export (v2): embeds each blob-backed photo as a data url.
@@ -188,7 +192,7 @@ function storedRef(image, scope, key) {
   if (!key) return image
   if (scope === 'ideas') return normalizeReferenceImages([{ ...(typeof image === 'object' ? image : {}), key }])[0]
   if (scope === 'concepts') return key
-  if (scope === 'saved') return { key }
+  if (scope === 'saved' || scope === 'favourites') return { key }
   return image
 }
 
@@ -199,9 +203,28 @@ function storedRef(image, scope, key) {
 export async function restoreBackupImages(data, { userId } = {}) {
   if (!userId) return { data, failed: 0 }
   let failed = 0
+  // Photos of artists and saved photos share a key for identical bytes, and a
+  // favourite reuses it, so a heart still matches its photo. Ideas and concepts
+  // keep their own scope (concept keys must live under /concepts/).
+  const photoScopes = new Set(['artists', 'saved', 'favourites'])
+  const stagedByUrl = new Map()
+  const stageOnce = (url, ctx) => {
+    if (!photoScopes.has(ctx.scope)) return stageImage(url, ctx)
+    if (!stagedByUrl.has(url)) stagedByUrl.set(url, stageImage(url, ctx))
+    return stagedByUrl.get(url)
+  }
+  const conceptPrefix = `user/${userId}/concepts/`
   const out = await mapBackupImages(data, async (image, { scope, id }) => {
-    if (!needsStaging(image, { userId })) return storedRef(image, scope, keyForUrl(urlOf(image)))
-    const staged = await stageImage(urlOf(image), { userId, scope, id })
+    // A concept's image must live under /concepts/ (stageConceptIdeaImage and
+    // Refine check it), so a photo another slot already staged is not reused
+    // for it: it is staged again under its own scope, unregistered so the
+    // other slots' reuse of the bytes is unaffected.
+    const known = keyForUrl(urlOf(image))
+    const own = scope !== 'concepts' || !known || known.startsWith(conceptPrefix)
+    if (own && !needsStaging(image, { userId })) return storedRef(image, scope, keyForUrl(urlOf(image)))
+    const ctx = { userId, scope, id }
+    if (!own) ctx.registerIdentity = false
+    const staged = await stageOnce(urlOf(image), ctx)
     if (staged.failed) {
       failed += 1
       return null
@@ -222,6 +245,7 @@ const LIBRARY_PARTS = [
   { count: (lib) => lib.boards?.length || 0, label: (n) => `${n} board${n === 1 ? '' : 's'}` },
   { count: (lib) => lib.concepts?.length || 0, label: (n) => `${n} concept${n === 1 ? '' : 's'}` },
   { count: (lib) => lib.saved?.length || 0, label: (n) => `${n} saved photo${n === 1 ? '' : 's'}` },
+  { count: (lib) => lib.favourites?.length || 0, label: (n) => `${n} favourite${n === 1 ? '' : 's'}` },
   {
     count: (lib) => Object.keys(lib.conventionOverrides || {}).length,
     label: (n) => `attendance at ${n} convention${n === 1 ? '' : 's'}`,
@@ -251,7 +275,7 @@ export function parseBackup(raw) {
   }
 
   const data = parsed.data || parsed
-  const arrayKeys = ['artists', 'ideas', 'boards', 'concepts', 'saved']
+  const arrayKeys = ['artists', 'ideas', 'boards', 'concepts', 'saved', 'favourites']
   const out = {}
 
   arrayKeys.forEach((key) => {

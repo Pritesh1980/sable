@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import { buildWallItems, stampAddedAt, photoParam, findPhotoIndex } from '../data/wall'
+import { favouriteIdentities, toggleFavourite, favouriteRef } from '../data/favourites'
+import { refIdentity } from '../data/imageRef'
 import useOverlayParam from '../hooks/useOverlayParam'
 import WallPiece from './WallPiece'
 import WallViewer from './WallViewer'
@@ -20,8 +22,21 @@ const savedId = (record) => record.id
 // The Wall: full-bleed masonry of every artist reference image, the default
 // view on the Artists page (#220). Getting around is the app nav's job and the
 // page header belongs to Gallery; this is only the wall and what hangs off it.
-export default function WallView({ artists = [], wallArtists = artists, ideas = [], saved = [], setSaved = () => {}, setArtists = () => {}, onAddArtist = () => {}, revealArtistId = null }) {
-  const items = buildWallItems(wallArtists, { saved })
+export default function WallView({ artists = [], wallArtists = artists, ideas = [], saved = [], setSaved = () => {}, favourites = [], setFavourites = () => {}, favouritesOnly = false, styleFilter = null, setArtists = () => {}, onAddArtist = () => {}, revealArtistId = null }) {
+  // Photos matched to favourites by image ref (#220 K). A favourite whose photo
+  // is gone matches nothing, so it never shows.
+  const favIds = favouriteIdentities(favourites)
+  const allItems = buildWallItems(wallArtists, { saved }).map((item) => ({
+    ...item,
+    isFavourite: favIds.has(refIdentity(item.image)),
+    canFavourite: favouriteRef(item.image) !== null,
+  }))
+  // Un-favouriting the photo you are looking at must not pull it out from under
+  // the viewer: it stays until the viewer closes.
+  const [keptParams, setKeptParams] = useState(() => new Set())
+  const items = favouritesOnly
+    ? allItems.filter((item) => item.isFavourite || keptParams.has(photoParam(item)))
+    : allItems
   // The open photo lives in the URL (?photo=<artistId>.<n>, #159): the browser's
   // Back closes the viewer instead of leaving the Wall, and a photo can be
   // linked to. A link to a photo that has gone just shows the Wall.
@@ -65,6 +80,13 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
   const { user } = useAuth() || {}
 
   const viewerOpen = viewerIndex !== -1
+  if (!viewerOpen && keptParams.size > 0) setKeptParams(new Set())
+
+  function handleToggleFavourite(item) {
+    if (!item?.canFavourite) return
+    if (item.isFavourite) setKeptParams((prev) => new Set(prev).add(photoParam(item)))
+    setFavourites((prev) => toggleFavourite(prev, item.image))
+  }
 
   // Overlay owns the screen while it's open — lock page scroll so the wall
   // behind it can't move, then hand scroll back when it closes.
@@ -153,7 +175,7 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
       {/* A style filter can leave nothing to show; say so rather than go blank. */}
       {items.length === 0 && (
         <p className="px-6 py-20 text-center font-v2-ui text-sm text-v2-muted">
-          {wallArtists.length === 0 ? 'No artists match this filter.' : 'No photos here yet. Add some from an artist’s page.'}
+          {favouritesOnly ? (styleFilter ? `No favourites in ${styleFilter}.` : 'No favourites yet. Tap the heart on a photo to add it.') : wallArtists.length === 0 ? 'No artists match this filter.' : 'No photos here yet. Add some from an artist’s page.'}
         </p>
       )}
 
@@ -209,6 +231,7 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
           onIndexChange={handleIndexChange}
           onAssignSaved={handleAssignSaved}
           onRemoveSaved={handleRemoveSaved}
+          onToggleFavourite={handleToggleFavourite}
           onAddNewArtist={() => { photo.close(); onAddArtist({}) }}
         />
       )}

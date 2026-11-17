@@ -2,6 +2,7 @@ import { warmImageCache } from './imageResolver'
 import { stageInlineOnce } from './imageStaging'
 import { normalizeReferenceImages } from './referenceImages'
 import { canonicalizeImages } from './artistsPolicy'
+import { favouriteRef } from './favourites'
 
 // Image codecs for the document collections that carry images (ideas, concepts).
 //
@@ -71,6 +72,18 @@ export const savedCodec = {
     }
     return { value: moved ? next : saved, moved }
   },
+}
+
+// ── favourites (#220 K): `image` is a { key } or static path, never a display
+// URL. Rows are never dropped; an image that is not stored yet stays as is. ───
+
+export const favouritesCodec = {
+  toCanonical: (favourites = []) => favourites.map((row) => ({ ...row, image: favouriteRef(row.image) ?? row.image })),
+  toDisplay: async (favourites = []) => {
+    warmImageCache(favourites.map((row) => row.image))
+    return favourites
+  },
+  ensureUploaded: async (favourites = []) => ({ value: favourites, moved: 0 }),
 }
 
 // ── concepts: imageUrl string at top level and on each variant — state holds

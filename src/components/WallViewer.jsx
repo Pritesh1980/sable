@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { Heart } from 'lucide-react'
 import ArtistImage from './ArtistImage'
 import GeneratedArtworkNotice from './GeneratedArtworkNotice'
 import GlCrossfade from './GlCrossfade'
@@ -155,6 +156,25 @@ function SavedActions({ artists, onAssign, onRemove, onAddNewArtist, className =
   )
 }
 
+// The heart (#220 K): a 44px target on every photo, pressed when favourited.
+// Disabled while the photo is not stored yet, since only a stored ref can be kept.
+function FavouriteButton({ item, onToggle, className = '' }) {
+  const on = Boolean(item.isFavourite)
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle?.(item)}
+      disabled={!item.canFavourite && !on}
+      aria-pressed={on}
+      aria-label={on ? 'Remove from favourites' : 'Favourite'}
+      title={on ? 'Remove from favourites (F)' : 'Favourite (F)'}
+      className={`flex items-center justify-center w-11 h-11 shrink-0 rounded-full border border-v2-hairline bg-v2-ink/60 backdrop-blur-md pointer-events-auto transition-colors hover:border-v2-accent disabled:opacity-40 ${on ? 'text-v2-accent' : 'text-v2-cream'} ${className}`}
+    >
+      <Heart aria-hidden="true" size={20} fill={on ? 'currentColor' : 'none'} />
+    </button>
+  )
+}
+
 const PANEL_BUTTON = 'flex items-center justify-center gap-3 bg-v2-ink/70 backdrop-blur-md border border-v2-hairline hover:border-v2-accent rounded-xs px-4 py-3 text-v2-cream font-v2-ui text-sm transition-colors'
 
 // Full-screen wall viewer. The image owns the screen.
@@ -181,6 +201,7 @@ export default function WallViewer({
   onAssignSaved,
   onRemoveSaved,
   onAddNewArtist,
+  onToggleFavourite,
 }) {
   const [showInfo, setShowInfo] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -208,6 +229,7 @@ export default function WallViewer({
     onClose: showInfo ? () => setShowInfo(false) : onClose,
     onGenerate,
     onToggleInfo: () => setShowInfo((s) => !s),
+    onToggleFavourite,
     enabled: open,
     dialogRef,
   })
@@ -280,8 +302,11 @@ export default function WallViewer({
         Close
       </button>
 
-      <div className="absolute right-[max(1rem,env(safe-area-inset-right))] sm:right-[max(2rem,env(safe-area-inset-right))] top-[max(1.5rem,env(safe-area-inset-top))] font-v2-display text-sm tracking-[0.2em] text-v2-cream [text-shadow:0_1px_8px_rgba(19,17,16,0.9)] pointer-events-none">
-        Photo {positionInArtist + 1} of {artistImageCount}
+      <div className={`absolute right-[max(1rem,env(safe-area-inset-right))] sm:right-[max(2rem,env(safe-area-inset-right))] flex items-center gap-2 pointer-events-none ${touch ? 'top-[max(1rem,env(safe-area-inset-top))]' : 'top-[max(1.5rem,env(safe-area-inset-top))]'}`}>
+        <span className="font-v2-display text-sm tracking-[0.2em] text-v2-cream [text-shadow:0_1px_8px_rgba(19,17,16,0.9)]">
+          Photo {positionInArtist + 1} of {artistImageCount}
+        </span>
+        {touch && <FavouriteButton item={current} onToggle={onToggleFavourite} />}
       </div>
     </>
   )
@@ -403,6 +428,7 @@ export default function WallViewer({
                   </p>
                 )}
               </div>
+
               <div className="relative flex items-center justify-between">
                 <PhotoArrow dir={-1} disabled={artistImageCount < 2} onGo={goWithinArtist} />
                 <ViewerSheetToggle open={false} onToggle={() => setSheetOpen(true)} controls={sheetId} />
@@ -474,6 +500,10 @@ export default function WallViewer({
 
           <div aria-hidden="true" className={FADE} />
 
+          <div className="absolute right-[max(1rem,env(safe-area-inset-right))] sm:right-[max(2rem,env(safe-area-inset-right))] top-[max(3.5rem,calc(env(safe-area-inset-top)+2.5rem))]">
+            <FavouriteButton item={current} onToggle={onToggleFavourite} />
+          </div>
+
           <div className="absolute left-8 bottom-7 pointer-events-auto">{plate}</div>
 
           {artistItems.length > 1 && (
@@ -501,6 +531,7 @@ export default function WallViewer({
             <span><kbd className={KBD}>↑</kbd><kbd className={KBD}>↓</kbd>next artist</span>
             {!isSaved && <span><kbd className={KBD}>G</kbd>generate</span>}
             {!isSaved && <span><kbd className={KBD}>I</kbd>info & notes</span>}
+            <span><kbd className={KBD}>F</kbd>favourite</span>
             <span><kbd className={KBD}>Esc</kbd>back to wall</span>
           </div>
         </div>

@@ -13,6 +13,7 @@ const KIND = {
   concepts: 'concept',
   boards: 'board',
   saved: 'saved',
+  favourites: 'favourite',
   artistsMeta: 'artistMeta',
   conventionOverrides: 'conventionOverrides',
 }

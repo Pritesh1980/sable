@@ -46,6 +46,7 @@ describe('createBackup', () => {
         boards: [{ id: 'board-1' }],
         concepts: [{ id: 'concept-1' }],
         saved: [],
+        favourites: [],
         conventionOverrides: {},
       },
     })
