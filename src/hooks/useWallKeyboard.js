@@ -52,6 +52,7 @@ export default function useWallKeyboard({
   onGenerate,
   onToggleInfo,
   onToggleFavourite,
+  onMoreLikeThis,
   enabled = true,
   dialogRef,
 }) {
@@ -135,6 +136,11 @@ export default function useWallKeyboard({
           if (e.metaKey || e.ctrlKey || e.altKey) break
           onToggleFavourite?.(items[index])
           break
+        case 'm':
+        case 'M':
+          if (e.metaKey || e.ctrlKey || e.altKey) break
+          onMoreLikeThis?.(items[index])
+          break
         case 'Escape':
           e.preventDefault()
           onClose?.()
@@ -146,7 +152,7 @@ export default function useWallKeyboard({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [enabled, moveWithinArtist, jumpArtist, onGenerate, onToggleInfo, onToggleFavourite, onClose, items, index, dialogRef])
+  }, [enabled, moveWithinArtist, jumpArtist, onGenerate, onToggleInfo, onToggleFavourite, onMoreLikeThis, onClose, items, index, dialogRef])
 
   const group = groupForIndex(groups, index)
   // Photos saved without an artist (#220 K) form a run of their own at the front;

@@ -512,6 +512,8 @@ export default function Gallery({ artists, setArtists, saved = [], setSaved = ()
           wallArtists={sorted}
           ideas={ideas}
           saved={activeTag ? [] : saved}
+          allSaved={saved}
+          onClearFilters={() => { setActiveTag(null); setFavOnly(false) }}
           setSaved={setSaved}
           favourites={favourites}
           setFavourites={setFavourites}

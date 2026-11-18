@@ -6,6 +6,7 @@ import { refIdentity } from '../data/imageRef'
 import useOverlayParam from '../hooks/useOverlayParam'
 import WallPiece from './WallPiece'
 import WallViewer from './WallViewer'
+import MoreLikeThis from './MoreLikeThis'
 import ConsiderShelf from './ConsiderShelf'
 import DiscoverMore from './DiscoverMore'
 import RankRail from './RankRail'
@@ -22,18 +23,22 @@ const savedId = (record) => record.id
 // The Wall: full-bleed masonry of every artist reference image, the default
 // view on the Artists page (#220). Getting around is the app nav's job and the
 // page header belongs to Gallery; this is only the wall and what hangs off it.
-export default function WallView({ artists = [], wallArtists = artists, ideas = [], saved = [], setSaved = () => {}, favourites = [], setFavourites = () => {}, favouritesOnly = false, styleFilter = null, setArtists = () => {}, onAddArtist = () => {}, revealArtistId = null }) {
+export default function WallView({ artists = [], wallArtists = artists, ideas = [], saved = [], allSaved = saved, onClearFilters = () => {}, setSaved = () => {}, favourites = [], setFavourites = () => {}, favouritesOnly = false, styleFilter = null, setArtists = () => {}, onAddArtist = () => {}, revealArtistId = null }) {
   // Photos matched to favourites by image ref (#220 K). A favourite whose photo
   // is gone matches nothing, so it never shows.
   const favIds = favouriteIdentities(favourites)
-  const allItems = buildWallItems(wallArtists, { saved }).map((item) => ({
+  const decorate = (item) => ({
     ...item,
     isFavourite: favIds.has(refIdentity(item.image)),
     canFavourite: favouriteRef(item.image) !== null,
-  }))
+  })
+  const allItems = buildWallItems(wallArtists, { saved }).map(decorate)
   // Un-favouriting the photo you are looking at must not pull it out from under
   // the viewer: it stays until the viewer closes.
   const [keptParams, setKeptParams] = useState(() => new Set())
+  const [similarItem, setSimilarItem] = useState(null)
+  // A photo picked in More like this: the viewer moves to it once it is in `items`.
+  const [goTo, setGoTo] = useState(null)
   const items = favouritesOnly
     ? allItems.filter((item) => item.isFavourite || keptParams.has(photoParam(item)))
     : allItems
@@ -81,6 +86,8 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
 
   const viewerOpen = viewerIndex !== -1
   if (!viewerOpen && keptParams.size > 0) setKeptParams(new Set())
+  if (!viewerOpen && goTo) setGoTo(null)
+  if (!viewerOpen && similarItem) setSimilarItem(null)
 
   function handleToggleFavourite(item) {
     if (!item?.canFavourite) return
@@ -98,6 +105,21 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
       document.body.style.overflow = previousOverflow
     }
   }, [viewerOpen])
+
+  // Opens a photo from the whole library. One that the wall's filters hide
+  // clears them first, so the viewer's list is always the real wall.
+  function openFromLibrary(item) {
+    const param = photoParam(item)
+    if (!items.some((i) => photoParam(i) === param)) onClearFilters()
+    setSimilarItem(null)
+    setGoTo({ param })
+  }
+
+  function openArtistFromLibrary(artist) {
+    const first = buildWallItems([artist]).find((i) => i.imageIndex === 0)
+    if (first) openFromLibrary(first)
+    else setSimilarItem(null)
+  }
 
   function handleOpen(item) {
     photo.open(photoParam(item))
@@ -222,6 +244,7 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
         <WallViewer
           items={items}
           initialIndex={viewerIndex}
+          goTo={goTo}
           artists={artists}
           ideas={ideas}
           open={viewerOpen}
@@ -232,7 +255,19 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
           onAssignSaved={handleAssignSaved}
           onRemoveSaved={handleRemoveSaved}
           onToggleFavourite={handleToggleFavourite}
+          onMoreLikeThis={setSimilarItem}
           onAddNewArtist={() => { photo.close(); onAddArtist({}) }}
+        />
+      )}
+
+      {viewerOpen && similarItem && (
+        <MoreLikeThis
+          item={similarItem}
+          artists={artists}
+          saved={allSaved}
+          onClose={() => setSimilarItem(null)}
+          onOpenItem={openFromLibrary}
+          onOpenArtist={openArtistFromLibrary}
         />
       )}
 
