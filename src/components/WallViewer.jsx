@@ -202,6 +202,7 @@ export default function WallViewer({
   onRemoveSaved,
   onAddNewArtist,
   onToggleFavourite,
+  onMoreLikeThis,
 }) {
   const [showInfo, setShowInfo] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -460,6 +461,11 @@ export default function WallViewer({
                   Next artist ›
                 </button>
               </div>}
+              {onMoreLikeThis && (
+                <button type="button" onClick={() => onMoreLikeThis(current)} className={PANEL_BUTTON}>
+                  More like this
+                </button>
+              )}
               {isSaved ? savedActions : (
                 <div className="flex gap-2">
                   <button onClick={() => onGenerate?.(current)} className={`${PANEL_BUTTON} flex-1`}>
@@ -512,17 +518,24 @@ export default function WallViewer({
             </div>
           )}
 
-          {isSaved ? (
-            <div className="absolute right-8 bottom-7 w-80">{savedActions}</div>
-          ) : (
-            <button
-              onClick={() => onGenerate?.(current)}
-              className={`absolute right-8 bottom-7 ${PANEL_BUTTON} pointer-events-auto`}
-            >
-              Generate a concept in this style
-              <kbd className="text-[0.7rem] text-v2-accent border border-v2-accent rounded px-1.5 py-0.5">G</kbd>
-            </button>
-          )}
+          <div className="absolute right-8 bottom-7 flex flex-col items-stretch gap-2">
+            {onMoreLikeThis && (
+              <button type="button" onClick={() => onMoreLikeThis(current)} className={`${PANEL_BUTTON} pointer-events-auto`}>
+                More like this
+              </button>
+            )}
+            {isSaved ? (
+              <div className="w-80">{savedActions}</div>
+            ) : (
+              <button
+                onClick={() => onGenerate?.(current)}
+                className={`${PANEL_BUTTON} pointer-events-auto`}
+              >
+                Generate a concept in this style
+                <kbd className="text-[0.7rem] text-v2-accent border border-v2-accent rounded px-1.5 py-0.5">G</kbd>
+              </button>
+            )}
+          </div>
 
           <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-5 font-v2-ui text-[0.68rem] tracking-[0.1em] text-v2-muted pointer-events-auto">
             {isSaved

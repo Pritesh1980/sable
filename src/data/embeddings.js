@@ -67,6 +67,25 @@ export function similarArtists(artists, artistId, getVec, { limit = 3 } = {}) {
   return rankArtistsByVector(artists, target, getVec, { limit, excludeId: artistId })
 }
 
+// The indexed photos closest to `vec`, best first. `candidates` are wall items
+// (anything with an `image` ref): artists' photos and photos saved without an
+// artist alike. The source photo (`excludeImage`, by identity) and any photo
+// with no vector are left out, and a photo seen twice counts once.
+export function similarPhotos(vec, candidates, getVec, { limit = 12, excludeImage } = {}) {
+  if (!vec) return []
+  const skip = excludeImage === undefined ? null : refIdentity(excludeImage)
+  const seen = new Set()
+  const ranked = []
+  for (const item of candidates) {
+    const id = refIdentity(item.image)
+    if (!id || id === skip || seen.has(id)) continue
+    seen.add(id)
+    const v = getVec(item.image)
+    if (v) ranked.push({ item, similarity: cosineSimilarity(vec, v) })
+  }
+  return ranked.sort((x, y) => y.similarity - x.similarity).slice(0, limit)
+}
+
 export function indexCoverage(artists, getVec) {
   let embedded = 0
   let total = 0
