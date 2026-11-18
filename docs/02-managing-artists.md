@@ -30,10 +30,13 @@ Found a tattoo but not who made it? Attach the photo, then tap **Save without ar
 instead of **Save**. You do not need a handle. The photo goes to the front of the Wall,
 marked **No artist yet**, and Sable says **Photo saved to the wall**.
 
-Open it on the Wall to find the artist later. **Give this an artist** lets you pick
-someone from your list; the photo moves to their page. **Remove photo** takes it off,
-with an Undo bar for a few seconds. A photo with no artist has no Artist count, handle
-or Generate button. A style filter hides these photos.
+Open it on the Wall to find the artist later. Any style note you typed shows under the
+photo. **Give this an artist** lets you pick someone from your list; the photo moves to
+their page, and the note becomes their style note if they have none. **Remove photo**
+takes it off, with an Undo bar for a few seconds. Either way the viewer moves on to your
+next saved photo, so you can sort a batch in one go; after the last one it shows the
+first artist photo. A photo with no artist has no Artist count, handle or Generate
+button. A style filter hides these photos.
 
 ### Favourite a photo
 
