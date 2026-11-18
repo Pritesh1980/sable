@@ -17,6 +17,8 @@ const PURGE_KEYS = [
   'tattoo_boards',
   'tattoo_saved',
   'tattoo_favourites',
+  // Gemini descriptions of the owner's photos (#220 K): device-local cache.
+  'tattoo_photo_descriptions',
   'tattoo_artists_meta',
   'tattoo_convention_attending',
   // Winners, but not tattoo_convention_lineups: a line-up is a show's published

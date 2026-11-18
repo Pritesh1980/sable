@@ -204,6 +204,7 @@ export default function WallViewer({
   onAddNewArtist,
   onToggleFavourite,
   onMoreLikeThis,
+  onDescribe,
   goTo = null,
 }) {
   const [showInfo, setShowInfo] = useState(false)
@@ -234,6 +235,7 @@ export default function WallViewer({
     onToggleInfo: () => setShowInfo((s) => !s),
     onToggleFavourite,
     onMoreLikeThis,
+    onDescribe,
     enabled: open,
     dialogRef,
   })
@@ -475,10 +477,19 @@ export default function WallViewer({
                   Next artist ›
                 </button>
               </div>}
-              {onMoreLikeThis && (
-                <button type="button" onClick={() => onMoreLikeThis(current)} className={PANEL_BUTTON}>
-                  More like this
-                </button>
+              {(onMoreLikeThis || onDescribe) && (
+                <div className="flex gap-2">
+                  {onMoreLikeThis && (
+                    <button type="button" onClick={() => onMoreLikeThis(current)} className={`${PANEL_BUTTON} flex-1`}>
+                      More like this
+                    </button>
+                  )}
+                  {onDescribe && (
+                    <button type="button" onClick={() => onDescribe(current)} className={`${PANEL_BUTTON} flex-1`}>
+                      Describe tattoo
+                    </button>
+                  )}
+                </div>
               )}
               {isSaved ? savedActions : (
                 <div className="flex gap-2">
@@ -533,11 +544,21 @@ export default function WallViewer({
           )}
 
           <div className="absolute right-8 bottom-7 flex flex-col items-stretch gap-2">
-            {onMoreLikeThis && (
-              <button type="button" onClick={() => onMoreLikeThis(current)} className={`${PANEL_BUTTON} pointer-events-auto`}>
-                More like this
-                <kbd className="text-[0.7rem] text-v2-accent border border-v2-accent rounded px-1.5 py-0.5">M</kbd>
-              </button>
+            {(onMoreLikeThis || onDescribe) && (
+              <div className="flex gap-2">
+                {onMoreLikeThis && (
+                  <button type="button" onClick={() => onMoreLikeThis(current)} className={`${PANEL_BUTTON} flex-1 whitespace-nowrap pointer-events-auto`}>
+                    More like this
+                    <kbd className="text-[0.7rem] text-v2-accent border border-v2-accent rounded px-1.5 py-0.5">M</kbd>
+                  </button>
+                )}
+                {onDescribe && (
+                  <button type="button" onClick={() => onDescribe(current)} className={`${PANEL_BUTTON} flex-1 whitespace-nowrap pointer-events-auto`}>
+                    Describe
+                    <kbd className="text-[0.7rem] text-v2-accent border border-v2-accent rounded px-1.5 py-0.5">D</kbd>
+                  </button>
+                )}
+              </div>
             )}
             {isSaved ? (
               <div className="w-80">{savedActions}</div>
@@ -552,7 +573,7 @@ export default function WallViewer({
             )}
           </div>
 
-          <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-5 font-v2-ui text-[0.68rem] tracking-[0.1em] text-v2-muted pointer-events-auto">
+          <div className="absolute bottom-5 left-1/2 -translate-x-1/2 hidden min-[1440px]:flex gap-5 font-v2-ui text-[0.68rem] tracking-[0.1em] text-v2-muted pointer-events-auto">
             {isSaved
               ? artistItems.length > 1 && <span><kbd className={KBD}>←</kbd><kbd className={KBD}>→</kbd>photos</span>
               : <span><kbd className={KBD}>←</kbd><kbd className={KBD}>→</kbd>this artist</span>}
@@ -560,6 +581,7 @@ export default function WallViewer({
             {!isSaved && <span><kbd className={KBD}>G</kbd>generate</span>}
             {!isSaved && <span><kbd className={KBD}>I</kbd>info & notes</span>}
             {onMoreLikeThis && <span><kbd className={KBD}>M</kbd>more like this</span>}
+            {onDescribe && <span><kbd className={KBD}>D</kbd>describe</span>}
             <span><kbd className={KBD}>F</kbd>favourite</span>
             <span><kbd className={KBD}>Esc</kbd>back to wall</span>
           </div>

@@ -61,6 +61,20 @@ not built yet, the sheet says so and offers **Build style index** (a one-off mod
 download). If only this photo is missing, it offers **Update style index**. Photos are
 compared on this device and never leave it.
 
+### Describe tattoo
+
+Open any photo on the Wall and tap **Describe tattoo** (**Describe**, or press **D**, on a
+laptop). On a phone it is in the bottom panel, next to More like this. A small sheet opens;
+tap **Describe** and it shows a few sentences about the tattoo itself (subject, composition,
+linework, shading and style), plus the style tags it fits. It never names or guesses the
+artist or the person.
+
+It uses Gemini with your own key from **Settings**; without one, the sheet says so and links
+there. Tapping **Describe** is the only time the photo is sent to Google; opening the sheet
+sends nothing. Moving to another photo closes the sheet. The description is kept on this
+device, so opening it again is instant and free; **Describe again** asks afresh. Descriptions
+are not synced, and are cleared when you sign out. Gemini can be wrong.
+
 For an existing handle, attach photos and tap **Add images to … instead**. Sable
 preserves the artist's existing details and confirms the number of photos added.
 With no photos, **Already in your collection** appears and the append action is disabled.
