@@ -104,7 +104,7 @@ export function dataUrlParts(dataUrl) {
   return m ? { mimeType: m[1], data: m[2] } : null
 }
 
-async function geminiVision(apiKey, dataUrl, prompt) {
+export async function geminiVision(apiKey, dataUrl, prompt) {
   const inline = dataUrlParts(dataUrl)
   if (!inline) throw new Error('Expected a base64 image data URL')
   const res = await fetch(

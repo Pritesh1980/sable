@@ -123,7 +123,7 @@ const NULL_AFFORDANCE = /(?:ring|border)-(?:0|transparent)(?![\w-])/
 // Full-screen viewer containers that take programmatic focus so keyboard events
 // (arrows, Escape) reach them. They are not controls the user tabs to, and a ring
 // around the entire viewport would be noise — suppressing the outline is correct.
-const OUTLINE_EXEMPT = ['src/components/WallViewer.jsx', 'src/components/ConceptViewer.jsx', 'src/components/MoreLikeThis.jsx']
+const OUTLINE_EXEMPT = ['src/components/WallViewer.jsx', 'src/components/ConceptViewer.jsx', 'src/components/MoreLikeThis.jsx', 'src/components/DescribeTattoo.jsx']
 
 describe('touch affordances (#49)', () => {
   // Hover-to-reveal is unreachable on a touch device: `group-hover:` only ever

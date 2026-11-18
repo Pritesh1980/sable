@@ -282,6 +282,7 @@ determines whether a value syncs.
 | Imported winners | `tattoo_convention_winners` | Not synced |
 | Winner photo bytes | `tattoo-winner-photos-v1` IndexedDB; records carry `photoIds` | No |
 | Top picks | Derived in memory from lineup, gallery, studios and curated picks | No separate collection |
+| Gemini photo descriptions (Describe tattoo) | `tattoo_photo_descriptions`, newest 200, purged on sign-out | No |
 | Text size, API keys, composer draft | Device-local preferences / draft | No |
 | CLIP vectors | Model-keyed IndexedDB cache | No |
 | Shared screenshot awaiting intake | `sable-share-v1` Cache Storage, consumed once | No |

@@ -7,6 +7,7 @@ import useOverlayParam from '../hooks/useOverlayParam'
 import WallPiece from './WallPiece'
 import WallViewer from './WallViewer'
 import MoreLikeThis from './MoreLikeThis'
+import DescribeTattoo from './DescribeTattoo'
 import ConsiderShelf from './ConsiderShelf'
 import DiscoverMore from './DiscoverMore'
 import RankRail from './RankRail'
@@ -37,6 +38,7 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
   // the viewer: it stays until the viewer closes.
   const [keptParams, setKeptParams] = useState(() => new Set())
   const [similarItem, setSimilarItem] = useState(null)
+  const [describeItem, setDescribeItem] = useState(null)
   // A photo picked in More like this: the viewer moves to it once it is in `items`.
   const [goTo, setGoTo] = useState(null)
   const items = favouritesOnly
@@ -88,6 +90,8 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
   if (!viewerOpen && keptParams.size > 0) setKeptParams(new Set())
   if (!viewerOpen && goTo) setGoTo(null)
   if (!viewerOpen && similarItem) setSimilarItem(null)
+  // The sheet belongs to one photo: moving the viewer on closes it.
+  if (describeItem && (!viewerOpen || photoParam(describeItem) !== photo.value)) setDescribeItem(null)
 
   function handleToggleFavourite(item) {
     if (!item?.canFavourite) return
@@ -255,7 +259,8 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
           onAssignSaved={handleAssignSaved}
           onRemoveSaved={handleRemoveSaved}
           onToggleFavourite={handleToggleFavourite}
-          onMoreLikeThis={setSimilarItem}
+          onMoreLikeThis={(item) => { setDescribeItem(null); setSimilarItem(item) }}
+          onDescribe={(item) => { setSimilarItem(null); setDescribeItem(item) }}
           onAddNewArtist={() => { photo.close(); onAddArtist({}) }}
         />
       )}
@@ -268,6 +273,14 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
           onClose={() => setSimilarItem(null)}
           onOpenItem={openFromLibrary}
           onOpenArtist={openArtistFromLibrary}
+        />
+      )}
+
+      {viewerOpen && describeItem && (
+        <DescribeTattoo
+          key={refIdentity(describeItem.image)}
+          item={describeItem}
+          onClose={() => setDescribeItem(null)}
         />
       )}
 
