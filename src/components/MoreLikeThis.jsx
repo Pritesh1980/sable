@@ -78,7 +78,7 @@ export default function MoreLikeThis({ item, artists, saved = [], onClose, onOpe
 
   let body
   if (vectors === null) {
-    body = <p role="status" className="font-v2-ui text-sm text-v2-muted">Looking…</p>
+    body = null // like Similar ink: nothing until the index has been read
   } else if (progress) {
     body = (
       <p role="status" className="font-v2-ui text-sm text-v2-cream">
@@ -144,20 +144,25 @@ export default function MoreLikeThis({ item, artists, saved = [], onClose, onOpe
             <p className="font-v2-ui text-sm text-v2-muted">No other indexed photos to compare with yet.</p>
           ) : (
             <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5">
-              {photoMatches.map(({ item: match }) => (
+              {photoMatches.map(({ item: match }, n) => (
                 <li key={refIdentity(match.image)}>
                   <button
                     type="button"
-                    aria-label={`Open photo by ${match.artistName}`}
+                    aria-label={`Open similar photo ${n + 1} of ${photoMatches.length}, ${match.savedId ? 'saved photo with no artist' : `by ${match.artistName}`}`}
                     onClick={() => onOpenItem(match)}
-                    className="relative block w-full aspect-square overflow-hidden bg-v2-surface outline-hidden focus-visible:ring-2 focus-visible:ring-v2-accent"
+                    className="block w-full text-left outline-hidden focus-visible:ring-2 focus-visible:ring-v2-accent"
                   >
-                    <ArtistImage
-                      src={match.image}
-                      label={match.artistName}
-                      sizes="(max-width: 640px) 50vw, 25vw"
-                      className="w-full h-full object-cover"
-                    />
+                    <span className="block aspect-square overflow-hidden bg-v2-surface">
+                      <ArtistImage
+                        src={match.image}
+                        label={match.artistName}
+                        sizes="(max-width: 640px) 50vw, 25vw"
+                        className="w-full h-full object-cover"
+                      />
+                    </span>
+                    <span className="block mt-1 font-v2-display text-v2-cream text-[0.7rem] uppercase tracking-[0.16em] leading-tight truncate">
+                      {match.artistName}
+                    </span>
                   </button>
                 </li>
               ))}

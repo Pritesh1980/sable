@@ -11,6 +11,7 @@ import useMediaQuery from '../hooks/useMediaQuery'
 import useSwipeTap from '../hooks/useSwipeTap'
 import useViewportZoomed from '../hooks/useViewportZoomed'
 import { resolveTransitionMode } from '../lib/gl'
+import { findPhotoIndex } from '../data/wall'
 import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
 
 const SAVED_FIELD = 'min-h-11 bg-v2-ink border border-v2-hairline rounded-xs px-3 text-v2-cream font-v2-ui text-sm outline-hidden focus:border-v2-accent'
@@ -203,6 +204,7 @@ export default function WallViewer({
   onAddNewArtist,
   onToggleFavourite,
   onMoreLikeThis,
+  goTo = null,
 }) {
   const [showInfo, setShowInfo] = useState(false)
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -231,9 +233,21 @@ export default function WallViewer({
     onGenerate,
     onToggleInfo: () => setShowInfo((s) => !s),
     onToggleFavourite,
+    onMoreLikeThis,
     enabled: open,
     dialogRef,
   })
+
+  // More like this hands over a photo to move to. Waits until it is in `items`
+  // (the wall's filters may have just been cleared) and acts once per request.
+  const handledGoTo = useRef(null)
+  useEffect(() => {
+    if (!goTo || handledGoTo.current === goTo) return
+    const at = findPhotoIndex(items, goTo.param)
+    if (at === -1) return
+    handledGoTo.current = goTo
+    setIndex(at)
+  }, [goTo, items, setIndex])
 
   const idle = useIdleFade(2000)
 
@@ -522,6 +536,7 @@ export default function WallViewer({
             {onMoreLikeThis && (
               <button type="button" onClick={() => onMoreLikeThis(current)} className={`${PANEL_BUTTON} pointer-events-auto`}>
                 More like this
+                <kbd className="text-[0.7rem] text-v2-accent border border-v2-accent rounded px-1.5 py-0.5">M</kbd>
               </button>
             )}
             {isSaved ? (
@@ -544,6 +559,7 @@ export default function WallViewer({
             <span><kbd className={KBD}>↑</kbd><kbd className={KBD}>↓</kbd>next artist</span>
             {!isSaved && <span><kbd className={KBD}>G</kbd>generate</span>}
             {!isSaved && <span><kbd className={KBD}>I</kbd>info & notes</span>}
+            {onMoreLikeThis && <span><kbd className={KBD}>M</kbd>more like this</span>}
             <span><kbd className={KBD}>F</kbd>favourite</span>
             <span><kbd className={KBD}>Esc</kbd>back to wall</span>
           </div>

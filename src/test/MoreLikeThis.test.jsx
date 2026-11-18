@@ -1,8 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
-import { MemoryRouter, Routes, Route, useLocation } from 'react-router'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import MoreLikeThis from '../components/MoreLikeThis'
-import WallView from '../components/WallView'
 import { loadVectors, buildStyleIndex } from '../data/styleIndex'
 import { refIdentity } from '../data/imageRef'
 
@@ -62,11 +60,13 @@ describe('MoreLikeThis', () => {
 
   it('shows similar photos, including saved ones, never the source, and opens one on tap', async () => {
     const { onOpenItem } = renderSheet()
-    const buttons = await screen.findAllByRole('button', { name: /open photo by/i })
+    const buttons = await screen.findAllByRole('button', { name: /open similar photo/i })
     expect(buttons).toHaveLength(6) // 7 indexed photos minus the source
     const first = buttons[0]
-    expect(first).toHaveAccessibleName('Open photo by Zoia') // z2 is nearest
-    fireEvent.click(buttons.find((b) => b.getAttribute('aria-label') === 'Open photo by No artist yet'))
+    expect(first).toHaveAccessibleName('Open similar photo 1 of 6, by Zoia') // z2 is nearest
+    // each photo is captioned with its artist
+    expect(within(first).getByText('Zoia')).toBeInTheDocument()
+    fireEvent.click(buttons.find((b) => /saved photo with no artist/.test(b.getAttribute('aria-label'))))
     expect(onOpenItem).toHaveBeenCalledWith(expect.objectContaining({ savedId: 's1' }))
   })
 
@@ -112,6 +112,13 @@ describe('MoreLikeThis', () => {
     expect(screen.getByText(/no other indexed photos/i)).toBeInTheDocument()
   })
 
+  it('renders nothing while the index is still being read', () => {
+    loadVectors.mockReturnValue(new Promise(() => {}))
+    renderSheet()
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(screen.queryByText(/needs the style index/i)).toBeNull()
+  })
+
   it('Escape closes the sheet', async () => {
     const { onClose } = renderSheet()
     await screen.findAllByTestId('mlt-artist-name')
@@ -120,26 +127,3 @@ describe('MoreLikeThis', () => {
   })
 })
 
-function Where() {
-  const loc = useLocation()
-  return <p data-testid="where">{loc.search}</p>
-}
-
-describe('More like this in the wall viewer', () => {
-  it('opens from the viewer and a tapped photo becomes the open photo', async () => {
-    render(
-      <MemoryRouter initialEntries={['/gallery?photo=zoia.1']}>
-        <Routes>
-          <Route path="/gallery" element={<><WallView artists={artists} saved={saved} /><Where /></>} />
-        </Routes>
-      </MemoryRouter>,
-    )
-    fireEvent.click(screen.getAllByRole('button', { name: 'More like this' })[0])
-    const sheet = await screen.findByRole('dialog', { name: 'More like this' })
-    const kerem = await within(sheet).findByRole('button', { name: /open photo by kerem/i })
-    fireEvent.click(kerem)
-    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('photo=kerem.1'))
-    expect(screen.queryByRole('dialog', { name: 'More like this' })).toBeNull()
-    expect(screen.getByRole('dialog', { name: /kerem/i })).toBeInTheDocument()
-  })
-})

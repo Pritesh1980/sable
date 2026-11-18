@@ -23,7 +23,7 @@ const savedId = (record) => record.id
 // The Wall: full-bleed masonry of every artist reference image, the default
 // view on the Artists page (#220). Getting around is the app nav's job and the
 // page header belongs to Gallery; this is only the wall and what hangs off it.
-export default function WallView({ artists = [], wallArtists = artists, ideas = [], saved = [], setSaved = () => {}, favourites = [], setFavourites = () => {}, favouritesOnly = false, styleFilter = null, setArtists = () => {}, onAddArtist = () => {}, revealArtistId = null }) {
+export default function WallView({ artists = [], wallArtists = artists, ideas = [], saved = [], allSaved = saved, onClearFilters = () => {}, setSaved = () => {}, favourites = [], setFavourites = () => {}, favouritesOnly = false, styleFilter = null, setArtists = () => {}, onAddArtist = () => {}, revealArtistId = null }) {
   // Photos matched to favourites by image ref (#220 K). A favourite whose photo
   // is gone matches nothing, so it never shows.
   const favIds = favouriteIdentities(favourites)
@@ -37,17 +37,11 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
   // the viewer: it stays until the viewer closes.
   const [keptParams, setKeptParams] = useState(() => new Set())
   const [similarItem, setSimilarItem] = useState(null)
-  // A photo reached from More like this may sit outside the current filter; it
-  // joins the viewer's list until the viewer closes, so it opens instead of
-  // vanishing.
-  const [pulled, setPulled] = useState(() => [])
-  // Which photo the viewer should start on after a jump, until the URL agrees.
-  const [jump, setJump] = useState({ param: null, n: 0 })
-  const shown = favouritesOnly
+  // A photo picked in More like this: the viewer moves to it once it is in `items`.
+  const [goTo, setGoTo] = useState(null)
+  const items = favouritesOnly
     ? allItems.filter((item) => item.isFavourite || keptParams.has(photoParam(item)))
     : allItems
-  const shownParams = new Set(shown.map(photoParam))
-  const items = [...shown, ...pulled.filter((item) => !shownParams.has(photoParam(item)))]
   // The open photo lives in the URL (?photo=<artistId>.<n>, #159): the browser's
   // Back closes the viewer instead of leaving the Wall, and a photo can be
   // linked to. A link to a photo that has gone just shows the Wall.
@@ -91,10 +85,8 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
   const { user } = useAuth() || {}
 
   const viewerOpen = viewerIndex !== -1
-  const jumpIndex = jump.param && jump.param !== photo.value ? findPhotoIndex(items, jump.param) : -1
-  const startIndex = jumpIndex !== -1 ? jumpIndex : viewerIndex
   if (!viewerOpen && keptParams.size > 0) setKeptParams(new Set())
-  if (!viewerOpen && pulled.length > 0) setPulled([])
+  if (!viewerOpen && goTo) setGoTo(null)
   if (!viewerOpen && similarItem) setSimilarItem(null)
 
   function handleToggleFavourite(item) {
@@ -114,13 +106,13 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
     }
   }, [viewerOpen])
 
-  // Opens a photo from the whole library, whatever the wall is filtered to.
+  // Opens a photo from the whole library. One that the wall's filters hide
+  // clears them first, so the viewer's list is always the real wall.
   function openFromLibrary(item) {
     const param = photoParam(item)
-    if (!items.some((i) => photoParam(i) === param)) setPulled((prev) => [...prev, decorate(item)])
+    if (!items.some((i) => photoParam(i) === param)) onClearFilters()
     setSimilarItem(null)
-    setJump((j) => ({ param, n: j.n + 1 }))
-    photo.replace(param)
+    setGoTo({ param })
   }
 
   function openArtistFromLibrary(artist) {
@@ -251,8 +243,8 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
       {viewerOpen && (
         <WallViewer
           items={items}
-          key={jump.n}
-          initialIndex={startIndex}
+          initialIndex={viewerIndex}
+          goTo={goTo}
           artists={artists}
           ideas={ideas}
           open={viewerOpen}
@@ -272,7 +264,7 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
         <MoreLikeThis
           item={similarItem}
           artists={artists}
-          saved={saved}
+          saved={allSaved}
           onClose={() => setSimilarItem(null)}
           onOpenItem={openFromLibrary}
           onOpenArtist={openArtistFromLibrary}

@@ -49,11 +49,12 @@ a photo an artist. If you delete the photo, its favourite is hidden.
 
 ### More like this
 
-Open any photo on the Wall and tap **More like this**. On a phone it is in the bottom
+Open any photo on the Wall and tap **More like this**, or press **M** on a laptop. On a phone it is in the bottom
 panel; tap the photo to bring the panel up. The sheet lists the three artists whose work
 sits closest to that one photo, then a grid of the photos most like it, including photos
 with no artist. The photo's own artist is left out of the three. Tap an artist to open
-their photos, or a photo to open it in the viewer.
+their photos, or a photo to open it in the viewer. If a filter on the Wall hides it, the
+filter is cleared first.
 
 It uses the style index that Similar ink uses, which is built on this device. If it is
 not built yet, the sheet says so and offers **Build style index** (a one-off model
