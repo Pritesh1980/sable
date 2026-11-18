@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useEffect, useState } from 'react'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
-import { MemoryRouter, Routes, Route } from 'react-router'
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react'
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router'
 import Gallery from '../pages/Gallery'
 import AddArtistModal from '../components/AddArtistModal'
 
@@ -25,14 +25,16 @@ const spy = {}
 function Harness({ initialSaved = SAVED }) {
   const [artists, setArtists] = useState(ARTISTS)
   const [saved, setSaved] = useState(initialSaved)
-  useEffect(() => { spy.state = { artists, saved } })
+  const location = useLocation()
+  useEffect(() => { spy.state = { artists, saved }; spy.photo = new URLSearchParams(location.search).get('photo') })
+  useEffect(() => { spy.edit = setArtists }, [setArtists])
   return <Gallery artists={artists} setArtists={setArtists} saved={saved} setSaved={setSaved} ideas={[]} />
 }
 
-function renderWall(entry = '/gallery') {
+function renderWall(entry = '/gallery', initialSaved = SAVED) {
   render(
     <MemoryRouter initialEntries={[entry]}>
-      <Routes><Route path="/gallery" element={<Harness />} /></Routes>
+      <Routes><Route path="/gallery" element={<Harness initialSaved={initialSaved} />} /></Routes>
     </MemoryRouter>,
   )
   return spy
@@ -73,6 +75,55 @@ describe('saved photos on the wall', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Remove photo' }))
     expect(spy.state.saved).toEqual([])
     expect(spy.state.artists).toEqual(ARTISTS)
+  })
+
+  // #233: sorting a batch of saved screenshots should not mean reopening the
+  // viewer for each one.
+  const BATCH = [
+    { id: 's1', image: { key: 'user/u1/saved/s1/a.jpg' }, addedAt: '2026-07-03T00:00:00.000Z' },
+    { id: 's2', image: { key: 'user/u1/saved/s2/a.jpg' }, addedAt: '2026-07-02T00:00:00.000Z' },
+  ]
+
+  it('moves to the next saved photo after Remove, instead of closing', () => {
+    const spy = renderWall('/gallery?photo=s:s1', BATCH)
+    fireEvent.click(screen.getByRole('button', { name: 'Remove photo' }))
+    expect(spy.state.saved.map((s) => s.id)).toEqual(['s2'])
+    expect(spy.photo).toBe('s:s2')
+    expect(screen.getByRole('button', { name: 'Remove photo' })).toBeInTheDocument()
+  })
+
+  it('moves to the next saved photo after Give', () => {
+    const spy = renderWall('/gallery?photo=s:s1', BATCH)
+    fireEvent.click(screen.getByRole('button', { name: 'Give this an artist' }))
+    fireEvent.change(screen.getByLabelText('Choose an artist'), { target: { value: 'carl' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Give' }))
+    expect(spy.photo).toBe('s:s2')
+    expect(screen.getByRole('button', { name: 'Give this an artist' })).toBeInTheDocument()
+  })
+
+  it('moves to the first artist photo once the last saved photo is sorted', () => {
+    const spy = renderWall('/gallery?photo=s:s1')
+    fireEvent.click(screen.getByRole('button', { name: 'Remove photo' }))
+    expect(spy.photo).toBe('zoia.ink.1')
+    expect(screen.getAllByRole('heading', { name: 'Zoia' }).length).toBeGreaterThan(0)
+  })
+
+  it('shows the saved style note, and gives it to an artist with no note of their own', () => {
+    const spy = renderWall('/gallery?photo=s:s1', [{ ...SAVED[0], note: 'Fine geometric linework' }])
+    expect(screen.getByText('Fine geometric linework')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Give this an artist' }))
+    fireEvent.change(screen.getByLabelText('Choose an artist'), { target: { value: 'carl' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Give' }))
+    expect(spy.state.artists.find((a) => a.id === 'carl').styleNote).toBe('Fine geometric linework')
+  })
+
+  it("keeps an artist's own style note when given a saved photo with one", () => {
+    const spy = renderWall('/gallery?photo=s:s1', [{ ...SAVED[0], note: 'Fine geometric linework' }])
+    act(() => spy.edit((prev) => prev.map((a) => (a.id === 'carl' ? { ...a, styleNote: 'Hyperreal portraits' } : a))))
+    fireEvent.click(screen.getByRole('button', { name: 'Give this an artist' }))
+    fireEvent.change(screen.getByLabelText('Choose an artist'), { target: { value: 'carl' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Give' }))
+    expect(spy.state.artists.find((a) => a.id === 'carl').styleNote).toBe('Hyperreal portraits')
   })
 
   it('ignores I on a saved photo, so Escape still closes the viewer, and hides artist-only hints', () => {

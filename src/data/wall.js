@@ -68,6 +68,7 @@ function savedItems(saved, now) {
       image: record.image,
       imageIndex: 0,
       addedAt: record.addedAt,
+      ...(record.note ? { note: record.note } : {}),
       isRecent: isRecent(record.addedAt, now),
     }))
 }
@@ -102,6 +103,18 @@ export function photoParam(item) {
   // Handles can't hold ':', so `s:<id>` never collides with an artist link.
   if (item.savedId) return `s:${item.savedId}`
   return `${item.artistId}.${item.imageIndex + 1}`
+}
+
+// Where the viewer goes once a saved photo is given away or removed (#233):
+// the next saved photo (wrapping round), then the first artist photo, so a
+// batch can be sorted without reopening the viewer. Null when nothing is left.
+export function nextAfterSaved(items, savedId) {
+  const savedOnes = items.filter((item) => item.savedId)
+  const at = savedOnes.findIndex((item) => item.savedId === savedId)
+  const others = [...savedOnes.slice(at + 1), ...savedOnes.slice(0, Math.max(at, 0))]
+    .filter((item) => item.savedId !== savedId)
+  const next = others[0] || items.find((item) => !item.savedId)
+  return next ? photoParam(next) : null
 }
 
 // Where a `?photo=` value sits in `items`, or -1 when it no longer names a

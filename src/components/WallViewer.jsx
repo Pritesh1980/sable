@@ -351,6 +351,9 @@ export default function WallViewer({
           {current.styles.join(' · ')}
         </div>
       )}
+      {isSaved && current.note && (
+        <p className="mt-1 max-w-prose font-v2-ui text-sm text-v2-cream/90 line-clamp-3">{current.note}</p>
+      )}
     </>
   )
 

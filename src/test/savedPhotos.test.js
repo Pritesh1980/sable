@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { buildWallItems, photoParam, findPhotoIndex } from '../data/wall'
+import { buildWallItems, photoParam, findPhotoIndex, nextAfterSaved } from '../data/wall'
 import { collectionFor } from '../backend/sync'
 import { purgeLocalUserData } from '../backend/purge'
 import { savedCodec } from '../data/imageCodec'
@@ -105,5 +105,24 @@ describe('savedCodec never drops a row', () => {
     expect(savedCodec.toCanonical([row])).toEqual([row])
     const out = await savedCodec.ensureUploaded([row], { userId: 'u1' })
     expect(out).toEqual({ value: [row], moved: 0 })
+  })
+})
+
+describe('nextAfterSaved (#233)', () => {
+  const items = [
+    { savedId: 'a' }, { savedId: 'b' }, { savedId: 'c' },
+    { artistId: 'zoia.ink', imageIndex: 0 }, { artistId: 'zoia.ink', imageIndex: 1 },
+  ]
+  it('goes to the saved photo after this one', () => {
+    expect(nextAfterSaved(items, 'a')).toBe('s:b')
+  })
+  it('wraps to the first saved photo from the last one', () => {
+    expect(nextAfterSaved(items, 'c')).toBe('s:a')
+  })
+  it('goes to the first artist photo when no other saved photo is left', () => {
+    expect(nextAfterSaved([{ savedId: 'a' }, ...items.slice(3)], 'a')).toBe('zoia.ink.1')
+  })
+  it('gives null when nothing else is on the wall', () => {
+    expect(nextAfterSaved([{ savedId: 'a' }], 'a')).toBeNull()
   })
 })

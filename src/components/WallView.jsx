@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
-import { buildWallItems, stampAddedAt, photoParam, findPhotoIndex } from '../data/wall'
+import { buildWallItems, stampAddedAt, photoParam, findPhotoIndex, nextAfterSaved } from '../data/wall'
 import { favouriteIdentities, toggleFavourite, favouriteRef } from '../data/favourites'
 import { refIdentity } from '../data/imageRef'
 import useOverlayParam from '../hooks/useOverlayParam'
@@ -157,16 +157,29 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
     )
   }
 
+  // After a saved photo is sorted, move on to the next one (#233).
+  function leaveSaved(item) {
+    const next = nextAfterSaved(items, item.savedId)
+    if (next) photo.replace(next)
+    else photo.close()
+  }
+
   // A saved photo (#220 K) joins the artist's images in one update, keeping
   // when it was added; the record it leaves behind is removed in the same go.
+  // Its style note fills the artist's only when they have none (#233).
   function handleAssignSaved(item, artistId) {
     const record = saved.find((s) => s.id === item.savedId)
     const target = artists.find((a) => a.id === artistId)
     if (!record || !target) return
     const image = stampAddedAt(record.image, record.addedAt || undefined)
-    setArtists((prev) => prev.map((a) => (a.id === artistId ? { ...a, images: [...(a.images || []), image] } : a)))
+    const give = (a) => ({
+      ...a,
+      images: [...(a.images || []), image],
+      ...(record.note && !a.styleNote?.trim() ? { styleNote: record.note } : {}),
+    })
+    setArtists((prev) => prev.map((a) => (a.id === artistId ? give(a) : a)))
     setSaved((prev) => prev.filter((s) => s.id !== record.id))
-    photo.close()
+    leaveSaved(item)
     setNotice(`Photo given to ${target.name || `@${target.handle}`}`)
   }
 
@@ -174,7 +187,7 @@ export default function WallView({ artists = [], wallArtists = artists, ideas = 
     const index = saved.findIndex((s) => s.id === item.savedId)
     if (index === -1) return
     removeSavedAt(index)
-    photo.close()
+    leaveSaved(item)
   }
 
   // #161: a new artist is unranked, so it lands at the foot of the wall, out of
