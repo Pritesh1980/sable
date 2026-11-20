@@ -179,7 +179,9 @@ same list along the **top on a laptop**.
 
 The old dashboard lives on at **More → Pipeline**: the Top 5 coverflow,
 the shortlist pipeline (researching → shortlisted → contact next), idea stats, **Nearby soon**
-(guest spots by your artists coming up near Milton Keynes) and idea matches.
+(guest spots by your artists coming up near Milton Keynes), idea matches, and **Your taste
+over time** (Top 5 by month, biggest risers and fallers, rank-weighted style share by month,
+and time spent in each status, recorded once per day as your ranks and statuses change).
 The viewer's `I` panel shows each artist's status in place, so you'll mostly need Pipeline
 when planning outreach. A small **Nearby soon** chip also sits in the Artists heading.
 

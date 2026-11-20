@@ -7,6 +7,7 @@ import SampleArtistNotice from '../components/SampleArtistNotice'
 import Top5Hero from '../components/Top5Hero'
 import ArtistImage from '../components/ArtistImage'
 import NearbySoon from '../components/NearbySoon'
+import TasteOverTime from '../components/TasteOverTime'
 import { IDEA_STATUSES } from '../data/brief'
 import { buildDashboardSummary, buildMatchRationale, buildPipelineSummary, matchArtistsForIdea } from '../data/planning'
 import { moveIntoTop5, moveOutOfTop5 } from '../data/ranking'
@@ -207,6 +208,10 @@ export default function Dashboard({ artists, ideas, boards, mergedConventions = 
             {' '}with styles to see matching artists here.
           </p>
         )}
+      </Panel>
+
+      <Panel title="Your taste over time">
+        <TasteOverTime artists={artists} />
       </Panel>
       </>
       )}

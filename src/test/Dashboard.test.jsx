@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import Dashboard from '../pages/Dashboard'
+import { DEMO_ARTISTS } from '../data/demoSeed'
 
 const artists = [
   { id: 'zoia.ink', handle: 'zoia.ink', name: '', tags: ['surrealism'], images: [], rank: 1, status: 'contact-next' },
@@ -95,5 +96,27 @@ describe('Top 5 panel', () => {
     const next = setArtists.mock.calls[0][0]
     expect(next.find((a) => a.id === 'a6').rank).toBe(5)
     expect(next.find((a) => a.id === 'a5').rank).toBe(6)
+  })
+})
+
+describe('Your taste over time (#188)', () => {
+  it('shows an honest empty message when artists have no rank/status history', () => {
+    renderHome()
+    expect(screen.getByText('Your taste over time')).toBeInTheDocument()
+    expect(screen.getByText(/No rank or status history yet/i)).toBeInTheDocument()
+  })
+
+  it('renders Top 5 by month, risers/fallers, style share, and status durations for demo data', () => {
+    render(
+      <MemoryRouter>
+        <Dashboard artists={DEMO_ARTISTS} ideas={[]} boards={[]} />
+      </MemoryRouter>
+    )
+    expect(screen.getByText('Top 5 by month')).toBeInTheDocument()
+    expect(screen.getByText('Biggest risers')).toBeInTheDocument()
+    expect(screen.getByText('Biggest fallers')).toBeInTheDocument()
+    expect(screen.getByText('Style share by month')).toBeInTheDocument()
+    expect(screen.getByText('Time in each status')).toBeInTheDocument()
+    expect(screen.getByText('#4 → #1 (+3)')).toBeInTheDocument()
   })
 })

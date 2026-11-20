@@ -15,6 +15,7 @@ import { DEFAULT_ARTISTS } from './artists'
 import { refIdentity } from './imageRef'
 import { reconcileRecords, nowStamp } from '../backend/sync'
 import { keyForUrl } from './blobUrls'
+import { hasRankOrStatusChange, mergeArtistHistories, recordArtistHistoryOnEdit } from './tasteHistory'
 
 export const META_KEY = 'tattoo_artists_meta'
 
@@ -153,6 +154,19 @@ export function applyImageTombstones(mergedRecords, localRecords, remoteRecords)
   })
 }
 
+// Union per-artist rank and status history across devices (same one-per-day cap, #188).
+export function applyArtistHistoryMerge(mergedRecords, localRecords, remoteRecords) {
+  const localById = new Map((localRecords || []).map((r) => [r.id, r]))
+  const remoteById = new Map((remoteRecords || []).map((r) => [r.id, r]))
+  return mergedRecords.map((rec) => {
+    const localHistory = localById.get(rec.id)?.history
+    const remoteHistory = remoteById.get(rec.id)?.history
+    if (!localHistory?.length && !remoteHistory?.length) return rec
+    const mergedHistory = mergeArtistHistories(localHistory, remoteHistory)
+    return mergedHistory.length ? { ...rec, history: mergedHistory } : rec
+  })
+}
+
 // ── The policy ───────────────────────────────────────────────────────────────
 
 export function createArtistsPolicy() {
@@ -189,7 +203,8 @@ export function createArtistsPolicy() {
         // A photo removed on one side must stay removed even when the other
         // side's whole record wins LWW on an unrelated field (#55).
         const withTombstones = applyImageTombstones(merged, localForReconcile, remote)
-        nextMeta = ctx.owner ? applyDefaults(withTombstones) : withTombstones
+        const withHistory = applyArtistHistoryMerge(withTombstones, localForReconcile, remote)
+        nextMeta = ctx.owner ? applyDefaults(withHistory) : withHistory
       } else {
         // Remote empty → seed/migrate local data up. Owner seeds the curated
         // defaults (preserving any local edits); a non-owner keeps only their
@@ -218,17 +233,31 @@ export function createArtistsPolicy() {
     onEdit(prev, stamped, at) {
       const prevById = new Map((prev || []).map((p) => [p?.id, p]))
       return stamped.map((row) => {
-        const prevA = prevById.get(row?.id)
-        if (!row || (prevA && prevA.images === row.images)) return row
-        // Whatever the producer emitted becomes refs here, once, at the edit boundary.
-        const images = normalizeArtistImages(row.images)
-        const a = sameList(images, row.images) ? row : { ...row, images }
-        if (!prevA) return a
-        const liveIds = new Set(a.images.map(refIdentity).filter(Boolean))
-        const survivors = (a.removedImages || []).filter((t) => !liveIds.has(refIdentity(t.ref)))
-        const fresh = removedImageTombstones(prevA.images, a.images, at)
-        if (survivors.length === (a.removedImages || []).length && !fresh.length) return a
-        return { ...a, removedImages: [...survivors, ...fresh] }
+        if (!row) return row
+        const prevA = prevById.get(row.id)
+        const imagesChanged = !prevA || prevA.images !== row.images
+        const rankOrStatusChanged = Boolean(prevA && hasRankOrStatusChange(prevA, row))
+        if (!imagesChanged && !rankOrStatusChanged) return row
+
+        let a = row
+        if (imagesChanged) {
+          // Whatever the producer emitted becomes refs here, once, at the edit boundary.
+          const images = normalizeArtistImages(row.images)
+          a = sameList(images, row.images) ? row : { ...row, images }
+          if (prevA) {
+            const liveIds = new Set(a.images.map(refIdentity).filter(Boolean))
+            const survivors = (a.removedImages || []).filter((t) => !liveIds.has(refIdentity(t.ref)))
+            const fresh = removedImageTombstones(prevA.images, a.images, at)
+            if (survivors.length !== (a.removedImages || []).length || fresh.length) {
+              a = { ...a, removedImages: [...survivors, ...fresh] }
+            }
+          }
+        }
+
+        if (rankOrStatusChanged) {
+          a = recordArtistHistoryOnEdit(prevA, a, at)
+        }
+        return a
       })
     },
   }
