@@ -340,7 +340,8 @@ describe('winnerArtistDraft', () => {
       { category: 'Best Black & Grey', placing: 1, handle: 'oscarakermo', name: 'Oscar Akermo', note: '' },
       'Big London Tattoo Show'
     )
-    expect(draft).toMatchObject({ handle: 'oscarakermo', name: 'Oscar Akermo', status: 'researching' })
+    expect(draft).toMatchObject({ handle: 'oscarakermo', name: 'Oscar Akermo' })
+    expect(draft).not.toHaveProperty('status')
     expect(draft.notes).toContain('Best Black & Grey')
     expect(draft.notes).toContain('Big London Tattoo Show')
   })

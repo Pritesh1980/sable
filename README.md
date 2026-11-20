@@ -43,7 +43,7 @@ npm run dev
 #   http://localhost:5173/?demo=1
 ```
 
-The sign-in screen also links straight to it (**No account? View the demo →**), so the bare URL isn't a dead end for anyone without an account. `?demo=1` (on the default local backend) signs in a demo session and seeds six fictional artists, ranked and statused, plus a few linked tattoo ideas. It never runs over an existing session (though an out-of-date demo session re-seeds itself, so returning visitors always see the current dataset), and edits you make in the demo persist across reloads. To reset, clear the site's storage (or use a fresh private window). The demo uses 18 original AI-generated tattoo photographs across botanical, surrealist, Japanese-inspired, tribal, colour-realism and brush-lettering portfolios. The generated-imagery label remains visible across the demo's main browsing and editing views; lettering is a concept, not a language-verified tattoo stencil.
+The sign-in screen also links straight to it (**No account? View the demo →**), so the bare URL isn't a dead end for anyone without an account. `?demo=1` (on the default local backend) signs in a demo session and seeds six fictional artists, ranked, plus a few linked tattoo ideas. It never runs over an existing session (though an out-of-date demo session re-seeds itself, so returning visitors always see the current dataset), and edits you make in the demo persist across reloads. To reset, clear the site's storage (or use a fresh private window). The demo uses 18 original AI-generated tattoo photographs across botanical, surrealist, Japanese-inspired, tribal, colour-realism and brush-lettering portfolios. The generated-imagery label remains visible across the demo's main browsing and editing views; lettering is a concept, not a language-verified tattoo stencil.
 
 | Artists gallery | Brief (ideas) |
 | --- | --- |
@@ -58,7 +58,7 @@ The sign-in screen also links straight to it (**No account? View the demo →**)
 - **Convention Radar**: curated UK convention shortlist with distances from Milton Keynes and artist attendance override support. Each show also takes its published **artist index** (Big London 2026 ships with the app; a bookmarklet grabber handles other shows' lazy-loading lists) and its **competition winners** — pasted in, grouped by award category, cross-referenced against the gallery, with photos of the winning tattoos attached per winner.
 - **Studios**: artist grouping by studio and reachability.
 - **AI Concepts**: multi-provider prompt packs (ChatGPT, Adobe Firefly, Gemini, Claude) built from free text or a Brief idea, paste-back of AI results as rated variants with a "Best" pick, optional in-app image generation via an OpenAI (DALL·E 3) or Gemini key with artist-style steering, relief STL export from image results, and style-based artist matching on each concept.
-- **Manage**: artist CRUD, tags, statuses, studios, notes and image import. Backup/import
+- **Manage**: artist CRUD, tags, studios, notes and image import. Backup/import
   lives in **Settings**.
 
 ## Tech Stack

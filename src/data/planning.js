@@ -4,21 +4,6 @@ import { itemIdentity } from './undoableRemoval'
 import { normalizeReferenceImages } from './referenceImages'
 export { normalizeReferenceImages } from './referenceImages'
 
-export const ARTIST_STATUSES = [
-  { value: 'researching', label: 'Researching', tone: 'text-cream-muted' },
-  { value: 'shortlisted', label: 'Shortlisted', tone: 'text-cream' },
-  { value: 'contact-next', label: 'Contact next', tone: 'text-accent' },
-  { value: 'contacted', label: 'Contacted', tone: 'text-blue-300' },
-  { value: 'maybe', label: 'Maybe', tone: 'text-cream-muted' },
-  { value: 'pass', label: 'Pass', tone: 'text-cream-muted/60' },
-]
-
-export const DEFAULT_ARTIST_STATUS = 'researching'
-
-export function normalizeArtistStatus(status) {
-  return ARTIST_STATUSES.some((s) => s.value === status) ? status : DEFAULT_ARTIST_STATUS
-}
-
 // Blob-backed refs resolve to a blob:/https: URL and pass through untouched;
 // static paths are stored base-relative and get the deploy base applied here
 // (see src/data/assetPath.js for why the base is never stored).
@@ -46,24 +31,14 @@ export function scoreArtistForIdea(artist, idea) {
   const ideaTags = idea?.tags || []
   const artistTags = artist?.tags || []
   const overlapTags = ideaTags.filter((tag) => artistTags.includes(tag))
-  const status = normalizeArtistStatus(artist?.status)
-  const statusBoost = status === 'contact-next'
-    ? 3
-    : status === 'shortlisted'
-      ? 2
-      : status === 'contacted'
-        ? 1
-        : status === 'pass'
-          ? -4
-          : 0
+  // Tags first, rank as the tie-break. A stored status is ignored (#220 D).
   const rankBoost = Math.max(0, 31 - (artist?.rank || 31)) / 10
 
   return {
     artist,
     overlap: overlapTags.length,
     overlapTags,
-    status,
-    score: overlapTags.length * 10 + statusBoost + rankBoost,
+    score: overlapTags.length * 10 + rankBoost,
   }
 }
 
@@ -98,55 +73,18 @@ export function buildMatchRationale(idea, match) {
   return ''
 }
 
-// The three ACTIVE shortlist stages in workflow order. Contacted artists need no
-// further attention, and maybe/pass are parked — both are excluded from the
-// strip but surfaced as counts so artists never vanish.
-const PIPELINE_STAGES = ['researching', 'shortlisted', 'contact-next']
-
-export function buildPipelineSummary(artists = []) {
-  const byStage = new Map(PIPELINE_STAGES.map((s) => [s, []]))
-  let parked = 0
-  let contacted = 0
-
-  for (const artist of artists) {
-    const status = normalizeArtistStatus(artist.status)
-    if (byStage.has(status)) byStage.get(status).push(artist)
-    else if (status === 'contacted') contacted += 1
-    else parked += 1
-  }
-
-  const stages = PIPELINE_STAGES.map((status) => ({
-    status,
-    label: ARTIST_STATUSES.find((s) => s.value === status).label,
-    artists: byStage.get(status).slice().sort((a, b) => (a.rank || 999) - (b.rank || 999)),
-    count: byStage.get(status).length,
-  }))
-
-  return { stages, parked, contacted }
-}
-
-export function buildDashboardSummary({ artists = [], ideas = [], boards = [] }) {
-  const activeIdeas = ideas.filter((idea) => (idea.status || 'idea') !== 'done')
-  const exportReadyIdeas = ideas.filter((idea) => (
-    idea.title &&
-    idea.description &&
-    idea.linkedArtists?.length > 0
-  ))
-  const nextArtists = artists
-    .filter((artist) => normalizeArtistStatus(artist.status) === 'contact-next')
-    .sort((a, b) => (a.rank || 999) - (b.rank || 999))
-
-  // "Top 5" means current artists — contacted and parked (maybe/pass) drop out.
-  const activeArtists = artists
-    .filter((artist) => PIPELINE_STAGES.includes(normalizeArtistStatus(artist.status)))
-    .sort((a, b) => (a.rank || 999) - (b.rank || 999))
-
-  return {
-    activeIdeas,
-    exportReadyIdeas,
-    nextArtists,
-    topArtists: activeArtists.slice(0, 5),
-    benchArtists: activeArtists.slice(5, 9),
-    openBoards: boards.filter((board) => board.ideaIds?.length > 0),
-  }
+// Plan (#220 D): up to `count` artists for one idea. Artists already linked to
+// it come first (in rank order, shared styles or not), then the closest
+// matches by shared styles, rank breaking ties.
+export function artistsForIdea(idea, artists = [], count = 3) {
+  const linkedIds = new Set(idea?.linkedArtists || [])
+  const ideaTags = idea?.tags || []
+  const linked = artists
+    .filter((a) => linkedIds.has(a.id))
+    .sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity))
+    .map((artist) => ({ artist, linked: true, overlapTags: ideaTags.filter((t) => artist.tags?.includes(t)) }))
+  const matched = matchArtistsForIdea(idea, artists)
+    .filter(({ artist }) => !linkedIds.has(artist.id))
+    .map(({ artist, overlapTags }) => ({ artist, linked: false, overlapTags }))
+  return [...linked, ...matched].slice(0, count)
 }

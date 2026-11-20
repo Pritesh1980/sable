@@ -113,18 +113,22 @@ describe('scoreShowEntry', () => {
     expect(mine.savedArtistId).toBe('zoia.ink')
   })
 
-  it('excludes an artist whose saved status is pass', () => {
+  // Status was removed from the app (#220 D): an old Pass no longer hides anyone.
+  it('ignores a stored status', () => {
     const passed = { ...saved, status: 'pass' }
+    const next = { ...saved, status: 'contact-next' }
     const [entry] = indexLineup([{ name: '', handle: 'zoia.ink', note: '' }], [passed])
-    const result = scoreShowEntry(entry, ctxFor([passed]))
-    expect(result.kind).toBe('skipped')
+    const a = scoreShowEntry(entry, ctxFor([passed]))
+    const b = scoreShowEntry(entry, ctxFor([next]))
+    expect(a.kind).toBe('mustSee')
+    expect(a.score).toBe(b.score)
+    expect(a.reasons.join(' ')).not.toMatch(/status/i)
   })
 
   it('does not assume every saved artist has a status field', () => {
     // DEFAULT_ARTISTS ship with no `status` at all.
     const [entry] = indexLineup([{ name: '', handle: 'zoia.ink', note: '' }], [saved])
     expect(() => scoreShowEntry(entry, ctxFor([saved]))).not.toThrow()
-    expect(scoreShowEntry(entry, ctxFor([saved])).kind).not.toBe('skipped')
   })
 
   it('does not call a studio a connection when you follow nobody there', () => {
@@ -184,14 +188,13 @@ describe('buildShowPlan', () => {
     expect(suggestedStudios.some((n) => /no regrets/i.test(n))).toBe(true)
   })
 
-  it('never puts a passed artist in mustSee or suggested', () => {
+  it('keeps an artist with an old stored pass in mustSee (#220 D)', () => {
     const passed = DEFAULT_ARTISTS.map((a) =>
       a.handle === 'carl245tattoo' ? { ...a, status: 'pass' } : a
     )
     const plan = buildShowPlan(seedEntriesFor('big-london@2026'), { artists: passed, studios: DEFAULT_STUDIOS })
-    expect(plan.mustSee.some((m) => m.entry.handle === 'carl245tattoo')).toBe(false)
-    expect(plan.suggested.some((m) => m.entry.handle === 'carl245tattoo')).toBe(false)
-    expect(plan.skipped.some((m) => m.entry.handle === 'carl245tattoo')).toBe(true)
+    expect(plan.mustSee.some((m) => m.entry.handle === 'carl245tattoo')).toBe(true)
+    expect(plan).not.toHaveProperty('skipped')
   })
 
   it('returns empty sections rather than throwing for an empty line-up', () => {
@@ -201,7 +204,6 @@ describe('buildShowPlan', () => {
       suggested: [],
       wildcards: [],
       missing: [],
-      skipped: [],
     })
   })
 })

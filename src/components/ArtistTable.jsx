@@ -1,6 +1,5 @@
 import { useState, useRef } from 'react'
 import { STYLE_TAGS, DEFAULT_STUDIOS } from '../data/artists'
-import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
 import { uploadImages } from '../hooks/useImageUpload'
 import { useAuth } from '../context/useAuth'
 import TagPill from './TagPill'
@@ -88,7 +87,6 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
 
   const igUrl = `https://www.instagram.com/${artist.handle}/`
   const imageCount = artist.images?.length || 0
-  const status = ARTIST_STATUSES.find((s) => s.value === normalizeArtistStatus(artist.status))
 
   return (
     <>
@@ -114,11 +112,6 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
           >
             Instagram ↗
           </a>
-        </td>
-
-        {/* Status */}
-        <td className="py-3 px-2">
-          <p className={`font-mono text-xs tracking-widest uppercase ${status.tone}`}>{status.label}</p>
         </td>
 
         {/* Photos */}
@@ -149,7 +142,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
       {/* Expanded row */}
       {expanded && (
         <tr ref={expandedRowRef} className="border-b border-ink-border bg-ink-card/30">
-          <td colSpan={5} className="px-4 py-4">
+          <td colSpan={4} className="px-4 py-4">
             <div className="space-y-4">
 
               {/* Tags */}
@@ -160,20 +153,6 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
                     <TagPill key={tag} tag={tag} active={artist.tags.includes(tag)} onClick={() => toggleTag(tag)} small />
                   ))}
                 </div>
-              </div>
-
-              {/* Status */}
-              <div>
-                <p className="text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Shortlist Status</p>
-                <select
-                  className="bg-ink-muted border border-ink-border rounded-xs px-3 py-1.5 text-sm text-cream outline-hidden focus:border-cream-muted/40 font-body"
-                  value={normalizeArtistStatus(artist.status)}
-                  onChange={(e) => onUpdate(artist.id, { status: e.target.value })}
-                >
-                  {ARTIST_STATUSES.map((s) => (
-                    <option key={s.value} value={s.value}>{s.label}</option>
-                  ))}
-                </select>
               </div>
 
               {/* Studio */}
@@ -285,7 +264,6 @@ export default function ArtistTable({ artists, onSaveImages, onUpdate, onRemove 
             <tr className="border-b border-ink-border bg-ink-card">
               <th className="text-left py-2.5 pl-4 pr-2 text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase">Artist</th>
               <th className="text-left py-2.5 px-2 text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase">Instagram</th>
-              <th className="text-left py-2.5 px-2 text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase">Status</th>
               <th className="text-left py-2.5 px-2 text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase">Photos</th>
               <th className="py-2.5 pr-4" />
             </tr>
@@ -302,7 +280,7 @@ export default function ArtistTable({ artists, onSaveImages, onUpdate, onRemove 
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-12 text-center text-cream-muted/90 font-mono text-xs tracking-widest uppercase">
+                <td colSpan={4} className="py-12 text-center text-cream-muted/90 font-mono text-xs tracking-widest uppercase">
                   No artists found
                 </td>
               </tr>

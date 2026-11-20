@@ -51,7 +51,7 @@ describe('focus on open', () => {
 
   it('tapping the filmstrip rank focuses the rank input it opens', () => {
     const artist = { id: 'zoia.ink', handle: 'zoia.ink', name: 'Zoia', tags: [], images: [], rank: 3, status: 'researching', notes: '', studio: null }
-    render(<FilmstripView artists={[artist]} onOpenArtist={vi.fn()} onSetRank={vi.fn()} onSetStatus={vi.fn()} />)
+    render(<FilmstripView artists={[artist]} onOpenArtist={vi.fn()} onSetRank={vi.fn()} />)
     fireEvent.click(screen.getByRole('button', { name: /^#?3$/ }))
     expect(screen.getByRole('spinbutton')).toHaveFocus()
   })

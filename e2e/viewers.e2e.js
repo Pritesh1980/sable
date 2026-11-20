@@ -122,7 +122,7 @@ test.describe('Back closes the overlay', () => {
     await openDemo(page, '/')
     await page.goto('/gallery')
     await page.getByRole('button', { name: 'Filmstrip view' }).click()
-    // The card's centre holds the status button; its name opens the detail.
+    // The row's name opens the detail.
     await page.getByRole('button', { name: /^Open / }).first().getByRole('heading').click()
     const back = page.getByRole('button', { name: '← Back' })
     await expect(back).toBeVisible()
@@ -137,7 +137,7 @@ test.describe('Back closes the overlay', () => {
   test('artist detail: a deep link opens it, and ← Back stays on the gallery', async ({ page }) => {
     await openDemo(page, '/gallery')
     await page.getByRole('button', { name: 'Filmstrip view' }).click()
-    // The card's centre holds the status button; its name opens the detail.
+    // The row's name opens the detail.
     await page.getByRole('button', { name: /^Open / }).first().getByRole('heading').click()
     const url = page.url()
     await page.goto(url)

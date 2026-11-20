@@ -12,7 +12,7 @@ const artists = [
 
 function editRankOfFirst(value, finish = 'Enter') {
   const onSetRank = vi.fn()
-  render(<FilmstripView artists={artists} onOpenArtist={vi.fn()} onSetRank={onSetRank} onSetStatus={vi.fn()} />)
+  render(<FilmstripView artists={artists} onOpenArtist={vi.fn()} onSetRank={onSetRank} />)
   fireEvent.click(screen.getByRole('button', { name: /^#?1$/ }))
   const input = screen.getByRole('spinbutton')
   fireEvent.change(input, { target: { value } })

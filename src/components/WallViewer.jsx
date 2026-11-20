@@ -12,11 +12,10 @@ import useSwipeTap from '../hooks/useSwipeTap'
 import useViewportZoomed from '../hooks/useViewportZoomed'
 import { resolveTransitionMode } from '../lib/gl'
 import { findPhotoIndex } from '../data/wall'
-import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
 
 const SAVED_FIELD = 'min-h-11 bg-v2-ink border border-v2-hairline rounded-xs px-3 text-v2-cream font-v2-ui text-sm outline-hidden focus:border-v2-accent'
 
-// Resolves the full artist record (status/notes) for the currently viewed
+// Resolves the full artist record (notes) for the currently viewed
 // item — prefers the `artists` list when given, falls back to the single
 // `artist` prop otherwise.
 function resolveArtist(artistId, artist, artists) {
@@ -26,7 +25,6 @@ function resolveArtist(artistId, artist, artists) {
 
 function InfoPanel({ artist, ideas, onClose }) {
   if (!artist) return null
-  const status = ARTIST_STATUSES.find((s) => s.value === normalizeArtistStatus(artist.status))
   const linkedIdeas = ideas.filter((idea) => idea.linkedArtists?.includes(artist.id))
 
   return (
@@ -37,8 +35,6 @@ function InfoPanel({ artist, ideas, onClose }) {
       >
         Close
       </button>
-
-      <p className={`font-v2-ui text-xs tracking-widest uppercase mb-4 ${status.tone}`}>{status.label}</p>
 
       <div className="mb-6">
         <p className="font-v2-ui text-xs tracking-widest uppercase text-v2-muted mb-2">Notes</p>

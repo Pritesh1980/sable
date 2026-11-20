@@ -126,10 +126,10 @@ describe('WallViewer', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('opens the info panel on I and shows status/notes/linked ideas', () => {
+  it('opens the info panel on I and shows notes and linked ideas, but no status', () => {
     renderViewer()
     fireEvent.keyDown(window, { key: 'I' })
-    expect(screen.getByText('Shortlisted')).toBeInTheDocument()
+    expect(screen.queryByText('Shortlisted')).toBeNull()
     expect(screen.getByText('Loved the last piece.')).toBeInTheDocument()
     expect(screen.getByText('Sleeve concept')).toBeInTheDocument()
   })

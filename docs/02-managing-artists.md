@@ -1,6 +1,6 @@
 # Managing artists
 
-*Add artists to your collection and give each one photos, style tags, a status, a studio and notes.*
+*Add artists to your collection and give each one photos, style tags, a studio and notes.*
 
 ← [Back to contents](README.md)
 
@@ -17,9 +17,9 @@ Tap **+ Add** on the Artists page, or open `/gallery?add=1`. It opens the captur
 2. Enter an **Instagram handle or profile link**, such as `@mora.blackfern` or
    `https://www.instagram.com/mora.blackfern/`. Post, reel and story links are
    rejected: they do not identify the artist.
-3. Tap **Save**. No optional metadata is required; the default status is Researching.
+3. Tap **Save**. No optional metadata is required.
 
-**Details** starts collapsed and holds display name, tags, status and a style note.
+**Details** starts collapsed and holds display name, tags and a style note.
 You can add or edit those later. **Artist saved** confirms the local library update;
 it does not claim cloud sync or an off-device backup. A new artist starts unranked, so
 their photos join the end of the Wall, which scrolls down to them.
@@ -151,11 +151,10 @@ artists and photos sits at the top.
 
 ![Manage mode on the Artists page](../public/guide/manage-list.png)
 
-The **Add New Artist** panel inside Manage mode still works too (and also accepts URLs,
-plus a shortlist status).
+The **Add New Artist** panel inside Manage mode still works too (and also accepts URLs).
 
 Below the add-artist panel is a searchable table of every artist with their Instagram
-link, status and photo count. Type in the **search** box to filter by name or handle.
+link and photo count. Type in the **search** box to filter by name or handle.
 
 ## Edit an artist
 
@@ -165,8 +164,6 @@ link, status and photo count. Type in the **search** box to filter by name or ha
 
 - **Style tags** — tap to toggle (`dark-illustrative`, `fine-line`, `blackwork`,
   `surrealism`, `dark-fantasy`, `realism`). These power the matching in *Ideas* and *AI*.
-- **Shortlist status** — `Researching`, `Shortlisted`, `Contact next`, `Contacted`,
-  `Maybe`, `Pass`. *Contact next* feeds Home's pipeline and "Contact next" list.
 - **Studio** — pick where they work; this populates the [Studios](05-conventions-and-studios.md) page.
 - **Notes** — free text; saves when you tap away or press Enter.
 - **Photos** — tap **+ Photos** to upload screenshots (they're compressed automatically).
@@ -178,7 +175,7 @@ link, status and photo count. Type in the **search** box to filter by name or ha
   commits the first.
 - **Remove artist** — deletes them from your collection (with a confirmation).
 
-> **Tip:** you can also upload photos and edit tags/status/studio from an artist's full
+> **Tip:** you can also upload photos and edit tags/studio from an artist's full
 > detail card in the [gallery views](03-gallery-and-ranking.md) — whichever is handier.
 > Tap **Done managing** to flip back to the visual views. Backups now live in
 > [More → Settings](07-backup-and-settings.md).

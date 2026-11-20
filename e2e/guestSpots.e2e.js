@@ -3,7 +3,7 @@ import { test, expect, openDemo } from './fixtures'
 
 // Guest spots (#183): an announcement screenshot is read only on an explicit
 // tap, every suggestion is reviewed before it is saved, and a saved spot near
-// Milton Keynes shows on Pipeline. Gemini is mocked; the artist is fictional.
+// Milton Keynes shows on Plan. Gemini is mocked; the artist is fictional.
 const announcement = { name: 'fictional-announcement.webp', mimeType: 'image/webp',
   buffer: readFileSync('public/images/demo/mora.blackfern/fern-v4.webp') }
 
@@ -52,7 +52,7 @@ test('reads a guest spot announcement, reviews it and shows it nearby soon', asy
   await page.reload()
   await expect(page.getByRole('list', { name: 'Upcoming guest spots' }).getByText('Oxford')).toBeVisible()
 
-  await page.goto('/pipeline')
+  await page.goto('/plan')
   const nearby = page.getByRole('list', { name: 'Guest spots nearby soon' })
   await expect(nearby.getByText('@ashgrove.tattoo')).toBeVisible()
   await expect(nearby.getByText('Vesper Ash')).toBeVisible() // seeded demo spot in London
@@ -69,6 +69,6 @@ test('reads a guest spot announcement, reviews it and shows it nearby soon', asy
   await expect(chip).toBeVisible()
   const box = await chip.boundingBox()
   expect(box.height).toBeLessThan(60)
-  await expect(page.getByRole('link', { name: /more nearby/ })).toHaveAttribute('href', /\/pipeline$/)
+  await expect(page.getByRole('link', { name: /more nearby/ })).toHaveAttribute('href', /\/plan$/)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 })

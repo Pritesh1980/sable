@@ -7,7 +7,7 @@ import { test, expect, openDemo, openIdeaWithPhoto, DEMO_CONCEPT } from './fixtu
 
 const ROUTES = [
   '/',
-  '/pipeline',
+  '/plan',
   '/gallery',
   '/gallery?mode=manage',
   '/brief',

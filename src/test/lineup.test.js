@@ -219,7 +219,8 @@ describe('lineupCounts', () => {
 describe('lineupArtistDraft', () => {
   it('says which line-up the artist was spotted in, as the artist record\'s notes', () => {
     const draft = lineupArtistDraft({ name: 'Martin Kubala', handle: 'kubalizmus', note: 'Booth 12' }, 'Brighton Tattoo Convention 2027')
-    expect(draft).toMatchObject({ handle: 'kubalizmus', name: 'Martin Kubala', tags: [], status: 'researching' })
+    expect(draft).toMatchObject({ handle: 'kubalizmus', name: 'Martin Kubala', tags: [] })
+    expect(draft).not.toHaveProperty('status')
     expect(draft.notes).toBe('Spotted in the Brighton Tattoo Convention 2027 line-up.')
   })
 

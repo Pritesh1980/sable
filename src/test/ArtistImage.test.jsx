@@ -313,7 +313,7 @@ describe('ArtistImage', () => {
     expect(screen.getByText('M')).toBeInTheDocument()
   })
 
-  // A caller can swap the monogram for its own empty state (#113) — Top5Hero
+  // A caller can swap the monogram for its own empty state (#113) — the old Top5Hero
   // shows the rank glyph — while keeping the boundary's loading and retry.
   it('renders a custom fallback instead of the monogram when there is no image', () => {
     render(<ArtistImage src="" label="Zed" fallback={<span data-testid="rank">3</span>} />)

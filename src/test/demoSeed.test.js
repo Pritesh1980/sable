@@ -99,7 +99,6 @@ describe('DEMO_ARTISTS data integrity', () => {
         tags: expect.any(Array),
         images: expect.any(Array),
         rank: expect.any(Number),
-        status: expect.any(String),
         notes: expect.any(String),
       })
       expect(a).toHaveProperty('studio')

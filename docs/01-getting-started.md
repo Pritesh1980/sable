@@ -75,9 +75,9 @@ Every empty page says what it holds and gives one way to start:
 - **Ideas** and **AI concepts** define an idea, a board and a concept, and show a faded
   **Example** of a filled one. The example is a picture only: it is not saved and goes
   away when you add your own.
-- **Pipeline** shows three steps instead of its panels: add an artist, put them in
+- **Plan** shows three steps until you have an artist: add an artist, put them in
   order, write an idea. Only the current step has a button.
-- **Add a sample artist** (empty Home, Artists and Pipeline) saves one invented artist,
+- **Add a sample artist** (empty Home, Artists and Plan) saves one invented artist,
   Vesper Ash, with three AI-generated photos, so you can try the wall, the viewer and
   ranking. It is a normal artist record and syncs like one. A note on Home and Artists
   marks it, and **Remove sample** takes it out in one tap.
@@ -120,11 +120,11 @@ The keyboard does the driving:
 | `←` `→` | previous / next photo by **this artist** |
 | `↑` `↓` | jump to the **previous / next artist** |
 | `G` | **generate a concept** in this artist's style |
-| `I` | open the artist's **info & notes** (status, notes, linked ideas) |
+| `I` | open the artist's **info & notes** (notes, linked ideas) |
 | `Esc` | back to the Wall (with **info & notes** open, the first `Esc` closes just the panel) |
 
 Outside the viewer, **Esc** closes whatever is on top (the add-artist sheet, the More
-menu, a full-screen photo on an artist's page, the status picker), one layer per press.
+menu, a full-screen photo on an artist's page), one layer per press.
 Wall photos, concepts, artist cards, thumbnails and ideas open with **Tab** then **Enter**.
 
 The top right reads **Photo 1 of 3**; the plate shows **Artist 2 of 26 · @handle**. Moving
@@ -170,24 +170,33 @@ same list along the **top on a laptop**.
 
 ![The More menu](../public/guide/nav-more.png)
 
-- **Plan** — **Pipeline** (the shortlist dashboard, below), **Radar** (upcoming
+- **Find** — **Plan** (which artist for which idea, below), **Radar** (upcoming
   conventions) and **Studios** (where your artists work).
 - **App** — **Settings** (backup, account and text size) and **Help** (this
   guide, in the app).
 
-## The Pipeline page
+## The Plan page
 
-The old dashboard lives on at **More → Pipeline**: the Top 5 coverflow,
-the shortlist pipeline (researching → shortlisted → contact next), idea stats, **Nearby soon**
-(guest spots by your artists coming up near Milton Keynes) and idea matches.
-The viewer's `I` panel shows each artist's status in place, so you'll mostly need Pipeline
-when planning outreach. A small **Nearby soon** chip also sits in the Artists heading.
+**More → Plan** answers one question: which artist for which idea. Each open idea
+(not yet Done) sits beside up to three saved artists: any you already linked to it,
+then the ones sharing the most of its styles, with your rank breaking ties. Each row
+says how many styles it shares, and a pin marks an artist with a guest spot nearby
+soon. An idea with no styles yet asks for some. Tap an idea to edit it, or an artist
+to open their page.
 
-![The Pipeline page](../public/guide/dashboard.png)
+Below the ideas, **Nearby soon** lists guest spots by your artists coming up near
+Milton Keynes; its **Within** setting also decides which artists get the pin. A small
+**Nearby soon** chip also sits in the Artists heading.
 
-On a wide screen it spreads into a multi-column layout:
+There is no artist status any more (researching → contact next → pass): Plan
+replaced the old Pipeline page, which was built around that contact chain. Old
+`/pipeline` links open Plan.
 
-![Pipeline on desktop](../public/guide/dashboard-desktop.png)
+![The Plan page](../public/guide/plan.png)
+
+On a wide screen:
+
+![Plan on desktop](../public/guide/plan-desktop.png)
 
 ---
 

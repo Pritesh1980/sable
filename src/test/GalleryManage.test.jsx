@@ -88,7 +88,7 @@ describe('Gallery manage mode', () => {
     const updater = setArtists.mock.calls[0][0]
     const next = updater(baseArtists)
     expect(next).toHaveLength(3)
-    expect(next[2]).toMatchObject({ id: 'new_artist', rank: 3, status: 'researching' })
+    expect(next[2]).toMatchObject({ id: 'new_artist', rank: 3 })
   })
 
   it('opens manage mode from a ?mode=manage deep link', () => {

@@ -92,7 +92,6 @@ describe('createArtist', () => {
       tags: [],
       images: [],
       rank: 5,
-      status: 'researching',
       notes: '',
       studio: null,
     })
@@ -153,20 +152,19 @@ describe('parseInstagramHandle', () => {
   })
 })
 
-describe('createArtist with tags and status', () => {
-  it('accepts optional tags and status', () => {
+describe('createArtist with tags', () => {
+  it('accepts optional tags, and writes no status (#220 D)', () => {
     const artist = createArtist(
       { handle: 'new_one', name: '', tags: ['blackwork', 'dark-fantasy'], status: 'shortlisted' },
       []
     )
     expect(artist.tags).toEqual(['blackwork', 'dark-fantasy'])
-    expect(artist.status).toBe('shortlisted')
+    expect(artist).not.toHaveProperty('status')
   })
 
-  it('still defaults tags/status when omitted', () => {
+  it('still defaults tags when omitted', () => {
     const artist = createArtist({ handle: 'plain', name: '' }, [])
     expect(artist.tags).toEqual([])
-    expect(artist.status).toBe('researching')
   })
 })
 

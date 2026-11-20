@@ -1,18 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
-import { nearbySoon, formatSpotDates, todayIso, NEARBY_DAYS, NEARBY_RADIUS_MILES } from '../data/guestSpots'
-
-const RADIUS_KEY = 'tattoo_nearby_radius' // device-local preference, not synced
-const RADII = [50, 100, 200, 400]
-
-function readRadius() {
-  try {
-    const value = Number(localStorage.getItem(RADIUS_KEY))
-    return RADII.includes(value) ? value : NEARBY_RADIUS_MILES
-  } catch {
-    return NEARBY_RADIUS_MILES
-  }
-}
+import { nearbySoon, formatSpotDates, todayIso, NEARBY_DAYS } from '../data/guestSpots'
+import { NEARBY_RADII as RADII, readNearbyRadius, saveNearbyRadius } from '../data/nearbyRadius'
 
 const artistLabel = (artist) => artist?.name || `@${artist?.handle}`
 const milesLabel = (miles) => (miles === 0 ? 'local' : `${miles} mi`)
@@ -20,16 +9,19 @@ const milesLabel = (miles) => (miles === 0 ? 'local' : `${miles} mi`)
 const artistLink = (artist) => `/gallery?artist=${encodeURIComponent(artist.id)}#guest-spots`
 
 // Guest spots by saved artists coming up near Milton Keynes (#183). The full
-// version sits on Pipeline; `compact` is a small chip in the Artists header (the
-// soonest spot, then a +N linking to Pipeline), and nothing at all when none is coming up.
-export default function NearbySoon({ artists = [], today = todayIso(), compact = false, className = '' }) {
-  const [radiusMiles, setRadiusMiles] = useState(readRadius)
+// version sits on Plan; `compact` is a small chip in the Artists header (the
+// soonest spot, then a +N linking to Plan), and nothing at all when none is coming up.
+// Plan passes `radiusMiles` + `onRadiusChange` so its idea chips follow the same radius.
+export default function NearbySoon({ artists = [], today = todayIso(), compact = false, className = '', radiusMiles: controlled, onRadiusChange }) {
+  const [own, setOwn] = useState(readNearbyRadius)
+  const radiusMiles = controlled ?? own
   const rows = nearbySoon(artists, { today, radiusMiles })
 
   function chooseRadius(e) {
     const value = Number(e.target.value)
-    setRadiusMiles(value)
-    try { localStorage.setItem(RADIUS_KEY, String(value)) } catch { /* private mode: keep it for this visit */ }
+    if (onRadiusChange) onRadiusChange(value)
+    else setOwn(value)
+    saveNearbyRadius(value)
   }
 
   if (compact) {
@@ -42,7 +34,7 @@ export default function NearbySoon({ artists = [], today = todayIso(), compact =
           <span className="truncate">{artistLabel(artist)} · {spot.city}</span>
         </Link>
         {rows.length > 1 && (
-          <Link to="/pipeline" aria-label={`${rows.length - 1} more nearby, see Pipeline`} className="flex items-center min-h-11 pr-3 shrink-0 text-cream-muted/80 hover:text-cream">+{rows.length - 1}</Link>
+          <Link to="/plan" aria-label={`${rows.length - 1} more nearby, see Plan`} className="flex items-center min-h-11 pr-3 shrink-0 text-cream-muted/80 hover:text-cream">+{rows.length - 1}</Link>
         )}
       </div>
     )

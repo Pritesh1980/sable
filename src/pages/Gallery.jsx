@@ -291,9 +291,6 @@ export default function Gallery({ artists, setArtists, saved = [], setSaved = ()
     })
   }
 
-  function setStatus(artistId, status) {
-    setArtists((prev) => prev.map((a) => a.id === artistId ? { ...a, status } : a))
-  }
 
   function addArtist(draft) {
     const artist = createArtist(draft, artists)
@@ -524,7 +521,7 @@ export default function Gallery({ artists, setArtists, saved = [], setSaved = ()
           revealArtistId={captureReceipt?.kind === 'created' ? captureReceipt.artistId : null}
         />
       ) : viewMode === 'filmstrip' ? (
-        <FilmstripView artists={sorted} onOpenArtist={openArtist} onSetRank={setRank} onSetStatus={setStatus} />
+        <FilmstripView artists={sorted} onOpenArtist={openArtist} onSetRank={setRank} />
       ) : viewMode === 'compare' ? (
         <CompareView artists={artists} onOpenArtist={openArtist} />
       ) : (

@@ -87,7 +87,7 @@ export function parseInstagramHandle(input = '') {
 // (case-insensitive). Rank goes to the back of the queue. `notes` carries where
 // the artist was found when they come from a line-up or the winners board.
 export function createArtist(
-  { handle, name, tags = [], status = 'researching', styleNote = '', images = [], notes = '' },
+  { handle, name, tags = [], styleNote = '', images = [], notes = '' },
   existingArtists = []
 ) {
   const duplicate = existingArtists.some(
@@ -108,7 +108,6 @@ export function createArtist(
     tags,
     images,
     rank: maxRank + 1,
-    status,
     ...(styleNote ? { styleNote } : {}),
     notes,
     studio: null,

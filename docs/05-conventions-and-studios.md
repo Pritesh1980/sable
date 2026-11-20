@@ -28,7 +28,7 @@ PWA, the Calendar hand-off still needs checking on a real phone.
 
 **Mark who's going.** Each card has a *Your artists attending* line — tap **Edit** to toggle
 which of your saved artists are appearing at that edition of the show. Those names then surface on the
-artist's detail card, on the Pipeline page, and next to the artist in idea matches. (Automatic look-up is
+artist's detail card and next to the artist in idea matches. (Automatic look-up is
 on the backlog; for now you set this yourself.)
 
 **Editions.** Every show recurs, so each card holds its editions by year and opens on the
@@ -131,7 +131,7 @@ sent anywhere — the list is parsed on the device.
 
 - **Search** by name, handle or the studio/country detail.
 - Filter to **In your gallery** (who you already follow is going) or **New to you**.
-- **Add** an artist straight to your gallery — they land as *researching*, with the show
+- **Add** an artist straight to your gallery, with the show
   they were spotted at in their notes, and are flagged as attending that show in one tap.
   Style tags stay empty: the show's list says nothing about style, so you tag them
   yourself once you've looked at their work.
@@ -191,7 +191,7 @@ the show wrote them rather than dropped. Anything that isn't a result — the
 1st → 2nd → 3rd within each. On every row you can:
 
 - See at a glance whether the winner is **already in your gallery** (their rank shows) or
-  is **new to you** (an **Add** button, which files them as *researching* with the award in
+  is **new to you** (an **Add** button, which files them with the award in
   their notes and flags them as attending that show).
 - Tap **Attending?** on someone you already have.
 - Open their Instagram from the handle.
@@ -256,7 +256,7 @@ These two pages aren't islands — the connections surface throughout the app:
 - A studio assignment in *Manage* is what places an artist on the *Studios* page.
 - A **guest spot** you add on an artist's detail card (a trip to another studio) shows its
   distance from Milton Keynes, and the ones coming up nearby appear under **Nearby soon** on
-  the Pipeline page. See [Guest spots](03-gallery-and-ranking.md#guest-spots).
+  the Plan page. See [Guest spots](03-gallery-and-ranking.md#guest-spots).
 
 ---
 
