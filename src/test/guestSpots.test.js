@@ -141,16 +141,16 @@ describe('nearbySoon', () => {
 
   it('lists spots in the next 90 days within 100 miles, soonest first', () => {
     const rows = nearbySoon(artists, { today: '2027-01-15' })
-    expect(rows.map((r) => r.spot.id)).toEqual(['s3', 's1'])
+    expect(rows.map((r) => r.spot.id)).toEqual(['s3', 's6', 's1'])
     expect(rows[0]).toMatchObject({ artist: { id: 'a2' }, distanceMiles: 50 })
   })
 
-  it('skips unknown cities, far cities, passed artists and spots beyond the window', () => {
+  it('skips unknown cities, far cities and spots beyond the window', () => {
     const ids = nearbySoon(artists, { today: '2027-01-15' }).map((r) => r.spot.id)
     expect(ids).not.toContain('s2') // Glasgow, too far
     expect(ids).not.toContain('s4') // Lisbon, unknown
     expect(ids).not.toContain('s5') // June, outside 90 days
-    expect(ids).not.toContain('s6') // artist marked pass
+    expect(ids).toContain('s6') // a stored Pass no longer hides anyone (#220 D)
   })
 
   it('honours a wider radius and includes a spot already under way', () => {

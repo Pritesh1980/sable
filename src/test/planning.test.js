@@ -1,24 +1,22 @@
 import { describe, it, expect } from 'vitest'
+import * as planning from '../data/planning'
 import {
-  buildDashboardSummary,
-  buildPipelineSummary,
   buildMatchRationale,
   getImageNote,
   getImageUrl,
+  artistsForIdea,
   matchArtistsForIdea,
-  normalizeArtistStatus,
   normalizeReferenceImages,
   setImageNote,
 } from '../data/planning'
 
-describe('normalizeArtistStatus', () => {
-  it('defaults unknown statuses to researching', () => {
-    expect(normalizeArtistStatus()).toBe('researching')
-    expect(normalizeArtistStatus('unknown')).toBe('researching')
-  })
-
-  it('preserves known statuses', () => {
-    expect(normalizeArtistStatus('contact-next')).toBe('contact-next')
+// Artist status was removed from the app (#220 D): nothing may read it.
+describe('artist status', () => {
+  it('is no longer part of planning', () => {
+    expect(planning.ARTIST_STATUSES).toBeUndefined()
+    expect(planning.normalizeArtistStatus).toBeUndefined()
+    expect(planning.buildPipelineSummary).toBeUndefined()
+    expect(planning.buildDashboardSummary).toBeUndefined()
   })
 })
 
@@ -40,48 +38,32 @@ describe('normalizeReferenceImages', () => {
 })
 
 describe('matchArtistsForIdea', () => {
-  it('scores by tag overlap, status, and rank', () => {
+  it('scores by tag overlap, then rank', () => {
     const matches = matchArtistsForIdea(
       { tags: ['blackwork', 'surrealism'] },
       [
-        { id: 'a', rank: 5, status: 'researching', tags: ['blackwork'] },
-        { id: 'b', rank: 20, status: 'pass', tags: ['blackwork', 'surrealism'] },
-        { id: 'c', rank: 8, status: 'contact-next', tags: ['blackwork'] },
+        { id: 'a', rank: 5, tags: ['blackwork'] },
+        { id: 'b', rank: 20, tags: ['blackwork', 'surrealism'] },
+        { id: 'c', rank: 8, tags: ['blackwork'] },
       ]
     )
 
-    expect(matches.map((m) => m.artist.id)).toEqual(['b', 'c', 'a'])
+    expect(matches.map((m) => m.artist.id)).toEqual(['b', 'a', 'c'])
     expect(matches[0].overlapTags).toEqual(['blackwork', 'surrealism'])
+  })
+
+  it('ignores a stored status', () => {
+    const idea = { tags: ['blackwork'] }
+    const matches = matchArtistsForIdea(idea, [
+      { id: 'passed', rank: 1, status: 'pass', tags: ['blackwork'] },
+      { id: 'next', rank: 2, status: 'contact-next', tags: ['blackwork'] },
+    ])
+    expect(matches.map((m) => m.artist.id)).toEqual(['passed', 'next'])
+    expect(matches[0]).not.toHaveProperty('status')
   })
 
   it('returns no matches when the idea has no style tags', () => {
     expect(matchArtistsForIdea({ tags: [] }, [{ id: 'a', tags: ['blackwork'] }])).toEqual([])
-  })
-})
-
-describe('buildDashboardSummary', () => {
-  it('summarizes active ideas, ready briefs, next artists, and boards', () => {
-    const summary = buildDashboardSummary({
-      artists: [
-        { id: 'top', rank: 1 },
-        { id: 'later', rank: 2, status: 'contact-next' },
-      ],
-      ideas: [
-        { id: 'draft', title: 'Draft', status: 'idea' },
-        { id: 'ready', title: 'Ready', status: 'booked', description: 'Full', linkedArtists: ['top'] },
-        { id: 'done', title: 'Done', status: 'done' },
-      ],
-      boards: [
-        { id: 'empty', ideaIds: [] },
-        { id: 'board', ideaIds: ['ready'] },
-      ],
-    })
-
-    expect(summary.activeIdeas.map((i) => i.id)).toEqual(['draft', 'ready'])
-    expect(summary.exportReadyIdeas.map((i) => i.id)).toEqual(['ready'])
-    expect(summary.nextArtists.map((a) => a.id)).toEqual(['later'])
-    expect(summary.openBoards.map((b) => b.id)).toEqual(['board'])
-    expect(summary.topArtists.map((a) => a.id)).toEqual(['top', 'later'])
   })
 })
 
@@ -116,57 +98,6 @@ describe('buildMatchRationale', () => {
   })
 })
 
-describe('buildPipelineSummary', () => {
-  const a = (id, status, rank) => ({ id, handle: id, status, rank })
-
-  it('returns the three active stages in workflow order with counts', () => {
-    const artists = [
-      a('r1', 'researching', 5),
-      a('s1', 'shortlisted', 2),
-      a('c1', 'contact-next', 1),
-      a('c2', 'contact-next', 3),
-      a('d1', 'contacted', 4),
-    ]
-    const { stages, contacted } = buildPipelineSummary(artists)
-    expect(stages.map((s) => s.status)).toEqual(['researching', 'shortlisted', 'contact-next'])
-    expect(stages.map((s) => s.count)).toEqual([1, 1, 2])
-    expect(stages.map((s) => s.label)).toEqual(['Researching', 'Shortlisted', 'Contact next'])
-    expect(contacted).toBe(1)
-  })
-
-  it('keeps contacted artists out of the strip — only a count remains', () => {
-    const { stages, contacted } = buildPipelineSummary([a('d1', 'contacted', 1), a('d2', 'contacted', 2)])
-    expect(stages.reduce((n, s) => n + s.count, 0)).toBe(0)
-    expect(contacted).toBe(2)
-  })
-
-  it('rank-sorts artists within a stage', () => {
-    const artists = [a('low', 'contact-next', 9), a('top', 'contact-next', 1)]
-    const { stages } = buildPipelineSummary(artists)
-    const contactNext = stages.find((s) => s.status === 'contact-next')
-    expect(contactNext.artists.map((x) => x.id)).toEqual(['top', 'low'])
-  })
-
-  it('normalizes unknown statuses to researching', () => {
-    const { stages } = buildPipelineSummary([a('x', 'banana', 1), a('y', undefined, 2)])
-    expect(stages.find((s) => s.status === 'researching').count).toBe(2)
-  })
-
-  it('parks maybe/pass artists out of the strip with a count', () => {
-    const artists = [a('m', 'maybe', 1), a('p', 'pass', 2), a('r', 'researching', 3)]
-    const { stages, parked } = buildPipelineSummary(artists)
-    expect(parked).toBe(2)
-    expect(stages.reduce((n, s) => n + s.count, 0)).toBe(1)
-  })
-
-  it('handles an empty list', () => {
-    const { stages, parked, contacted } = buildPipelineSummary([])
-    expect(stages.every((s) => s.count === 0)).toBe(true)
-    expect(parked).toBe(0)
-    expect(contacted).toBe(0)
-  })
-})
-
 describe('setImageNote (#114)', () => {
   const a = { url: '', note: '', key: 'user/u1/a.jpg' }
   const b = { url: '', note: '', key: 'user/u1/b.jpg' }
@@ -188,3 +119,20 @@ describe('setImageNote (#114)', () => {
     ])
   })
 })
+
+describe('artistsForIdea (#220 D)', () => {
+  const art = (id, rank, tags = []) => ({ id, rank, tags })
+
+  it('orders linked artists by shared styles, then rank, before any suggestion', () => {
+    const artists = [art('r1', 1), art('r2', 2), art('r3', 3), art('r4', 4, ['blackwork', 'surrealism']), art('s', 5, ['blackwork'])]
+    const idea = { tags: ['blackwork', 'surrealism'], linkedArtists: ['r1', 'r2', 'r3', 'r4'] }
+    expect(artistsForIdea(idea, artists).map((r) => r.artist.id)).toEqual(['r4', 'r1', 'r2'])
+  })
+
+  it('fills up with matches that are not linked', () => {
+    const artists = [art('a', 1, ['blackwork']), art('b', 2, ['blackwork']), art('c', 3, [])]
+    const rows = artistsForIdea({ tags: ['blackwork'], linkedArtists: ['c'] }, artists)
+    expect(rows.map((r) => [r.artist.id, r.linked])).toEqual([['c', true], ['a', false], ['b', false]])
+  })
+})
+

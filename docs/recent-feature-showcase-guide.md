@@ -7,7 +7,7 @@ do not enable a relay or send paid requests as part of this walkthrough.
 - Start the app:
   - Run `npm run dev`.
   - Open the local URL shown by Vite.
-  - Home is the start page and the Wall is in Artists; open the drawer for **Pipeline**.
+  - Home is the start page and the Wall is in Artists; open **More** for **Plan**.
 
 - Try AI Concepts prompt packs:
   - Go to **AI**.
@@ -40,10 +40,10 @@ do not enable a relay or send paid requests as part of this walkthrough.
   - Check the matched artists.
   - Review the match rationale explaining why each artist fits.
 
-- Try Dashboard match rationales:
-  - Go to **More → Pipeline**.
-  - Look at idea-to-artist matches.
-  - Check the rationale text shown alongside suggested matches.
+- Try Plan:
+  - Go to **More → Plan**.
+  - Look at each open idea beside its best-matched artists.
+  - Check how many styles each shares, and the pin on anyone with a guest spot nearby.
 
 - Try artist style DNA:
   - Go to **Artists**.

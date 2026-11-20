@@ -126,7 +126,7 @@ export default function ArtistImage({
   }
 
   if (!displaySrc || failed) {
-    // A caller's own empty state (e.g. Top5Hero's rank glyph) replaces the monogram.
+    // A caller's own empty state (a `fallback` node) replaces the monogram.
     if (fallback) return fallback
     // Still resolving: a neutral empty box, so the letter doesn't flash and
     // then vanish when the photo arrives. An unavailable photo keeps the letter.

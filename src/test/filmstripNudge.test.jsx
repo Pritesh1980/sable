@@ -30,7 +30,6 @@ function Harness({ initial }) {
       artists={sorted}
       onOpenArtist={() => {}}
       onSetRank={(id, rank) => setArtists((prev) => rerank(prev, id, rank))}
-      onSetStatus={() => {}}
     />
   )
 }
@@ -154,7 +153,6 @@ describe('FilmstripView — rank-nudge pin', () => {
             artists={sorted}
             onOpenArtist={() => {}}
             onSetRank={(id, rank) => setArtists((prev) => rerank(prev, id, rank))}
-            onSetStatus={() => {}}
           />
         </div>
       )

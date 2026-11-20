@@ -20,7 +20,7 @@ and shows as a chip in the bar. Tap the chip's name to pick another style, or it
 view shows **+ Add artist**, which opens the same capture form as **+ Add** in the header.
 
 A small **Nearby soon** chip in the heading shows the soonest guest spot by a saved artist,
-with **+N** linking to Pipeline.
+with **+N** linking to Plan.
 
 ## The four views
 
@@ -31,7 +31,7 @@ default view; see [Getting started](01-getting-started.md#the-wall-in-artists).
 ![The Wall](../public/guide/wall.png)
 
 ### Strip (filmstrip)
-One artist per row: a thin line with their rank, name, status and **▲ / ▼**, then a strip
+One artist per row: a thin line with their rank, name and **▲ / ▼**, then a strip
 of large photos to swipe sideways. Tap the name or a photo to open the artist, where the
 handle and style tags live.
 
@@ -66,7 +66,7 @@ up to four on a wider screen.
 
 ## Opening an artist
 
-Tap any card to open the full **artist detail**: a photo carousel, their tags, status,
+Tap any card to open the full **artist detail**: a photo carousel, their tags,
 studio, notes, and any conventions they're attending. Tap **Edit details** to change them.
 **← Back**, or the browser's Back (Android's back button, Safari's back swipe), closes it
 and leaves you on the gallery. The address shows the artist (`?artist=…`), so a link to it
@@ -95,10 +95,10 @@ is sent. Each city it finds appears as a suggestion, with any booking note it co
 Nothing is saved until you do.
 
 Spots by your saved artists in the next 90 days and within reach show up as **Nearby
-soon** on the Pipeline page (100 miles by default; the **Within** menu changes it, and this
+soon** on the Plan page (100 miles by default; the **Within** menu changes it, and this
 device remembers your choice), with their notes, and as a chip in the Artists heading (the
-soonest one, then **+N** to Pipeline). Home's **Next** line can suggest it too. Tapping one opens
-the artist at their Guest spots. Artists you've marked *pass* are left out.
+soonest one, then **+N** to Plan). Home's **Next** line can suggest it too. Tapping one opens
+the artist at their Guest spots.
 
 ### Similar ink
 
@@ -111,8 +111,8 @@ processes newly added photos, and each device keeps its own index. Tap a match t
 jump to that artist.
 
 Beneath the matches, a **taste line** shows what the model has learned from your own
-behaviour: how strongly this artist's work fits the taste implied by your ranking and
-shortlist statuses, and where the model would place them on images alone — a useful
+behaviour: how strongly this artist's work fits the taste implied by your ranking,
+and where the model would place them on images alone — a useful
 nudge when it disagrees with where you've actually ranked them.
 
 ### Taste map
@@ -120,7 +120,7 @@ nudge when it disagrees with where you've actually ranked them.
 Tap **Tools → Map** in the Artists header to see your whole collection laid out by what the
 work looks like: artists whose ink looks alike sit closer together, each ringed in the
 colour of their main style (the key is underneath). **✦ You** marks your taste — the
-blend of everyone's work weighted by your ranking and shortlist statuses — so you can
+blend of everyone's work weighted by your ranking — so you can
 see which corner of your collection pulls you most, and spot artists sitting far from
 everything else. Tap anyone to open them. It uses the same on-device style index as
 Similar ink; if you haven't built it yet, the map offers **Build style index**.
@@ -147,8 +147,8 @@ The Artists page keeps its own ranking tools for when you're already there organ
 
 ![Swipe-compare ranking](../public/guide/ranking-swipe.png)
 
-> **Tip:** ranking flows through the whole app — the **Top 5** on Home and the Wall and **Contact next**,
-> and the artist suggestions in *Brief*, all respect the order you set here.
+> **Tip:** ranking flows through the whole app — the top artists on Home, the Wall's **Top 5**,
+> and the artist suggestions in *Ideas* and on *Plan*, all respect the order you set here.
 
 ---
 

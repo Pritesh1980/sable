@@ -5,7 +5,6 @@
 // screenshotIntake.js with the other vision calls.
 import { randomId } from './randomId'
 import { distanceFromMiltonKeynes } from './places'
-import { normalizeArtistStatus } from './planning'
 
 export const NEARBY_DAYS = 90
 export const NEARBY_RADIUS_MILES = 100
@@ -81,13 +80,12 @@ export function splitGuestSpots(spots, today = todayIso()) {
 }
 
 // Guest spots by saved artists that start within `days` (or are already under
-// way) and are within `radiusMiles`. Unknown cities and passed-on artists are
-// left out: "nearby" needs a distance we actually know.
+// way) and are within `radiusMiles`. Unknown cities are left out: "nearby"
+// needs a distance we actually know.
 export function nearbySoon(artists = [], { today = todayIso(), days = NEARBY_DAYS, radiusMiles = NEARBY_RADIUS_MILES } = {}) {
   const horizon = addDaysIso(today, days)
   const rows = []
   for (const artist of artists) {
-    if (normalizeArtistStatus(artist?.status) === 'pass') continue
     for (const spot of artist?.guestSpots || []) {
       if (!spot?.endDate || spot.endDate < today || spot.startDate > horizon) continue
       const distanceMiles = distanceFromMiltonKeynes(spot.city)

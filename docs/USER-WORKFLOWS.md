@@ -20,7 +20,7 @@ flowchart LR
   ARTISTS["Artists<br/>collect · inspect · rank"]
   IDEAS["Ideas<br/>describe · place · link"]
   CONCEPTS["AI Concepts<br/>generate · compare · refine"]
-  PLAN["Pipeline, Radar, Studios<br/>prioritise · check context"]
+  PLAN["Plan, Radar, Studios<br/>match ideas · check context"]
   CONTACT["Artist conversation<br/>outside Sable"]
   OUTCOME["Booked or done<br/>recorded in Sable"]
 
@@ -70,9 +70,6 @@ flowchart TB
   INDEX{"Style index built?"}
   SIMILAR["Review Similar ink<br/>and taste fit"]
   ORGANISE["Use the Artists page<br/>filter, compare, or rank"]
-  STATUS{"Decision"}
-  ACTIVE["Researching → Shortlisted<br/>→ Contact next"]
-  PARK["Maybe or Pass"]
 
   START --> CAPTURE
   SHOW --> RADARIN
@@ -88,18 +85,15 @@ flowchart TB
   WALL --> VIEW --> INDEX
   INDEX -- yes --> SIMILAR --> ORGANISE
   INDEX -- no --> ORGANISE
-  ORGANISE --> STATUS
-  STATUS -- "keep progressing" --> ACTIVE
-  STATUS -- "not for now" --> PARK
-  ACTIVE -. "more research or new photos" .-> WALL
+  ORGANISE -. "more research or new photos" .-> WALL
 ```
 
-Ranking and status answer different questions. Rank is one global preference order;
-status says what should happen next. Moving someone to **Contact next** does not change
-their rank, and moving them to **Maybe** does not delete their research.
+Rank is the one ordering: there is no per-artist status (#220 D removed the
+researching → contact next → pass chain, which the owner did not use). Rank breaks ties
+when two artists suit an idea equally.
 
 Adding from either convention list does both halves of the job at once: the artist
-lands in the gallery as *researching*, and is flagged as attending that show. Winners
+lands in the gallery, and is flagged as attending that show. Winners
 arrive with the award already in their notes, so the reason you saved them survives.
 
 OS sharing requires an installed PWA with share-target support and an active service
@@ -129,7 +123,7 @@ flowchart TB
   FILL["Upload image<br/>optionally fill with Gemini"]
   WRITE["Add title and description"]
   SHAPE["Choose placement, status,<br/>style tags, and reference notes"]
-  MATCH["Sable scores artist matches<br/>tag overlap + status + rank"]
+  MATCH["Sable scores artist matches<br/>tag overlap, then rank"]
   LINK["Review rationale<br/>link suitable artists"]
   BOARD{"Part of a larger piece?"}
   GROUP["Add to a Board<br/>order related ideas"]
@@ -250,39 +244,34 @@ booking, and tattoo appointments remain external.
 
 ```mermaid
 flowchart TB
-  PIPE["Open Pipeline"]
-  RESEARCH["Researching"]
-  SHORT["Shortlisted"]
-  NEXT["Contact next"]
-  PARK{"Pause this artist?"}
-  MAYBE["Maybe or Pass<br/>parked outside active stages"]
+  PLANP["Open Plan<br/>each open idea beside its best artists"]
   CONTEXT{"Check practical context"}
+  NEARBY["Nearby soon<br/>guest spots close by"]
   RADAR["Radar<br/>distance and saved attendance"]
   STUDIO["Studios<br/>location, distance, saved artists"]
   DETAIL["Artist detail<br/>portfolio, notes, conventions"]
   DECIDE{"Contact now?"}
   CONTACT["Message the artist externally<br/>with copied idea or board brief"]
-  MARK["Mark artist Contacted"]
+  LINK["Link the artist to the idea"]
   APPOINT{"Appointment arranged?"}
   BOOKED["Mark related idea Booked"]
   DONE["After the tattoo:<br/>mark idea Done"]
   LOOP["Keep researching<br/>or reprioritise"]
 
-  PIPE --> RESEARCH --> SHORT --> NEXT --> PARK
-  PARK -- yes --> MAYBE
-  PARK -- no --> CONTEXT
+  PLANP --> CONTEXT
+  CONTEXT --> NEARBY --> DECIDE
   CONTEXT --> RADAR --> DECIDE
   CONTEXT --> STUDIO --> DECIDE
   CONTEXT --> DETAIL --> DECIDE
-  DECIDE -- yes --> CONTACT --> MARK --> APPOINT
+  DECIDE -- yes --> CONTACT --> LINK --> APPOINT
   APPOINT -- yes --> BOOKED --> DONE
   APPOINT -- "not yet" --> LOOP
   DECIDE -- no --> LOOP
-  LOOP -. "rank or status changes" .-> PIPE
+  LOOP -. "rank or tags change" .-> PLANP
 ```
 
 Convention attendance is currently curated by the user. Marking an artist as attending
-surfaces that context on Radar, artist detail, Pipeline, and idea matching; Sable does
+surfaces that context on Radar and artist detail; Sable does
 not automatically scrape an event roster.
 
 ---
@@ -323,9 +312,8 @@ flowchart TB
   REVIEW -- "save this artist" --> SAVED
 ```
 
-Top picks use your saved artists, rank/status, known studios and curated choices;
-they do not run CLIP or infer styles for the whole roster. **Pass** artists are omitted
-from picks, and wildcards are explicitly unjudged suggestions. This is a research
+Top picks use your saved artists, rank, known studios and curated choices;
+they do not run CLIP or infer styles for the whole roster. Wildcards are explicitly unjudged suggestions. This is a research
 shortlist, not a mapped walking route.
 
 Imports and winner photos stay on this device. Only artists you explicitly save and

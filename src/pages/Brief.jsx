@@ -27,11 +27,9 @@ import { useAuth } from '../context/useAuth'
 import { useUndoableRemoval } from '../hooks/useUndoableRemoval'
 import { analyzeIdeaImageWithGemini } from '../data/screenshotIntake'
 import {
-  ARTIST_STATUSES,
   buildMatchRationale,
   getImageNote,
   matchArtistsForIdea,
-  normalizeArtistStatus,
   normalizeReferenceImages,
 } from '../data/planning'
 import { itemIdentity } from '../data/undoableRemoval'
@@ -195,7 +193,6 @@ function IdeaModal({ idea, isNew = !idea.id, onClose, onSave, onDelete, onRestor
   const suggested = matchArtistsToIdea(draft, artists).filter(
     (a) => !draft.linkedArtists?.includes(a.id)
   )
-  const statusLabel = (status) => ARTIST_STATUSES.find((s) => s.value === normalizeArtistStatus(status))?.label
 
   function toggleTag(tag) {
     touch('tags')
@@ -590,9 +587,9 @@ function IdeaModal({ idea, isNew = !idea.id, onClose, onSave, onDelete, onRestor
         {matches.length > 0 && (
           <div>
             <p className="text-xs font-mono text-accent tracking-widest uppercase mb-2">Artist match view</p>
-            <p className="text-cream-muted/90 text-[0.6875rem] font-mono mb-3">Ranked by style overlap, shortlist status, and your artist rank.</p>
+            <p className="text-cream-muted/90 text-[0.6875rem] font-mono mb-3">Ranked by shared styles, then your artist rank.</p>
             <div className="space-y-2">
-              {matches.slice(0, 8).map(({ artist, overlapTags, status }) => {
+              {matches.slice(0, 8).map(({ artist, overlapTags }) => {
                 const linked = draft.linkedArtists?.includes(artist.id)
                 return (
                   <button
@@ -615,9 +612,9 @@ function IdeaModal({ idea, isNew = !idea.id, onClose, onSave, onDelete, onRestor
                           <p className="font-display text-lg leading-tight truncate">{artist.name || `@${artist.handle}`}</p>
                           <span className="font-mono text-[0.6875rem] text-accent shrink-0">{overlapTags.length} match</span>
                         </div>
-                        <p className="font-mono text-[0.6875rem] text-cream-muted/70 mt-1">#{artist.rank} · {statusLabel(status)}</p>
+                        <p className="font-mono text-[0.6875rem] text-cream-muted/70 mt-1">#{artist.rank}</p>
                         {(() => {
-                          const rationale = buildMatchRationale(draft, { artist, overlapTags, status })
+                          const rationale = buildMatchRationale(draft, { artist, overlapTags })
                           return rationale ? (
                             <p className="font-body text-[0.8125rem] text-cream-muted/80 leading-snug mt-1">{rationale}</p>
                           ) : null

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import NearbySoon from '../components/NearbySoon'
-import Dashboard from '../pages/Dashboard'
+import Plan from '../pages/Plan'
 import { todayIso } from '../data/guestSpots'
 
 const TODAY = '2027-01-15'
@@ -48,7 +48,7 @@ describe('NearbySoon', () => {
     expect(screen.getByText(/No guest spots within 100 mi/i)).toBeInTheDocument()
   })
 
-  it('compact mode is a chip: the soonest spot, then a +N linking to Pipeline', () => {
+  it('compact mode is a chip: the soonest spot, then a +N linking to Plan', () => {
     localStorage.setItem('tattoo_nearby_radius', '200')
     renderPanel({ compact: true })
     const links = screen.getAllByRole('link')
@@ -57,7 +57,7 @@ describe('NearbySoon', () => {
     expect(links[0]).toHaveTextContent('London')
     expect(links[0]).toHaveAttribute('href', '/gallery?artist=a1#guest-spots')
     expect(links[1]).toHaveTextContent('+1')
-    expect(links[1]).toHaveAttribute('href', '/pipeline')
+    expect(links[1]).toHaveAttribute('href', '/plan')
     expect(screen.getAllByText(/Nearby soon/i)).toHaveLength(1)
   })
 
@@ -67,13 +67,13 @@ describe('NearbySoon', () => {
   })
 })
 
-describe('Pipeline shows Nearby soon', () => {
+describe('Plan shows Nearby soon', () => {
   it('renders the panel from real dates', () => {
     const today = todayIso()
     const [y, m, d] = today.split('-').map(Number)
     const inAWeek = new Date(Date.UTC(y, m - 1, d + 7)).toISOString().slice(0, 10)
     const artists = [{ ...ARTISTS[0], guestSpots: [{ id: 's9', city: 'Oxford', studio: '', startDate: inAWeek, endDate: inAWeek }] }]
-    render(<MemoryRouter><Dashboard artists={artists} ideas={[]} boards={[]} /></MemoryRouter>)
+    render(<MemoryRouter><Plan artists={artists} ideas={[]} /></MemoryRouter>)
     expect(screen.getByRole('heading', { name: 'Nearby soon' })).toBeInTheDocument()
     expect(within(screen.getByRole('list', { name: 'Guest spots nearby soon' })).getByText('Oxford')).toBeInTheDocument()
   })

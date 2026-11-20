@@ -87,9 +87,16 @@ describe('root and pipeline routes', () => {
     expect(await screen.findByRole('heading', { name: first.name || first.handle })).toBeInTheDocument()
   })
 
-  it('renders the old Dashboard content at /pipeline', async () => {
+  it('renders Plan at /plan', async () => {
+    renderAt('/plan')
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'Plan' })).toBeInTheDocument())
+  })
+
+  // #220 D: Pipeline became Plan; old links and bookmarks keep working.
+  it('redirects /pipeline to /plan', async () => {
     renderAt('/pipeline')
-    await waitFor(() => expect(screen.getByText(/how sable works/i)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('heading', { level: 1, name: 'Plan' })).toBeInTheDocument())
+    expect(screen.queryByText(/how sable works/i)).toBeNull()
   })
 
   it('uses the canonical form and shared photo at the Gallery landing', async () => {

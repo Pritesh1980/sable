@@ -36,24 +36,25 @@ describe('Nav', () => {
     expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page')
   })
 
-  it('groups everything else under More: Plan, then App', () => {
+  it('groups everything else under More: Find, then App', () => {
     renderNav()
     openMore()
     const menu = screen.getByRole('dialog', { name: 'More' })
-    const plan = within(menu).getByRole('group', { name: 'Plan' })
+    const plan = within(menu).getByRole('group', { name: 'Find' })
     const app = within(menu).getByRole('group', { name: 'App' })
     expect(within(plan).getAllByRole('link').map((l) => l.getAttribute('href')))
-      .toEqual(['/pipeline', '/conventions', '/studios'])
+      .toEqual(['/plan', '/conventions', '/studios'])
     expect(within(app).getAllByRole('link').map((l) => l.getAttribute('href')))
       .toEqual(['/settings', '/help'])
     expect(within(plan).getByText('Conventions near you')).toBeInTheDocument()
+    expect(within(plan).getByText('Which artist for which idea')).toBeInTheDocument()
   })
 
   it('reaches every page from one list, with no page listed twice', () => {
     const all = [...PRIMARY_LINKS, ...MORE_GROUPS.flatMap((g) => g.links)].map((l) => l.to)
     expect(new Set(all).size).toBe(all.length)
     expect(all.sort()).toEqual(
-      ['/', '/brief', '/concepts', '/conventions', '/gallery', '/help', '/pipeline', '/settings', '/studios'],
+      ['/', '/brief', '/concepts', '/conventions', '/gallery', '/help', '/plan', '/settings', '/studios'],
     )
   })
 

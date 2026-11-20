@@ -29,9 +29,8 @@ function formatArtist(artist) {
   if (!artist) return ''
   const label = artist.name ? `${artist.name} (@${artist.handle})` : `@${artist.handle}`
   const tags = artist.tags?.length ? ` - ${artist.tags.join(', ')}` : ''
-  const status = artist.status ? `\n  Status: ${artist.status}` : ''
   const notes = artist.notes ? `\n  Notes: ${artist.notes}` : ''
-  return `- ${label}${tags}${status}${notes}`
+  return `- ${label}${tags}${notes}`
 }
 
 function formatImageList(images = []) {

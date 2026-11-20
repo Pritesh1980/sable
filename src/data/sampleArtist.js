@@ -35,7 +35,6 @@ export function addSampleArtist(artists = []) {
       styleNote: 'Sample artist, not a real person. Surreal black and grey: an ocean inside an hourglass, fractured marble and stairways into impossible spaces.',
       images: DEMO_ARTWORK.filter((piece) => piece.artistId === SAMPLE_SOURCE).map((piece) => piece.src),
       rank: lastRank + 1,
-      status: 'researching',
       notes: '',
       studio: null,
     },

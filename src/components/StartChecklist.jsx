@@ -2,13 +2,13 @@ import { Link } from 'react-router'
 import { Check, Plus } from 'lucide-react'
 import { SampleArtistButton } from './SampleArtistNotice'
 
-// Pipeline with nobody saved (#220, group C): three steps, one at a time,
+// Plan with nobody saved (#220, groups C and D): three steps, one at a time,
 // instead of seven panels of zeros. Only the current step has a button.
 export default function StartChecklist({ ideas = [], setArtists }) {
   const steps = [
     { title: 'Add an artist', detail: 'Save a tattooist whose work you would wear. One photo is enough to start.', done: false },
-    { title: 'Put them in order', detail: 'Your top five show here, with where each artist stands.', done: false },
-    { title: 'Write an idea', detail: 'A tattoo you want. Sable matches it to the artists who suit it.', done: ideas.length > 0 },
+    { title: 'Put them in order', detail: 'Rank your artists. When two suit an idea equally, the higher one comes first.', done: false },
+    { title: 'Write an idea', detail: 'A tattoo you want. Plan puts it beside the artists who suit it.', done: ideas.length > 0 },
   ]
   const current = steps.findIndex((s) => !s.done)
 

@@ -50,7 +50,7 @@ page: a bottom bar on a phone, a top bar on a laptop.
 
 | The bar | | Under More |
 |---|---|---|
-| **Home** — start page and next step | | **Plan**: **Pipeline** — the shortlist dashboard |
+| **Home** — start page and next step | | **Find**: **Plan** — which artist for which idea |
 | **Artists** — Wall, filmstrip, compare, grid, ranking & Manage | | **Plan**: **Radar** · **Studios** |
 | **Ideas** — tattoo ideas, with Boards as a tab | | **App**: **Settings** · **Help** |
 | **AI** — generated concepts on their own wall | | |
@@ -73,7 +73,7 @@ the current code. Dated files under `plans/` and `superpowers/` are historical d
 records, not activation instructions. The shared guide screenshots use fictional data.
 
 1. **[Getting started](01-getting-started.md)** — Home, the Wall, the full-screen viewer, moving around.
-2. **[Managing artists](02-managing-artists.md)** — add artists, photos, tags, status, notes.
+2. **[Managing artists](02-managing-artists.md)** — add artists, photos, tags, notes.
 3. **[Gallery & ranking](03-gallery-and-ranking.md)** — the classic browse views, filtering, and ranking.
 4. **[Ideas & boards](04-brief-and-boards.md)** — capture ideas, link artists, build boards.
 5. **[Conventions & studios](05-conventions-and-studios.md)** — shows near you, their artist line-ups and competition winners, and where artists work.
@@ -112,8 +112,8 @@ The pieces are designed to feed each other:
    of choice and paste the result back).
 4. **Capture an idea** in *Ideas*, tag it with styles, and it suggests matching artists
    to link. **Group related ideas** on the Boards tab; **Copy brief** shares a clean summary.
-5. **Rank and shortlist** in *Artists*; *More → Pipeline* shows where everyone
-   stands: researching → shortlisted → contact next → contacted.
+5. **Rank** in *Artists*; *More → Plan* puts each open idea beside the artists who
+   suit it.
 6. Check **More → Radar** for conventions where your shortlisted artists are appearing, and
    **Studios** for where they work and how far that is.
 7. **Export a backup** from *More → Settings* so you always hold a restore point.

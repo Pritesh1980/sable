@@ -11,9 +11,9 @@ export const PRIMARY_LINKS = [
 
 export const MORE_GROUPS = [
   {
-    label: 'Plan',
+    label: 'Find',
     links: [
-      { to: '/pipeline', label: 'Pipeline', Icon: ListChecks, description: 'Your shortlist and what to do next' },
+      { to: '/plan', label: 'Plan', Icon: ListChecks, description: 'Which artist for which idea' },
       { to: '/conventions', label: 'Radar', Icon: Radar, description: 'Conventions near you' },
       { to: '/studios', label: 'Studios', Icon: Store, description: 'Where your artists work' },
     ],

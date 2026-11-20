@@ -18,7 +18,7 @@ import { pendingImageJobs } from './data/imageJobs/pendingJobs'
 // Home stays eager — it's the first paint. Every other page is
 // route-split so the initial bundle (and the SW precache built from it) stays
 // small; each page loads on first navigation and is cached thereafter.
-const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Plan = lazy(() => import('./pages/Plan'))
 const Gallery = lazy(() => import('./pages/Gallery'))
 const Brief = lazy(() => import('./pages/Brief'))
 const Conventions = lazy(() => import('./pages/Conventions'))
@@ -107,7 +107,9 @@ function AppShell() {
               path="/"
               element={<HomeRoute artists={artists} setArtists={setArtists} ideas={ideas} concepts={concepts} />}
             />
-            <Route path="/pipeline" element={<Dashboard artists={artists} setArtists={setArtists} ideas={ideas} boards={boards} mergedConventions={mergedConventions} />} />
+            <Route path="/plan" element={<Plan artists={artists} setArtists={setArtists} ideas={ideas} />} />
+            {/* #220 D: Pipeline became Plan; keep old links and bookmarks working. */}
+            <Route path="/pipeline" element={<Navigate to="/plan" replace />} />
             <Route path="/gallery" element={<Gallery artists={artists} setArtists={setArtists} saved={saved} setSaved={setSaved} favourites={favourites} setFavourites={setFavourites} ideas={ideas} mergedConventions={mergedConventions} />} />
             <Route path="/brief" element={<Brief ideas={ideas} setIdeas={setIdeas} artists={artists} mergedConventions={mergedConventions} boards={boards} setBoards={setBoards} />} />
             <Route path="/conventions" element={<Conventions artists={artists} setArtists={setArtists} conventionOverrides={conventionOverrides} setConventionOverrides={setConventionOverrides} conventionLineups={conventionLineups} setConventionLineups={setConventionLineups} conventionWinners={conventionWinners} setConventionWinners={setConventionWinners} />} />

@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router'
 import Home from '../pages/Home'
 import Brief from '../pages/Brief'
 import Concepts from '../pages/Concepts'
-import Dashboard from '../pages/Dashboard'
+import Plan from '../pages/Plan'
 import SampleArtistNotice from '../components/SampleArtistNotice'
 import { AuthProvider } from '../context/AuthContext'
 import { addSampleArtist } from '../data/sampleArtist'
@@ -76,9 +76,9 @@ describe('empty pages (#220, group C)', () => {
     })
   })
 
-  describe('Pipeline', () => {
+  describe('Plan', () => {
     const renderPipeline = (props = {}) => wrap(
-      <Dashboard artists={[]} ideas={[]} boards={[]} setArtists={vi.fn()} {...props} />, '/pipeline')
+      <Plan artists={[]} ideas={[]} setArtists={vi.fn()} {...props} />, '/plan')
 
     it('replaces the zero panels with a three-step checklist', () => {
       renderPipeline()
@@ -105,7 +105,7 @@ describe('empty pages (#220, group C)', () => {
       expect(setArtists.mock.calls[0][0]([])[0].sample).toBe(true)
     })
 
-    it('marks the sample on the pipeline it fills, with the way out', () => {
+    it('marks the sample on the plan it fills, with the way out', () => {
       const setArtists = vi.fn()
       const artists = addSampleArtist([])
       renderPipeline({ artists, setArtists })
@@ -113,10 +113,10 @@ describe('empty pages (#220, group C)', () => {
       expect(setArtists.mock.calls[0][0](artists)).toEqual([])
     })
 
-    it('shows the full pipeline once an artist exists', () => {
-      renderPipeline({ artists: [{ id: 'a', handle: 'a', name: '', tags: [], images: [], rank: 1, status: 'researching' }] })
+    it('drops the checklist once an artist exists', () => {
+      renderPipeline({ artists: [{ id: 'a', handle: 'a', name: '', tags: [], images: [], rank: 1 }] })
       expect(screen.queryByRole('list', { name: /getting started/i })).toBeNull()
-      expect(screen.getByText('Top 5')).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: /write an idea/i })).toBeInTheDocument()
     })
   })
 

@@ -24,10 +24,10 @@ This is a personal app for one user (the owner). (A read-only share link for the
 ## Tech Stack
 
 - **Framework**: React (PWA-configured)
-- **Routing**: React Router v8 — import from **`react-router`**, never `react-router-dom` (that package no longer exists in v8; only `RouterProvider`/`HydratedRouter` come from `react-router/dom`, and Sable uses neither — it's a plain `BrowserRouter`). 9 deep-linkable routes (Home start page, Pipeline `/pipeline`, Artists `/gallery`, Ideas `/brief`, Radar `/conventions`, Studios, AI `/concepts`, Settings, Help); `/?photo=…` → `/gallery?photo=…` (the Wall now lives in Artists); legacy `/manage` → `/gallery?mode=manage` and `/boards` → `/brief?tab=boards` redirect; `/share` → `/gallery?shared=1` is the stable landing URL for the manifest's share target and the iOS Shortcut (don't move it); unknown paths go to `/` (#161). The unit suite renders through `MemoryRouter`, so **it never exercises `BrowserRouter` or `basename`** — verify routing changes in a browser under both `/` and `VITE_BASE=/sable/`.
+- **Routing**: React Router v8 — import from **`react-router`**, never `react-router-dom` (that package no longer exists in v8; only `RouterProvider`/`HydratedRouter` come from `react-router/dom`, and Sable uses neither — it's a plain `BrowserRouter`). 9 deep-linkable routes (Home start page, Plan `/plan`, Artists `/gallery`, Ideas `/brief`, Radar `/conventions`, Studios, AI `/concepts`, Settings, Help); `/?photo=…` → `/gallery?photo=…` (the Wall now lives in Artists); legacy `/manage` → `/gallery?mode=manage`, `/boards` → `/brief?tab=boards` and `/pipeline` → `/plan` redirect; `/share` → `/gallery?shared=1` is the stable landing URL for the manifest's share target and the iOS Shortcut (don't move it); unknown paths go to `/` (#161). The unit suite renders through `MemoryRouter`, so **it never exercises `BrowserRouter` or `basename`** — verify routing changes in a browser under both `/` and `VITE_BASE=/sable/`.
 - **Styling**: One font pair (Marcellus display + Archivo text, both Google Fonts; Marcellus has no italic or bold, so don't add them to `font-display`) and one dark palette; there is no light theme (#220 G). Tailwind CSS **v4**. `src/index.css` starts with `@import 'tailwindcss'` (not the v3 `@tailwind` triple) plus `@config '../tailwind.config.js'` — the JS config is deliberately **kept** rather than ported to CSS-first `@theme`, because `src/test/v2-tokens.spec.js` imports it and asserts the six v2 colours and both font families; moving the tokens into CSS would silently delete that guard. PostCSS uses `@tailwindcss/postcss`; autoprefixer is gone (v4 prefixes via Lightning CSS). Three v4 renames are load-bearing here — **use `rounded-xs`, `backdrop-blur-xs`, `outline-hidden`**, since v4's `rounded-sm`/`backdrop-blur-sm` are a step larger and its `outline-none` no longer means what v3's did. Also: **`leading-*` now overrides the line-height bundled with `text-*`** (in v3 the `text-*` value silently won), so adding both classes actually changes spacing now. Finally, `index.css` defines **`@custom-variant can-hover`** (`@media (hover: hover)`), and hover-revealed controls are written **`can-hover:opacity-0 group-hover:opacity-100`** — gating the *hiding*, not just the reveal. v4 already wraps `hover:`/`group-hover:` in `@media (hover: hover)`, so a bare `opacity-0` left nine controls (including Brief's remove-photo) permanently invisible yet tappable on iPhone. With `can-hover:` they are simply always visible on touch and unchanged on a mouse. This replaced the migration's `@custom-variant hover (&:hover)` shim (#49, Aug 2026); `src/test/a11yAffordances.spec.js` guards both halves. **A source-level test cannot prove the media wrapper survives compilation** — if you touch this, check `dist/assets/*.css` structurally that `.can-hover\:opacity-0` sits *inside* `@media (hover:hover)`, and verify in a real mobile browser context (`isMobile: true`), not a narrow desktop viewport: only that reports `hover: none`.
 - **Hosting**: a live, backend-free demo runs on **GitHub Pages** (`.github/workflows/deploy-pages.yml`, published from `main` at https://pritesh1980.github.io/sable/ under base `/sable/`; it's the `?demo=1` experience, local backend, no secrets). A real accounts + sync deployment (S3 + CloudFront) is written but not applied: `infra/main.tf` + `npm run deploy:aws` (runs from the Mac, because the gitignored artist images exist only there; `docs/DEPLOY-AWS.md`). The build is **base-aware** — `VITE_BASE` threads through the router `basename`, the SW (derives its base from `self.location`), and the precache manifest — so the same code serves at `/` or a sub-path. Two exceptions, both deliberate: `public/manifest.json` is copied verbatim by Vite (nothing rewrites `base` into `public/`), so its URLs are **relative**; and **image paths are stored base-relative and based at display time** by `resolveAssetPath` (`src/data/assetPath.js`), because `canonicalizeImages` persists and syncs static paths verbatim — a baked-in base would outlive its build and strand stored paths on a base change. Never add `BASE_URL` to seed data; a data test enforces this.
-- **AI (Concepts page)**: copy-prompt → paste into ChatGPT/Claude/Gemini and bring the result back, **or** optional OpenAI DALL·E 3 / Gemini image generation with user-supplied keys (stored locally). Saved image results can export browser-generated relief STL files. Artist ↔ idea/concept matching is tag-overlap (`src/data/planning.js`) **plus** the on-device Taste Engine (July 2026): CLIP embeddings via `@huggingface/transformers` — dynamic-import only, enforced by a contract test — power Similar-ink artist matching, concept→artist visual matching and a taste model over rank/status history (`src/data/embeddings.js`, `taste.js`, `styleIndex.js`, `embedder.js`). Screenshot intake (`src/data/screenshotIntake.js`) prefills both add-artist forms and Brief ideas from images via Gemini vision; its parsers are strict (pipe format, tag/handle allowlists, in-image text treated as data not instructions, key sent via `x-goog-api-key` header).
+- **AI (Concepts page)**: copy-prompt → paste into ChatGPT/Claude/Gemini and bring the result back, **or** optional OpenAI DALL·E 3 / Gemini image generation with user-supplied keys (stored locally). Saved image results can export browser-generated relief STL files. Artist ↔ idea/concept matching is tag-overlap (`src/data/planning.js`) **plus** the on-device Taste Engine (July 2026): CLIP embeddings via `@huggingface/transformers` — dynamic-import only, enforced by a contract test — power Similar-ink artist matching, concept→artist visual matching and a taste model over rank history (`src/data/embeddings.js`, `taste.js`, `styleIndex.js`, `embedder.js`). Screenshot intake (`src/data/screenshotIntake.js`) prefills both add-artist forms and Brief ideas from images via Gemini vision; its parsers are strict (pipe format, tag/handle allowlists, in-image text treated as data not instructions, key sent via `x-goog-api-key` header).
 - **Every Gemini call sends the key in the `x-goog-api-key` header, never `?key=`** (URLs land in logs and error reports). `src/test/geminiKeyHeader.test.js` scans `src/` for the URL form, so a new caller can't regress it.
 - **Gemini model IDs are pinned and go stale**: `GEMINI_TEXT_MODEL` (`src/data/discovery.js`, artist discovery/refresh) and `GEMINI_IMAGE_MODEL` (`src/data/geminiImage.js`, concept images). Google retires these (`gemini-2.5-*` → `gemini-3.x` mid-2026); on a "model no longer available" error, bump both against https://ai.google.dev/gemini-api/docs/deprecations. No test pins the IDs.
 - **Accounts & sync**: email/password login and per-owner data; cross-device sync only
@@ -105,8 +105,8 @@ This is a personal app for one user (the owner). (A read-only share link for the
 ### 1. Artist Gallery
 The heart of the app. Visual-first browsing of saved artists.
 
-- Each artist card shows: name, Instagram handle (linked), style tags, shortlist status, and a gallery of reference images (manually added URLs or uploaded screenshots)
-- A single ranked list set via drag (grid), rank nudge (filmstrip), or swipe-compare (the **Rank** button), plus a per-artist shortlist **status** (researching → shortlisted → contact-next → contacted → maybe → pass)
+- Each artist card shows: name, Instagram handle (linked), style tags, and a gallery of reference images (manually added URLs or uploaded screenshots)
+- A single ranked list set via drag (grid), rank nudge (filmstrip), or swipe-compare (the **Rank** button). There is **no per-artist status** any more (#220 D removed researching → contact-next → pass from the UI and from all behaviour); records may still carry a stored `status`, which backups keep, but `src/test/artistStatusRemoved.test.js` fails if code reads or shows it
 - Four gallery views: wall (default), filmstrip, compare, grid — plus a Manage mode (add-artist form + maintenance table) toggled from the page header. Tiers were removed; the artist tables below record provenance only
 - Filter by style tag
 - Tap/click to open full artist detail view
@@ -122,7 +122,7 @@ A personal mood board / brief section.
 ### 3. Convention Radar
 - List of upcoming tattoo conventions
 - Distance from **Milton Keynes** shown for each
-- Cross-reference: which saved artists are attending each convention (surfaced on the dashboard, artist detail, and idea editor)
+- Cross-reference: which saved artists are attending each convention (surfaced on artist detail and the idea editor)
 - Curated in `src/data/conventions.js`; ordered by distance (local show as hero, then nearest first)
 - **Line-up index** (`src/data/lineup.js`, `ConventionLineup.jsx`) and **competition
   winners** (`src/data/winners.js`, `ConventionWinners.jsx`): pasted lists turned into
@@ -160,7 +160,7 @@ A personal mood board / brief section.
 
 The canonical artist list lives in `src/data/artists.js` (`DEFAULT_ARTISTS`) — a
 data test guards its integrity, so change it there, never by re-seeding. The
-curated handles, ranks, statuses and style notes are the owner's personal taste;
+curated handles, ranks and style notes are the owner's personal taste;
 treat them as content, not fixtures. The original pre-load tables moved to the
 untracked `CLAUDE.local.md` (see the note for readers at the end of this file).
 
@@ -182,7 +182,7 @@ Line (TBC), Fatfugu (TBC).
 - `dark-fantasy`
 - `realism`
 
-Each artist in `src/data/artists.js` already carries style tags; they drive matching across Brief, Concepts and the dashboard. Keep them accurate when adding artists.
+Each artist in `src/data/artists.js` already carries style tags; they drive matching across Brief, Concepts and Plan. Keep them accurate when adding artists.
 
 ---
 
@@ -202,8 +202,8 @@ unseeded — ideas are the user's own.
 **Already built (originally scoped as V2):**
 - Mood boards (Boards tab on the Ideas page — group ideas)
 - Artist ↔ idea/concept matching (tag-overlap, `src/data/planning.js`)
-- Status tracking (idea → booked → done; per-artist shortlist statuses)
-- Home pipeline (shortlist stages), Studios, Settings and Help pages; four gallery views (Wall default) + swipe-ranking; Manage merged into Artists
+- Status tracking (idea → booked → done)
+- Plan (`/plan`: each open idea beside its best-matched artists), Studios, Settings and Help pages; four gallery views (Wall default) + swipe-ranking; Manage merged into Artists
 - Convention artist index (line-ups) and competition winners, both cross-referenced against the gallery
 - Web Share Target (#22, shipped in #41) — share an Instagram screenshot straight into add-artist intake
 
