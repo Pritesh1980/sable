@@ -22,7 +22,7 @@ const SECTIONS = [
       'Leave the mouse still and the viewer’s controls fade away, leaving just the image; move it or press a key and they return. The @handle link opens the artist’s Instagram in a new tab.',
       'With a keyboard, Esc also closes whatever else is on top — the add-artist sheet, the More menu, a full-screen photo on an artist’s page, the status picker — one layer per press. Wall photos, concepts, artist cards, thumbnails and ideas open with Tab then Enter.',
       'Every page has the same navigation: a bar along the bottom on a phone, the same list along the top on a laptop. It holds Home, Artists, Ideas, AI and More. More has two groups: Plan (Pipeline, Radar, Studios) and App (Settings, Help).',
-      'The old dashboard lives at More → Pipeline: Top 5 coverflow, shortlist pipeline, idea stats, Nearby soon guest spots and idea matches.',
+      'The old dashboard lives at More → Pipeline: Top 5 coverflow, shortlist pipeline, idea stats, Nearby soon guest spots, idea matches, and Your taste over time (Top 5 by month, risers and fallers, rank-weighted style share by month, and time spent in each status, recorded once a day as ranks and statuses change).',
       'Studios and conventions come pre-loaded. The public demo includes fictional artists; offline owner builds can include a curated starter list. Real-auth libraries do not seed artists from an email match. Ideas, boards and concepts are yours to build.',
     ],
   },
