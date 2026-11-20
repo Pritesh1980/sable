@@ -74,15 +74,15 @@ export function buildMatchRationale(idea, match) {
 }
 
 // Plan (#220 D): up to `count` artists for one idea. Artists already linked to
-// it come first (in rank order, shared styles or not), then the closest
-// matches by shared styles, rank breaking ties.
+// it come first (shared styles or not), then the closest unlinked matches;
+// within each group, most shared styles first, rank breaking ties.
 export function artistsForIdea(idea, artists = [], count = 3) {
   const linkedIds = new Set(idea?.linkedArtists || [])
   const ideaTags = idea?.tags || []
   const linked = artists
     .filter((a) => linkedIds.has(a.id))
-    .sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity))
     .map((artist) => ({ artist, linked: true, overlapTags: ideaTags.filter((t) => artist.tags?.includes(t)) }))
+    .sort((a, b) => b.overlapTags.length - a.overlapTags.length || (a.artist.rank ?? Infinity) - (b.artist.rank ?? Infinity))
   const matched = matchArtistsForIdea(idea, artists)
     .filter(({ artist }) => !linkedIds.has(artist.id))
     .map(({ artist, overlapTags }) => ({ artist, linked: false, overlapTags }))

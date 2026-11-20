@@ -63,7 +63,7 @@ describe('Plan (#220 D)', () => {
   it('puts an artist already linked to the idea first, marked, even with no shared style', () => {
     renderPlan({ ideas: [idea({ linkedArtists: ['ember'] })] })
     const links = within(card('Raven sleeve')).getAllByRole('link').filter((a) => a.getAttribute('href').startsWith('/gallery'))
-    expect(links[0]).toHaveAttribute('href', '/gallery?artist=ember')
+    expect(links[0].getAttribute('href')).toMatch(/^\/gallery\?artist=ember/)
     expect(within(links[0]).getByText(/linked/i)).toBeInTheDocument()
     expect(links).toHaveLength(3)
   })
@@ -72,6 +72,18 @@ describe('Plan (#220 D)', () => {
     renderPlan({ ideas: [idea({ tags: ['fine-line'] })] })
     const link = within(card('Raven sleeve')).getByRole('link', { name: /ember/i })
     expect(within(link).getByText(/london/i)).toBeInTheDocument()
+  })
+
+  it('opens a pinned artist at their Guest spots', () => {
+    renderPlan({ ideas: [idea({ tags: ['fine-line'] })] })
+    expect(within(card('Raven sleeve')).getByRole('link', { name: /ember/i })).toHaveAttribute('href', '/gallery?artist=ember#guest-spots')
+  })
+
+  it('does not ask for styles when the idea already has its artist', () => {
+    renderPlan({ ideas: [idea({ tags: [], linkedArtists: ['dusk'] })] })
+    const c = card('Raven sleeve')
+    expect(within(c).getByRole('link', { name: /dusk/i })).toBeInTheDocument()
+    expect(within(c).queryByText(/add styles to this idea/i)).toBeNull()
   })
 
   it('asks for styles when an idea has none', () => {

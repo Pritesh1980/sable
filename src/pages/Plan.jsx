@@ -26,7 +26,7 @@ function ArtistRow({ artist, linked, overlapTags, spot }) {
   return (
     <li>
       <Link
-        to={`/gallery?artist=${encodeURIComponent(artist.id)}`}
+        to={`/gallery?artist=${encodeURIComponent(artist.id)}${spot ? '#guest-spots' : ''}`}
         className="group flex items-center gap-3 min-h-14 py-2 pr-1 hover:bg-ink-muted/40 rounded-xs transition-colors"
       >
         <span className="w-10 h-12 shrink-0 overflow-hidden rounded-xs bg-ink-muted">
@@ -85,7 +85,7 @@ function IdeaCard({ idea, artists, nearbyByArtist, step }) {
           {rows.map((row) => <ArtistRow key={row.artist.id} {...row} spot={nearbyByArtist.get(row.artist.id)} />)}
         </ol>
       )}
-      {!hasTags && (
+      {!hasTags && rows.length === 0 && (
         <p className={`${hintClass} mt-3`}>
           <Link to={ideaLink} className="text-accent hover:text-cream underline underline-offset-4">Add styles to this idea</Link>
           {' '}to see which artists suit it.

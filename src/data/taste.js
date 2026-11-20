@@ -7,11 +7,17 @@
 // injectable like the rest of src/data/embeddings.js.
 import { artistCentroids, cosineSimilarity } from './embeddings'
 
-// Rank scales interest: #1 counts double the last-placed artist. Ranks can have
-// gaps, so one past the list length is treated as last, never as negative.
-function tasteWeight(artist, count) {
-  const rank = Number.isFinite(artist.rank) ? Math.min(Math.max(artist.rank, 1), count) : count
-  return count > 1 ? 1 + (count - rank) / (count - 1) : 1
+// Rank scales interest: the top artist counts double the last-placed one. It
+// goes by place in rank order, not the stored number, because ranks can have
+// gaps (a deleted artist leaves #2 and #3 with no #1) and must never weigh
+// negative. Equal ranks weigh the same; unranked artists count as last.
+function rankWeights(artists) {
+  const key = (a) => (Number.isFinite(a.rank) ? a.rank : Infinity)
+  const keys = artists.map(key).sort((a, b) => a - b)
+  const count = artists.length
+  // place = how many artists rank strictly ahead, so ties weigh the same.
+  const place = (k) => keys.findIndex((x) => x === k)
+  return new Map(artists.map((artist) => [artist.id, count > 1 ? 1 + (count - 1 - place(key(artist))) / (count - 1) : 1]))
 }
 
 // Unit vector describing the user's visual taste; null when nothing is
@@ -19,12 +25,12 @@ function tasteWeight(artist, count) {
 export function buildTasteVector(artists, getVec) {
   const centroids = artistCentroids(artists, getVec)
   if (centroids.size === 0) return null
-  const count = artists.length
+  const weights = rankWeights(artists)
   let sum = null
   for (const artist of artists) {
     const centroid = centroids.get(artist.id)
     if (!centroid) continue
-    const weight = tasteWeight(artist, count)
+    const weight = weights.get(artist.id)
     if (!sum) sum = new Array(centroid.length).fill(0)
     for (let i = 0; i < centroid.length; i++) sum[i] += weight * centroid[i]
   }

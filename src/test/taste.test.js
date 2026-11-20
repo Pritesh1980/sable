@@ -36,6 +36,13 @@ describe('buildTasteVector', () => {
     expect(buildTasteVector(withStatus, getVec)).toEqual(buildTasteVector(artists, getVec))
   })
 
+  it('keeps rank order when ranks have gaps (an artist was deleted)', () => {
+    // #1 was removed: #2 must still outweigh #3, so the taste leans to #2.
+    const gapped = [{ id: 'three', images: ['/passed1.jpg'], rank: 3 }, { id: 'two', images: ['/loved1.jpg'], rank: 2 }]
+    const taste = buildTasteVector(gapped, getVec)
+    expect(cosineSimilarity(taste, [1, 0, 0])).toBeGreaterThan(cosineSimilarity(taste, [0, 0, 1]))
+  })
+
   it('never weights an artist negatively, even with a rank past the list length', () => {
     // Ranks can have gaps (9 of 4 here): that must not turn into a pull away.
     const only = [{ id: 'passed', images: ['/passed1.jpg'], rank: 9 }, { id: 'loved', images: ['/loved1.jpg'], rank: 1 }]

@@ -4,6 +4,7 @@ import {
   buildMatchRationale,
   getImageNote,
   getImageUrl,
+  artistsForIdea,
   matchArtistsForIdea,
   normalizeReferenceImages,
   setImageNote,
@@ -118,3 +119,20 @@ describe('setImageNote (#114)', () => {
     ])
   })
 })
+
+describe('artistsForIdea (#220 D)', () => {
+  const art = (id, rank, tags = []) => ({ id, rank, tags })
+
+  it('orders linked artists by shared styles, then rank, before any suggestion', () => {
+    const artists = [art('r1', 1), art('r2', 2), art('r3', 3), art('r4', 4, ['blackwork', 'surrealism']), art('s', 5, ['blackwork'])]
+    const idea = { tags: ['blackwork', 'surrealism'], linkedArtists: ['r1', 'r2', 'r3', 'r4'] }
+    expect(artistsForIdea(idea, artists).map((r) => r.artist.id)).toEqual(['r4', 'r1', 'r2'])
+  })
+
+  it('fills up with matches that are not linked', () => {
+    const artists = [art('a', 1, ['blackwork']), art('b', 2, ['blackwork']), art('c', 3, [])]
+    const rows = artistsForIdea({ tags: ['blackwork'], linkedArtists: ['c'] }, artists)
+    expect(rows.map((r) => [r.artist.id, r.linked])).toEqual([['c', true], ['a', false], ['b', false]])
+  })
+})
+
