@@ -11,6 +11,7 @@ export function guideUrl(guide) {
 
 export const HELP_GROUPS = [
   {
+    id: 'getting-started',
     label: 'Getting started',
     topics: [
       {
@@ -20,6 +21,7 @@ export const HELP_GROUPS = [
           'Home shows your top artists, ideas and concepts, and one suggested next step.',
           'The bar along the bottom (along the top on a laptop) has Home, Artists, Ideas, AI and More.',
           'More holds Find (Plan, Radar, Studios) and App (Settings, Help).',
+          'Artists opens on the Wall. Strip, Compare and Grid show one card per artist: tap a card to open their page.',
         ],
         image: 'nav-more.png',
         guide: '01-getting-started.md#moving-around',
@@ -27,6 +29,7 @@ export const HELP_GROUPS = [
     ],
   },
   {
+    id: 'artists',
     label: 'Artists and photos',
     topics: [
       {
@@ -58,7 +61,7 @@ export const HELP_GROUPS = [
           'Tap any photo on the Wall and it fills the screen.',
           'On a phone, swipe left or right for this artist’s photos, up for the next artist, and down to close.',
           'On a laptop, use the arrow keys, and Esc to close.',
-          'Tap the photo, or More, for the artist’s details and tools.',
+          'For the artist’s notes and tools, tap the photo (or More) on a phone, or press I on a laptop.',
         ],
         image: 'wall-viewer.png',
         guide: '01-getting-started.md#the-full-screen-viewer--one-click-in',
@@ -76,7 +79,7 @@ export const HELP_GROUPS = [
         id: 'similar',
         question: 'How do I find work like a photo I like?',
         steps: [
-          'Open the photo and tap More like this (M on a laptop; in the bottom panel on a phone).',
+          'Open the photo and tap More like this. On a phone, tap the photo first to show the panel; on a laptop, press M.',
           'It shows the three closest artists, then the most similar photos.',
           'The first time, tap Build style index. It runs on this device, and your photos never leave it.',
           'To see one style on the Wall, tap Filter and pick it.',
@@ -98,6 +101,7 @@ export const HELP_GROUPS = [
     ],
   },
   {
+    id: 'ideas-ai',
     label: 'Ideas and AI',
     topics: [
       {
@@ -105,9 +109,9 @@ export const HELP_GROUPS = [
         question: 'How do I write down a tattoo idea?',
         steps: [
           'Ideas → +.',
-          'Give it a title, styles, a placement and reference photos, then Save.',
+          'Give it a title, styles, a placement and reference photos, then tap Add.',
           'Artists with matching styles appear in the editor: tap one to link them.',
-          'The Boards tab groups ideas together.',
+          'Share as image makes a card to send an artist. The Boards tab groups ideas together.',
         ],
         image: 'brief-idea-editor.png',
         guide: '04-brief-and-boards.md#create-or-edit-an-idea',
@@ -119,6 +123,7 @@ export const HELP_GROUPS = [
           'More → Plan lists each open idea with up to three of your artists.',
           'Artists you linked come first, then those sharing the most styles, then your rank.',
           'A pin means they have a guest spot nearby soon.',
+          'Add an artist’s trips under Guest spots on their page.',
         ],
         image: 'plan.png',
         guide: '01-getting-started.md#the-plan-page',
@@ -141,7 +146,7 @@ export const HELP_GROUPS = [
         steps: [
           'On an AI result with an image, choose View on arm in 3D. From an idea, tap On arm on a reference photo.',
           'Drag to turn the arm and pinch to resize; the size shows in centimetres.',
-          'Try on skin puts the design over your live camera instead.',
+          'Or choose Try on skin, then Live camera, to see it over your camera view.',
         ],
         image: 'concept-arm.png',
         guide: '06-concepts.md#see-a-concept-on-the-arm-in-3d',
@@ -151,7 +156,7 @@ export const HELP_GROUPS = [
         question: 'How do I 3D print a design?',
         steps: [
           'On an AI result with an image, choose Make STL. From an idea, tap 3D print on a reference photo.',
-          'Pick a style, check the 3D preview, then tap Download STL.',
+          'Pick a style, check the 3D preview, then tap Download.',
           'From a photo of a real tattoo, Lift the tattoo (needs a Gemini key) redraws the ink flat first.',
         ],
         guide: '06-concepts.md#export-a-relief-stl',
@@ -159,6 +164,7 @@ export const HELP_GROUPS = [
     ],
   },
   {
+    id: 'shows-library',
     label: 'Shows and your library',
     topics: [
       {
@@ -166,7 +172,7 @@ export const HELP_GROUPS = [
         question: 'Which conventions are my artists going to?',
         steps: [
           'More → Radar lists conventions, nearest to Milton Keynes first.',
-          'On a card, tap Edit under Your artists attending to mark who is going.',
+          'On a card, tap Edit beside your artists attending to mark who is going.',
           'Artist index lists a show’s line-up and says which of them you already have.',
         ],
         image: 'conventions.png',
@@ -176,10 +182,10 @@ export const HELP_GROUPS = [
         id: 'backup',
         question: 'How do I back up my library?',
         steps: [
-          'More → Settings → Export Backup downloads one file with your artists, ideas, concepts and photos.',
-          'Check the file saved, and keep a copy off this device.',
+          'More → Settings → Export Backup downloads one file with your artists, ideas, concepts and photos. Keep a copy off this device.',
+          'If it says some photos couldn’t be read, reconnect and export again.',
           'Import Backup restores a file, replacing what is here now.',
-          'Your library stays on this device: only cloud-storage builds sync to your other devices.',
+          'Unless your Sable is set up for cloud sync, your library lives only on this device.',
         ],
         image: 'settings.png',
         guide: '07-backup-and-settings.md#export-a-backup',

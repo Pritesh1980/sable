@@ -43,7 +43,8 @@ describe('Help topics', () => {
     for (const topic of topics) {
       const [file, anchor] = topic.guide.split('#')
       expect(existsSync(`docs/${file}`), topic.guide).toBe(true)
-      expect(anchorsIn(file), topic.guide).toContain(anchor)
+      // GitHub suffixes a repeated heading (-1, -2), so the target must be unique.
+      expect(anchorsIn(file).filter((a) => a === anchor), topic.guide).toHaveLength(1)
       expect(guideUrl(topic.guide)).toBe(`${GUIDE_BASE}${topic.guide}`)
     }
   })

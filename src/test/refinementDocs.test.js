@@ -13,7 +13,7 @@ it('documents manual fallback, durability limits and deferred activation', () =>
   expect(activation).toContain('8 MiB')
   expect(activation).toContain('dispatched')
   const help = readFileSync('src/data/helpTopics.js', 'utf8')
-  expect(help).toContain('only cloud-storage builds sync')
+  expect(help).toContain('Unless your Sable is set up for cloud sync, your library lives only on this device')
   expect(help).not.toContain('stored in your account, and synced')
   expect(help + concepts).not.toContain('$0.04')
   const workflows = readFileSync('docs/USER-WORKFLOWS.md', 'utf8')

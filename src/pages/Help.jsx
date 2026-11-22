@@ -5,6 +5,7 @@ import { GUIDE_BASE, HELP_GROUPS, guideUrl } from '../data/helpTopics'
 // On-device quick help (#220 I): a How-do-I list with short answers. The full,
 // screenshot-rich guide is docs/ on GitHub; each answer links to its part of it.
 // Screenshots are served from public/guide/ (the same image set the docs use).
+// One answer is open at a time, so tall phone screenshots never stack up.
 
 function Topic({ topic, open, onToggle }) {
   const panelId = `help-${topic.id}`
@@ -21,52 +22,46 @@ function Topic({ topic, open, onToggle }) {
         <span aria-hidden="true" className={`text-cream-muted/60 text-xs transition-transform shrink-0 ${open ? 'rotate-180' : ''}`}>▾</span>
       </button>
 
-      {open && (
-        <div id={panelId} className="px-4 pb-4 animate-slide-up">
-          <ol aria-label={`Steps: ${topic.question}`} className="space-y-2 mb-3">
-            {topic.steps.map((step, i) => (
-              <li key={i} className="flex gap-3 text-sm font-body text-cream-muted leading-relaxed">
-                <span className="font-mono text-accent/80 text-xs tabular-nums mt-0.5 shrink-0">{i + 1}</span>
-                <span>{step}</span>
-              </li>
-            ))}
-          </ol>
-          <a
-            href={guideUrl(topic.guide)}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex min-h-11 items-center font-body text-sm text-accent hover:text-cream transition-colors"
-          >
-            More in the full guide ↗
-          </a>
-          {topic.image && (
-            <div className="w-fit max-w-full rounded-xs overflow-hidden border border-ink-border bg-ink-muted mt-2">
-              <img
-                src={`${import.meta.env.BASE_URL}guide/${topic.image}`}
-                alt={topic.question}
-                loading="lazy"
-                className="block max-w-full max-h-[60vh] w-auto"
-                onError={(e) => { e.currentTarget.parentElement.style.display = 'none' }}
-              />
-            </div>
-          )}
-        </div>
-      )}
+      <div id={panelId} hidden={!open} className="px-4 pb-4 animate-slide-up">
+        {open && (
+          <>
+            <ul aria-label={`Steps: ${topic.question}`} className="space-y-2 mb-1">
+              {topic.steps.map((step, i) => (
+                <li key={i} className="flex gap-3 text-sm font-body text-cream-muted leading-relaxed">
+                  <span aria-hidden="true" className="mt-[0.6em] h-1 w-1 rounded-full bg-accent/80 shrink-0" />
+                  <span>{step}</span>
+                </li>
+              ))}
+            </ul>
+            <a
+              href={guideUrl(topic.guide)}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`More in the full guide: ${topic.question}`}
+              className="inline-flex min-h-11 items-center font-body text-sm text-accent hover:text-cream transition-colors"
+            >
+              More in the full guide ↗
+            </a>
+            {topic.image && (
+              <div className="w-fit max-w-full mx-auto rounded-xs overflow-hidden border border-ink-border bg-ink-muted mt-2">
+                <img
+                  src={`${import.meta.env.BASE_URL}guide/${topic.image}`}
+                  alt=""
+                  loading="lazy"
+                  className="block max-w-full max-h-[60vh] w-auto"
+                  onError={(e) => { e.currentTarget.parentElement.style.display = 'none' }}
+                />
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </li>
   )
 }
 
 export default function Help() {
-  const [open, setOpen] = useState(() => new Set())
-
-  function toggle(id) {
-    setOpen((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
+  const [openId, setOpenId] = useState(null)
 
   return (
     <div className="min-h-screen bg-ink-black max-w-3xl mx-auto px-4 md:px-8 pt-safe-top pb-24">
@@ -89,9 +84,9 @@ export default function Help() {
 
       <div className="space-y-6">
         {HELP_GROUPS.map((group) => (
-          <section key={group.label} aria-labelledby={`help-group-${group.label}`}>
+          <section key={group.id} aria-labelledby={`help-group-${group.id}`}>
             <h2
-              id={`help-group-${group.label}`}
+              id={`help-group-${group.id}`}
               className="font-mono text-[11px] uppercase tracking-[0.2em] text-cream-muted/70 mb-2"
             >
               {group.label}
@@ -101,8 +96,8 @@ export default function Help() {
                 <Topic
                   key={topic.id}
                   topic={topic}
-                  open={open.has(topic.id)}
-                  onToggle={() => toggle(topic.id)}
+                  open={openId === topic.id}
+                  onToggle={() => setOpenId((prev) => (prev === topic.id ? null : topic.id))}
                 />
               ))}
             </ul>
