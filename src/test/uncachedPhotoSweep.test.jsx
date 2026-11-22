@@ -29,23 +29,22 @@ const { default: ArtistTable } = await import('../components/ArtistTable')
 const { default: CompareView } = await import('../components/CompareView')
 const { default: FilmstripView } = await import('../components/FilmstripView')
 const { default: RankingMode } = await import('../components/RankingMode')
-const { default: Top5Hero } = await import('../components/Top5Hero')
 const { default: TasteMap } = await import('../components/TasteMap')
 const { default: SimilarArtists } = await import('../components/SimilarArtists')
 const { default: WallPiece } = await import('../components/WallPiece')
 const { default: WallViewer } = await import('../components/WallViewer')
 const { default: WallView } = await import('../components/WallView')
 const { default: Gallery } = await import('../pages/Gallery')
-const { default: Dashboard } = await import('../pages/Dashboard')
+const { default: Plan } = await import('../pages/Plan')
 const { buildWallItems } = await import('../data/wall')
 
 const REF = { key: 'user/u1/artists/zoia/1.jpg' }
 const OFFLINE = {
-  id: 'zoia', handle: 'zoia.ink', name: 'Zoia', rank: 1, status: 'contact-next',
+  id: 'zoia', handle: 'zoia.ink', name: 'Zoia', rank: 1,
   tags: ['surrealism'], images: [REF], notes: '', studio: null,
 }
 const NONE = {
-  id: 'bare', handle: 'bare.ink', name: 'Bare', rank: 2, status: 'shortlisted',
+  id: 'bare', handle: 'bare.ink', name: 'Bare', rank: 2,
   tags: ['blackwork'], images: [], notes: '', studio: null,
 }
 
@@ -123,7 +122,7 @@ describe('uncached { key } photo across artist-photo surfaces (counts include of
 
   it('FilmstripView: the row has a photo strip (not "No images yet") holding the monogram', async () => {
     const { container } = render(
-      <FilmstripView artists={[OFFLINE, NONE]} onOpenArtist={vi.fn()} onSetRank={vi.fn()} onSetStatus={vi.fn()} />,
+      <FilmstripView artists={[OFFLINE, NONE]} onOpenArtist={vi.fn()} onSetRank={vi.fn()} />,
     )
     await settledMonogram(container)
     expect(screen.getAllByText('No images yet')).toHaveLength(1) // only the photo-less artist
@@ -156,9 +155,10 @@ describe('uncached { key } photo across artist-photo surfaces (counts include of
     expect(await screen.findByText('1 / 1')).toBeInTheDocument()
   })
 
-  it('Dashboard: the stage card shows the monogram for the offline cover photo', async () => {
+  it('Plan: an idea artist row shows the monogram for the offline cover photo', async () => {
+    const idea = { id: 'i1', title: 'Moth', status: 'idea', tags: ['surrealism'], linkedArtists: [] }
     const { container } = render(
-      <MemoryRouter><Dashboard artists={[OFFLINE, NONE]} ideas={[]} boards={[]} /></MemoryRouter>,
+      <MemoryRouter><Plan artists={[OFFLINE, NONE]} ideas={[idea]} /></MemoryRouter>,
     )
     await waitFor(() => expect(getUrl).toHaveBeenCalled())
     expect(within(container).queryByRole('img')).not.toBeInTheDocument()
@@ -192,18 +192,6 @@ describe('uncached { key } photo across artist-photo surfaces (counts include of
     await waitFor(() => expect(getUrl).toHaveBeenCalled())
     expect(await screen.findAllByText('Z')).not.toHaveLength(0)
     expect(screen.queryByRole('img', { name: /Zoia/ })).not.toBeInTheDocument()
-  })
-
-  it('Top5Hero: the cover tile for the offline photo is present, with the rank glyph and no dead img', async () => {
-    const { container } = render(
-      <MemoryRouter><Top5Hero artists={[OFFLINE]} bench={[NONE]} /></MemoryRouter>,
-    )
-    await waitFor(() => expect(getUrl).toHaveBeenCalled())
-    // The artist's tile must actually be there: its focus button, holding the
-    // hero's own rank-glyph fallback (Top5Hero passes `fallback`, so no monogram).
-    const tile = await screen.findByRole('button', { name: 'Focus Zoia (rank 1)' })
-    expect(tile.querySelector('span.bg-ink-card')).toHaveTextContent('1')
-    expect(within(container).queryByRole('img')).not.toBeInTheDocument()
   })
 
   it('TasteMap: an artist whose only photo is uncached is not placed (no vector) while an indexed one is', async () => {

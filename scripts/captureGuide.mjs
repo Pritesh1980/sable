@@ -49,8 +49,8 @@ try {
       await page.getByRole('button', { name: 'More' }).click()
       await capture(page, 'nav-more')
       await page.keyboard.press('Escape')
-      await page.goto('/pipeline')
-      await capture(page, 'dashboard-desktop')
+      await page.goto('/plan')
+      await capture(page, 'plan-desktop')
       await page.goto('/gallery')
       await page.getByRole('button', { name: 'Grid view', exact: true }).click()
       await capture(page, 'gallery-grid-desktop')
@@ -65,7 +65,7 @@ try {
       await page.getByLabel('Your idea').fill('A quiet temple, three pillars and a softened ink wash')
       await capture(page, 'concepts')
     } else {
-      for (const [path, name] of [['/pipeline', 'dashboard'], ['/conventions', 'conventions'],
+      for (const [path, name] of [['/plan', 'plan'], ['/conventions', 'conventions'],
         ['/studios', 'studios'], ['/help', 'help-overview'], ['/brief', 'brief-list']]) {
         await page.goto(path)
         await capture(page, name)

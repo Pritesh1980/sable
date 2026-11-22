@@ -236,7 +236,7 @@ flowchart TB
   end
 
   subgraph SUPPORT["Supporting journeys"]
-    PIPELINE["/pipeline — Pipeline"]
+    PIPELINE["/plan — Plan (/pipeline redirects)"]
     RADAR["/conventions — Radar"]
     STUDIOS["/studios — Studios"]
     SETTINGS["/settings — Settings"]
@@ -603,7 +603,7 @@ flowchart TB
   IMG[("Reference images<br/>on device")]
   EMB["embedder.js<br/>dynamic import only"]
   IDX[("Style index — IndexedDB<br/>keyed by model id, not synced")]
-  SIG["Taste signal<br/>from rank and status history"]
+  SIG["Taste signal<br/>from rank history"]
   OUT1["Similar-ink artist matching"]
   OUT2["Concept to artist matching"]
   MODEL["Hosted CLIP model and processor"]
@@ -835,7 +835,7 @@ flowchart TB
   GALLERY["Saved artists + attendance"]
   INDEX["indexLineup<br/>match against gallery"]
   AZ["All / Saved / New<br/>searchable artist index"]
-  PLAN["buildShowPlan<br/>rank · status · styles · studio connections"]
+  PLAN["buildShowPlan<br/>rank · styles · studio connections"]
   CURATED["Bundled studios and curated picks<br/>priority / wildcard reasons"]
   PICKS["Top picks<br/>Must see · From the field guide · Wildcards · Worth a look<br/>unmatched curated picks reported"]
   KEEP["Explicit Add artist / attendance toggle"]
@@ -855,7 +855,7 @@ flowchart TB
 
 The shipped seed is merged at read time, not copied wholesale into localStorage.
 `cleared: true` suppresses it until a new import lifts the flag. Scoring uses existing
-gallery rank/status/tags, attendance, studio connections and curated reasons; artists
+gallery rank/tags, attendance, studio connections and curated reasons; artists
 marked **Pass** are excluded from picks. Unmatched strangers remain in the A–Z list
 without invented style scores. `bigLondon2026Floorplan.js` contains checked-in booth
 coordinates, but no runtime component consumes them yet: a walking route or map is

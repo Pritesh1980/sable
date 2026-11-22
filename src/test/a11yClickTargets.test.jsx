@@ -22,22 +22,23 @@ beforeEach(() => localStorage.clear())
 describe('keyboard-operable click targets', () => {
   it('filmstrip thumbnails and the artist block open the artist', () => {
     const onOpenArtist = vi.fn()
-    render(<FilmstripView artists={[artist]} onOpenArtist={onOpenArtist} onSetRank={vi.fn()} onSetStatus={vi.fn()} />)
+    render(<FilmstripView artists={[artist]} onOpenArtist={onOpenArtist} onSetRank={vi.fn()} />)
     const buttons = screen.getAllByRole('button', { name: /open zoia/i })
     expect(buttons.length).toBe(3) // artist block + two thumbnails
     for (const b of buttons) fireEvent.keyDown(b, { key: ' ' })
     expect(onOpenArtist).toHaveBeenCalledTimes(3)
   })
 
-  // #220 E: the row lost its @handle link (it is on the artist's page), so the
-  // nested control that must not open the artist is now the status chip.
-  it('a key pressed on the filmstrip status chip does not also open the artist', () => {
+  // #220 E: the row lost its @handle link (it is on the artist's page), and
+  // #220 D its status chip, so the nested control that must not open the
+  // artist is now the rank nudge.
+  it('a key pressed on the filmstrip rank nudge does not also open the artist', () => {
     const onOpenArtist = vi.fn()
-    render(<FilmstripView artists={[artist]} onOpenArtist={onOpenArtist} onSetRank={vi.fn()} onSetStatus={vi.fn()} />)
-    const row = screen.getByTestId('filmstrip-row')
-    const chip = [...row.querySelectorAll('button')].find((b) => /tracking-widest/.test(b.className))
-    fireEvent.keyDown(chip, { key: 'Enter' })
-    fireEvent.click(chip)
+    render(<FilmstripView artists={[artist, { ...artist, id: 'two', handle: 'two', rank: 2 }]} onOpenArtist={onOpenArtist} onSetRank={vi.fn()} />)
+    const row = screen.getAllByTestId('filmstrip-row')[0]
+    const nudge = within(row).getByRole('button', { name: /down$/i })
+    fireEvent.keyDown(nudge, { key: 'Enter' })
+    fireEvent.click(nudge)
     expect(onOpenArtist).not.toHaveBeenCalled()
   })
 
@@ -84,14 +85,5 @@ describe('overlays close with Escape', () => {
     expect(screen.getByRole('dialog', { name: /more/i })).toBeInTheDocument()
     pressEscape()
     expect(screen.queryByRole('dialog', { name: /more/i })).toBeNull()
-  })
-
-  it('the filmstrip status picker closes with Escape', () => {
-    render(<FilmstripView artists={[artist]} onOpenArtist={vi.fn()} onSetRank={vi.fn()} onSetStatus={vi.fn()} />)
-    fireEvent.click(screen.getByRole('button', { name: /researching/i }))
-    const options = () => screen.queryAllByRole('button', { name: /shortlisted/i })
-    expect(options().length).toBeGreaterThan(0)
-    pressEscape()
-    expect(options().length).toBe(0)
   })
 })

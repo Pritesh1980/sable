@@ -147,7 +147,7 @@ describe('buildIdeaBrief', () => {
     expect(text).toContain('Placement: forearm')
     expect(text).toContain('Note: Use the wing shape, not the exact flower.')
     expect(text).toContain('- Artist One (@artist_one) - blackwork')
-    expect(text).toContain('Status: contact-next')
+    expect(text).not.toContain('Status: contact-next') // status left the app (#220 D)
     expect(text).toContain('Notes: Strong insects.')
   })
 })

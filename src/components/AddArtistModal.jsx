@@ -42,7 +42,6 @@ export default function AddArtistModal({ artists = [], setArtists, setSaved, use
   const [handle, setHandle] = useState(initial?.handle || '')
   const [name, setName] = useState(initial?.name || '')
   const [tags, setTags] = useState(initial?.tags || [])
-  const [status, setStatus] = useState('researching')
   const [staged, setStaged] = useState([])
   const [dragOver, setDragOver] = useState(false)
   const [error, setError] = useState('')
@@ -118,7 +117,7 @@ export default function AddArtistModal({ artists = [], setArtists, setSaved, use
   }, [pendingSave, artists, userId, onSaved, onClose])
 
   const dirty = initialFilePending || staged.length > 0 || handle !== baseline.current.handle || name !== baseline.current.name ||
-    JSON.stringify(tags) !== JSON.stringify(baseline.current.tags) || styleNote !== '' || status !== 'researching'
+    JSON.stringify(tags) !== JSON.stringify(baseline.current.tags) || styleNote !== ''
   function mayDismiss() {
     return !saveLock.current && (!dirty || window.confirm('Discard this artist capture?'))
   }
@@ -415,7 +414,7 @@ export default function AddArtistModal({ artists = [], setArtists, setSaved, use
       if (!alive.current) return
       if (currentUserId.current !== owner) throw new Error('Owner changed')
       if (stagedRef.current !== files) throw new Error('Capture changed during upload')
-      const artist = target || createArtist({ handle: cleanHandle, name: name.trim(), tags, status, styleNote: styleNote.trim(), images }, artists)
+      const artist = target || createArtist({ handle: cleanHandle, name: name.trim(), tags, styleNote: styleNote.trim(), images }, artists)
       setArtists((prev) => {
         if (!alive.current || currentUserId.current !== owner) return prev
         if (target) return prev.map((a) => a.id === target.id && a.generation === target.generation
@@ -504,10 +503,6 @@ export default function AddArtistModal({ artists = [], setArtists, setSaved, use
                   {tag}
                 </button>)}
               </div>
-              <label htmlFor="capture-status" className="block text-xs text-v2-muted mt-3 mb-2">Status</label>
-              <select id="capture-status" className={inputClass} value={status} onChange={(e) => setStatus(e.target.value)}>
-                {['researching', 'shortlisted', 'contact-next', 'contacted', 'maybe', 'pass'].map((value) => <option key={value} value={value}>{value}</option>)}
-              </select>
               <label htmlFor="quick-add-stylenote" className="block text-xs text-v2-muted mt-3 mb-2">Style note</label>
               <textarea id="quick-add-stylenote" rows={2} className={inputClass} value={styleNote}
                 onChange={(e) => { aiPrefill.current.styleNote = null; setStyleNote(e.target.value) }} />

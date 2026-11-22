@@ -35,7 +35,7 @@ for (const width of [320, 375, 430]) {
     await dialog.getByRole('button', { name: 'Save', exact: true }).click()
     await expect(dialog).not.toBeVisible()
     await expect(page.getByRole('status').filter({ hasText: /^Artist saved/ })).toBeVisible()
-    await expect.poll(async () => (await savedRow(page, 'fixture.capture'))?.status).toBe('researching')
+    await expect.poll(async () => (await savedRow(page, 'fixture.capture'))?.handle).toBe('fixture.capture')
 
     await page.setViewportSize({ width, height: 740 })
     dialog = await capture(page)

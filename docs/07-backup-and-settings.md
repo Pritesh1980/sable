@@ -28,7 +28,7 @@ are available when clipboard reading is denied or unsupported.
 Tap **Export Backup**. A JSON download is requested — named with the date, e.g.
 `tattoo-backup-2026-05-30.json`. It contains the current document snapshot:
 
-- artists, their tags, status, studio, notes and ranks
+- artists, their tags, studio, notes and ranks (an old stored status, if any, rides along too)
 - canonical local saved images embedded as image bytes, including paid concept results
 - ideas, boards and AI concepts
 - photos saved without an artist

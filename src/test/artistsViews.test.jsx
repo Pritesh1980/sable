@@ -122,7 +122,7 @@ describe('Artists style filter', () => {
 
 describe('Filmstrip rows', () => {
   function renderStrip() {
-    render(<FilmstripView artists={artists} onOpenArtist={() => {}} onSetRank={() => {}} onSetStatus={() => {}} />)
+    render(<FilmstripView artists={artists} onOpenArtist={() => {}} onSetRank={() => {}} />)
     return screen.getAllByTestId('filmstrip-row')[0]
   }
 
@@ -130,7 +130,7 @@ describe('Filmstrip rows', () => {
     const row = renderStrip()
     expect(row.className).toMatch(/flex-col/)
     expect(within(row).getByRole('heading')).toHaveTextContent('Ana')
-    expect(within(row).getByText('Shortlisted')).toBeInTheDocument()
+    expect(within(row).queryByText('Shortlisted')).toBeNull() // status left the app (#220 D)
     expect(within(row).getByRole('button', { name: 'Move Ana down' })).toBeInTheDocument()
   })
 

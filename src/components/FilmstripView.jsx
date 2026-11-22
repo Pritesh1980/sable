@@ -1,38 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import ArtistImage from './ArtistImage'
-import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
-import { useEscapeToClose, useFocusOnOpen } from '../hooks/useDialogFocus'
+import { useFocusOnOpen } from '../hooks/useDialogFocus'
 import { activateOnKey } from '../a11y/activate'
 
-function StatusPicker({ artist, onSetStatus, onClose }) {
-  const current = normalizeArtistStatus(artist.status)
-  const ref = useEscapeToClose(onClose)
-  return (
-    <div ref={ref} className="absolute top-full left-0 z-30 mt-1 bg-ink-card border border-ink-border rounded-xs shadow-2xl shadow-black/70 min-w-[148px]">
-      {ARTIST_STATUSES.map((s) => (
-        <button
-          key={s.value}
-          onClick={(e) => { e.stopPropagation(); onSetStatus(artist.id, s.value); onClose() }}
-          className={`w-full text-left px-3 py-2 text-[0.625rem] font-mono tracking-widest uppercase transition-colors hover:bg-ink-muted ${
-            s.value === current ? 'bg-ink-muted/60' : ''
-          } ${s.tone}`}
-        >
-          {s.label}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-function FilmstripRow({ artist, onOpen, index, onSetRank, onNudge, onSetStatus, isFirst, isLast, totalArtists, onRowMouseLeave }) {
+function FilmstripRow({ artist, onOpen, index, onSetRank, onNudge, isFirst, isLast, totalArtists, onRowMouseLeave }) {
   const scrollRef = useRef(null)
   const [editingRank, setEditingRank] = useState(false)
   const rankInputRef = useFocusOnOpen(editingRank)
   const [rankInput, setRankInput] = useState('')
-  const [statusOpen, setStatusOpen] = useState(false)
   const displayName = artist.name || `@${artist.handle}`
   const hasImages = artist.images?.length > 0
-  const currentStatus = ARTIST_STATUSES.find((s) => s.value === normalizeArtistStatus(artist.status))
 
   function startEdit() {
     setRankInput(String(artist.rank))
@@ -96,23 +73,6 @@ function FilmstripRow({ artist, onOpen, index, onSetRank, onNudge, onSetStatus, 
           <h3 className="font-display text-cream text-base leading-tight truncate">{displayName}</h3>
         </div>
 
-        {/* Status chip — tap to change */}
-        <div className="relative shrink-0">
-          <button
-            onClick={() => setStatusOpen((v) => !v)}
-            className={`min-h-11 px-1 flex items-center text-[0.625rem] font-mono tracking-widest uppercase transition-opacity hover:opacity-70 ${currentStatus.tone}`}
-          >
-            {currentStatus.label}
-          </button>
-          {statusOpen && (
-            <>
-              {/* Tap-outside catcher; Escape closes the picker too (StatusPicker). */}
-              <div role="presentation" className="fixed inset-0 z-20" onClick={() => setStatusOpen(false)} />
-              <StatusPicker artist={artist} onSetStatus={onSetStatus} onClose={() => setStatusOpen(false)} />
-            </>
-          )}
-        </div>
-
         <button
           onClick={() => !isFirst && onNudge(artist, index, -1)}
           aria-label={`Move ${displayName} up`}
@@ -174,7 +134,7 @@ const NUDGE_IDLE_RELEASE_MS = 700
 // into its real sorted position. `pinnedId` must be React state — release
 // happens from a timeout or a mouse event outside any row's own render, and
 // only a state change (not a ref mutation) repaints to reflect it.
-export default function FilmstripView({ artists, onOpenArtist, onSetRank, onSetStatus }) {
+export default function FilmstripView({ artists, onOpenArtist, onSetRank }) {
   const [pinnedId, setPinnedId] = useState(null)
   const [pinnedIndex, setPinnedIndex] = useState(null)
   const idleTimerRef = useRef(null)
@@ -233,7 +193,6 @@ export default function FilmstripView({ artists, onOpenArtist, onSetRank, onSetS
           onOpen={onOpenArtist}
           onSetRank={onSetRank}
           onNudge={handleNudge}
-          onSetStatus={onSetStatus}
           onRowMouseLeave={() => releasePin(artist.id)}
           index={i}
           isFirst={artist.rank <= 1}

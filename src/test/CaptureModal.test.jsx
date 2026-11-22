@@ -69,7 +69,8 @@ describe('compact capture', () => {
     handle('https://www.instagram.com/mora.blackfern/?igsh=test')
     fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
     await waitFor(() => expect(onSaved).toHaveBeenCalledExactlyOnceWith({ kind: 'created', artistId: 'mora.blackfern', imageCount: 0 }))
-    expect(latest[0]).toMatchObject({ status: 'researching', name: '', tags: [] })
+    expect(latest[0]).toMatchObject({ name: '', tags: [] })
+    expect(latest[0]).not.toHaveProperty('status') // status left the app (#220 D)
     expect(onClose).toHaveBeenCalledTimes(1)
   })
   it('rejects post links without starting an upload', () => {
@@ -99,13 +100,13 @@ describe('compact capture', () => {
     expect(screen.getByRole('button', { name: 'Auto-fill' })).toBeInTheDocument()
     expect(analyzeScreenshotWithGemini).not.toHaveBeenCalled()
   })
-  it('retains optional status and style note', async () => {
+  it('retains an optional style note, and asks for no status', async () => {
     open(); handle()
     fireEvent.click(screen.getByText('Details'))
-    fireEvent.change(screen.getByLabelText('Status'), { target: { value: 'shortlisted' } })
+    expect(screen.queryByLabelText('Status')).toBeNull()
     fireEvent.change(screen.getByLabelText('Style note'), { target: { value: 'Manual note' } })
     fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
-    await waitFor(() => expect(latest[0]).toMatchObject({ status: 'shortlisted', styleNote: 'Manual note' }))
+    await waitFor(() => expect(latest[0]).toMatchObject({ styleNote: 'Manual note' }))
   })
   it('ignores Escape intended for a nested dialog', () => {
     const { onClose } = open()

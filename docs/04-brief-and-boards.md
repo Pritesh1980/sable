@@ -44,7 +44,7 @@ visible while you review or change its references.
 ### Artists match automatically
 
 As soon as an idea has style tags, the editor shows **matching artists**, ranked by how
-many tags overlap, their shortlist status and their rank. **Tap an artist to link them**
+many tags overlap, then their rank. **Tap an artist to link them**
 to the idea. (Before any tags are set, you'll see lighter *suggestions* instead.)
 
 Use the sharing row below **Back** and **Save**. **Share as image** exports a 1080×1350

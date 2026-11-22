@@ -4,7 +4,7 @@ import { test, expect, expectWorksOffline } from './fixtures'
 // relative on purpose: Playwright resolves it against baseURL, so 'gallery'
 // means /sable/gallery, whereas '/gallery' would escape the base entirely.
 
-const ROUTES = ['', 'pipeline', 'gallery', 'brief', 'conventions', 'studios', 'concepts', 'settings', 'help']
+const ROUTES = ['', 'plan', 'gallery', 'brief', 'conventions', 'studios', 'concepts', 'settings', 'help']
 
 test.beforeEach(async ({ page }) => {
   await page.goto('?demo=1')

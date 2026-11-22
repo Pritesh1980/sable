@@ -8,7 +8,6 @@ import GuestSpots from './GuestSpots'
 import { STYLE_TAGS, DEFAULT_STUDIOS } from '../data/artists'
 import { uploadImages } from '../hooks/useImageUpload'
 import { useAuth } from '../context/useAuth'
-import { ARTIST_STATUSES, normalizeArtistStatus } from '../data/planning'
 import { refIdentity } from '../data/imageRef'
 import { useEscapeToClose } from '../hooks/useDialogFocus'
 import { isPastEdition } from '../data/conventions'
@@ -19,7 +18,7 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
   const [draft, setDraft] = useState({ ...artist })
   // Which fields this session has actually edited (#81). `draft` is a
   // one-time snapshot of `artist` taken at mount, never re-synced — a
-  // cross-device sync landing a change to (say) status or notes while this
+  // cross-device sync landing a change to (say) tags or notes while this
   // sheet is open is invisible to it. save() used to spread the whole draft
   // back, so it would silently revert that change even though the user never
   // touched the field. Same fix shape as #63/#79: patch only what the user
@@ -61,12 +60,11 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
   }, [images.length])
 
   const instagramUrl = `https://www.instagram.com/${artist.handle}/`
-  const currentStatus = ARTIST_STATUSES.find((s) => s.value === normalizeArtistStatus(artist.status))
 
   // Images auto-save immediately — no need to be in edit mode. Patches only
   // images (#79): sending the whole draft here is what let this closure —
   // captured whenever the upload/remove/reorder started — silently revert a
-  // tag or status change that had landed in the meantime through a different
+  // tag or notes change that had landed in the meantime through a different
   // auto-save.
   function saveImages(newImages) {
     imagesRef.current = newImages
@@ -208,11 +206,6 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
                 {DEFAULT_STUDIOS.find((s) => s.id === artist.studio).name}
               </p>
             )}
-            {!editing && (
-              <p className={`font-mono text-xs tracking-widest uppercase mt-3 ${currentStatus.tone}`}>
-                {currentStatus.label}
-              </p>
-            )}
             {!editing && artist.styleNote && (
               <p className="font-body text-sm text-cream-muted/80 italic leading-relaxed mt-3">
                 {artist.styleNote}
@@ -325,19 +318,6 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
           {/* Studio (edit mode) */}
           {editing && (
             <>
-              <div className="mb-6">
-                <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-3">Shortlist status</p>
-                <select
-                  className="w-full bg-ink-muted border border-ink-border rounded-xs px-3 py-2 text-sm text-cream outline-hidden focus:border-cream-muted/50 font-body"
-                  value={normalizeArtistStatus(draft.status)}
-                  onChange={(e) => { touch('status'); setDraft((d) => ({ ...d, status: e.target.value })) }}
-                >
-                  {ARTIST_STATUSES.map((s) => (
-                    <option key={s.value} value={s.value}>{s.label}</option>
-                  ))}
-                </select>
-              </div>
-
               <div className="mb-6">
                 <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-3">Studio</p>
                 <select

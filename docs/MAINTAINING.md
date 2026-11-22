@@ -76,7 +76,7 @@ with Reorder **off** — that is the view people arrive in.
    | Route | Files |
    |---|---|
    | `/` | `home.png` (desktop), `home-mobile.png` (phone), `nav-more.png` (desktop, More open) |
-   | `/pipeline` | `dashboard.png`, `dashboard-desktop.png` |
+   | `/plan` | `plan.png`, `plan-desktop.png` |
    | `/gallery` | `wall.png` (desktop, default Wall view), `wall-mobile.png` (phone), `wall-viewer.png` (desktop, a Wall photo open with HUD visible), `gallery-filmstrip.png`, `gallery-grid.png`, `gallery-grid-desktop.png`, `gallery-compare.png`, `artist-detail.png`, `guest-spots.png` (`?artist=vesper_noctis`, seeded London trip), `ranking-swipe.png` |
    | `/gallery?mode=manage` | `manage-list.png`, `manage-artist-expanded.png` |
    | `/brief` | `brief-list.png`, `brief-idea-editor.png` |

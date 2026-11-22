@@ -17,17 +17,17 @@ const artists = [
 
 describe('FilmstripView touch targets (#76)', () => {
   it('gives every control on the title line a 44pt-tall hit area', () => {
-    render(<FilmstripView artists={artists} onOpenArtist={vi.fn()} onSetRank={vi.fn()} onSetStatus={vi.fn()} />)
+    render(<FilmstripView artists={artists} onOpenArtist={vi.fn()} onSetRank={vi.fn()} />)
     const row = screen.getAllByTestId('filmstrip-row')[0]
     const controls = within(row).getAllByRole('button')
-    expect(controls.length).toBeGreaterThanOrEqual(5)
+    expect(controls.length).toBeGreaterThanOrEqual(4)
     for (const control of controls) {
       expect(declares44pt(control.className), control.getAttribute('aria-label') || control.textContent).toBe(true)
     }
   })
 
   it('no longer carries the Instagram link, which lives on the artist page', () => {
-    render(<FilmstripView artists={artists} onOpenArtist={vi.fn()} onSetRank={vi.fn()} onSetStatus={vi.fn()} />)
+    render(<FilmstripView artists={artists} onOpenArtist={vi.fn()} onSetRank={vi.fn()} />)
     expect(screen.queryByRole('link')).toBeNull()
   })
 })

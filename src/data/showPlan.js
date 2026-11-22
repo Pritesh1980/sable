@@ -7,7 +7,6 @@
 // Glitch, …) is worth a look even if you've never heard of them. Style-tag
 // overlap only ever fires for the handful of line-up entries that happen to
 // match a saved artist, because the show's list carries no style data at all.
-import { normalizeArtistStatus } from './planning'
 import { indexLineup, parseLineup } from './lineup'
 import { trimEndChars } from './textTrim'
 
@@ -106,7 +105,6 @@ export function buildStudioIndex(artists = [], studios = []) {
   return { get: (id) => byId.get(id), matchText }
 }
 
-const STATUS_SCORE = { 'contact-next': 3, shortlisted: 2, contacted: 1, pass: -4 }
 const STUDIO_STABLEMATE_CAP = 30
 
 export function scoreShowEntry(entry, { artists = [], attendingIds = [], studioIndex, styles = [], curated = {} } = {}) {
@@ -114,20 +112,11 @@ export function scoreShowEntry(entry, { artists = [], attendingIds = [], studioI
   let score = 0
 
   const artist = entry.artist || (entry.savedArtistId && artists.find((a) => a.id === entry.savedArtistId)) || null
-  const status = artist ? normalizeArtistStatus(artist.status) : null
-
-  if (artist && status === 'pass') {
-    return { entry, artist, score: -Infinity, kind: 'skipped', savedArtistId: artist.id, reasons: ['Marked pass'] }
-  }
-
   if (artist) {
     score += 100
     const rankBoost = Math.max(0, 31 - (artist.rank || 31)) / 10
     score += rankBoost
     if (artist.rank) reasons.push(`#${artist.rank} in your ranking`)
-    const statusBoost = STATUS_SCORE[status] || 0
-    score += statusBoost
-    if (status && STATUS_SCORE[status]) reasons.push(`Status: ${status}`)
   }
 
   // A studio only counts as a connection when you actually follow someone
@@ -188,7 +177,7 @@ export function buildShowPlan(
   { artists = [], studios = [], attendingIds = [], curated = {} } = {}
 ) {
   if (entries.length === 0) {
-    return { mustSee: [], fieldGuide: [], suggested: [], wildcards: [], missing: [], skipped: [] }
+    return { mustSee: [], fieldGuide: [], suggested: [], wildcards: [], missing: [] }
   }
 
   const indexed = indexLineup(entries, artists)
@@ -200,12 +189,10 @@ export function buildShowPlan(
   const fieldGuide = []
   const suggested = []
   const wildcards = []
-  const skipped = []
 
   for (const entry of indexed) {
     const scored = scoreShowEntry(entry, ctx)
-    if (scored.kind === 'skipped') skipped.push(scored)
-    else if (scored.kind === 'mustSee') mustSee.push(scored)
+    if (scored.kind === 'mustSee') mustSee.push(scored)
     else if (scored.kind === 'fieldGuide') fieldGuide.push(scored)
     else if (scored.kind === 'wildcard') wildcards.push(scored)
     else if (scored.kind === 'suggested') suggested.push(scored)
@@ -226,7 +213,7 @@ export function buildShowPlan(
   fieldGuide.sort(byScore)
   suggested.sort(byScore)
   wildcards.sort(byScore)
-  return { mustSee, fieldGuide, suggested, wildcards, missing, skipped }
+  return { mustSee, fieldGuide, suggested, wildcards, missing }
 }
 
 // Re-exported so callers of buildShowPlan don't also need to import parseLineup

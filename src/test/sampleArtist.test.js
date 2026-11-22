@@ -7,7 +7,8 @@ describe('sample artist (#220, group C)', () => {
   it('adds one fictional artist, marked as a sample, ranked first in an empty library', () => {
     const [sample, ...rest] = addSampleArtist([])
     expect(rest).toEqual([])
-    expect(sample).toMatchObject({ sample: true, rank: 1, status: 'researching' })
+    expect(sample).toMatchObject({ sample: true, rank: 1 })
+    expect(sample).not.toHaveProperty('status') // status left the app (#220 D)
     expect(sample.id.startsWith(SAMPLE_ARTIST_PREFIX)).toBe(true)
     expect(sample.name).toBeTruthy()
     expect(sample.tags.length).toBeGreaterThan(0)

@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { buildTasteVector, predictedRank } from '../data/taste'
 import { cosineSimilarity } from '../data/embeddings'
 
-// Two style directions: X = the taste the user demonstrably loves (top rank,
-// contact-next), Z = a style they've passed on. Y sits in between.
+// Two style directions: X = the taste the user ranks highest, Z = the style
+// they rank last. Y sits in between. Status is gone (#220 D): rank alone.
 const vecs = {
   '/loved1.jpg': [1, 0, 0],
   '/loved2.jpg': [0.9, 0.1, 0],
@@ -14,14 +14,14 @@ const vecs = {
 const getVec = (src) => vecs[src] || null
 
 const artists = [
-  { id: 'loved', images: ['/loved1.jpg', '/loved2.jpg'], rank: 1, status: 'contact-next' },
-  { id: 'mid', images: ['/mid1.jpg'], rank: 5, status: 'researching' },
-  { id: 'passed', images: ['/passed1.jpg', '/passed2.jpg'], rank: 9, status: 'pass' },
-  { id: 'noimages', images: [], rank: 2, status: 'shortlisted' },
+  { id: 'loved', images: ['/loved1.jpg', '/loved2.jpg'], rank: 1 },
+  { id: 'mid', images: ['/mid1.jpg'], rank: 5 },
+  { id: 'passed', images: ['/passed1.jpg', '/passed2.jpg'], rank: 9 },
+  { id: 'noimages', images: [], rank: 2 },
 ]
 
 describe('buildTasteVector', () => {
-  it('points toward highly-ranked, positively-statused work', () => {
+  it('points toward highly-ranked work', () => {
     const taste = buildTasteVector(artists, getVec)
     expect(taste).not.toBeNull()
     const lovedSim = cosineSimilarity(taste, [1, 0, 0])
@@ -30,11 +30,24 @@ describe('buildTasteVector', () => {
     expect(lovedSim).toBeGreaterThan(passedSim)
   })
 
-  it('pass-status artists actively repel the taste vector', () => {
-    const withoutPass = buildTasteVector(artists.filter((a) => a.status !== 'pass'), getVec)
-    const withPass = buildTasteVector(artists, getVec)
-    // Adding a passed artist moves the vector further from the passed style.
-    expect(cosineSimilarity(withPass, [0, 0, 1])).toBeLessThan(cosineSimilarity(withoutPass, [0, 0, 1]))
+  it('ignores a stored status', () => {
+    const statuses = ['pass', 'contact-next', 'maybe', 'shortlisted']
+    const withStatus = artists.map((a, i) => ({ ...a, status: statuses[i] }))
+    expect(buildTasteVector(withStatus, getVec)).toEqual(buildTasteVector(artists, getVec))
+  })
+
+  it('keeps rank order when ranks have gaps (an artist was deleted)', () => {
+    // #1 was removed: #2 must still outweigh #3, so the taste leans to #2.
+    const gapped = [{ id: 'three', images: ['/passed1.jpg'], rank: 3 }, { id: 'two', images: ['/loved1.jpg'], rank: 2 }]
+    const taste = buildTasteVector(gapped, getVec)
+    expect(cosineSimilarity(taste, [1, 0, 0])).toBeGreaterThan(cosineSimilarity(taste, [0, 0, 1]))
+  })
+
+  it('never weights an artist negatively, even with a rank past the list length', () => {
+    // Ranks can have gaps (9 of 4 here): that must not turn into a pull away.
+    const only = [{ id: 'passed', images: ['/passed1.jpg'], rank: 9 }, { id: 'loved', images: ['/loved1.jpg'], rank: 1 }]
+    const taste = buildTasteVector(only, getVec)
+    expect(cosineSimilarity(taste, [0, 0, 1])).toBeGreaterThan(0)
   })
 
   it('is a unit vector, and null when nothing is embedded', () => {
@@ -45,7 +58,7 @@ describe('buildTasteVector', () => {
 })
 
 describe('predictedRank', () => {
-  it('ranks the loved artist first and the passed artist last against the taste vector', () => {
+  it('ranks the top artist first and the last-ranked artist last against the taste vector', () => {
     const taste = buildTasteVector(artists, getVec)
     expect(predictedRank(artists, 'loved', getVec, taste)).toEqual({ position: 1, of: 3 })
     expect(predictedRank(artists, 'passed', getVec, taste)).toEqual({ position: 3, of: 3 })
