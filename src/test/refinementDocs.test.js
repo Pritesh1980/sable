@@ -12,8 +12,8 @@ it('documents manual fallback, durability limits and deferred activation', () =>
   expect(activation).toContain('Safari')
   expect(activation).toContain('8 MiB')
   expect(activation).toContain('dispatched')
-  const help = readFileSync('src/pages/Help.jsx', 'utf8')
-  expect(help).toContain('only cloud-storage builds sync')
+  const help = readFileSync('src/data/helpTopics.js', 'utf8')
+  expect(help).toContain('Unless your Sable is set up for cloud sync, your library lives only on this device')
   expect(help).not.toContain('stored in your account, and synced')
   expect(help + concepts).not.toContain('$0.04')
   const workflows = readFileSync('docs/USER-WORKFLOWS.md', 'utf8')
@@ -21,12 +21,11 @@ it('documents manual fallback, durability limits and deferred activation', () =>
   expect(workflows).not.toContain('signed image URLs are not fetched')
 })
 
-it('keeps the new guide images referenced in the user guide and Help', () => {
+// In-app Help is a short How-do-I list (#220 I); refinement is in the guide only.
+it('keeps the new guide images referenced in the user guide', () => {
   const guide = readFileSync('docs/06-concepts.md', 'utf8')
-  const help = readFileSync('src/pages/Help.jsx', 'utf8')
   for (const file of ['concept-refinement.png', 'concept-refinement-compare.png']) {
     expect(guide).toContain(file)
-    expect(help).toContain(file)
     expect(existsSync(`public/guide/${file}`)).toBe(true)
   }
   const docs = readdirSync('docs').filter((file) => file.endsWith('.md'))

@@ -55,7 +55,8 @@ page: a bottom bar on a phone, a top bar on a laptop.
 | **Ideas** — tattoo ideas, with Boards as a tab | | **App**: **Settings** · **Help** |
 | **AI** — generated concepts on their own wall | | |
 
-The same guidance is built into the app under **More → Help**:
+A short version is built into the app under **More → Help**: plain questions (*How do I add
+an artist?*), each answered in a few lines with a link to its part of this guide.
 
 ![The in-app Help page](../public/guide/help-overview.png)
 

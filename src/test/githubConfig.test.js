@@ -134,7 +134,7 @@ describe('GitHub repository configuration', () => {
     // The shipped line-up seed is data held as text, not code to grade.
     expect(sonar).toContain('src/data/lineups/**')
     // Help's prose arrays look duplicated to CPD; issues are still analysed there.
-    expect(sonar).toMatch(/^sonar\.cpd\.exclusions=src\/pages\/Help\.jsx$/m)
+    expect(sonar).toMatch(/^sonar\.cpd\.exclusions=src\/data\/helpTopics\.js$/m)
   })
   it('takes the Node version from .nvmrc everywhere', () => {
     const want = readRepoFile('.nvmrc').trim()
