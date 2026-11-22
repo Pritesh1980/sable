@@ -67,10 +67,49 @@ describe('onEdit (#55 tombstones)', () => {
     next[0] = prev[0]
     expect(policy.onEdit(prev, next, LATER)[1].removedImages).toBeUndefined()
   })
+
+  it('records daily rank history and replaces same-day updates (#188)', () => {
+    const rankedPrev = [{ id: 'a', rank: 5, images: ['images/x.jpg'], updatedAt: OLD }]
+    const sameDay1 = [{ ...rankedPrev[0], images: rankedPrev[0].images, rank: 3 }]
+    const [step1] = policy.onEdit(rankedPrev, sameDay1, '2026-11-10T09:00:00.000Z')
+    expect(step1.history).toEqual([
+      { at: OLD, rank: 5 },
+      { at: '2026-11-10T09:00:00.000Z', rank: 3 },
+    ])
+
+    const sameDay2 = [{ ...step1, rank: 2 }]
+    const [step2] = policy.onEdit([step1], sameDay2, '2026-11-10T18:00:00.000Z')
+    expect(step2.history).toEqual([
+      { at: OLD, rank: 5 },
+      { at: '2026-11-10T18:00:00.000Z', rank: 2 },
+    ])
+
+    // Unrelated edits keep history unchanged and return row as-is.
+    const noteEdit = [{ ...step2, notes: 'checked healed photos' }]
+    const [step3] = policy.onEdit([step2], noteEdit, '2026-11-11T12:00:00.000Z')
+    expect(step3).toBe(noteEdit[0])
+    expect(step3.history).toEqual(step2.history)
+  })
 })
 
 describe('merge', () => {
   const local = [{ id: 'a', notes: 'local', images: ['images/x.jpg'], updatedAt: LATER }]
+
+  it('unions rank history across devices when merging (#188)', () => {
+    const localWithHist = [{
+      id: 'a', notes: 'local', images: ['images/x.jpg'], rank: 2, updatedAt: LATER,
+      history: [{ at: '2026-10-05T10:00:00.000Z', rank: 2 }],
+    }]
+    const remoteWithHist = [{
+      id: 'a', notes: 'stale', images: ['images/x.jpg'], rank: 5, updatedAt: OLD,
+      history: [{ at: '2026-09-01T10:00:00.000Z', rank: 5 }],
+    }]
+    const { value } = policy.merge({ local: localWithHist, remote: remoteWithHist, ctx: ctxOther })
+    expect(value[0].history).toEqual([
+      { at: '2026-09-01T10:00:00.000Z', rank: 5 },
+      { at: '2026-10-05T10:00:00.000Z', rank: 2 },
+    ])
+  })
 
   it('keeps a photo removed on either side out of the winning record (#55)', () => {
     const remote = [{

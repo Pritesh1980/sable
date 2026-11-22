@@ -41,7 +41,8 @@ export const DEMO_INTRO_KEY = 'tattoo_demo_intro_dismissed'
 // v4: realistic synthetic portfolios, new immutable image URLs and matching ideas.
 // v5: favourites-first order; reset the sample collections on returning demos.
 // v6: guest spots (#183), dated from the seed day.
-export const DEMO_SEED_VERSION = 6
+// v7: fictional rank history for Your taste over time (#188).
+export const DEMO_SEED_VERSION = 7
 
 // Base-relative, deliberately. seedDemoData writes these straight into
 // localStorage, so prefixing BASE_URL here would freeze the build's base into
@@ -51,15 +52,53 @@ export const DEMO_SEED_VERSION = 6
 // the earlier version of this file wrote).
 const demoImages = (id) => DEMO_ARTWORK.filter((piece) => piece.artistId === id).map((piece) => piece.src)
 
+export function demoTasteHistory(today = todayIso()) {
+  const stamp = (daysAgo) => `${addDaysIso(today, daysAgo)}T12:00:00.000Z`
+  return {
+    vesper_noctis: [
+      { at: stamp(-70), rank: 4 },
+      { at: stamp(-35), rank: 2 },
+      { at: stamp(-5), rank: 1 },
+    ],
+    'ashgrove.tattoo': [
+      { at: stamp(-70), rank: 5 },
+      { at: stamp(-35), rank: 3 },
+      { at: stamp(-5), rank: 2 },
+    ],
+    hexen_atlas: [
+      { at: stamp(-70), rank: 3 },
+      { at: stamp(-35), rank: 1 },
+      { at: stamp(-5), rank: 3 },
+    ],
+    'lekhani.ink': [
+      { at: stamp(-70), rank: 6 },
+      { at: stamp(-35), rank: 5 },
+      { at: stamp(-5), rank: 4 },
+    ],
+    'mora.blackfern': [
+      { at: stamp(-70), rank: 1 },
+      { at: stamp(-35), rank: 4 },
+      { at: stamp(-5), rank: 5 },
+    ],
+    ferrum_line: [
+      { at: stamp(-70), rank: 2 },
+      { at: stamp(-35), rank: 6 },
+      { at: stamp(-5), rank: 6 },
+    ],
+  }
+}
+
+const INITIAL_DEMO_HISTORY = demoTasteHistory(todayIso())
+
 // Fictional artists only — invented names and handles, no resemblance to the
 // real artists in src/data/artists.js. Tags come from the canonical STYLE_TAGS.
 export const DEMO_ARTISTS = [
-  { id: 'vesper_noctis', handle: 'vesper_noctis', name: 'Vesper Ash', tags: ['surrealism', 'realism'], styleNote: 'Surreal black-and-grey — an ocean inside an hourglass, fractured marble and stairways into impossible spaces.', images: demoImages('vesper_noctis'), rank: 1, notes: '', studio: null },
-  { id: 'ashgrove.tattoo', handle: 'ashgrove.tattoo', name: '', tags: ['realism'], styleNote: 'Colour photorealism — a vivid kingfisher, a tiger portrait and a luminous teal gemstone with convincing depth.', images: demoImages('ashgrove.tattoo'), rank: 2, notes: '', studio: null },
-  { id: 'hexen_atlas', handle: 'hexen_atlas', name: '', tags: ['dark-illustrative', 'realism'], styleNote: 'Japanese-inspired storytelling — samurai armour, koi and temple landscapes shaped around the body.', images: demoImages('hexen_atlas'), rank: 3, notes: '', studio: null },
-  { id: 'lekhani.ink', handle: 'lekhani.ink', name: 'Asha Lekhani', tags: ['fine-line', 'blackwork'], styleNote: 'Sumi-e-inspired brushwork — Gujarati, Japanese and Latin lettering concepts alongside abstract ink. Generated lettering is not a language-verified tattoo stencil.', images: demoImages('lekhani.ink'), rank: 4, notes: '', studio: null },
-  { id: 'mora.blackfern', handle: 'mora.blackfern', name: 'Mora Vane', tags: ['dark-illustrative', 'fine-line'], styleNote: 'Botanical fine-line — fern fronds, magnolia petals and meadow grasses with delicate black-and-grey shading.', images: demoImages('mora.blackfern'), rank: 5, notes: '', studio: null },
-  { id: 'ferrum_line', handle: 'ferrum_line', name: '', tags: ['blackwork'], styleNote: 'Contemporary tribal-inspired blackwork — bold interlocking shapes and clean negative space following the calf, shoulder and forearm.', images: demoImages('ferrum_line'), rank: 6, notes: '', studio: null },
+  { id: 'vesper_noctis', handle: 'vesper_noctis', name: 'Vesper Ash', tags: ['surrealism', 'realism'], styleNote: 'Surreal black-and-grey — an ocean inside an hourglass, fractured marble and stairways into impossible spaces.', images: demoImages('vesper_noctis'), rank: 1, notes: '', studio: null, history: INITIAL_DEMO_HISTORY.vesper_noctis },
+  { id: 'ashgrove.tattoo', handle: 'ashgrove.tattoo', name: '', tags: ['realism'], styleNote: 'Colour photorealism — a vivid kingfisher, a tiger portrait and a luminous teal gemstone with convincing depth.', images: demoImages('ashgrove.tattoo'), rank: 2, notes: '', studio: null, history: INITIAL_DEMO_HISTORY['ashgrove.tattoo'] },
+  { id: 'hexen_atlas', handle: 'hexen_atlas', name: '', tags: ['dark-illustrative', 'realism'], styleNote: 'Japanese-inspired storytelling — samurai armour, koi and temple landscapes shaped around the body.', images: demoImages('hexen_atlas'), rank: 3, notes: '', studio: null, history: INITIAL_DEMO_HISTORY.hexen_atlas },
+  { id: 'lekhani.ink', handle: 'lekhani.ink', name: 'Asha Lekhani', tags: ['fine-line', 'blackwork'], styleNote: 'Sumi-e-inspired brushwork — Gujarati, Japanese and Latin lettering concepts alongside abstract ink. Generated lettering is not a language-verified tattoo stencil.', images: demoImages('lekhani.ink'), rank: 4, notes: '', studio: null, history: INITIAL_DEMO_HISTORY['lekhani.ink'] },
+  { id: 'mora.blackfern', handle: 'mora.blackfern', name: 'Mora Vane', tags: ['dark-illustrative', 'fine-line'], styleNote: 'Botanical fine-line — fern fronds, magnolia petals and meadow grasses with delicate black-and-grey shading.', images: demoImages('mora.blackfern'), rank: 5, notes: '', studio: null, history: INITIAL_DEMO_HISTORY['mora.blackfern'] },
+  { id: 'ferrum_line', handle: 'ferrum_line', name: '', tags: ['blackwork'], styleNote: 'Contemporary tribal-inspired blackwork — bold interlocking shapes and clean negative space following the calf, shoulder and forearm.', images: demoImages('ferrum_line'), rank: 6, notes: '', studio: null, history: INITIAL_DEMO_HISTORY.ferrum_line },
 ]
 
 export const DEMO_IDEAS = [
@@ -121,8 +160,15 @@ function write(storage, key, value) {
 // session + offline caches + the local backend's simulated remote rows.
 export function seedDemoData(storage = localStorage) {
   const at = nowStamp()
-  const spots = demoGuestSpots(todayIso())
-  const artists = DEMO_ARTISTS.map((a) => ({ ...a, ...(spots[a.id] ? { guestSpots: spots[a.id] } : {}), updatedAt: at }))
+  const today = todayIso()
+  const spots = demoGuestSpots(today)
+  const historyByArtist = demoTasteHistory(today)
+  const artists = DEMO_ARTISTS.map((a) => ({
+    ...a,
+    ...(spots[a.id] ? { guestSpots: spots[a.id] } : {}),
+    ...(historyByArtist[a.id] ? { history: historyByArtist[a.id] } : {}),
+    updatedAt: at,
+  }))
   const ideas = DEMO_IDEAS.map((i) => ({ ...i, updatedAt: at }))
   write(storage, 'tattoo_local_session', DEMO_SESSION)
   write(storage, 'tattoo_artists_meta', artists)

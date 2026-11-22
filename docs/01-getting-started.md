@@ -188,6 +188,10 @@ Below the ideas, **Nearby soon** lists guest spots by your artists coming up nea
 Milton Keynes; its **Within** setting also decides which artists get the pin. A small
 **Nearby soon** chip also sits in the Artists heading.
 
+**Your taste over time** underneath tracks how your ranking evolves once per day per
+artist, showing your top five by month, biggest risers and fallers, and rank-weighted
+style share by month.
+
 There is no artist status any more (researching → contact next → pass): Plan
 replaced the old Pipeline page, which was built around that contact chain. Old
 `/pipeline` links open Plan.

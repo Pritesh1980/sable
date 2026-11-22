@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, within, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import Plan from '../pages/Plan'
+import { DEMO_ARTISTS } from '../data/demoSeed'
 
 // Group D of #220: Pipeline was built around a contact workflow the owner does
 // not use. Plan answers one question instead: which artist for which idea.
@@ -110,5 +111,22 @@ describe('Plan (#220 D)', () => {
     // London is 55 mi from Milton Keynes: narrowing to 50 drops it everywhere.
     fireEvent.change(screen.getByLabelText(/within/i), { target: { value: '50' } })
     expect(within(card('Raven sleeve')).getByRole('link', { name: /ember/i })).not.toHaveTextContent(/london/i)
+  })
+
+  it('shows empty note when artists have no rank history yet, and renders Taste over time for demo data (#188)', () => {
+    renderPlan()
+    expect(screen.getByRole('heading', { level: 2, name: /your taste over time/i })).toBeInTheDocument()
+    expect(screen.getByText(/no rank history yet/i)).toBeInTheDocument()
+
+    render(
+      <MemoryRouter initialEntries={['/plan']}>
+        <Plan artists={DEMO_ARTISTS} ideas={[]} setArtists={vi.fn()} today={TODAY} />
+      </MemoryRouter>
+    )
+    expect(screen.getByText('Top five by month')).toBeInTheDocument()
+    expect(screen.getByText('Biggest risers')).toBeInTheDocument()
+    expect(screen.getByText('Biggest fallers')).toBeInTheDocument()
+    expect(screen.getByText('Style share by month')).toBeInTheDocument()
+    expect(screen.getByText('#4 → #1 (+3)')).toBeInTheDocument()
   })
 })
