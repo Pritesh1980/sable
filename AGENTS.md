@@ -14,7 +14,7 @@ out of date).
   only a local index of them.
 - **User guide:** [`docs/`](docs/README.md), also available in-app under **More → Help**.
 - **Keeping docs in sync:** when you change UI under `src/pages/` or `src/components/`,
-  update the matching `docs/NN-*.md` and the `SECTIONS` array in `src/pages/Help.jsx`, then
+  update the matching `docs/NN-*.md` and, if Help answers it, its topic in `src/data/helpTopics.js`, then
   re-capture screenshots — see [`docs/MAINTAINING.md`](docs/MAINTAINING.md). A Stop hook
   (`scripts/docs-drift-check.sh`) reminds you if you forget.
 - **Run it:** `npm install && npm run dev` (→ http://localhost:5173); `npm test`; `npm run build`.

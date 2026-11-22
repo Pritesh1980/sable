@@ -172,8 +172,8 @@ same list along the **top on a laptop**.
 
 - **Find** — **Plan** (which artist for which idea, below), **Radar** (upcoming
   conventions) and **Studios** (where your artists work).
-- **App** — **Settings** (backup, account and text size) and **Help** (this
-  guide, in the app).
+- **App** — **Settings** (backup, account and text size) and **Help** (short
+  answers to common questions, each linking to its part of this guide).
 
 ## The Plan page
 

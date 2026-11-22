@@ -1,16 +1,20 @@
 # Maintaining the docs
 
-How to keep the user guide (`docs/`) and the in-app Help page (`src/pages/Help.jsx`) in
+How to keep the user guide (`docs/`) and the in-app Help page (`src/data/helpTopics.js`) in
 step with the app. **This is a contributor note, not part of the user guide.**
 
 ## What's connected to what
 
 - `docs/README.md` + `docs/01`–`07-*.md` — the Markdown guide. Images: `../public/guide/*.png`.
-- `src/pages/Help.jsx` — the in-app `/help` page (the `SECTIONS` array). Images: `/guide/*.png`.
+- `src/data/helpTopics.js` — the in-app `/help` page (`src/pages/Help.jsx` draws it): a short
+  How-do-I list, 2–4 lines per answer, each linking to its docs heading. Images: `/guide/*.png`.
+  `src/test/helpTopics.test.js` keeps answers short and fails if a linked heading is renamed.
 - `public/guide/*.png` — **one** screenshot set, shared by both. Don't duplicate images.
 
 When you change UI under `src/pages/` or `src/components/`, update the matching `docs/NN-*.md`
-**and** the `SECTIONS` entry in `Help.jsx`, then re-capture any affected screenshots.
+**and**, if a Help answer covers it, that topic in `helpTopics.js`, then re-capture any affected
+screenshots. Detail belongs in `docs/` only (#220 I): keep Help answers short. If you rename a
+docs heading, update the topic's `guide` anchor.
 
 ## Regenerating screenshots
 
@@ -216,7 +220,7 @@ fictional env as `playwright.refinement.config.js`, serve `dist-refinement` on p
 do not use that config for deployment. It uses synthetic PNGs,
 desktop 1280 x 900 and mobile 430 x 920 with `isMobile` and touch, viewport-only.
 Never substitute portfolio images, body photos, private library bytes or paid results.
-Keep the guide links and Help `SECTIONS` images aligned, then run `npm run docs:check`.
+Keep the guide links and Help topic images aligned, then run `npm run docs:check`.
 
 ### Live demo smoke test
 
@@ -268,13 +272,13 @@ Things this suite taught that are easy to get wrong:
 Every referenced image should exist, and every image should be referenced:
 
 ```bash
-grep -rho 'guide/[a-z-]*\.png' docs/ src/pages/Help.jsx | sed 's#.*guide/##' | sort -u > /tmp/refs.txt
+grep -rhoE "guide/[a-z-]+\.png|image: '[a-z-]+\.png" docs/ src/data/helpTopics.js | sed "s#image: '##; s#'\$##" | sed 's#.*guide/##' | sort -u > /tmp/refs.txt
 ls public/guide/ | sort -u > /tmp/have.txt
 echo "missing: $(comm -23 /tmp/refs.txt /tmp/have.txt | tr '\n' ' ')"
 echo "unused:  $(comm -13 /tmp/refs.txt /tmp/have.txt | tr '\n' ' ')"
 ```
 
-Both lines should be empty. Then run `npm run build` and `npm test` to confirm `Help.jsx`
+Both lines should be empty. Then run `npm run build` and `npm test` to confirm Help
 and the routes still compile.
 
 ## The drift reminder

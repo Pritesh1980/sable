@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 
 it('keeps the Instagram capture guide and in-app Help aligned', () => {
   const guide = readFileSync('docs/02-managing-artists.md', 'utf8')
-  const help = readFileSync('src/pages/Help.jsx', 'utf8')
+  const help = readFileSync('src/data/helpTopics.js', 'utf8')
   expect(guide).toContain('artist-capture.png')
   expect(help).toContain('artist-capture.png')
   expect(guide).toContain('Share from Instagram')
