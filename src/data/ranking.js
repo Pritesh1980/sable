@@ -2,7 +2,7 @@ const BUCKET_ORDER = { top: 0, maybe: 1, pass: 2 }
 
 // Sort comparator that tolerates missing / non-numeric ranks (they sort last).
 // JS Array.sort is stable, so equal/absent ranks keep their current order.
-function byRank(a, b) {
+export function byRank(a, b) {
   const ra = Number.isFinite(a.rank) ? a.rank : Infinity
   const rb = Number.isFinite(b.rank) ? b.rank : Infinity
   return ra - rb
@@ -41,20 +41,19 @@ export const moveToTop = (artists, id) => moveToRank(artists, id, 1)
 export const moveIntoTop5 = (artists, id) => moveToRank(artists, id, 5)
 export const moveOutOfTop5 = (artists, id) => moveToRank(artists, id, 6)
 
+// Swipe ranking sorts judged artists into Top / Maybe / Pass and keeps the
+// existing order within each bucket. Only the places judged artists already
+// held are reshuffled: an artist the swipe never showed (no photos) keeps their
+// place, so passing on everyone can't push them below the passes (#220 F).
 export function computeSwipeRanking(decisions, artists) {
   const decisionMap = Object.fromEntries(decisions.map((d) => [d.artistId, d.bucket]))
-
-  const ranked = artists
-    .filter((a) => decisionMap[a.id] !== undefined)
-    .sort((a, b) => {
-      const bucketDiff = BUCKET_ORDER[decisionMap[a.id]] - BUCKET_ORDER[decisionMap[b.id]]
-      if (bucketDiff !== 0) return bucketDiff
-      return a.rank - b.rank
-    })
-
-  const unranked = artists
-    .filter((a) => decisionMap[a.id] === undefined)
-    .sort((a, b) => a.rank - b.rank)
-
-  return [...ranked, ...unranked].map((a, i) => ({ ...a, rank: i + 1 }))
+  const judged = (a) => decisionMap[a.id] !== undefined
+  const order = artists.slice().sort(byRank)
+  const reordered = order
+    .filter(judged)
+    .sort((a, b) => BUCKET_ORDER[decisionMap[a.id]] - BUCKET_ORDER[decisionMap[b.id]])
+  let next = 0
+  return order
+    .map((a) => (judged(a) ? reordered[next++] : a))
+    .map((a, i) => ({ ...a, rank: i + 1 }))
 }

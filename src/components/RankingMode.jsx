@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { computeSwipeRanking } from '../data/ranking'
+import { computeSwipeRanking, byRank } from '../data/ranking'
 import useDialogFocus, { isTopmostDialog } from '../hooks/useDialogFocus'
 import ArtistImage from './ArtistImage'
 import GeneratedArtworkNotice from './GeneratedArtworkNotice'
@@ -22,6 +22,91 @@ function GroupSection({ label, items, accent }) {
             {a.name || `@${a.handle}`}
           </span>
         ))}
+      </div>
+    </div>
+  )
+}
+
+// The first five after saving, each beside the place they hold now. Places
+// are counted in rank order (not the stored number, which may have gaps), so
+// "no change" means the same position.
+function NewTopFive({ decisions, artists }) {
+  const before = new Map(artists.slice().sort(byRank).map((a, i) => [a.id, i + 1]))
+  const after = computeSwipeRanking(decisions, artists).sort(byRank).slice(0, 5)
+  return (
+    <div className="mb-8">
+      <p className="font-mono text-[0.6875rem] tracking-[0.35em] uppercase text-cream-muted mb-2">Your new top 5</p>
+      <ol aria-label="Your new top 5" className="border-t border-ink-border">
+        {after.map((a) => {
+          const was = before.get(a.id)
+          return (
+            <li key={a.id} className="flex items-baseline gap-3 py-2 border-b border-ink-border">
+              <span className="font-display text-lg text-cream w-8 shrink-0">#{a.rank}</span>
+              <span className="font-body text-sm text-cream flex-1 min-w-0 truncate">{a.name || `@${a.handle}`}</span>
+              <span className={`font-mono text-xs shrink-0 ${was === a.rank ? 'text-cream-muted/70' : was > a.rank ? 'text-accent' : 'text-cream-muted'}`}>
+                {was === a.rank ? 'no change' : `${was > a.rank ? '↑' : '↓'} from #${was}`}
+              </span>
+            </li>
+          )
+        })}
+      </ol>
+    </div>
+  )
+}
+
+// What the order is for, said once before the first card (#220 F: "not quite
+// sure what I'm ranking here and what it affects").
+function IntroScreen({ count, without, onStart, onCancel }) {
+  const effects = [
+    'Sets your Top 5 on the Wall and the order of every Artists view.',
+    'Breaks ties when two artists suit an idea equally well, in Plan, Ideas and AI.',
+    'Weights your taste: higher places count for more in Similar ink and the taste map.',
+    'Feeds Your taste over time on Plan, noted once a day.',
+  ]
+  return (
+    <div className="flex-1 min-h-0 flex flex-col">
+      <div className="flex-1 overflow-y-auto px-5 pt-14 pb-4 max-w-xl w-full mx-auto">
+        <p className="font-mono text-[0.6875rem] text-accent tracking-[0.4em] uppercase mb-2">Rank your artists</p>
+        <h2 className="font-display text-4xl text-cream mb-4 leading-none">Put them in order</h2>
+        <p className="font-body text-base text-cream leading-relaxed mb-6">
+          One list of every artist, in the order you&rsquo;d most like to be tattooed by them.
+        </p>
+
+        <p className="font-mono text-[0.6875rem] tracking-[0.35em] uppercase text-cream-muted mb-2">Your order</p>
+        <ul className="mb-6 space-y-2">
+          {effects.map((line) => (
+            <li key={line} className="flex gap-3 font-body text-sm text-cream-muted leading-relaxed">
+              <span aria-hidden="true" className="text-accent">·</span>
+              <span>{line}</span>
+            </li>
+          ))}
+        </ul>
+
+        <p className="font-mono text-[0.6875rem] tracking-[0.35em] uppercase text-cream-muted mb-2">How it works</p>
+        <p className="font-body text-sm text-cream-muted leading-relaxed mb-3">
+          You&rsquo;ll see {count} {count === 1 ? 'artist' : 'artists'} with photos, one at a time.
+          {without > 0 && <> {without === 1 ? 'The 1 artist' : `The ${without} artists`} without photos {without === 1 ? 'keeps their' : 'keep their'} place.</>}
+          {' '}<span className="text-accent">Top</span> puts them at the front, <span className="text-cream">Maybe</span> in the middle and <span className="text-cream">Pass</span> at the back.
+          {' '}Pass doesn&rsquo;t remove anyone. Within each group your current order stays, and nothing changes until you save.
+        </p>
+        <p className="font-body text-sm text-cream-muted/80 leading-relaxed">
+          Dragging your Top 5 on the Wall, Reorder top 5, ▲ ▼ in Strip and ⇅ Reorder in Grid all change this same list.
+        </p>
+      </div>
+
+      <div className="shrink-0 px-5 pb-10 pt-4 border-t border-ink-border flex gap-3 max-w-xl w-full mx-auto">
+        <button
+          onClick={onCancel}
+          className="flex-1 min-h-11 py-3.5 font-mono text-xs tracking-widest uppercase text-cream-muted border border-ink-border rounded-xs hover:text-cream transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={onStart}
+          className="flex-1 min-h-11 py-3.5 font-mono text-xs tracking-widest uppercase text-ink-black bg-accent border border-accent rounded-xs hover:bg-accent/90 transition-colors"
+        >
+          Start
+        </button>
       </div>
     </div>
   )
@@ -60,9 +145,15 @@ function SummaryScreen({ decisions, artists, onApply, onDiscard }) {
           )}
         </div>
 
-        <GroupSection label="Top Tier" items={groups.top} accent="text-accent" />
-        <GroupSection label="Maybe" items={groups.maybe} accent="text-cream-muted" />
-        <GroupSection label="Pass" items={groups.pass} accent="text-cream-muted/40" />
+        <NewTopFive decisions={decisions} artists={artists} />
+
+        <GroupSection label="Top · to the front" items={groups.top} accent="text-accent" />
+        <GroupSection label="Maybe · in the middle" items={groups.maybe} accent="text-cream-muted" />
+        <GroupSection label="Pass · to the back" items={groups.pass} accent="text-cream-muted/70" />
+
+        <p className="font-body text-sm text-cream-muted leading-relaxed">
+          Within each group your current order stays. Nobody is removed, and nothing changes until you save.
+        </p>
       </div>
 
       <div className="shrink-0 px-5 pb-10 pt-4 border-t border-ink-border flex gap-3">
@@ -76,7 +167,7 @@ function SummaryScreen({ decisions, artists, onApply, onDiscard }) {
           onClick={onApply}
           className="flex-1 py-3.5 font-mono text-xs tracking-widest uppercase text-cream border border-cream/30 rounded-xs hover:bg-cream/5 transition-colors"
         >
-          Apply Ranking
+          Save this order
         </button>
       </div>
     </div>
@@ -89,6 +180,7 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
   const [currentIdx, setCurrentIdx] = useState(0)
   const [decisions, setDecisions] = useState([])
   const [transitioning, setTransitioning] = useState(false)
+  const [started, setStarted] = useState(false)
   const [showSummary, setShowSummary] = useState(false)
   const [dragX, setDragX] = useState(0)
   const [hasDragged, setHasDragged] = useState(false)
@@ -187,7 +279,7 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
         onClose()
         return
       }
-      if (showSummary) return
+      if (showSummary || !started) return
       if (e.key === 'ArrowLeft')  decide('pass')
       if (e.key === 'ArrowRight') decide('top')
       if (e.key === 'ArrowUp')    decide('maybe')
@@ -201,8 +293,8 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
   // The button that made the last decision is gone once the summary shows;
   // put focus back on the dialog rather than lose it to the page.
   useEffect(() => {
-    if (showSummary) dialogRef.current?.focus()
-  }, [showSummary, dialogRef])
+    if (showSummary || started) dialogRef.current?.focus()
+  }, [showSummary, started, dialogRef])
 
   function handleApply() {
     onApplyRanking(computeSwipeRanking(decisions, artists))
@@ -315,7 +407,7 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
         {currentIdx === 0 && !hasDragged && (
           <div className="absolute bottom-2 inset-x-0 flex justify-center pointer-events-none">
             <p className="font-mono text-[0.6875rem] text-cream-muted/30 tracking-widest uppercase">
-              swipe to rank
+              → Top · ↑ Maybe · ← Pass
             </p>
           </div>
         )}
@@ -364,7 +456,9 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
       tabIndex={-1}
       className="fixed inset-0 z-[60] bg-ink-black flex flex-col animate-fade-in outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
     >
-      {showSummary ? (
+      {!started ? (
+        <IntroScreen count={queue.length} without={artists.length - queue.length} onStart={() => setStarted(true)} onCancel={onClose} />
+      ) : showSummary ? (
         <SummaryScreen
           decisions={decisions}
           artists={artists}

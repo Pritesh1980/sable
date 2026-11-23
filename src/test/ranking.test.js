@@ -59,6 +59,48 @@ describe('computeSwipeRanking', () => {
     expect(result.find((a) => a.id === 'e').rank).toBe(5)
   })
 
+  // The swipe only shows artists with photos. Passing on everyone must not
+  // push a photo-less artist, who was never judged, below the passes (#220 F).
+  it('keeps an artist who was not judged at their place in the order', () => {
+    const artists = [
+      { id: 'nophoto', rank: 1, images: [] },
+      { id: 'a', rank: 2, images: ['a.jpg'] },
+      { id: 'b', rank: 3, images: ['b.jpg'] },
+    ]
+    const decisions = [
+      { artistId: 'a', bucket: 'pass' },
+      { artistId: 'b', bucket: 'top' },
+    ]
+    const rankOf = (id) => computeSwipeRanking(decisions, artists).find((x) => x.id === id).rank
+    expect(rankOf('nophoto')).toBe(1)
+    expect(rankOf('b')).toBe(2)
+    expect(rankOf('a')).toBe(3)
+  })
+
+  it('moves judged artists only among the places judged artists held', () => {
+    const artists = [
+      { id: 'a', rank: 1, images: ['a.jpg'] },
+      { id: 'mid', rank: 2, images: [] },
+      { id: 'b', rank: 3, images: ['b.jpg'] },
+    ]
+    const decisions = [
+      { artistId: 'a', bucket: 'pass' },
+      { artistId: 'b', bucket: 'top' },
+    ]
+    const result = computeSwipeRanking(decisions, artists)
+    expect(result.map((x) => `${x.id}:${x.rank}`).sort()).toEqual(['a:3', 'b:1', 'mid:2'])
+  })
+
+  it('tolerates missing ranks, which sort last', () => {
+    const artists = [
+      { id: 'x', images: ['x.jpg'] },
+      { id: 'a', rank: 1, images: ['a.jpg'] },
+    ]
+    const result = computeSwipeRanking([{ artistId: 'x', bucket: 'maybe' }, { artistId: 'a', bucket: 'maybe' }], artists)
+    expect(result.find((r) => r.id === 'a').rank).toBe(1)
+    expect(result.find((r) => r.id === 'x').rank).toBe(2)
+  })
+
   it('returns sequential ranks from 1 to n', () => {
     const decisions = [
       { artistId: 'a', bucket: 'top' },
