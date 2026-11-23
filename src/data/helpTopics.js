@@ -92,7 +92,7 @@ export const HELP_GROUPS = [
         steps: [
           'Rank is one list of every artist. It sets your Top 5 and the Artists order, breaks ties in artist suggestions, and weights your taste.',
           'On the Wall, drag a rank number in the Top 5, or tap Reorder top 5 for ▲ and ▼ on everyone.',
-          'Tools → Rank shows artists one at a time: Top moves them up, Pass moves them down. Nobody is removed.',
+          'Tools → Rank shows artists one at a time: Top puts them at the front, Pass at the back. Nobody is removed.',
           'All of these change the same list.',
         ],
         image: 'ranking-intro.png',

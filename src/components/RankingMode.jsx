@@ -44,7 +44,7 @@ function NewTopFive({ decisions, artists }) {
               <span className="font-display text-lg text-cream w-8 shrink-0">#{a.rank}</span>
               <span className="font-body text-sm text-cream flex-1 min-w-0 truncate">{a.name || `@${a.handle}`}</span>
               <span className={`font-mono text-xs shrink-0 ${was === a.rank ? 'text-cream-muted/70' : was > a.rank ? 'text-accent' : 'text-cream-muted'}`}>
-                {was === a.rank ? 'no change' : `was #${was}`}
+                {was === a.rank ? 'no change' : `${was > a.rank ? '↑' : '↓'} from #${was}`}
               </span>
             </li>
           )
@@ -56,12 +56,12 @@ function NewTopFive({ decisions, artists }) {
 
 // What the order is for, said once before the first card (#220 F: "not quite
 // sure what I'm ranking here and what it affects").
-function IntroScreen({ count, onStart, onCancel }) {
+function IntroScreen({ count, without, onStart, onCancel }) {
   const effects = [
-    'Sets your Top 5 and the order of every Artists view.',
-    'Breaks ties when Plan, Ideas and AI suggest artists for an idea.',
-    'Shapes your taste: higher places count for more in Similar ink and the taste map.',
-    'Is noted once a day for Your taste over time, on Plan.',
+    'Sets your Top 5 on the Wall and the order of every Artists view.',
+    'Breaks ties when two artists suit an idea equally well, in Plan, Ideas and AI.',
+    'Weights your taste: higher places count for more in Similar ink and the taste map.',
+    'Feeds Your taste over time on Plan, noted once a day.',
   ]
   return (
     <div className="flex-1 min-h-0 flex flex-col">
@@ -85,11 +85,12 @@ function IntroScreen({ count, onStart, onCancel }) {
         <p className="font-mono text-[0.6875rem] tracking-[0.35em] uppercase text-cream-muted mb-2">How it works</p>
         <p className="font-body text-sm text-cream-muted leading-relaxed mb-3">
           You&rsquo;ll see {count} {count === 1 ? 'artist' : 'artists'} with photos, one at a time.
-          {' '}<span className="text-accent">Top</span> moves them up, <span className="text-cream">Maybe</span> keeps them in the middle and <span className="text-cream">Pass</span> moves them down.
+          {without > 0 && <> {without === 1 ? 'The 1 artist' : `The ${without} artists`} without photos {without === 1 ? 'keeps their' : 'keep their'} place.</>}
+          {' '}<span className="text-accent">Top</span> puts them at the front, <span className="text-cream">Maybe</span> in the middle and <span className="text-cream">Pass</span> at the back.
           {' '}Pass doesn&rsquo;t remove anyone. Within each group your current order stays, and nothing changes until you save.
         </p>
         <p className="font-body text-sm text-cream-muted/80 leading-relaxed">
-          Reorder, the Strip&rsquo;s ▲ ▼ and the Top 5 rail change the same list.
+          Dragging your Top 5 on the Wall, Reorder top 5, ▲ ▼ in Strip and ⇅ Reorder in Grid all change this same list.
         </p>
       </div>
 
@@ -146,9 +147,9 @@ function SummaryScreen({ decisions, artists, onApply, onDiscard }) {
 
         <NewTopFive decisions={decisions} artists={artists} />
 
-        <GroupSection label="Top · moved up" items={groups.top} accent="text-accent" />
-        <GroupSection label="Maybe · kept in the middle" items={groups.maybe} accent="text-cream-muted" />
-        <GroupSection label="Pass · moved down" items={groups.pass} accent="text-cream-muted/70" />
+        <GroupSection label="Top · to the front" items={groups.top} accent="text-accent" />
+        <GroupSection label="Maybe · in the middle" items={groups.maybe} accent="text-cream-muted" />
+        <GroupSection label="Pass · to the back" items={groups.pass} accent="text-cream-muted/70" />
 
         <p className="font-body text-sm text-cream-muted leading-relaxed">
           Within each group your current order stays. Nobody is removed, and nothing changes until you save.
@@ -456,7 +457,7 @@ export default function RankingMode({ artists, onClose, onApplyRanking }) {
       className="fixed inset-0 z-[60] bg-ink-black flex flex-col animate-fade-in outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
     >
       {!started ? (
-        <IntroScreen count={queue.length} onStart={() => setStarted(true)} onCancel={onClose} />
+        <IntroScreen count={queue.length} without={artists.length - queue.length} onStart={() => setStarted(true)} onCancel={onClose} />
       ) : showSummary ? (
         <SummaryScreen
           decisions={decisions}

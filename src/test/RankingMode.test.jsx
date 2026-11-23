@@ -58,6 +58,16 @@ describe('RankingMode — intro', () => {
     expect(screen.queryByText('1 / 2')).not.toBeInTheDocument()
   })
 
+  it('says artists without photos keep their place, only when there are some', () => {
+    renderMode([artist, second, { ...second, id: 'bare', handle: 'bare', images: [], rank: 3 }], undefined, { start: false })
+    expect(screen.getByRole('dialog')).toHaveTextContent(/the 1 artist without photos keeps their place/i)
+  })
+
+  it('does not mention photo-less artists when everyone has photos', () => {
+    renderMode(undefined, undefined, { start: false })
+    expect(screen.getByRole('dialog')).not.toHaveTextContent(/without photos/i)
+  })
+
   it('says the other ways to reorder change the same list', () => {
     renderMode(undefined, undefined, { start: false })
     expect(screen.getByRole('dialog')).toHaveTextContent(/same list/i)
@@ -82,8 +92,12 @@ describe('RankingMode — intro', () => {
     expect(onApplyRanking).not.toHaveBeenCalled()
   })
 
-  it('keeps focus on the dialog after Start', () => {
-    renderMode()
+  it('keeps focus on the dialog after Start, which then leaves the page', () => {
+    renderMode(undefined, undefined, { start: false })
+    const start = screen.getByRole('button', { name: 'Start' })
+    start.focus()
+    fireEvent.click(start)
+    expect(document.activeElement).not.toBe(document.body)
     expect(screen.getByRole('dialog', { name: 'Rank artists' })).toHaveFocus()
   })
 })
@@ -95,8 +109,8 @@ describe('RankingMode — summary', () => {
       const { onApplyRanking, onClose } = renderMode()
       decideAll(['ArrowLeft', 'ArrowRight'])
       const dialog = screen.getByRole('dialog', { name: 'Ranking complete' })
-      expect(dialog).toHaveTextContent(/top · moved up/i)
-      expect(dialog).toHaveTextContent(/pass · moved down/i)
+      expect(dialog).toHaveTextContent(/top · to the front/i)
+      expect(dialog).toHaveTextContent(/pass · to the back/i)
       expect(dialog).not.toHaveTextContent(/tier/i)
       expect(dialog).toHaveTextContent(/nothing changes until you save/i)
       fireEvent.click(screen.getByRole('button', { name: 'Save this order' }))
@@ -115,9 +129,9 @@ describe('RankingMode — summary', () => {
       const preview = screen.getByRole('list', { name: 'Your new top 5' })
       const rows = within(preview).getAllByRole('listitem')
       expect(rows[0]).toHaveTextContent('@tolgatemirlenk.ink')
-      expect(rows[0]).toHaveTextContent(/was #2/)
+      expect(rows[0]).toHaveTextContent('↑ from #2')
       expect(rows[1]).toHaveTextContent('Zoia')
-      expect(rows[1]).toHaveTextContent(/was #1/)
+      expect(rows[1]).toHaveTextContent('↓ from #1')
     } finally {
       vi.useRealTimers()
     }

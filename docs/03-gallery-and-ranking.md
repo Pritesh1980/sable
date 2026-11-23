@@ -144,7 +144,7 @@ The Artists page keeps its own ranking tools for when you're already there organ
 3. **Swipe-compare** — tap **Tools → Rank** (top-right of the Artists page). A short intro says
    what the order affects, then **Start** shows artists with photos one at a time, with a
    scrollable row of all their reference images to browse before you decide.
-   **Top** moves an artist up, **Maybe** keeps them in the middle, **Pass** moves them down.
+   **Top** puts an artist at the front, **Maybe** in the middle, **Pass** at the back.
    Pass doesn't remove anyone, and within each group your current order stays. Artists with
    no photos aren't shown and keep their place. Made a mistake? **Undo** reverses your last
    decision. At the end you see your new top 5, each beside the place they held before, and
