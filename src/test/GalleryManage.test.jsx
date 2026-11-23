@@ -34,6 +34,8 @@ describe('Gallery manage mode', () => {
     renderGallery({ artists: [{ ...baseArtists[0], images: ['images/demo/mora.blackfern/fern-v4.webp'] }] })
     fireEvent.click(screen.getByRole('button', { name: 'Tools' }))
     fireEvent.click(screen.getByRole('menuitem', { name: 'Rank' }))
+    // The intro shows no artwork; the notice belongs with the first card.
+    fireEvent.click(screen.getByRole('button', { name: 'Start' }))
     expect(within(screen.getByRole('button', { name: 'Cancel' }).closest('.fixed')).getByText(/AI-generated imagery/)).toBeInTheDocument()
   })
 

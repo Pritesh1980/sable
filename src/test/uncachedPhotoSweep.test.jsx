@@ -130,6 +130,7 @@ describe('uncached { key } photo across artist-photo surfaces (counts include of
 
   it('RankingMode: the offline-photo artist is queued, the photo-less one is not', async () => {
     const { container } = render(<RankingMode artists={[NONE, OFFLINE]} onClose={vi.fn()} onApplyRanking={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Start' }))
     expect(screen.getByText('1 / 1')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Zoia' })).toBeInTheDocument()
     await settledMonogram(container)
@@ -152,7 +153,9 @@ describe('uncached { key } photo across artist-photo surfaces (counts include of
     )
     fireEvent.click(screen.getByRole('button', { name: 'Tools' }))
     fireEvent.click(screen.getByRole('menuitem', { name: 'Rank' }))
-    expect(await screen.findByText('1 / 1')).toBeInTheDocument()
+    expect(await screen.findByText(/1 artist with photos/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Start' }))
+    expect(screen.getByText('1 / 1')).toBeInTheDocument()
   })
 
   it('Plan: an idea artist row shows the monogram for the offline cover photo', async () => {

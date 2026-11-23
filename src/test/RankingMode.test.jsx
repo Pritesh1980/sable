@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { render, screen, fireEvent, act, within } from '@testing-library/react'
 import RankingMode from '../components/RankingMode'
 
 const artist = {
@@ -28,12 +28,126 @@ function touch(el, type, clientX, clientY = 0) {
   fireEvent[type](el, { touches: [{ clientX, clientY }], changedTouches: [{ clientX, clientY }] })
 }
 
-function renderMode(artists = [artist, second], props = {}) {
+// Opens past the intro (#220 F) unless `{ start: false }`.
+function renderMode(artists = [artist, second], props = {}, { start = true } = {}) {
   const onClose = vi.fn()
   const onApplyRanking = vi.fn()
   render(<RankingMode artists={artists} onClose={onClose} onApplyRanking={onApplyRanking} {...props} />)
+  if (start) fireEvent.click(screen.getByRole('button', { name: 'Start' }))
   return { onClose, onApplyRanking }
 }
+
+function decideAll(keys) {
+  for (const key of keys) {
+    fireEvent.keyDown(window, { key })
+    act(() => { vi.advanceTimersByTime(300) })
+  }
+}
+
+// #220 F: "Not quite sure what I'm ranking here and what it affects."
+describe('RankingMode — intro', () => {
+  it('opens on an intro that says what the order is for, before any card', () => {
+    renderMode(undefined, undefined, { start: false })
+    const dialog = screen.getByRole('dialog', { name: 'Rank artists' })
+    expect(dialog).toHaveTextContent(/order you.d most like to be tattooed by them/i)
+    expect(dialog).toHaveTextContent(/top 5/i)
+    expect(dialog).toHaveTextContent(/plan/i)
+    expect(dialog).toHaveTextContent(/taste/i)
+    expect(dialog).toHaveTextContent(/pass doesn.t remove anyone/i)
+    expect(dialog).toHaveTextContent(/2 artists with photos/i)
+    expect(screen.queryByText('1 / 2')).not.toBeInTheDocument()
+  })
+
+  it('says the other ways to reorder change the same list', () => {
+    renderMode(undefined, undefined, { start: false })
+    expect(screen.getByRole('dialog')).toHaveTextContent(/same list/i)
+  })
+
+  it('ignores decision keys until Start', () => {
+    vi.useFakeTimers()
+    try {
+      renderMode(undefined, undefined, { start: false })
+      decideAll(['ArrowRight'])
+      fireEvent.click(screen.getByRole('button', { name: 'Start' }))
+      expect(screen.getByText('1 / 2')).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('Cancel on the intro closes without changing anything', () => {
+    const { onClose, onApplyRanking } = renderMode(undefined, undefined, { start: false })
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(onApplyRanking).not.toHaveBeenCalled()
+  })
+
+  it('keeps focus on the dialog after Start', () => {
+    renderMode()
+    expect(screen.getByRole('dialog', { name: 'Rank artists' })).toHaveFocus()
+  })
+})
+
+describe('RankingMode — summary', () => {
+  it('names what each group does and saves with "Save this order"', () => {
+    vi.useFakeTimers()
+    try {
+      const { onApplyRanking, onClose } = renderMode()
+      decideAll(['ArrowLeft', 'ArrowRight'])
+      const dialog = screen.getByRole('dialog', { name: 'Ranking complete' })
+      expect(dialog).toHaveTextContent(/top · moved up/i)
+      expect(dialog).toHaveTextContent(/pass · moved down/i)
+      expect(dialog).not.toHaveTextContent(/tier/i)
+      expect(dialog).toHaveTextContent(/nothing changes until you save/i)
+      fireEvent.click(screen.getByRole('button', { name: 'Save this order' }))
+      expect(onApplyRanking).toHaveBeenCalledTimes(1)
+      expect(onClose).toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('previews the new top 5 with each artist\'s old and new place', () => {
+    vi.useFakeTimers()
+    try {
+      renderMode()
+      decideAll(['ArrowLeft', 'ArrowRight'])
+      const preview = screen.getByRole('list', { name: 'Your new top 5' })
+      const rows = within(preview).getAllByRole('listitem')
+      expect(rows[0]).toHaveTextContent('@tolgatemirlenk.ink')
+      expect(rows[0]).toHaveTextContent(/was #2/)
+      expect(rows[1]).toHaveTextContent('Zoia')
+      expect(rows[1]).toHaveTextContent(/was #1/)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('marks a row whose place did not change', () => {
+    vi.useFakeTimers()
+    try {
+      renderMode()
+      decideAll(['ArrowRight', 'ArrowLeft'])
+      const rows = within(screen.getByRole('list', { name: 'Your new top 5' })).getAllByRole('listitem')
+      expect(rows[0]).toHaveTextContent(/no change/i)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('Discard closes without saving', () => {
+    vi.useFakeTimers()
+    try {
+      const { onApplyRanking, onClose } = renderMode()
+      decideAll(['ArrowLeft', 'ArrowRight'])
+      fireEvent.click(screen.getByRole('button', { name: 'Discard' }))
+      expect(onApplyRanking).not.toHaveBeenCalled()
+      expect(onClose).toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
 
 describe('RankingMode — image row', () => {
   it('shows a horizontal row of ALL the current artist images, not just the first', () => {
@@ -178,6 +292,7 @@ describe('RankingMode — dialog semantics', () => {
           <div role="dialog" aria-modal="true" aria-label="Above" />
         </>
       )
+      fireEvent.click(screen.getByRole('button', { name: 'Start' }))
       fireEvent.keyDown(document, { key: 'Escape' })
       fireEvent.keyDown(document, { key: 'ArrowRight' })
       act(() => { vi.advanceTimersByTime(500) })

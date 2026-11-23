@@ -141,14 +141,27 @@ The Artists page keeps its own ranking tools for when you're already there organ
 
 1. **Drag** in Grid view, with **⇅ Reorder** turned on.
 2. **Nudge** the rank number up/down in Filmstrip view.
-3. **Swipe-compare** — tap **Tools → Rank** (top-right of the Artists page) to judge artists one at
-   a time as **Pass / Maybe / Top**, with a scrollable row of all their reference images
-   to browse before you decide. Made a mistake? **Undo** reverses your last decision.
+3. **Swipe-compare** — tap **Tools → Rank** (top-right of the Artists page). A short intro says
+   what the order affects, then **Start** shows artists with photos one at a time, with a
+   scrollable row of all their reference images to browse before you decide.
+   **Top** moves an artist up, **Maybe** keeps them in the middle, **Pass** moves them down.
+   Pass doesn't remove anyone, and within each group your current order stays. Artists with
+   no photos aren't shown and keep their place. Made a mistake? **Undo** reverses your last
+   decision. At the end you see your new top 5, each beside the place they held before, and
+   nothing changes until you tap **Save this order**.
+
+![The intro before swipe-compare: what your order affects](../public/guide/ranking-intro.png)
 
 ![Swipe-compare ranking](../public/guide/ranking-swipe.png)
 
-> **Tip:** ranking flows through the whole app — the top artists on Home, the Wall's **Top 5**,
-> and the artist suggestions in *Ideas* and on *Plan*, all respect the order you set here.
+### What your rank affects
+
+- The Wall's **Top 5** and the order of every Artists view.
+- Artist suggestions on **Plan**, in **Ideas** and in **AI**: shared styles come first, and
+  rank breaks the ties.
+- Your **taste**: higher-ranked artists count for more in **Similar ink**, the taste line and
+  the **taste map**.
+- **Your taste over time** on Plan, which notes rank changes once a day.
 
 ---
 
