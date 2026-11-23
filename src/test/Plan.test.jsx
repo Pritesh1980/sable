@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, within, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import Plan from '../pages/Plan'
-import { DEMO_ARTISTS } from '../data/demoSeed'
+import { DEMO_ARTISTS, demoTasteHistory } from '../data/demoSeed'
 
 // Group D of #220: Pipeline was built around a contact workflow the owner does
 // not use. Plan answers one question instead: which artist for which idea.
@@ -113,20 +113,38 @@ describe('Plan (#220 D)', () => {
     expect(within(card('Raven sleeve')).getByRole('link', { name: /ember/i })).not.toHaveTextContent(/london/i)
   })
 
-  it('shows empty note when artists have no rank history yet, and renders Taste over time for demo data (#188)', () => {
+  it('shows empty note when artists have no rank history yet (#188)', () => {
     renderPlan()
     expect(screen.getByRole('heading', { level: 2, name: /your taste over time/i })).toBeInTheDocument()
     expect(screen.getByText(/no rank history yet/i)).toBeInTheDocument()
+  })
+
+  it('renders Taste over time with deterministic months and artist links (#188)', () => {
+    const demoHistory = demoTasteHistory(TODAY)
+    const demoArtists = DEMO_ARTISTS.map((a) => ({ ...a, history: demoHistory[a.id] }))
 
     render(
       <MemoryRouter initialEntries={['/plan']}>
-        <Plan artists={DEMO_ARTISTS} ideas={[]} setArtists={vi.fn()} today={TODAY} />
+        <Plan artists={demoArtists} ideas={[]} setArtists={vi.fn()} today={TODAY} />
       </MemoryRouter>
     )
-    expect(screen.getByText('Top five by month')).toBeInTheDocument()
-    expect(screen.getByText('Biggest risers')).toBeInTheDocument()
-    expect(screen.getByText('Biggest fallers')).toBeInTheDocument()
-    expect(screen.getByText('Style share by month')).toBeInTheDocument()
-    expect(screen.getByText('#4 → #1 (+3)')).toBeInTheDocument()
+
+    const tasteSection = screen.getByRole('region', { name: /your taste over time/i })
+    expect(within(tasteSection).getByText('Top five by month')).toBeInTheDocument()
+    expect(within(tasteSection).getByText('Biggest risers')).toBeInTheDocument()
+    expect(within(tasteSection).getByText('Biggest fallers')).toBeInTheDocument()
+    expect(within(tasteSection).getByText('Style share by month')).toBeInTheDocument()
+    for (const label of ['Nov 2026', 'Dec 2026', 'Jan 2027', 'Feb 2027']) {
+      expect(within(tasteSection).getAllByText(label)).toHaveLength(2)
+    }
+    expect(within(tasteSection).getByText('#4 → #1 (+3)')).toBeInTheDocument()
+
+    const vesperLinks = within(tasteSection).getAllByRole('link', { name: /vesper ash/i })
+    expect(vesperLinks.length).toBeGreaterThan(0)
+    for (const link of vesperLinks) expect(link).toHaveAttribute('href', '/gallery?artist=vesper_noctis')
+
+    const moraLinks = within(tasteSection).getAllByRole('link', { name: /mora vane/i })
+    expect(moraLinks.length).toBeGreaterThan(0)
+    for (const link of moraLinks) expect(link).toHaveAttribute('href', '/gallery?artist=mora.blackfern')
   })
 })

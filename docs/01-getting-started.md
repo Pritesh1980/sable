@@ -190,7 +190,7 @@ Milton Keynes; its **Within** setting also decides which artists get the pin. A 
 
 **Your taste over time** underneath tracks how your ranking evolves once per day per
 artist, showing your top five by month, biggest risers and fallers, and rank-weighted
-style share by month.
+style share by month. Tap any artist to open their page.
 
 There is no artist status any more (researching → contact next → pass): Plan
 replaced the old Pipeline page, which was built around that contact chain. Old
@@ -201,6 +201,10 @@ replaced the old Pipeline page, which was built around that contact chain. Old
 On a wide screen:
 
 ![Plan on desktop](../public/guide/plan-desktop.png)
+
+Scrolling down shows **Your taste over time**:
+
+![Your taste over time on the Plan page](../public/guide/taste-over-time.png)
 
 ---
 

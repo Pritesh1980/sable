@@ -148,7 +148,7 @@ export default function Plan({ artists = [], ideas = [], setArtists = () => {}, 
             </section>
 
             <section aria-labelledby="plan-taste-history" className="mt-12">
-              <h2 id="plan-taste-history" className="font-display text-2xl text-cream leading-none border-b border-ink-border pb-2 mb-4">
+              <h2 id="plan-taste-history" className="scroll-mt-20 font-display text-2xl text-cream leading-none border-b border-ink-border pb-2 mb-4">
                 Your taste over time
               </h2>
               <TasteOverTime artists={artists} today={today} />
