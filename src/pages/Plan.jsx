@@ -7,6 +7,7 @@ import EmptyState from '../components/EmptyState'
 import StartChecklist from '../components/StartChecklist'
 import SampleArtistNotice from '../components/SampleArtistNotice'
 import NearbySoon from '../components/NearbySoon'
+import TasteOverTime from '../components/TasteOverTime'
 import { readNearbyRadius } from '../data/nearbyRadius'
 import { IDEA_STATUSES } from '../data/brief'
 import { artistsForIdea } from '../data/planning'
@@ -144,6 +145,13 @@ export default function Plan({ artists = [], ideas = [], setArtists = () => {}, 
                 Nearby soon
               </h2>
               <NearbySoon artists={artists} today={today} radiusMiles={radiusMiles} onRadiusChange={setRadiusMiles} />
+            </section>
+
+            <section aria-labelledby="plan-taste-history" className="mt-12">
+              <h2 id="plan-taste-history" className="font-display text-2xl text-cream leading-none border-b border-ink-border pb-2 mb-4">
+                Your taste over time
+              </h2>
+              <TasteOverTime artists={artists} today={today} />
             </section>
           </>
         )}
