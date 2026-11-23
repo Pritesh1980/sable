@@ -1,9 +1,36 @@
 import { useMemo } from 'react'
+import { Link } from 'react-router'
 import { movers, styleShareByMonth, topNByMonth } from '../data/tasteHistory'
 import TagPill from './TagPill'
 
 function artistLabel(artist) {
   return artist?.name || `@${artist?.handle}`
+}
+
+const artistHref = (artist) => `/gallery?artist=${encodeURIComponent(artist.id)}`
+
+function MoverCard({ title, entries, emptyText, positive = false }) {
+  return (
+    <div className="bg-ink-card border border-ink-border rounded-xs p-3">
+      <p className="font-mono text-[0.6875rem] uppercase tracking-widest text-cream-muted mb-2">{title}</p>
+      {entries.length > 0 ? (
+        <ul className="space-y-1.5">
+          {entries.map((entry) => (
+            <li key={entry.id}>
+              <Link to={artistHref(entry)} className="group flex items-center justify-between gap-2 py-0.5 text-xs rounded-xs">
+                <span className="text-cream group-hover:text-accent transition-colors truncate">{artistLabel(entry)}</span>
+                <span className={`font-mono text-[0.6875rem] tabular-nums shrink-0 ${positive ? 'text-accent' : 'text-cream-muted'}`}>
+                  #{entry.fromRank} → #{entry.toRank} ({positive ? `+${entry.delta}` : entry.delta})
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-xs text-cream-muted/70">{emptyText}</p>
+      )}
+    </div>
+  )
 }
 
 export default function TasteOverTime({ artists = [], today }) {
@@ -53,12 +80,14 @@ export default function TasteOverTime({ artists = [], today }) {
                 <p className="font-mono text-xs text-accent tracking-widest uppercase mb-2">{month.label}</p>
                 <ol className="space-y-1">
                   {month.artists.map((entry, idx) => (
-                    <li key={entry.id} className="flex items-baseline gap-2 text-xs">
-                      <span className="font-mono text-[0.6875rem] text-cream-muted/70 tabular-nums shrink-0">#{idx + 1}</span>
-                      <span className="text-cream truncate">{artistLabel(entry)}</span>
-                      {entry.rank !== idx + 1 && (
-                        <span className="font-mono text-[0.625rem] text-cream-muted/70 shrink-0">(rank #{entry.rank})</span>
-                      )}
+                    <li key={entry.id}>
+                      <Link to={artistHref(entry)} className="group flex items-baseline gap-2 py-0.5 text-xs rounded-xs">
+                        <span className="font-mono text-[0.6875rem] text-cream-muted/70 tabular-nums shrink-0">#{idx + 1}</span>
+                        <span className="text-cream group-hover:text-accent transition-colors truncate">{artistLabel(entry)}</span>
+                        {entry.rank !== idx + 1 && (
+                          <span className="font-mono text-[0.625rem] text-cream-muted/70 shrink-0">(rank #{entry.rank})</span>
+                        )}
+                      </Link>
                     </li>
                   ))}
                 </ol>
@@ -70,41 +99,17 @@ export default function TasteOverTime({ artists = [], today }) {
 
       {(rankMovers.risers.length > 0 || rankMovers.fallers.length > 0) && (
         <div className="grid sm:grid-cols-2 gap-3">
-          <div className="bg-ink-card border border-ink-border rounded-xs p-3">
-            <p className="font-mono text-[0.6875rem] uppercase tracking-widest text-cream-muted mb-2">Biggest risers</p>
-            {rankMovers.risers.length > 0 ? (
-              <ul className="space-y-1.5">
-                {rankMovers.risers.map((entry) => (
-                  <li key={entry.id} className="flex items-center justify-between gap-2 text-xs">
-                    <span className="text-cream truncate">{artistLabel(entry)}</span>
-                    <span className="font-mono text-[0.6875rem] text-accent tabular-nums shrink-0">
-                      #{entry.fromRank} → #{entry.toRank} (+{entry.delta})
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-xs text-cream-muted/70">No risers recorded yet.</p>
-            )}
-          </div>
-
-          <div className="bg-ink-card border border-ink-border rounded-xs p-3">
-            <p className="font-mono text-[0.6875rem] uppercase tracking-widest text-cream-muted mb-2">Biggest fallers</p>
-            {rankMovers.fallers.length > 0 ? (
-              <ul className="space-y-1.5">
-                {rankMovers.fallers.map((entry) => (
-                  <li key={entry.id} className="flex items-center justify-between gap-2 text-xs">
-                    <span className="text-cream truncate">{artistLabel(entry)}</span>
-                    <span className="font-mono text-[0.6875rem] text-cream-muted tabular-nums shrink-0">
-                      #{entry.fromRank} → #{entry.toRank} ({entry.delta})
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-xs text-cream-muted/70">No fallers recorded yet.</p>
-            )}
-          </div>
+          <MoverCard
+            title="Biggest risers"
+            entries={rankMovers.risers}
+            emptyText="No risers recorded yet."
+            positive
+          />
+          <MoverCard
+            title="Biggest fallers"
+            entries={rankMovers.fallers}
+            emptyText="No fallers recorded yet."
+          />
         </div>
       )}
 

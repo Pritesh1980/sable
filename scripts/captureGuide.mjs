@@ -51,6 +51,8 @@ try {
       await page.keyboard.press('Escape')
       await page.goto('/plan')
       await capture(page, 'plan-desktop')
+      await page.getByRole('heading', { name: 'Your taste over time', exact: true }).evaluate((el) => el.scrollIntoView({ block: 'start' }))
+      await capture(page, 'taste-over-time')
       await page.goto('/gallery')
       await page.getByRole('button', { name: 'Grid view', exact: true }).click()
       await capture(page, 'gallery-grid-desktop')
