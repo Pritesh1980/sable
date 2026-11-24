@@ -18,13 +18,16 @@ export function TagSuggestions({ suggestions, onAccept }) {
     <ul className="mt-3 space-y-1.5">
       {suggestions.map(({ tag, because }) => (
         <li key={tag} className="flex items-center gap-3">
+          {/* The 44pt hit area is the button; the visible chip matches the small tag pills. */}
           <button
             type="button"
             onClick={() => onAccept(tag)}
             aria-label={`Add the ${tag} tag`}
-            className="inline-flex items-center justify-center min-h-11 shrink-0 px-2 rounded-xs border border-dashed border-cream-muted/60 font-mono text-[0.8125rem] tracking-widest uppercase text-cream-muted hover:border-accent hover:text-accent transition-colors"
+            className="group inline-flex items-center min-h-11 shrink-0"
           >
-            + {tag}
+            <span className="px-1.5 py-0.5 rounded-xs border border-dashed border-cream-muted/60 font-mono text-[0.8125rem] tracking-widest uppercase text-cream-muted group-hover:border-accent group-hover:text-accent transition-colors">
+              + {tag}
+            </span>
           </button>
           <span className="text-xs text-cream-muted/90 font-body">
             Suggested: looks like {names(because)}, tagged {tag}.
@@ -49,7 +52,8 @@ export function OffStylePhotos({ artist, flags, onKeep, onRemove }) {
       <ul className="space-y-2">
         {flags.map(({ image, index }) => (
           <li key={index} className="flex items-center gap-3">
-            <div className="w-18 h-18 rounded-xs overflow-hidden bg-ink-muted shrink-0">
+            {/* Bigger than the strip above: big enough to tell a poster from a piece. */}
+            <div className="w-28 h-28 rounded-xs overflow-hidden bg-ink-muted shrink-0">
               <ArtistImage src={image} label={label(artist)} className="w-full h-full object-cover" monogramClassName="text-lg" />
             </div>
             <button

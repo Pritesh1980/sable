@@ -5,6 +5,7 @@ import { useAuth } from '../context/useAuth'
 import TagPill from './TagPill'
 import ArtistImage from './ArtistImage'
 import { useUndoableRemoval } from '../hooks/useUndoableRemoval'
+import { useUndo } from '../context/useUndo'
 import { intersectsViewport } from '../data/viewport'
 import useStyleVectors from '../hooks/useStyleVectors'
 import { artistCentroids } from '../data/embeddings'
@@ -92,8 +93,16 @@ function ArtistRow({ artist, hints = NO_HINTS, onSaveImages, onUpdate, onRemove 
     onUpdate(artist.id, { tags })
   }
 
+  // Keep sits beside Remove, so a mis-tap gets the same way back.
+  const { offer: offerUndo } = useUndo()
   function keepImage(image) {
-    onUpdate(artist.id, { keptImages: [...(artist.keptImages || []), refIdentity(image)] })
+    const before = artist.keptImages || []
+    onUpdate(artist.id, { keptImages: [...before, refIdentity(image)] })
+    offerUndo({
+      message: `Photo kept for ${who}`,
+      onUndo: () => onUpdate(artist.id, { keptImages: before }),
+      durable: true,
+    })
   }
 
   const igUrl = `https://www.instagram.com/${artist.handle}/`

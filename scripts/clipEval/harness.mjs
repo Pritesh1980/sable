@@ -51,11 +51,16 @@ async function ensureModel(hfCache) {
   return downloaded
 }
 
-// A request path inside one root folder, or null for anything that escapes it.
+// A request path inside one root folder, or null for anything that escapes it,
+// by `..` or by a symlink pointing outside (compared after resolving links).
 function within(root, rel) {
-  const base = path.resolve(root)
-  const file = path.resolve(base, rel.replace(/^\/+/, ''))
-  return file.startsWith(base + path.sep) ? file : null
+  try {
+    const base = fs.realpathSync(root)
+    const file = fs.realpathSync(path.resolve(root, rel.replace(/^\/+/, '')))
+    return file.startsWith(base + path.sep) ? file : null
+  } catch {
+    return null // missing file
+  }
 }
 
 function serve(mounts) {
@@ -64,7 +69,7 @@ function serve(mounts) {
       const url = decodeURIComponent(new URL(req.url, 'http://local').pathname)
       const [prefix, root] = mounts.find(([p]) => url.startsWith(p))
       const file = within(root, url.slice(prefix.length))
-      if (!file || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
+      if (!file || !fs.statSync(file).isFile()) {
         res.writeHead(404)
         return res.end()
       }
@@ -85,7 +90,14 @@ export async function openClipPage({ out, imgDir }) {
   fs.mkdirSync(out, { recursive: true })
   const hfCache = path.join(out, 'hf-cache')
   const downloaded = await ensureModel(hfCache)
-  const server = await serve([['/hf/', hfCache], ['/repo/', repo], ['/photos/', imgDir], ['/', here]])
+  // Only node_modules from the checkout (the page's runtime), never the rest of
+  // it: a .env.local there must not be one request away.
+  const server = await serve([
+    ['/hf/', hfCache],
+    ['/repo/node_modules/', path.join(repo, 'node_modules')],
+    ['/photos/', imgDir],
+    ['/', here],
+  ])
   const { chromium } = require('playwright')
   const browser = await chromium.launch()
   const page = await browser.newPage()

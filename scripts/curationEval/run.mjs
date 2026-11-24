@@ -11,6 +11,8 @@
 //
 // Usage: node scripts/curationEval/run.mjs <outDir> [photosDir]
 // Share an outDir with scripts/textSearchEval to reuse its image vectors.
+// This chose the approach. The rule Manage actually ships (src/data/curation.js)
+// is measured by shipped.mjs, over the vectors this writes.
 // Writes <outDir>/curation.json and <outDir>/offstyle.html (the contact sheet,
 // local only: the photos are third-party work, never commit or post it).
 import fs from 'node:fs'
@@ -28,11 +30,15 @@ const { DEFAULT_ARTISTS } = await import(pathToFileURL(path.join(repo, 'src/data
 // ---- embed ---------------------------------------------------------------
 const strings = [...new Set([...Object.values(PROMPTS.tags).flat(), ...PROMPTS.stray])]
 const clip = await openClipPage({ out, imgDir })
-const { vectors } = await clip.page.evaluate(({ images, cached }) => window.embedImages(images, cached), {
-  images: listPhotos(imgDir),
+const present = listPhotos(imgDir)
+const embedded = await clip.page.evaluate(({ images, cached }) => window.embedImages(images, cached), {
+  images: present,
   cached: clip.cachedVectors,
 })
-clip.saveVectors(vectors)
+// The cache may hold photos from an earlier run on another folder: score only
+// the photos in this one.
+const vectors = Object.fromEntries(present.filter((u) => embedded.vectors[u]).map((u) => [u, embedded.vectors[u]]))
+clip.saveVectors(embedded.vectors)
 const text = await clip.page.evaluate((s) => window.embedTexts(s), strings)
 await clip.close()
 const textVec = Object.fromEntries(strings.map((s, i) => [s, text.vectors[i]]))

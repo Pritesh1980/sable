@@ -6,6 +6,9 @@
 //   unreliably. Learning from the owner's own tags did better: the nearest
 //   tagged artists predict fine-line and realism at AUC 0.75-0.80 for any K
 //   of 3/5/7. The other four tags never held up, so they're not suggested.
+//   This rule (3 of the 5 nearest tagged artists), each artist's tags hidden in
+//   turn: fine-line precision 0.75 / recall 0.55, realism 0.76 / 0.87
+//   (scripts/curationEval/shipped.mjs).
 // - Off-style: a photo's similarity to the centroid of its artist's *other*
 //   photos. Under 0.6 flagged 12 of 406, 11 of them not the artist's tattoo
 //   work (selfies, posters, studio shots). A per-artist z-score was worse.

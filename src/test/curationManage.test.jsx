@@ -79,6 +79,17 @@ describe('curation hints in Manage (#187)', () => {
     expect(onUpdate).toHaveBeenCalledWith(odd.id, { keptImages: ['path:/images/artists/odd/4.jpg'] })
   })
 
+  it('a mis-tapped Keep can be undone', async () => {
+    const { artists, odd } = library()
+    const { onUpdate } = renderTable(artists)
+    fireEvent.click(await screen.findByText('@odd'))
+    const section = (await screen.findByText(/doesn.t look like the rest/i)).closest('section')
+    fireEvent.click(within(section).getByRole('button', { name: /keep/i }))
+    expect(screen.getByText(/photo kept for @odd/i)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /^undo$/i }))
+    expect(onUpdate).toHaveBeenLastCalledWith(odd.id, { keptImages: [] })
+  })
+
   it('Remove takes the flagged photo out, with undo', async () => {
     const { artists, odd } = library()
     const { onSaveImages } = renderTable(artists)
