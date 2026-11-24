@@ -41,6 +41,8 @@ jobs:
       # Parse every Mermaid block in tracked Markdown before application checks.
       - name: Validate Mermaid documentation
         run: npm run docs:check
+      - name: Test Blender Python helpers
+        run: python3 -m unittest discover -s scripts/blender
       # Blocking (#32 closed the last known violations). ESLint exits 1 for
       # rule violations and 2 for a fatal config/crash error — both fail CI
       # now. (The eslint 10 bump once crashed the linter outright while CI

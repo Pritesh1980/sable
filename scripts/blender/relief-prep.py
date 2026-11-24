@@ -94,6 +94,36 @@ def _non_negative(cast, label='number'):
     return parse
 
 
+def _same_path_target(a_abs, a_real, b_abs, b_real):
+    if a_real == b_real:
+        return True
+    try:
+        if os.path.exists(a_abs) and os.path.exists(b_abs) and os.path.samefile(a_abs, b_abs):
+            return True
+    except OSError:
+        pass
+    return False
+
+
+def validate_io_paths(input_path, out_stl, preview=None, report=None):
+    """Ensure input and requested output paths are distinct non-directory files."""
+    entries = [('--input', input_path), ('--out-stl', out_stl)]
+    if preview is not None:
+        entries.append(('--preview', preview))
+    if report is not None:
+        entries.append(('--report', report))
+    resolved = []
+    for flag, raw in entries:
+        expanded = os.path.abspath(os.path.expanduser(raw))
+        if flag != '--input' and os.path.isdir(expanded):
+            raise ValueError(f'{flag} points to a directory: {raw}')
+        resolved.append((flag, expanded, os.path.realpath(expanded)))
+    for i, (f1, e1, r1) in enumerate(resolved):
+        for f2, e2, r2 in resolved[i + 1:]:
+            if _same_path_target(e1, r1, e2, r2):
+                raise ValueError(f'{f1} and {f2} resolve to the same file ({r1})')
+
+
 def parse_args(argv):
     """Parse CLI arguments after ``--`` (Blender ignores everything before it)."""
     argv = list(argv)
@@ -139,18 +169,111 @@ def parse_args(argv):
         help=f'preview square image size in px (default: {DEFAULT_SIZE})',
     )
     p.add_argument('--ascii', action='store_true', help='write ASCII STL instead of binary')
-    return p.parse_args(own)
+    p.add_argument(
+        '--allow-non-manifold', action='store_true',
+        help='still export --out-stl when repair leaves non-manifold geometry',
+    )
+    args = p.parse_args(own)
+    try:
+        validate_io_paths(args.input, args.out_stl, args.preview, args.report)
+    except ValueError as err:
+        p.error(str(err))
+    return args
+
+
+def exact_bounds(vertices):
+    """Unrounded axis-aligned bounds from ``(x, y, z)`` vertices."""
+    if not vertices:
+        return {
+            'width': 0.0, 'depth': 0.0, 'height': 0.0,
+            'min_x': 0.0, 'max_x': 0.0, 'min_y': 0.0, 'max_y': 0.0, 'min_z': 0.0, 'max_z': 0.0,
+        }
+    xs = [float(v[0]) for v in vertices]
+    ys = [float(v[1]) for v in vertices]
+    zs = [float(v[2]) for v in vertices]
+    min_x, max_x = min(xs), max(xs)
+    min_y, max_y = min(ys), max(ys)
+    min_z, max_z = min(zs), max(zs)
+    return {
+        'width': max_x - min_x,
+        'depth': max_y - min_y,
+        'height': max_z - min_z,
+        'min_x': min_x,
+        'max_x': max_x,
+        'min_y': min_y,
+        'max_y': max_y,
+        'min_z': min_z,
+        'max_z': max_z,
+    }
+
+
+def _count_connected_shells(num_faces, edge_faces):
+    if num_faces == 0:
+        return 0
+    adj = [[] for _ in range(num_faces)]
+    for linked in edge_faces.values():
+        if len(linked) < 2:
+            continue
+        first = linked[0]
+        for other in linked[1:]:
+            adj[first].append(other)
+            adj[other].append(first)
+    visited = [False] * num_faces
+    shells = 0
+    for start in range(num_faces):
+        if visited[start]:
+            continue
+        shells += 1
+        stack = [start]
+        visited[start] = True
+        while stack:
+            cur = stack.pop()
+            for nb in adj[cur]:
+                if not visited[nb]:
+                    visited[nb] = True
+                    stack.append(nb)
+    return shells
+
+
+def _count_non_manifold_vertices(vert_faces, vert_edge_faces):
+    non_manifold = 0
+    for v, inc in vert_faces.items():
+        if len(inc) < 2:
+            continue
+        adj = {fi: [] for fi in inc}
+        for linked in vert_edge_faces[v].values():
+            if len(linked) < 2:
+                continue
+            first = linked[0]
+            for other in linked[1:]:
+                adj[first].append(other)
+                adj[other].append(first)
+        seen = {inc[0]}
+        stack = [inc[0]]
+        while stack:
+            cur = stack.pop()
+            for nb in adj[cur]:
+                if nb not in seen:
+                    seen.add(nb)
+                    stack.append(nb)
+        if len(seen) != len(inc):
+            non_manifold += 1
+    return non_manifold
 
 
 def analyze_topology(vertices, faces, *, area_eps=DEFAULT_AREA_EPS):
-    """Inspect vertices/faces for manifoldness, boundaries, loose verts, volume, and bounds."""
+    """Inspect vertices/faces for edge/vertex manifoldness, shells, loose verts, volume, and bounds."""
     verts = [tuple(float(c) for c in v) for v in vertices]
     referenced = set()
     edge_counts = collections.Counter()
     half_edges = collections.Counter()
+    edge_faces = collections.defaultdict(list)
+    vert_faces = collections.defaultdict(list)
+    vert_edge_faces = collections.defaultdict(lambda: collections.defaultdict(list))
     triangles = 0
     degenerate_faces = 0
     signed_volume = 0.0
+    valid_face_count = 0
 
     for raw_face in faces:
         n = len(raw_face)
@@ -158,7 +281,11 @@ def analyze_topology(vertices, faces, *, area_eps=DEFAULT_AREA_EPS):
             degenerate_faces += 1
             continue
         face = [int(idx) for idx in raw_face]
+        fi = valid_face_count
+        valid_face_count += 1
         referenced.update(face)
+        for v in set(face):
+            vert_faces[v].append(fi)
         if len(set(face)) < 3:
             degenerate_faces += 1
         triangles += n - 2
@@ -178,6 +305,9 @@ def analyze_topology(vertices, faces, *, area_eps=DEFAULT_AREA_EPS):
             key = (u, v) if u < v else (v, u)
             edge_counts[key] += 1
             half_edges[(u, v)] += 1
+            edge_faces[key].append(fi)
+            vert_edge_faces[u][key].append(fi)
+            vert_edge_faces[v][key].append(fi)
 
     boundary_edges = 0
     non_manifold_edges = 0
@@ -188,40 +318,35 @@ def analyze_topology(vertices, faces, *, area_eps=DEFAULT_AREA_EPS):
         elif count != 2 or half_edges[(u, v)] != 1 or half_edges[(v, u)] != 1:
             non_manifold_edges += 1
 
+    non_manifold_vertices = _count_non_manifold_vertices(vert_faces, vert_edge_faces)
+    shells = _count_connected_shells(valid_face_count, edge_faces)
     loose_vertices = max(0, len(verts) - len(referenced))
-    if verts:
-        xs = [v[0] for v in verts]
-        ys = [v[1] for v in verts]
-        zs = [v[2] for v in verts]
-        min_x, max_x = min(xs), max(xs)
-        min_y, max_y = min(ys), max(ys)
-        min_z, max_z = min(zs), max(zs)
-    else:
-        min_x = max_x = min_y = max_y = min_z = max_z = 0.0
-
-    bounds_mm = {
-        'width': round(max_x - min_x, 4),
-        'depth': round(max_y - min_y, 4),
-        'height': round(max_z - min_z, 4),
-        'min_x': round(min_x, 4),
-        'max_x': round(max_x, 4),
-        'min_y': round(min_y, 4),
-        'max_y': round(max_y, 4),
-        'min_z': round(min_z, 4),
-        'max_z': round(max_z, 4),
-    }
+    raw_bounds = exact_bounds(verts)
+    bounds_mm = {k: round(val, 4) for k, val in raw_bounds.items()}
     return {
         'triangles': triangles,
         'vertices': len(verts),
         'edges': len(edge_counts),
+        'shells': shells,
         'boundary_edges': boundary_edges,
         'non_manifold_edges': non_manifold_edges,
+        'non_manifold_vertices': non_manifold_vertices,
         'loose_vertices': loose_vertices,
         'degenerate_faces': degenerate_faces,
         'signed_volume_mm3': round(signed_volume, 4),
         'bounds_mm': bounds_mm,
-        'is_manifold': triangles > 0 and non_manifold_edges == 0 and loose_vertices == 0,
+        'is_manifold': (
+            triangles > 0
+            and non_manifold_edges == 0
+            and non_manifold_vertices == 0
+            and loose_vertices == 0
+        ),
     }
+
+
+def should_recalc_normals(pre_stats, holes_filled):
+    """Preserve valid nested/cavity normals when mesh is already closed, manifold, and positive-volume."""
+    return not (not holes_filled and pre_stats['is_manifold'] and pre_stats['signed_volume_mm3'] > 0)
 
 
 def compute_decimate_ratio(current_triangles, max_triangles):
@@ -262,19 +387,37 @@ def preview_camera_pose(bounds_mm, *, focal_mm=50.0, sensor_mm=36.0, fill=0.92):
     }
 
 
+def _format_topology_state(stats):
+    if stats['is_manifold']:
+        shells = stats.get('shells', 1)
+        return 'manifold' if shells <= 1 else f'manifold ({shells} shells)'
+    parts = []
+    if stats.get('non_manifold_edges'):
+        parts.append(f'{stats["non_manifold_edges"]} edges')
+    if stats.get('non_manifold_vertices'):
+        parts.append(f'{stats["non_manifold_vertices"]} vertices')
+    if stats.get('loose_vertices'):
+        parts.append(f'{stats["loose_vertices"]} loose')
+    return f'non-manifold ({", ".join(parts)})' if parts else 'non-manifold'
+
+
 def format_report(report):
     """Format a concise human-readable before/after summary."""
     b, a = report['before'], report['after']
-    b_state = 'manifold' if b['is_manifold'] else f'non-manifold ({b["non_manifold_edges"]} edges)'
-    a_state = 'manifold' if a['is_manifold'] else f'non-manifold ({a["non_manifold_edges"]} edges)'
+    b_state = _format_topology_state(b)
+    a_state = _format_topology_state(a)
     dims = a['bounds_mm']
+    out_label = report['out_stl'] if report.get('out_stl_written', True) else f'{report["out_stl"]} (skipped)'
     lines = [
         f'[relief-prep] input:  {report["input"]} ({b["triangles"]:,} tris, {b_state})',
-        (f'[relief-prep] output: {report["out_stl"]} ({a["triangles"]:,} tris, {a_state}, '
+        (f'[relief-prep] output: {out_label} ({a["triangles"]:,} tris, {a_state}, '
          f'{dims["width"]:g} × {dims["depth"]:g} × {dims["height"]:g} mm)'),
     ]
     if report.get('steps'):
         lines.append('[relief-prep] steps:  ' + ', '.join(report['steps']))
+    if report.get('pause_height_shift_mm'):
+        shift = report['pause_height_shift_mm']
+        lines.append(f'[relief-prep] note:   pause-at-height shifted by +{shift:g} mm (if using single-extruder filament swap)')
     if report.get('preview'):
         lines.append(f'[relief-prep] preview: {report["preview"]}')
     for warn in report.get('warnings') or ():
@@ -303,24 +446,24 @@ def _clean_and_orient_bmesh(bm, bmesh_mod, merge_distance):
     if loose_verts:
         bmesh_mod.ops.delete(bm, geom=loose_verts, context='VERTS')
     boundary = [e for e in bm.edges if e.is_boundary]
+    holes_filled = bool(boundary)
     if boundary:
         bmesh_mod.ops.holes_fill(bm, edges=boundary, sides=0)
     if len(bm.faces) > 0:
         bmesh_mod.ops.triangulate(bm, faces=list(bm.faces))
-        bmesh_mod.ops.recalc_face_normals(bm, faces=list(bm.faces))
-        stats = _inspect_bmesh(bm)
-        if stats['boundary_edges'] == 0 and stats['signed_volume_mm3'] < 0:
-            bmesh_mod.ops.reverse_faces(bm, faces=list(bm.faces))
-    else:
-        stats = _inspect_bmesh(bm)
+        pre_stats = _inspect_bmesh(bm)
+        if should_recalc_normals(pre_stats, holes_filled):
+            bmesh_mod.ops.recalc_face_normals(bm, faces=list(bm.faces))
+            stats = _inspect_bmesh(bm)
+            if stats['boundary_edges'] == 0 and stats['signed_volume_mm3'] < 0:
+                bmesh_mod.ops.reverse_faces(bm, faces=list(bm.faces))
     if len(bm.verts) > 0:
         min_z = min(v.co.z for v in bm.verts)
         if abs(min_z) > 1e-6:
             for v in bm.verts:
                 v.co.z -= min_z
             bm.normal_update()
-        stats = _inspect_bmesh(bm)
-    return stats
+    return _inspect_bmesh(bm)
 
 
 def _import_stl(bpy, path):
@@ -359,66 +502,73 @@ def _clean_object_mesh(obj, bmesh_mod, merge_distance):
         bm.free()
 
 
-def _create_box_object(bpy, bmesh_mod, name, min_x, max_x, min_y, max_y, min_z, max_z):
-    bm = bmesh_mod.new()
-    try:
-        corners = [
-            (min_x, min_y, min_z),
-            (max_x, min_y, min_z),
-            (max_x, max_y, min_z),
-            (min_x, max_y, min_z),
-            (min_x, min_y, max_z),
-            (max_x, min_y, max_z),
-            (max_x, max_y, max_z),
-            (min_x, max_y, max_z),
-        ]
-        vs = [bm.verts.new(c) for c in corners]
-        bm.faces.new((vs[3], vs[2], vs[1], vs[0]))  # bottom (-Z)
-        bm.faces.new((vs[4], vs[5], vs[6], vs[7]))  # top (+Z)
-        bm.faces.new((vs[0], vs[1], vs[5], vs[4]))  # front (-Y)
-        bm.faces.new((vs[1], vs[2], vs[6], vs[5]))  # right (+X)
-        bm.faces.new((vs[2], vs[3], vs[7], vs[6]))  # back (+Y)
-        bm.faces.new((vs[3], vs[0], vs[4], vs[7]))  # left (-X)
-        bmesh_mod.ops.triangulate(bm, faces=list(bm.faces))
-        bmesh_mod.ops.recalc_face_normals(bm, faces=list(bm.faces))
-        mesh = bpy.data.meshes.new(name)
-        bm.to_mesh(mesh)
-    finally:
-        bm.free()
-    helper = bpy.data.objects.new(name, mesh)
-    bpy.context.collection.objects.link(helper)
-    return helper
+def build_box_geometry(min_x, max_x, min_y, max_y, min_z, max_z):
+    """Outward-wound watertight triangulated axis-aligned box ``(verts, faces)``."""
+    verts = [
+        (float(min_x), float(min_y), float(min_z)),
+        (float(max_x), float(min_y), float(min_z)),
+        (float(max_x), float(max_y), float(min_z)),
+        (float(min_x), float(max_y), float(min_z)),
+        (float(min_x), float(min_y), float(max_z)),
+        (float(max_x), float(min_y), float(max_z)),
+        (float(max_x), float(max_y), float(max_z)),
+        (float(min_x), float(max_y), float(max_z)),
+    ]
+    faces = [
+        (0, 3, 2), (0, 2, 1),  # bottom (-Z)
+        (4, 5, 6), (4, 6, 7),  # top (+Z)
+        (0, 1, 5), (0, 5, 4),  # front (-Y)
+        (1, 2, 6), (1, 6, 5),  # right (+X)
+        (2, 3, 7), (2, 7, 6),  # back (+Y)
+        (3, 0, 4), (3, 4, 7),  # left (-X)
+    ]
+    return verts, faces
 
 
-def _create_frame_object(bpy, bmesh_mod, bounds, frame_mm, frame_height_mm):
-    """Watertight rectangular ring prism slightly overlapping outer relief edges."""
+def build_frame_geometry(bounds, frame_mm, frame_height_mm):
+    """Outward-wound watertight rectangular ring prism slightly overlapping relief edges."""
     w, d = bounds['width'], bounds['depth']
     overlap = min(0.15, w * 0.02, d * 0.02)
     ox0, ox1 = bounds['min_x'] - frame_mm, bounds['max_x'] + frame_mm
     oy0, oy1 = bounds['min_y'] - frame_mm, bounds['max_y'] + frame_mm
     ix0, ix1 = bounds['min_x'] + overlap, bounds['max_x'] - overlap
     iy0, iy1 = bounds['min_y'] + overlap, bounds['max_y'] - overlap
-    z0, z1 = 0.0, frame_height_mm
+    z0, z1 = 0.0, float(frame_height_mm)
 
+    verts = [
+        (ox0, oy0, z0), (ox1, oy0, z0), (ox1, oy1, z0), (ox0, oy1, z0),
+        (ix0, iy0, z0), (ix1, iy0, z0), (ix1, iy1, z0), (ix0, iy1, z0),
+        (ox0, oy0, z1), (ox1, oy0, z1), (ox1, oy1, z1), (ox0, oy1, z1),
+        (ix0, iy0, z1), (ix1, iy0, z1), (ix1, iy1, z1), (ix0, iy1, z1),
+    ]
+    faces = []
+    for i in range(4):
+        j = (i + 1) % 4
+        ob_i, ob_j = i, j
+        ib_i, ib_j = 4 + i, 4 + j
+        ot_i, ot_j = 8 + i, 8 + j
+        it_i, it_j = 12 + i, 12 + j
+        faces.extend((
+            (ob_i, ob_j, ot_j), (ob_i, ot_j, ot_i),  # outer wall
+            (ib_j, ib_i, it_i), (ib_j, it_i, it_j),  # inner wall
+            (ot_i, ot_j, it_j), (ot_i, it_j, it_i),  # top rim
+            (ob_j, ob_i, ib_i), (ob_j, ib_i, ib_j),  # bottom rim
+        ))
+    return verts, faces
+
+
+def _create_helper_from_geometry(bpy, bmesh_mod, name, verts, faces):
     bm = bmesh_mod.new()
     try:
-        outer_bot = [bm.verts.new(p) for p in ((ox0, oy0, z0), (ox1, oy0, z0), (ox1, oy1, z0), (ox0, oy1, z0))]
-        inner_bot = [bm.verts.new(p) for p in ((ix0, iy0, z0), (ix1, iy0, z0), (ix1, iy1, z0), (ix0, iy1, z0))]
-        outer_top = [bm.verts.new(p) for p in ((ox0, oy0, z1), (ox1, oy0, z1), (ox1, oy1, z1), (ox0, oy1, z1))]
-        inner_top = [bm.verts.new(p) for p in ((ix0, iy0, z1), (ix1, iy0, z1), (ix1, iy1, z1), (ix0, iy1, z1))]
-        for i in range(4):
-            j = (i + 1) % 4
-            bm.faces.new((outer_bot[i], outer_top[i], outer_top[j], outer_bot[j]))  # outer wall
-            bm.faces.new((inner_bot[j], inner_top[j], inner_top[i], inner_bot[i]))  # inner wall
-            bm.faces.new((outer_top[i], inner_top[i], inner_top[j], outer_top[j]))  # top rim
-            bm.faces.new((outer_bot[j], inner_bot[j], inner_bot[i], outer_bot[i]))  # bottom rim
-        bmesh_mod.ops.triangulate(bm, faces=list(bm.faces))
-        bmesh_mod.ops.recalc_face_normals(bm, faces=list(bm.faces))
-        mesh = bpy.data.meshes.new('ReliefFrame')
+        vs = [bm.verts.new(c) for c in verts]
+        for face in faces:
+            bm.faces.new(tuple(vs[idx] for idx in face))
+        bm.normal_update()
+        mesh = bpy.data.meshes.new(name)
         bm.to_mesh(mesh)
     finally:
         bm.free()
-    helper = bpy.data.objects.new('ReliefFrame', mesh)
+    helper = bpy.data.objects.new(name, mesh)
     bpy.context.collection.objects.link(helper)
     return helper
 
@@ -459,7 +609,13 @@ def _decimate_object(bpy, obj, bmesh_mod, target_triangles, current_stats, merge
         applied_ratio = attempt_ratio
         if not was_manifold or stats['is_manifold']:
             bpy.data.meshes.remove(backup)
-            return stats, applied_ratio, None
+            warn = None
+            if target_triangles > 0 and stats['triangles'] > math.ceil(target_triangles * 1.05):
+                warn = (
+                    f'decimated mesh has {stats["triangles"]:,} triangles, above '
+                    f'--max-triangles {target_triangles:,}'
+                )
+            return stats, applied_ratio, warn
         obj.data = backup.copy()
     obj.data = backup
     stats = _clean_object_mesh(obj, bmesh_mod, merge_distance)
@@ -581,10 +737,19 @@ def _render_preview(bpy, Matrix, Vector, obj, bounds_mm, args):
     return preview_abs
 
 
+def _mesh_exact_bounds(obj):
+    return exact_bounds([(v.co.x, v.co.y, v.co.z) for v in obj.data.vertices])
+
+
 def run_in_blender(args):
     import bpy  # noqa: PLC0415
     import bmesh  # noqa: PLC0415
     from mathutils import Matrix, Vector  # noqa: PLC0415
+
+    try:
+        validate_io_paths(args.input, args.out_stl, args.preview, args.report)
+    except ValueError as err:
+        raise SystemExit(str(err)) from None
 
     bpy.ops.wm.read_factory_settings(use_empty=True)
     obj = _import_stl(bpy, args.input)
@@ -605,67 +770,91 @@ def run_in_blender(args):
 
     steps = ['weld-and-repair']
     warnings = []
+    pause_height_shift_mm = 0.0
 
     if args.max_triangles > 0 and stats['triangles'] > args.max_triangles:
         stats, used_ratio, warn = _decimate_object(
             bpy, obj, bmesh, args.max_triangles, stats, args.merge_distance,
         )
+        if used_ratio < 1.0:
+            steps.append(f'decimate({used_ratio:.2f})')
         if warn:
             warnings.append(warn)
-        else:
-            steps.append(f'decimate({used_ratio:.2f})')
 
     if args.base_mm > 0:
-        b = stats['bounds_mm']
+        b = _mesh_exact_bounds(obj)
         for v in obj.data.vertices:
             v.co.z += args.base_mm
         obj.data.update()
-        # Inset by a fraction of a micron on XY? Keep exact relief footprint; tiny +0.05 mm Z overlap prevents coplanar seam.
-        helper = _create_box_object(
-            bpy, bmesh, 'ReliefBase',
-            b['min_x'], b['max_x'], b['min_y'], b['max_y'],
+        # Tiny XY inset avoids coplanar side-wall slivers in EXACT boolean; +0.05 mm Z overlap avoids bottom coplanar seam.
+        inset = min(0.01, b['width'] * 0.001, b['depth'] * 0.001)
+        b_verts, b_faces = build_box_geometry(
+            b['min_x'] + inset, b['max_x'] - inset,
+            b['min_y'] + inset, b['max_y'] - inset,
             0.0, args.base_mm + 0.05,
         )
+        helper = _create_helper_from_geometry(bpy, bmesh, 'ReliefBase', b_verts, b_faces)
         stats = _boolean_union(bpy, obj, helper, bmesh, args.merge_distance)
+        pause_height_shift_mm = round(args.base_mm, 4)
         steps.append(f'base(+{args.base_mm:g}mm)')
 
     if args.frame_mm > 0:
-        b = stats['bounds_mm']
+        shells_before = stats['shells']
+        b = _mesh_exact_bounds(obj)
         frame_h = args.frame_height_mm if args.frame_height_mm is not None else max(b['height'], 1.0)
-        helper = _create_frame_object(bpy, bmesh, b, args.frame_mm, frame_h)
+        f_verts, f_faces = build_frame_geometry(b, args.frame_mm, frame_h)
+        helper = _create_helper_from_geometry(bpy, bmesh, 'ReliefFrame', f_verts, f_faces)
         stats = _boolean_union(bpy, obj, helper, bmesh, args.merge_distance)
         steps.append(f'frame({args.frame_mm:g}mm x {frame_h:g}mm)')
-
-    out_abs = os.path.abspath(os.path.expanduser(args.out_stl))
-    os.makedirs(os.path.dirname(out_abs), exist_ok=True)
-    bpy.ops.object.select_all(action='DESELECT')
-    obj.select_set(True)
-    bpy.context.view_layer.objects.active = obj
-    if hasattr(bpy.ops.wm, 'stl_export'):
-        bpy.ops.wm.stl_export(
-            filepath=out_abs,
-            ascii_format=bool(args.ascii),
-            export_selected_objects=True,
-            apply_modifiers=True,
-        )
-    else:
-        bpy.ops.export_mesh.stl(filepath=out_abs, ascii=bool(args.ascii), use_selection=True)
-
-    preview_abs = None
-    if args.preview:
-        preview_abs = _render_preview(bpy, Matrix, Vector, obj, stats['bounds_mm'], args)
-        steps.append(f'preview({args.material})')
+        if stats['shells'] > shells_before:
+            warnings.append(
+                f'frame created {stats["shells"]} disconnected shells (was {shells_before}); '
+                f'relief perimeter did not contact the frame within {frame_h:g} mm height'
+            )
 
     if not stats['is_manifold']:
         warnings.append(
-            f'output mesh still has {stats["non_manifold_edges"]} non-manifold edge(s) and {stats["loose_vertices"]} loose vertex/vertices',
+            f'output mesh still has {stats["non_manifold_edges"]} non-manifold edge(s), '
+            f'{stats["non_manifold_vertices"]} non-manifold vertex/vertices, and '
+            f'{stats["loose_vertices"]} loose vertex/vertices'
         )
+
+    out_abs = os.path.abspath(os.path.expanduser(args.out_stl))
+    allow_non_manifold = getattr(args, 'allow_non_manifold', False)
+    can_export = stats['is_manifold'] or allow_non_manifold
+    out_stl_written = False
+    out_stl_bytes = 0
+    preview_abs = None
+
+    if can_export:
+        os.makedirs(os.path.dirname(out_abs), exist_ok=True)
+        bpy.ops.object.select_all(action='DESELECT')
+        obj.select_set(True)
+        bpy.context.view_layer.objects.active = obj
+        if hasattr(bpy.ops.wm, 'stl_export'):
+            bpy.ops.wm.stl_export(
+                filepath=out_abs,
+                ascii_format=bool(args.ascii),
+                export_selected_objects=True,
+                apply_modifiers=True,
+            )
+        else:
+            bpy.ops.export_mesh.stl(filepath=out_abs, ascii=bool(args.ascii), use_selection=True)
+        out_stl_written = True
+        out_stl_bytes = os.path.getsize(out_abs)
+        if args.preview:
+            preview_abs = _render_preview(bpy, Matrix, Vector, obj, stats['bounds_mm'], args)
+            steps.append(f'preview({args.material})')
+    else:
+        warnings.append('skipped STL export because mesh is non-manifold (pass --allow-non-manifold to force)')
 
     report = {
         'issue': 193,
         'input': os.path.abspath(os.path.expanduser(args.input)),
         'out_stl': out_abs,
-        'out_stl_bytes': os.path.getsize(out_abs),
+        'out_stl_written': out_stl_written,
+        'out_stl_bytes': out_stl_bytes,
+        'pause_height_shift_mm': pause_height_shift_mm,
         'preview': preview_abs,
         'before': before_stats,
         'after': stats,
@@ -685,8 +874,9 @@ def run_in_blender(args):
 
 def main(argv=None):
     args = parse_args(sys.argv[1:] if argv is None else argv)
-    run_in_blender(args)
-    return 0
+    report = run_in_blender(args)
+    allow_non_manifold = getattr(args, 'allow_non_manifold', False)
+    return 0 if (report['after']['is_manifold'] or allow_non_manifold) else 1
 
 
 if __name__ == '__main__':
