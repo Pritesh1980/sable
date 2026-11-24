@@ -199,6 +199,20 @@ test.describe('concept viewer', () => {
   })
 })
 
+test('a long restored style tag fits inside the concept style picker on a phone', async ({ page }) => {
+  const tag = 'fine-line-black-and-grey-botanical-with-dotwork-stippling-and-geometric-detail'
+  await openDemo(page, '/concepts', { concepts: [{ ...DEMO_CONCEPT, tags: [tag] }] })
+  await openConceptViewer(page, /Moth over/)
+  await page.touchscreen.tap(...centre(page))
+  await page.getByRole('button', { name: 'Variants & STL export' }).tap()
+  await page.getByRole('button', { name: 'Edit styles' }).tap()
+  const picker = page.getByRole('group', { name: 'Match to style' })
+  await expect(picker.getByRole('button', { name: tag })).toBeVisible()
+  await page.evaluate(() => document.fonts.ready)
+  const panel = page.locator('aside').filter({ has: picker })
+  expect(await panel.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1)
+})
+
 test.describe('drawers over the concept viewer', () => {
   test.beforeEach(async ({ page }) => {
     await openDemo(page, '/concepts', { concepts: [DEMO_CONCEPT] })

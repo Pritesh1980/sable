@@ -1,8 +1,8 @@
 import { useState, useRef } from 'react'
-import { STYLE_TAGS, DEFAULT_STUDIOS } from '../data/artists'
+import { DEFAULT_STUDIOS } from '../data/artists'
 import { uploadImages } from '../hooks/useImageUpload'
 import { useAuth } from '../context/useAuth'
-import TagPill from './TagPill'
+import StyleTagPicker from './StyleTagPicker'
 import ArtistImage from './ArtistImage'
 import { useUndoableRemoval } from '../hooks/useUndoableRemoval'
 import { intersectsViewport } from '../data/viewport'
@@ -146,14 +146,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
             <div className="space-y-4">
 
               {/* Tags */}
-              <div>
-                <p className="text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase mb-2">Style Tags</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {STYLE_TAGS.map((tag) => (
-                    <TagPill key={tag} tag={tag} active={artist.tags.includes(tag)} onClick={() => toggleTag(tag)} small />
-                  ))}
-                </div>
-              </div>
+              <StyleTagPicker tags={artist.tags} onToggle={toggleTag} />
 
               {/* Studio */}
               <div>

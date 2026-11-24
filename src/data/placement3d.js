@@ -1,3 +1,5 @@
+import { normalizeBodyPlacement } from './artists'
+
 // Pure maths for the 3D placement view (#195): where a design sits on the arm
 // and how big it is, in centimetres of skin. No three.js here, so it is unit
 // tested in jsdom; ArmPlacement3D turns these numbers into shader uniforms.
@@ -39,9 +41,13 @@ export const DEFAULT_LIMB = 'upper-arm'
 // An idea's body placement (PLACEMENTS in data/artists.js) → the limb its 3D
 // view opens on. A sleeve starts on the upper arm; anywhere without a model
 // falls back to it too, and the view's switcher is one tap away.
-const LIMB_FOR_PLACEMENT = { forearm: 'forearm', 'upper arm': 'upper-arm', sleeve: 'upper-arm' }
+const LIMB_FOR_PLACEMENT = new Map([
+  ['forearm', 'forearm'],
+  ['upper arm', 'upper-arm'],
+  ['sleeve', 'upper-arm'],
+])
 export function limbFor(placement) {
-  return LIMB_FOR_PLACEMENT[placement] || DEFAULT_LIMB
+  return LIMB_FOR_PLACEMENT.get(normalizeBodyPlacement(placement)) ?? DEFAULT_LIMB
 }
 
 export function circumferenceAt(table, yCm) {

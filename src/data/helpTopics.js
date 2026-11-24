@@ -109,7 +109,7 @@ export const HELP_GROUPS = [
         question: 'How do I write down a tattoo idea?',
         steps: [
           'Ideas → +.',
-          'Give it a title, styles, a placement and reference photos, then tap Add.',
+          'Add a title, optional Placement and photos. Tap Edit styles to add or remove tags, then tap Add.',
           'Artists with matching styles appear in the editor: tap one to link them.',
           'Share as image makes a card to send an artist. The Boards tab groups ideas together.',
         ],
@@ -133,7 +133,7 @@ export const HELP_GROUPS = [
         question: 'How do I make an AI design?',
         steps: [
           'AI → + New concept. Or press G on an open photo to work in that artist’s style.',
-          'Describe your idea and pick a placement.',
+          'Describe your idea and choose an optional Placement. Pick No placement to clear it.',
           'Generate image needs your own OpenAI or Gemini key, added in AI setup.',
           'No key? Tap Copy prompt instead, run it in ChatGPT or Gemini, then paste the image back in.',
         ],
@@ -145,7 +145,8 @@ export const HELP_GROUPS = [
         question: 'How do I see a design on my arm?',
         steps: [
           'On an AI result with an image, choose View on arm in 3D. From an idea, tap On arm on a reference photo.',
-          'Drag to turn the arm and pinch to resize; the size shows in centimetres.',
+          'An idea with Forearm placement opens on the forearm.',
+          'Drag to turn the arm and pinch to resize. The size shows in centimetres.',
           'Or choose Try on skin, then Live camera, to see it over your camera view.',
         ],
         image: 'concept-arm.png',

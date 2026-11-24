@@ -75,6 +75,7 @@ describe('switching the open artist inside ArtistDetail, through Gallery (#78)',
 
     fireEvent.click(screen.getByText('Artist A'))
     expect(within(detailSheet()).getByText('Artist A')).toBeInTheDocument()
+    fireEvent.click(within(detailSheet()).getByRole('button', { name: 'Edit styles' }))
 
     // Switch to B from inside the open sheet — the path that previously left
     // stale local state behind because the same instance was reused.
@@ -83,7 +84,8 @@ describe('switching the open artist inside ArtistDetail, through Gallery (#78)',
 
     // A synchronous save. A's only tag is fine-line and B has none, so which
     // artist's tag list gains surrealism is the proof of identity.
-    fireEvent.click(within(detailSheet()).getByText('surrealism'))
+    fireEvent.click(within(detailSheet()).getByRole('button', { name: 'Edit styles' }))
+    fireEvent.click(within(detailSheet()).getByRole('button', { name: 'surrealism' }))
 
     const a = lastArtists.find((x) => x.id === 'a')
     const b = lastArtists.find((x) => x.id === 'b')

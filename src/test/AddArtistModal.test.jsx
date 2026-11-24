@@ -373,6 +373,8 @@ describe('AddArtistModal screenshot analysis', () => {
     fireEvent.change(screen.getByPlaceholderText(/handle or instagram url/i), {
       target: { value: 'kept_user_edit' },
     })
+    fireEvent.click(screen.getByText('Details', { exact: true }))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit styles' }))
     fireEvent.click(screen.getByRole('button', { name: 'blackwork' }))
     fireEvent.click(screen.getByLabelText(/remove staged image 1/i))
     analyzeStaged()
@@ -420,12 +422,14 @@ describe('AddArtistModal screenshot analysis', () => {
 describe('AddArtistModal', () => {
   beforeEach(() => { vi.clearAllMocks(); localStorage.clear() })
 
-  it('normalises a pasted Instagram URL, applies tags, and saves a new artist in two clicks', async () => {
+  it('normalises a pasted Instagram URL and saves a new artist with the chosen tags', async () => {
     const { setArtists, onClose } = renderModal()
 
     fireEvent.change(screen.getByPlaceholderText(/handle or instagram url/i), {
       target: { value: 'https://www.instagram.com/new_artist/' },
     })
+    fireEvent.click(screen.getByText('Details', { exact: true }))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit styles' }))
     fireEvent.click(screen.getByRole('button', { name: 'blackwork' }))
     fireEvent.click(screen.getByRole('button', { name: 'dark-fantasy' }))
     fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
@@ -434,7 +438,7 @@ describe('AddArtistModal', () => {
     const next = setArtists.mock.calls[0][0](existing)
     const added = next.find((a) => a.handle === 'new_artist')
     expect(added).toMatchObject({ handle: 'new_artist', tags: ['blackwork', 'dark-fantasy'] })
-    expect(onClose).toHaveBeenCalled()
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
   })
 
   it('requires a handle before saving', () => {

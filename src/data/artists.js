@@ -56,9 +56,13 @@ export const DEFAULT_STUDIOS = [
 ]
 
 export const PLACEMENTS = [
-  'chest', 'back', 'upper arm', 'forearm', 'sleeve', 'thigh',
-  'calf', 'ribs', 'neck', 'hand', 'foot', 'other',
+  'neck', 'chest', 'back', 'ribs', 'upper arm', 'forearm', 'sleeve',
+  'hand', 'thigh', 'calf', 'foot', 'other',
 ]
+
+export function normalizeBodyPlacement(value) {
+  return typeof value === 'string' ? value.trim().toLowerCase() : ''
+}
 
 // Accepts '@handle', a bare handle, or a pasted Instagram URL; returns the bare
 // handle ('' when nothing usable is found).

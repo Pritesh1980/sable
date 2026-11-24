@@ -162,8 +162,9 @@ link and photo count. Type in the **search** box to filter by name or handle.
 
 ![An expanded artist row](../public/guide/manage-artist-expanded.png)
 
-- **Style tags** — tap to toggle (`dark-illustrative`, `fine-line`, `blackwork`,
-  `surrealism`, `dark-fantasy`, `realism`). These power the matching in *Ideas* and *AI*.
+- **Style tags** — tap **Edit styles** to add or remove tags, then **Done** to see
+  only the selected styles. This works in artist details and Manage, and under
+  **Details** when adding an artist. The tags power matching in *Ideas* and *AI*.
 - **Studio** — pick where they work; this populates the [Studios](05-conventions-and-studios.md) page.
 - **Notes** — free text; saves when you tap away or press Enter.
 - **Photos** — tap **+ Photos** to upload screenshots (they're compressed automatically).

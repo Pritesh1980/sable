@@ -26,7 +26,8 @@ already set). One panel, top to bottom:
   different one, or clear it for an unsteered concept.
 - **Your idea** — describe it plainly, e.g. *"A raven perched on a broken pocket watch,
   feathers dissolving into smoke, heavy black shading."*
-- **Placement** — forearm, upper arm, chest, back, calf…
+- **Placement (optional)** — choose a body area from the dropdown, ordered
+  roughly from neck to foot. Choose **No placement** to clear it.
 - **Generate image** — creates the image in-app (needs an API key, below).
 - **Copy prompt instead** — copies the same image prompt **Generate image** sends (idea,
   steer style and placement), for an image generator such as ChatGPT, Gemini or AI
@@ -75,7 +76,8 @@ gesture; use **× Close** or swipe down.
 
 - **Prompt & response** — the original prompt, any saved pack (switch providers and copy
   again), and any AI text that came back.
-- **Match to style** — tag the concept with styles and its **top artist matches** appear;
+- **Match to style** — tap **Edit styles** to add or remove tags, then **Done** to
+  see the selected styles. The concept’s **top artist matches** appear below;
   tap one to open their Instagram.
 - **Visual matches** — once the style index is built (Artists → any artist →
   [Similar ink](03-gallery-and-ranking.md#similar-ink)), the concept **image itself** is

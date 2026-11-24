@@ -23,8 +23,11 @@ Tap **+** to add an idea (or tap a card to edit one). The editor gives you:
 
 - **Title** and **description**.
 - **Status** — Idea, Booked or Done.
-- **Style tags** — the same six styles used across the app.
-- **Body placement** — chest, forearm, sleeve, etc.
+- **Style tags** — the editor shows the selected styles. Tap **Edit styles** to
+  add or remove tags, including custom tags on restored ideas. Tap **Done** to
+  fold the list back up.
+- **Placement (optional)** — choose a body area from the dropdown, ordered
+  roughly from neck to foot. Choose **No placement** to clear it.
 - **Fill idea from image** — with a Gemini key set and at least one uploaded reference
   image, this button drafts the title, description, style tags and placement from the
   image itself; only fields you haven't filled are touched.
@@ -32,10 +35,11 @@ Tap **+** to add an idea (or tap a card to edit one). The editor gives you:
   borrow from it*. **3D print** on an image opens the STL / two-colour 3MF export for it
   (with optional Gemini **Lift the tattoo** preparation and **Add to references**, see
   [AI concepts](06-concepts.md#export-a-relief-stl)). **On arm** puts it on the 3D arm at
-  its real size, on the forearm when the idea's placement is *forearm* and on the upper arm
-  otherwise; **Add to references** keeps the picture as another reference, noted with its
-  width (see [On the arm in 3D](06-concepts.md#see-a-concept-on-the-arm-in-3d)). Save the
-  idea to keep it. It works best with a flat design (a drawing, a flash sheet, a concept):
+  its real size. It opens on the forearm when **Placement** shows **Forearm**, including
+  on restored ideas. Other placements open on the upper arm. **Add to references** keeps
+  the picture as another reference, noted with its width (see
+  [On the arm in 3D](06-concepts.md#see-a-concept-on-the-arm-in-3d)). Save the idea to
+  keep it. It works best with a flat design (a drawing, a flash sheet, a concept):
   a photo of a tattoo already on skin goes on whole, its skin and background included.
 
 If an idea uses a shipped demo image, its editor keeps the **AI-generated imagery** label

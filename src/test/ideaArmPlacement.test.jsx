@@ -69,7 +69,7 @@ describe('3D arm from an idea reference photo', () => {
   it('follows the placement as edited, before the idea is saved', () => {
     render(<Harness />)
     fireEvent.click(screen.getByText('Fern study'))
-    fireEvent.click(screen.getByRole('button', { name: 'upper arm' }))
+    fireEvent.change(screen.getByRole('combobox', { name: 'Placement (optional)' }), { target: { value: 'upper arm' } })
     fireEvent.click(screen.getByRole('button', { name: 'View reference 1 on the arm in 3D' }))
     expect(h.panel.limb).toBe('upper-arm')
   })

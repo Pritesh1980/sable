@@ -3,7 +3,8 @@ import { Link } from 'react-router'
 import { ClipboardPaste, ImagePlus, Sparkles, X } from 'lucide-react'
 import useDialogFocus, { isTopmostDialog } from '../hooks/useDialogFocus'
 import { readCaptureClipboard } from '../data/clipboardIntake'
-import { STYLE_TAGS, parseInstagramHandle, createArtist } from '../data/artists'
+import { parseInstagramHandle, createArtist } from '../data/artists'
+import StyleTagPicker from './StyleTagPicker'
 import { uploadImages, compressImages } from '../hooks/useImageUpload'
 import { stageImageRefs } from '../data/imageStaging'
 import { randomId } from '../data/randomId'
@@ -495,14 +496,7 @@ export default function AddArtistModal({ artists = [], setArtists, setSaved, use
               <label htmlFor="quick-add-name" className="block text-xs text-v2-muted mb-2">Display name</label>
               <input id="quick-add-name" className={inputClass} placeholder="Full name (optional)" value={name}
                 onChange={(e) => { aiPrefill.current.name = null; setName(e.target.value) }} />
-              <p className="text-xs text-v2-muted mt-3 mb-1">Style tags</p>
-              <div className="flex flex-wrap gap-1.5">
-                {STYLE_TAGS.map((tag) => <button key={tag} type="button" onClick={() => toggleTag(tag)}
-                  aria-pressed={tags.includes(tag)}
-                  className={`min-h-11 text-xs px-2 rounded-xs border ${tags.includes(tag) ? 'border-v2-accent text-v2-accent bg-v2-accent/10' : 'border-v2-hairline text-v2-muted'}`}>
-                  {tag}
-                </button>)}
-              </div>
+              <StyleTagPicker tags={tags} onToggle={toggleTag} />
               <label htmlFor="quick-add-stylenote" className="block text-xs text-v2-muted mt-3 mb-2">Style note</label>
               <textarea id="quick-add-stylenote" rows={2} className={inputClass} value={styleNote}
                 onChange={(e) => { aiPrefill.current.styleNote = null; setStyleNote(e.target.value) }} />

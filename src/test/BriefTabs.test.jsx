@@ -42,6 +42,80 @@ describe('Brief Ideas | Boards tabs', () => {
     expect(screen.queryByText('Dark folklore')).not.toBeInTheDocument()
   })
 
+  it('shows and clears a saved placement without overwriting other idea edits', () => {
+    const idea = { ...ideas[0], placement: 'wrist' }
+    const setIdeas = vi.fn()
+    renderBrief({ props: { ideas: [idea], setIdeas } })
+    fireEvent.click(screen.getByText('Koru unfurling'))
+    const picker = screen.getByRole('combobox', { name: 'Placement (optional)' })
+    expect(picker).toHaveDisplayValue('Wrist')
+    fireEvent.change(picker, { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save', exact: true }))
+    expect(setIdeas).toHaveBeenCalledOnce()
+    const latest = { ...idea, title: 'Updated in another session' }
+    expect(setIdeas.mock.calls[0][0]([latest])).toEqual([{ ...latest, placement: '' }])
+  })
+
+  it('shows a single option for a saved placement with different casing and preserves its stored value', () => {
+    const idea = { ...ideas[0], placement: 'Forearm' }
+    const setIdeas = vi.fn()
+    renderBrief({ props: { ideas: [idea], setIdeas } })
+    fireEvent.click(screen.getByText('Koru unfurling'))
+    const picker = screen.getByRole('combobox', { name: 'Placement (optional)' })
+    expect(within(picker).getAllByRole('option', { name: 'Forearm', exact: true })).toHaveLength(1)
+    expect(picker).toHaveValue('forearm')
+
+    fireEvent.change(screen.getByPlaceholderText('Idea title…'), { target: { value: 'Fern study' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save', exact: true }))
+    expect(setIdeas.mock.calls[0][0]([idea])).toEqual([{ ...idea, title: 'Fern study' }])
+  })
+
+  it('shows selected styles and saves multiple changes made in the style picker', () => {
+    const setIdeas = vi.fn()
+    renderBrief({ props: { setIdeas } })
+    fireEvent.click(screen.getByText('Koru unfurling'))
+    const editor = within(screen.getByRole('button', { name: 'Save', exact: true }).closest('.fixed'))
+    expect(editor.getByText('fine-line', { exact: true })).toBeVisible()
+    expect(editor.queryByRole('button', { name: 'blackwork', exact: true })).not.toBeInTheDocument()
+    const edit = screen.getByRole('button', { name: 'Edit styles' })
+    expect(edit).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(edit)
+    const picker = screen.getByRole('group', { name: 'Style tags' })
+    expect(within(picker).getByRole('button', { name: 'fine-line' })).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(within(picker).getByRole('button', { name: 'fine-line' }))
+    fireEvent.click(within(picker).getByRole('button', { name: 'blackwork' }))
+    fireEvent.click(within(picker).getByRole('button', { name: 'realism' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Done editing styles' }))
+    expect(screen.queryByRole('group', { name: 'Style tags' })).not.toBeInTheDocument()
+    expect(editor.getByText('blackwork', { exact: true })).toBeVisible()
+    expect(editor.getByText('realism', { exact: true })).toBeVisible()
+    expect(setIdeas).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Save', exact: true }))
+    expect(setIdeas.mock.calls[0][0](ideas)[0].tags).toEqual(['blackwork', 'realism'])
+  })
+
+  it('lets a restored custom tag be removed and keeps the choice until editing ends', () => {
+    const idea = { ...ideas[0], tags: ['fine-line', 'dotwork'] }
+    const setIdeas = vi.fn()
+    renderBrief({ props: { ideas: [idea], setIdeas } })
+    fireEvent.click(screen.getByText('Koru unfurling'))
+    const save = screen.getByRole('button', { name: 'Save', exact: true })
+    const editor = within(save.closest('.fixed'))
+    expect(editor.getByText('dotwork', { exact: true })).toBeVisible()
+
+    fireEvent.click(editor.getByRole('button', { name: 'Edit styles' }))
+    const picker = within(editor.getByRole('group', { name: 'Style tags' }))
+    const customTag = picker.getByRole('button', { name: 'dotwork' })
+    expect(customTag).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(customTag)
+    expect(picker.getByRole('button', { name: 'dotwork' })).toHaveAttribute('aria-pressed', 'false')
+    fireEvent.click(editor.getByRole('button', { name: 'Done editing styles' }))
+    expect(editor.queryByText('dotwork', { exact: true })).not.toBeInTheDocument()
+
+    fireEvent.click(save)
+    expect(setIdeas.mock.calls[0][0]([idea])[0].tags).toEqual(['fine-line'])
+  })
+
   it('discloses generated demo references on Ideas and Boards', () => {
     renderBrief({ props: { ideas: [{ ...ideas[0], images: [{ url: 'images/demo/mora.blackfern/fern-v4.webp' }] }] } })
     expect(screen.getByText(/AI-generated imagery/)).toBeInTheDocument()

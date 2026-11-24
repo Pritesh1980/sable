@@ -68,6 +68,7 @@ up to four on a wider screen.
 
 Tap any card to open the full **artist detail**: a photo carousel, their tags,
 studio, notes, and any conventions they're attending. Tap **Edit details** to change them.
+The style section shows the selected tags. Tap **Edit styles** to add or remove tags.
 **← Back**, or the browser's Back (Android's back button, Safari's back swipe), closes it
 and leaves you on the gallery. The address shows the artist (`?artist=…`), so a link to it
 opens their detail.

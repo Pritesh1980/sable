@@ -1,10 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { PLACEMENTS } from '../data/artists'
 import ArtistImage from './ArtistImage'
-
-function capitalize(word) {
-  return word.charAt(0).toUpperCase() + word.slice(1)
-}
+import PlacementSelect from './PlacementSelect'
 
 function ArtistPicker({ artists, onPick, onClear }) {
   return (
@@ -177,21 +173,8 @@ export default function ConceptComposer({
         className="w-full bg-v2-ink text-v2-cream border border-v2-hairline rounded-xs px-3.5 py-3 font-v2-ui text-sm outline-hidden focus:border-v2-accent resize-y"
       />
 
-      <label htmlFor="composer-placement" className="block font-v2-ui text-[0.68rem] tracking-[0.14em] uppercase text-v2-muted mt-5 mb-1.5">
-        Placement
-      </label>
-      <div id="composer-placement" className="flex flex-wrap gap-1.5">
-        {PLACEMENTS.map((p) => (
-          <button
-            key={p}
-            onClick={() => onPlacementChange(placement === p ? '' : p)}
-            className={`font-v2-ui text-xs tracking-[0.04em] rounded-full border px-3 py-1.5 transition-colors ${
-              placement === p ? 'text-v2-cream border-v2-accent' : 'text-v2-muted border-v2-hairline hover:text-v2-cream'
-            }`}
-          >
-            {capitalize(p)}
-          </button>
-        ))}
+      <div className="mt-5">
+        <PlacementSelect value={placement} onChange={onPlacementChange} />
       </div>
 
       {genError && (

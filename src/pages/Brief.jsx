@@ -3,6 +3,8 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router'
 import { backend } from '../backend'
 import { takeConceptIdeaHandoff } from '../data/conceptIdeaHandoff'
 import TagPill from '../components/TagPill'
+import PlacementSelect from '../components/PlacementSelect'
+import StyleTagPicker from '../components/StyleTagPicker'
 import Logo from '../components/Logo'
 import BoardsSection from '../components/BoardsSection'
 import { getBoardCover } from '../data/boards'
@@ -11,7 +13,6 @@ import ReliefStlDrawer from '../components/ReliefStlDrawer'
 import ArmPlacementDrawer from '../components/ArmPlacementDrawer'
 import { limbFor } from '../data/placement3d'
 import GeneratedArtworkNotice from '../components/GeneratedArtworkNotice'
-import { STYLE_TAGS, PLACEMENTS } from '../data/artists'
 import { IDEA_STATUSES, matchArtistsToIdea } from '../data/brief'
 import { shareOrDownloadBriefCard } from '../data/briefCard'
 import usePreparedBriefCard from '../hooks/usePreparedBriefCard'
@@ -451,28 +452,15 @@ function IdeaModal({ idea, isNew = !idea.id, onClose, onSave, onDelete, onRestor
           />
         </div>
 
-        <div>
-          <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-3">Style Tags</p>
-          <div className="flex flex-wrap gap-2">
-            {STYLE_TAGS.map((tag) => (
-              <TagPill key={tag} tag={tag} active={draft.tags.includes(tag)} onClick={() => toggleTag(tag)} />
-            ))}
-          </div>
-        </div>
+        <StyleTagPicker tags={draft.tags} onToggle={toggleTag} />
 
-        <div>
-          <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-3">Body Placement</p>
-          <div className="flex flex-wrap gap-2">
-            {PLACEMENTS.map((p) => (
-              <TagPill
-                key={p}
-                tag={p}
-                active={draft.placement === p}
-                onClick={() => { touch('placement'); setDraft((d) => ({ ...d, placement: d.placement === p ? '' : p })) }}
-              />
-            ))}
-          </div>
-        </div>
+        <PlacementSelect
+          value={draft.placement}
+          onChange={(placement) => {
+            touch('placement')
+            setDraft((current) => ({ ...current, placement }))
+          }}
+        />
 
         <div>
           <div className="flex items-center justify-between mb-3">

@@ -12,8 +12,7 @@ import GlCrossfade from './GlCrossfade'
 import RefImage from './RefImage'
 import ViewerSheetToggle from './ViewerSheetToggle'
 import SavedPromptPack from './SavedPromptPack'
-import TagPill from './TagPill'
-import { STYLE_TAGS } from '../data/artists'
+import StyleTagPicker from './StyleTagPicker'
 import { matchArtistsForIdea } from '../data/planning'
 import { resolveTransitionMode } from '../lib/gl'
 
@@ -62,22 +61,15 @@ function InfoPanel({ item, artists, concepts, onClose, onSaveTags, onAddVariant,
       )}
 
       <div className="mb-6">
-        <p className="font-v2-ui text-xs tracking-widest uppercase text-v2-muted mb-2">Match to style</p>
-        <div className="flex flex-wrap gap-1.5">
-          {STYLE_TAGS.map((tag) => (
-            <TagPill
-              key={tag}
-              tag={tag}
-              active={(concept.tags || []).includes(tag)}
-              onClick={() => onSaveTags(concept.id,
-                (concept.tags || []).includes(tag)
-                  ? (concept.tags || []).filter((t) => t !== tag)
-                  : [...(concept.tags || []), tag]
-              )}
-              small
-            />
-          ))}
-        </div>
+        <StyleTagPicker
+          key={concept.id}
+          label="Match to style"
+          tags={concept.tags}
+          onToggle={(tag) => {
+            const tags = concept.tags || []
+            onSaveTags(concept.id, tags.includes(tag) ? tags.filter((value) => value !== tag) : [...tags, tag])
+          }}
+        />
         {matched.length > 0 && (
           <ul className="mt-3 space-y-1">
             {matched.map(({ artist }) => (

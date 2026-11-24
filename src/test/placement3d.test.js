@@ -238,8 +238,12 @@ describe('LIMBS and limbFor', () => {
     expect(limbFor('upper arm')).toBe('upper-arm')
     expect(limbFor('sleeve')).toBe('upper-arm')
   })
+  it('recognises restored placement values with different casing or surrounding whitespace', () => {
+    expect(limbFor('Forearm')).toBe('forearm')
+    expect(limbFor(' Forearm ')).toBe('forearm')
+  })
   it('falls back to the upper arm for anywhere it has no model of', () => {
-    for (const p of ['', undefined, 'back', 'thigh', 'Forearm ']) expect(limbFor(p)).toBe(DEFAULT_LIMB)
+    for (const p of ['', undefined, 'back', 'thigh', 'constructor']) expect(limbFor(p)).toBe(DEFAULT_LIMB)
   })
 })
 

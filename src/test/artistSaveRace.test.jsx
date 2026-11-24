@@ -68,7 +68,8 @@ describe('a tag toggle survives a slower upload landing after it (#79)', () => {
     await waitFor(() => expect(pending).toHaveLength(1))
 
     // Before it resolves, toggle a tag — auto-saves immediately, lands first.
-    fireEvent.click(within(detailSheet()).getByText('fine-line'))
+    fireEvent.click(within(detailSheet()).getByRole('button', { name: 'Edit styles' }))
+    fireEvent.click(within(detailSheet()).getByRole('button', { name: 'fine-line' }))
 
     // The upload resolves after — its saveImages call must not carry the
     // pre-toggle draft back over the tag that landed while it was in flight.
@@ -93,7 +94,8 @@ describe('a tag toggle survives a slower upload landing after it (#79)', () => {
     pending[0].resolve(['new-uploaded.jpg'])
     await waitFor(() => expect(lastArtists[0].images).toContain('new-uploaded.jpg'))
 
-    fireEvent.click(within(detailSheet()).getByText('fine-line'))
+    fireEvent.click(within(detailSheet()).getByRole('button', { name: 'Edit styles' }))
+    fireEvent.click(within(detailSheet()).getByRole('button', { name: 'fine-line' }))
 
     expect(lastArtists[0].tags).toContain('fine-line')
     expect(lastArtists[0].images).toContain('new-uploaded.jpg')

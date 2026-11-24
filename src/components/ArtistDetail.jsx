@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
-import TagPill from './TagPill'
+import StyleTagPicker from './StyleTagPicker'
 import ArtistImage from './ArtistImage'
 import PhotoTile from './PhotoTile'
 import GeneratedArtworkNotice from './GeneratedArtworkNotice'
 import SimilarArtists from './SimilarArtists'
 import GuestSpots from './GuestSpots'
-import { STYLE_TAGS, DEFAULT_STUDIOS } from '../data/artists'
+import { DEFAULT_STUDIOS } from '../data/artists'
 import { uploadImages } from '../hooks/useImageUpload'
 import { useAuth } from '../context/useAuth'
 import { refIdentity } from '../data/imageRef'
@@ -295,18 +295,7 @@ export default function ArtistDetail({ artist, onClose, onSave, attendingConvent
 
           {/* Style tags */}
           <div className="mb-6">
-            <p className="text-xs font-mono text-cream-muted tracking-widest uppercase mb-3">Style</p>
-            <div className="flex flex-wrap gap-2">
-              {STYLE_TAGS.map((tag) => (
-                <TagPill
-                  key={tag}
-                  tag={tag}
-                  active={draft.tags.includes(tag)}
-                  onClick={() => toggleTag(tag)}
-                />
-              ))}
-            </div>
-            {!editing && <p className="text-cream-muted/90 text-xs font-mono mt-2">Tap tags to tune matching.</p>}
+            <StyleTagPicker key={artist.id} tags={draft.tags} onToggle={toggleTag} />
           </div>
 
           {/* Similar ink — on-device visual matches (only outside edit mode, and

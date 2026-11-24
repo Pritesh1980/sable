@@ -135,7 +135,8 @@ describe('the explicit edit-form Save does not clobber a field synced in while e
 
     // Toggle a tag while not editing — auto-saves immediately via its own
     // independent patch, nothing to do with a later explicit Save.
-    fireEvent.click(within(detailSheet()).getByText('blackwork'))
+    fireEvent.click(within(detailSheet()).getByRole('button', { name: 'Edit styles' }))
+    fireEvent.click(within(detailSheet()).getByRole('button', { name: 'blackwork' }))
     expect(lastArtists[0].tags).toEqual(expect.arrayContaining(['fine-line', 'blackwork']))
 
     // Another device syncs in a different tags set afterwards.

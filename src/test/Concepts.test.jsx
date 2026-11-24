@@ -204,11 +204,22 @@ describe('Concepts page', () => {
     expect(loadComposerDraft().idea).toBe('A moth study')
   })
 
-  it('restores a saved draft on mount', () => {
+  it('restores a saved placement and lets it be changed or cleared in body order', () => {
     saveComposerDraft({ steerArtistId: '', idea: 'Restored idea', placement: 'forearm' })
     render(<ConceptsHarness />)
     fireEvent.click(screen.getAllByRole('button', { name: '+ New concept' })[0])
     expect(screen.getByLabelText('Your idea')).toHaveValue('Restored idea')
+    const placement = screen.getByRole('combobox', { name: 'Placement (optional)' })
+    expect(placement).toHaveValue('forearm')
+    expect(within(placement).getAllByRole('option').map((option) => option.textContent)).toEqual([
+      'No placement', 'Neck', 'Chest', 'Back', 'Ribs', 'Upper arm', 'Forearm',
+      'Sleeve', 'Hand', 'Thigh', 'Calf', 'Foot', 'Other',
+    ])
+    fireEvent.change(placement, { target: { value: 'neck' } })
+    expect(loadComposerDraft().placement).toBe('neck')
+    fireEvent.change(placement, { target: { value: '' } })
+    expect(loadComposerDraft().placement).toBe('')
+    expect(placement).toHaveDisplayValue('No placement')
   })
 
   it('clears the draft after a successful paste-back save', async () => {
