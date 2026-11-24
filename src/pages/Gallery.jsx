@@ -22,6 +22,8 @@ import Logo from '../components/Logo'
 import GeneratedArtworkNotice from '../components/GeneratedArtworkNotice'
 import ArtistDetail from '../components/ArtistDetail'
 import TasteMap from '../components/TasteMap'
+import PhotoSearch from '../components/PhotoSearch'
+import { photoParam } from '../data/wall'
 import ArtistBrowse from '../components/ArtistBrowse'
 import RankingMode from '../components/RankingMode'
 import ToolsMenu from '../components/ToolsMenu'
@@ -116,6 +118,10 @@ export default function Gallery({ artists, setArtists, saved = [], setSaved = ()
   const detail = useOverlayParam('artist')
   const selected = detail.value ? artists.find((a) => a.id === detail.value) || null : null
   const openArtist = (artist) => detail.open(artist.id)
+  // Search by words (#186): the phrase lives in the URL (?search=skull), so
+  // Back from a photo picked there returns to the results.
+  const searchSheet = useOverlayParam('search')
+  const photo = useOverlayParam('photo')
   const [viewMode, setViewMode] = useState('wall')
   const showsWall = viewMode === 'wall' || artists.length === 0
   const favActive = favOnly && showsWall
@@ -126,6 +132,17 @@ export default function Gallery({ artists, setArtists, saved = [], setSaved = ()
   function changeView(mode) {
     setViewMode(mode)
     setEditing(false)
+  }
+  // A photo picked in Search opens in the Wall's viewer, over the results. A
+  // filter that would hide it is cleared, so the viewer's list is the real wall.
+  function openSearchResult(item) {
+    const hiddenByStyle = activeTag && (item.savedId || !(item.styles || []).includes(activeTag))
+    if (hiddenByStyle || favOnly) {
+      setActiveTag(null)
+      setFavOnly(false)
+    }
+    changeView('wall')
+    photo.open(photoParam(item))
   }
   const [browsing, setBrowsing] = useState(false)
   const [ranking, setRanking] = useState(false)
@@ -356,6 +373,9 @@ export default function Gallery({ artists, setArtists, saved = [], setSaved = ()
               <ToolsMenu
                 disabled={dragActive}
                 tools={[
+                  ...(artistsWithImages.length > 0 || saved.length > 0 ? [
+                    { label: 'Search', hint: 'Find photos by what is in them: a skull, a wolf, a face', onSelect: () => searchSheet.open('') },
+                  ] : []),
                   ...(artistsWithImages.length > 0 ? [
                     { label: 'Rank', hint: 'Judge each artist in turn: pass, maybe or top', onSelect: () => setRanking(true) },
                     { label: 'Browse', hint: 'Flip through your artists one at a time', onSelect: () => setBrowsing(true) },
@@ -371,6 +391,20 @@ export default function Gallery({ artists, setArtists, saved = [], setSaved = ()
         {/* A saved artist working near Milton Keynes soon (#183): one chip, nothing when none. */}
         <NearbySoon artists={artists} compact className="mt-3" />
       </div>
+
+      {/* Before the views: the photo viewer opens over this sheet, and the
+          topmost modal is the last in the page (isTopmostDialog), so Escape
+          on a photo must find the viewer after it. */}
+      {searchSheet.value !== null && (
+        <PhotoSearch
+          artists={artists}
+          saved={saved}
+          query={searchSheet.value}
+          onQueryChange={(query) => searchSheet.replace(query)}
+          onClose={searchSheet.close}
+          onOpenItem={openSearchResult}
+        />
+      )}
 
       {/* Maintenance mode replaces the browsing views entirely */}
       {manageMode && (

@@ -8,7 +8,7 @@
 // Same hand-rolled IndexedDB pattern as backend/local/localBlobs.js.
 import { refIdentity } from './imageRef'
 import { resolveImage } from './imageResolver'
-import { EMBEDDING_MODEL_ID, getEmbedder } from './embedder'
+import { EMBEDDING_MODEL_ID, getEmbedder, getTextEmbedder } from './embedder'
 
 // v2 keys vectors by photo identity (refIdentity), not by display URL: a signed
 // url changes every session, so the v1 index re-embedded every photo each time
@@ -139,6 +139,23 @@ export async function vectorFor(src, cacheKey) {
     console.error('[tattoo] one-off embed failed:', cacheKey, e)
     return null
   }
+}
+
+// The vector for a search phrase (#186), kept beside the photo vectors under
+// the same model id, so a repeated search needs neither the model nor the
+// network. `phrase` is already normalised (textSearch.normaliseQuery). Throws
+// when the model can't load, so the search can say so. `cachedOnly` answers
+// from kept phrases alone (null when not kept), for a search restored from
+// the URL: only a tap may start the model download.
+export async function textVectorFor(phrase, { onProgress, cachedOnly = false } = {}) {
+  const key = `${EMBEDDING_MODEL_ID}:text:${phrase}`
+  const cached = await dbGetMany([key])
+  if (cached.has(key)) return cached.get(key)
+  if (cachedOnly) return null
+  const embedText = await getTextEmbedder({ onProgress })
+  const vec = await embedText(phrase)
+  await dbPut(key, vec)
+  return vec
 }
 
 // Test/reset helper: drops the whole index database (closing our own

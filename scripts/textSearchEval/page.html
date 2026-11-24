@@ -1,0 +1,70 @@
+<!doctype html>
+<meta charset="utf-8">
+<script type="importmap">
+{ "imports": {
+  "onnxruntime-web/webgpu": "/repo/node_modules/onnxruntime-web/dist/ort.webgpu.bundle.min.mjs",
+  "onnxruntime-common": "/repo/node_modules/onnxruntime-common/dist/esm/index.js",
+  "@huggingface/transformers": "/repo/node_modules/@huggingface/transformers/dist/transformers.web.js"
+} }
+</script>
+<script type="module">
+import { env, AutoProcessor, AutoTokenizer, CLIPVisionModelWithProjection, CLIPTextModelWithProjection, RawImage } from '@huggingface/transformers'
+env.allowLocalModels = false
+env.remoteHost = location.origin + '/hf/'
+env.useBrowserCache = false
+env.backends.onnx.wasm.wasmPaths = '/repo/node_modules/onnxruntime-web/dist/'
+const MODEL = 'Xenova/clip-vit-base-patch32'
+const norm = (v) => { let n = 0; for (const x of v) n += x * x; n = Math.sqrt(n); return n ? v.map((x) => x / n) : v }
+const dot = (a, b) => { let s = 0; for (let i = 0; i < a.length; i++) s += a[i] * b[i]; return s }
+
+window.spike = async (images, cached, PHRASES) => {
+  const timing = {}
+  const vectors = { ...cached }
+  const todo = images.filter((u) => !vectors[u])
+  if (todo.length) {
+    const processor = await AutoProcessor.from_pretrained(MODEL)
+    const vision = await CLIPVisionModelWithProjection.from_pretrained(MODEL, { dtype: 'q8', device: 'wasm' })
+    const t = performance.now()
+    let i = 0
+    for (const u of todo) {
+      try {
+        const { image_embeds } = await vision(await processor(await RawImage.read(u)))
+        vectors[u] = norm(Array.from(image_embeds.data))
+      } catch (e) { console.log('skip ' + u + ' ' + e.message) }
+      if (++i % 50 === 0) console.log(`embedded ${i}/${todo.length}`)
+    }
+    timing.imageMsEach = Math.round((performance.now() - t) / todo.length)
+  }
+  let t = performance.now()
+  const tokenizer = await AutoTokenizer.from_pretrained(MODEL)
+  const text = await CLIPTextModelWithProjection.from_pretrained(MODEL, { dtype: 'q8', device: 'wasm' })
+  timing.textLoadMs = Math.round(performance.now() - t)
+  const embedText = async (s) => {
+    const { text_embeds } = await text(tokenizer([s], { padding: true, truncation: true }))
+    return norm(Array.from(text_embeds.data))
+  }
+  const lib = images.filter((u) => vectors[u]).map((u) => ({ u, artist: u.split('/')[2], v: vectors[u] }))
+  const TEMPLATES = { bare: (q) => q, tattoo: (q) => `a tattoo of ${q}`, bw: (q) => `a black and grey tattoo of ${q}` }
+  const results = {}
+  const qms = []
+  for (const [name, tpl] of Object.entries(TEMPLATES)) {
+    results[name] = {}
+    for (const p of PHRASES) {
+      t = performance.now()
+      const q = await embedText(tpl(p))
+      qms.push(performance.now() - t)
+      const ranked = lib.map((x) => ({ u: x.u, artist: x.artist, s: dot(q, x.v) })).sort((a, b) => b.s - a.s)
+      const sc = ranked.map((r) => r.s)
+      const mean = sc.reduce((a, b) => a + b, 0) / sc.length
+      const sd = Math.sqrt(sc.reduce((a, b) => a + (b - mean) ** 2, 0) / sc.length)
+      results[name][p] = { top: ranked.slice(0, 12), mean, sd, max: sc[0], z1: (sc[0] - mean) / sd, scores: sc }
+    }
+  }
+  qms.sort((a, b) => a - b)
+  timing.queryMsMedian = Math.round(qms[qms.length >> 1])
+  timing.libSize = lib.length
+  timing.crossOriginIsolated = self.crossOriginIsolated
+  return { timing, results, vectors }
+}
+window.ready = true
+</script>

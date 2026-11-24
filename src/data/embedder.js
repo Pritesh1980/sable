@@ -43,6 +43,43 @@ async function createEmbedder() {
   }
 }
 
+let textEmbedderPromise = null
+
+// Returns an `embedText(phrase) → unit vector` function from the text half of
+// the same CLIP model (#186), so a phrase lands in the image index's space.
+// Loaded only on the first search: about 67 MB, cached by the browser after
+// that. `onProgress(percent)` follows the model download for whoever starts it.
+export function getTextEmbedder({ onProgress } = {}) {
+  if (!textEmbedderPromise) {
+    textEmbedderPromise = createTextEmbedder(onProgress).catch((e) => {
+      textEmbedderPromise = null // allow retry after an offline download failure
+      throw e
+    })
+  }
+  return textEmbedderPromise
+}
+
+async function createTextEmbedder(onProgress) {
+  const { AutoTokenizer, CLIPTextModelWithProjection } = await import('@huggingface/transformers')
+  const progress_callback = (event) => {
+    if (event?.status === 'progress' && /\.onnx$/.test(event.file || '')) onProgress?.(Math.round(event.progress))
+  }
+  const tokenizer = await AutoTokenizer.from_pretrained(EMBEDDING_MODEL_ID, { progress_callback })
+  let model
+  try {
+    model = await CLIPTextModelWithProjection.from_pretrained(EMBEDDING_MODEL_ID, { dtype: 'q8', device: 'webgpu', progress_callback })
+  } catch {
+    model = await CLIPTextModelWithProjection.from_pretrained(EMBEDDING_MODEL_ID, { dtype: 'q8', progress_callback })
+  }
+  return async function embedText(text) {
+    // The bare phrase: the #186 spike found "a tattoo of …" lifts every photo alike.
+    const { text_embeds } = await model(tokenizer([text], { padding: true, truncation: true }))
+    const v = Array.from(text_embeds.data)
+    const norm = Math.hypot(...v)
+    return norm === 0 ? v : v.map((x) => x / norm)
+  }
+}
+
 // RawImage.read uses createImageBitmap, which cannot decode SVGs (e.g. the
 // demo artwork). Fall back to rasterising through an <img> + canvas, which
 // renders anything the browser can display.

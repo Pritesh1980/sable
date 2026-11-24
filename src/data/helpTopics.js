@@ -87,6 +87,16 @@ export const HELP_GROUPS = [
         guide: '02-managing-artists.md#more-like-this',
       },
       {
+        id: 'search',
+        question: 'How do I find photos of a skull, a wolf or a face?',
+        steps: [
+          'Tap Tools, then Search, on the Artists page and type one subject.',
+          'Matches come back grouped by artist. Tap one to open it.',
+          'The first search downloads a 67 MB model, once. It runs on this device.',
+        ],
+        guide: '02-managing-artists.md#search-your-photos',
+      },
+      {
         id: 'rank',
         question: 'What does rank do, and how do I set it?',
         steps: [

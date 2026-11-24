@@ -1,17 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import ArtistImage from './ArtistImage'
 import useDialogFocus, { isTopmostDialog } from '../hooks/useDialogFocus'
-import { vectorLookup, rankArtistsByVector, similarPhotos, indexCoverage } from '../data/embeddings'
-import { loadVectors, buildStyleIndex } from '../data/styleIndex'
+import useStyleVectors from '../hooks/useStyleVectors'
+import { rankArtistsByVector, similarPhotos } from '../data/embeddings'
 import { buildWallItems } from '../data/wall'
 import { refIdentity } from '../data/imageRef'
 
 const BUTTON = 'min-h-11 flex items-center justify-center bg-v2-ink border border-v2-hairline hover:border-v2-accent rounded-xs px-4 py-2 text-v2-cream font-v2-ui text-sm transition-colors'
 const LABEL = 'font-v2-ui text-xs tracking-widest uppercase text-v2-muted mb-3'
-
-// Photos saved without an artist are indexed through a stand-in artist, so they
-// use the same identity keys and the same one build action as everyone else's.
-const SAVED_ID = '__saved__'
 
 // "More like this" (#220 K): from one photo in the viewer, the three artists
 // whose work sits closest to it and the photos most like it, ranked by the
@@ -19,24 +15,7 @@ const SAVED_ID = '__saved__'
 // as Similar ink); nothing leaves the device.
 export default function MoreLikeThis({ item, artists, saved = [], onClose, onOpenItem, onOpenArtist }) {
   const dialogRef = useDialogFocus(true)
-  const [vectors, setVectors] = useState(null) // null = loading
-  const [progress, setProgress] = useState(null)
-  const [error, setError] = useState('')
-
-  const indexSource = useMemo(
-    () => [...artists, { id: SAVED_ID, images: saved.map((s) => s.image) }],
-    [artists, saved]
-  )
-
-  useEffect(() => {
-    let alive = true
-    loadVectors(indexSource)
-      .then((v) => alive && setVectors(v))
-      .catch(() => alive && setVectors(new Map()))
-    return () => {
-      alive = false
-    }
-  }, [indexSource])
+  const { vectors, getVec, coverage, progress, error, build } = useStyleVectors(artists, saved)
 
   // One layer per Escape: this sheet closes, the viewer under it stays.
   useEffect(() => {
@@ -50,21 +29,6 @@ export default function MoreLikeThis({ item, artists, saved = [], onClose, onOpe
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose, dialogRef])
 
-  async function build() {
-    setError('')
-    setProgress({ done: 0, total: 0 })
-    try {
-      await buildStyleIndex(indexSource, { onProgress: setProgress })
-      setVectors(await loadVectors(indexSource))
-    } catch (e) {
-      console.error('[tattoo] style index build failed:', e)
-      setError('Index build failed. Check your connection and try again.')
-    }
-    setProgress(null)
-  }
-
-  const getVec = useMemo(() => (vectors ? vectorLookup(vectors) : null), [vectors])
-  const coverage = vectors ? indexCoverage(indexSource, getVec) : null
   const vec = getVec ? getVec(item.image) : null
 
   const artistMatches = useMemo(
