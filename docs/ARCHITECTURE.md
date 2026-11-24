@@ -840,6 +840,9 @@ flowchart TB
   PICKS["Top picks<br/>Must see · From the field guide · Wildcards · Worth a look<br/>unmatched curated picks reported"]
   KEEP["Explicit Add artist / attendance toggle"]
   SYNC["Gallery and attendance setters<br/>selected storage adapter"]
+  FLOOR["Per-edition floor plan<br/>booth x/y · aspect · entrance"]
+  ROUTE["Walking order<br/>nearest pick next from the entrance<br/>Elsewhere in the hall · Copy route"]
+  TRIP["Worth the trip?<br/>verdict on each upcoming edition"]
 
   SHOW --> GRAB --> HASH --> PARSE
   PASTE --> PARSE --> STORE
@@ -849,17 +852,30 @@ flowchart TB
   INDEX --> PLAN
   GALLERY --> PLAN
   CURATED --> PLAN --> PICKS
+  PICKS --> ROUTE
+  FLOOR --> ROUTE
+  PLAN --> TRIP
   AZ --> KEEP
   PICKS --> KEEP --> SYNC
 ```
 
 The shipped seed is merged at read time, not copied wholesale into localStorage.
 `cleared: true` suppresses it until a new import lifts the flag. Scoring uses existing
-gallery rank/tags, attendance, studio connections and curated reasons; artists
-marked **Pass** are excluded from picks. Unmatched strangers remain in the A–Z list
-without invented style scores. `bigLondon2026Floorplan.js` contains checked-in booth
-coordinates, but no runtime component consumes them yet: a walking route or map is
-not an implemented output of `ShowPlanView`.
+gallery rank/tags, attendance, studio connections and curated reasons; a stored
+artist status is ignored (#220). Unmatched strangers remain in the A–Z list
+without invented style scores.
+
+Floor plans are per-edition data (`FLOORPLANS` in `lineupSeeds.js`; only Big London
+2026 so far, from `bigLondon2026Floorplan.js`). `showRoute.js` walks Must see and
+field-guide picks from the entrance, always to the nearest unvisited stand, measuring
+with the plan's aspect ratio, because booth numbers serpentine. Worth a look and
+wildcards within about three stands are listed under a stop, and a booth missing from
+the plan goes under "Elsewhere in the hall", never at a guessed position.
+Pickups not near a stop follow the route as "Also on your list".
+`worthTheTrip.js` reuses `buildShowPlan` to give each upcoming edition a go / maybe /
+skip verdict from your artists (a top-five rank clears a long trip alone), priority
+picks, studio stablemates and distance from Milton Keynes; wildcards never count, and
+an edition with no line-up and nobody marked going gets no line.
 
 ```mermaid
 flowchart TB
@@ -877,7 +893,8 @@ Winners are imported from pasted text, not automatically fetched by Gemini. Matc
 provenance (`matchedBy`) distinguishes exact identity from a guarded name-prefix
 match. The gallery artist and attendance record can sync; the imported award board
 and its photos cannot. Implementation: `lineup.js`, `lineupGrabber.js`,
-`lineupSeeds.js`, `showPlan.js`, `winners.js`, `winnerPhotos.js`, and `Conventions.jsx`.
+`lineupSeeds.js`, `showPlan.js`, `showRoute.js`, `worthTheTrip.js`, `winners.js`,
+`winnerPhotos.js`, and `Conventions.jsx`.
 
 ### Why line-ups arrive by paste, and why the grabber is base64
 

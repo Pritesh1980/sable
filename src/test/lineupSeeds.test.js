@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { LINEUP_SEEDS, seedEntriesFor, mergeLineupSeeds } from '../data/lineupSeeds'
+import { LINEUP_SEEDS, seedEntriesFor, mergeLineupSeeds, floorplanFor } from '../data/lineupSeeds'
 import { indexLineup, lineupCounts } from '../data/lineup'
 import { DEFAULT_ARTISTS } from '../data/artists'
 
@@ -95,5 +95,25 @@ describe('mergeLineupSeeds', () => {
     expect(mergeLineupSeeds(stored, 'big-london@2026')).toEqual([])
     expect(mergeLineupSeeds(stored, 'brighton@2026')).toHaveLength(1)
     expect(mergeLineupSeeds(stored, 'brighton@2027')).toEqual([])
+  })
+})
+
+// Floor plans belong to one edition, like line-ups (#178, #190): the 2026 plan
+// is not where anyone stands in 2027.
+describe('floorplanFor', () => {
+  it('gives Big London 2026 its plan, with an entrance and the booth positions', () => {
+    const plan = floorplanFor('big-london@2026')
+    expect(Object.keys(plan.booths)).toHaveLength(398)
+    expect(plan.entrance).toHaveLength(2)
+    expect(plan.aspect).toBeCloseTo(4233 / 6400)
+  })
+
+  it('reads a bare show id as its 2026 edition', () => {
+    expect(floorplanFor('big-london')).toBe(floorplanFor('big-london@2026'))
+  })
+
+  it('has no plan for an edition nobody has published one for', () => {
+    expect(floorplanFor('big-london@2027')).toBeNull()
+    expect(floorplanFor('brighton@2026')).toBeNull()
   })
 })

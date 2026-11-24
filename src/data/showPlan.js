@@ -11,13 +11,15 @@ import { indexLineup, parseLineup } from './lineup'
 import { trimEndChars } from './textTrim'
 
 // "No Regrets, Booth 315" / "Some Studio, Booth T39" / "Studio, Booth 153 - 158".
-const BOOTH_RE = /Booth\s+([A-Za-z]{0,2})(\d+)/i
+// A letter after the number ("315A") is part of the booth: dropping it would
+// send the walking route to stand 315 instead (#190).
+const BOOTH_RE = /Booth\s+([A-Za-z]{0,2})(\d+)([A-Za-z]?)\b/i
 
 export function parseBooth(note = '') {
   const m = BOOTH_RE.exec(String(note || ''))
   if (!m) return null
-  const [, zone, digits] = m
-  return { raw: `${zone}${digits}`, zone: zone.toUpperCase(), number: Number(digits) }
+  const [, zone, digits, suffix] = m
+  return { raw: `${zone}${digits}${suffix.toUpperCase()}`, zone: zone.toUpperCase(), number: Number(digits) }
 }
 
 // Rank-weighted style-tag histogram over the saved gallery — same weighting as

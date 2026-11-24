@@ -1,5 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { buildShowPlan } from '../data/showPlan'
+import { buildShowRoute, formatRoute, pickupReason } from '../data/showRoute'
 import { LineupRow } from './ConventionLineup'
 
 // Not an alphabetical list — a verdict. Must see is your own gallery showing
@@ -34,6 +35,124 @@ function Section({ title, subtitle, picks, convention, attendingIds, onAddArtist
   )
 }
 
+const toggleClass = (on) =>
+  `min-h-11 px-2.5 flex items-center text-[0.625rem] font-mono tracking-widest uppercase border rounded-xs transition-colors ${
+    on
+      ? 'border-accent bg-accent/10 text-accent'
+      : 'border-ink-border text-cream-muted/60 hover:text-cream hover:border-cream-muted'
+  }`
+
+function CopyRoute({ text }) {
+  const [state, setState] = useState('idle')
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(text)
+      setState('copied')
+    } catch {
+      // No clipboard permission: show the text so it can be selected by hand.
+      // It renders the current route, so a later line-up change shows up in it.
+      setState('manual')
+    }
+  }
+  return (
+    <>
+      <button onClick={copy} className={toggleClass(false)}>
+        {state === 'copied' ? 'Copied ✓' : 'Copy route'}
+      </button>
+      {state === 'manual' && (
+        <textarea
+          readOnly
+          aria-label="Route text"
+          value={text}
+          rows={8}
+          onFocus={(e) => e.target.select()}
+          className="mt-2 w-full bg-ink-black border border-ink-border focus:border-accent outline-hidden rounded-xs p-2 text-cream text-[0.6875rem] font-mono"
+        />
+      )}
+    </>
+  )
+}
+
+const boothText = (booth) => (booth ? `Booth ${booth}` : 'No booth listed')
+
+// Where to find someone, then why: the row truncates its note on a narrow
+// phone, and the booth is the one thing a walking order is for, so it leads.
+function Footer({ lead, reasons = [] }) {
+  return (
+    <div className="pb-1 text-[0.6875rem] font-mono">
+      <p className="text-accent">{lead}</p>
+      {reasons.length > 0 && <p className="text-accent/70">{reasons.join(' · ')}</p>}
+    </div>
+  )
+}
+
+// The picks you set out to see, in the order you would reach them from the
+// doors. Pickups are hints under a stop, not rows of their own: they have
+// full rows in the ranked view, and here they only say "while you are there".
+function RouteView({ route, title, convention, attendingIds, onAddArtist, onToggleAttending }) {
+  const row = ({ pick }, footer) => (
+    <LineupRow
+      key={pick.entry.handle || pick.entry.label}
+      entry={pick.entry}
+      convention={convention}
+      attending={attendingIds.includes(pick.entry.savedArtistId)}
+      onAddArtist={onAddArtist}
+      onToggleAttending={onToggleAttending}
+      footer={footer}
+    />
+  )
+  return (
+    <div className="mt-3">
+      <p className="text-cream-muted/70 text-[0.6875rem] font-mono">
+        Ordered across the floor from the entrance, based on the show&rsquo;s published plan.
+      </p>
+      <div className="mt-1.5">
+        <CopyRoute text={formatRoute(route, { title })} />
+      </div>
+      {route.stops.length === 0 ? (
+        <p className="text-cream-muted/60 text-xs font-mono mt-3">None of your picks are on the floor plan.</p>
+      ) : (
+        <ol aria-label="Route" className="mt-1.5">
+          {route.stops.map((stop, i) => row(stop, (
+            <>
+              <Footer lead={`Stop ${i + 1} · ${boothText(stop.booth)}`} reasons={stop.pick.reasons} />
+              {stop.nearby.map((n) => (
+                <p key={n.pick.entry.handle || n.pick.entry.label} className="pb-1 text-[0.6875rem] font-mono text-cream-muted/70">
+                  Close by: {[`${n.pick.entry.label}, ${boothText(n.booth)}`, pickupReason(n.pick)].filter(Boolean).join(' · ')}
+                </p>
+              ))}
+            </>
+          )))}
+        </ol>
+      )}
+      {route.elsewhere.length > 0 && (
+        <section className="mt-4">
+          <h3 className="font-display text-cream text-base">Elsewhere in the hall</h3>
+          <p className="text-cream-muted/60 text-[0.6875rem] font-mono mt-0.5">
+            Not on the floor plan: ask at the door or look for them on the day
+          </p>
+          <ul className="mt-1.5">
+            {route.elsewhere.map((e) => row(e, <Footer lead={boothText(e.booth)} reasons={e.pick.reasons} />))}
+          </ul>
+        </section>
+      )}
+      {route.others.length > 0 && (
+        <section className="mt-4">
+          <h3 className="font-display text-cream text-base">Also on your list</h3>
+          <p className="text-cream-muted/60 text-[0.6875rem] font-mono mt-0.5">
+            Worth a look and wildcards that aren&rsquo;t close to a stop
+          </p>
+          <ul className="mt-1.5">
+            {route.others.map((o) => row(o, (
+              <Footer lead={[boothText(o.booth), pickupReason(o.pick)].filter(Boolean).join(' · ')} reasons={o.pick.reasons} />
+            )))}
+          </ul>
+        </section>
+      )}
+    </div>
+  )
+}
+
 export default function ShowPlanView({
   convention,
   entries = [],
@@ -41,13 +160,16 @@ export default function ShowPlanView({
   studios = [],
   attendingIds = [],
   curated = {},
+  floorplan = null,
   onAddArtist = () => {},
   onToggleAttending = () => {},
 }) {
+  const [order, setOrder] = useState('ranked')
   const plan = useMemo(
     () => buildShowPlan(entries, { artists, studios, attendingIds, curated }),
     [entries, artists, studios, attendingIds, curated]
   )
+  const route = useMemo(() => (floorplan ? buildShowRoute(plan, floorplan) : null), [plan, floorplan])
 
   if (
     plan.mustSee.length === 0 &&
@@ -63,8 +185,37 @@ export default function ShowPlanView({
     )
   }
 
+  const orderToggle = route && (
+    // Set apart by a rule, so it does not read as more of the view chips above.
+    <div role="group" aria-label="Order" className="flex flex-wrap gap-1.5 mb-3 pt-2 border-t border-ink-border/40">
+      <button onClick={() => setOrder('ranked')} aria-pressed={order === 'ranked'} className={toggleClass(order === 'ranked')}>
+        Ranked
+      </button>
+      <button onClick={() => setOrder('route')} aria-pressed={order === 'route'} className={toggleClass(order === 'route')}>
+        Walking order
+      </button>
+    </div>
+  )
+
+  if (route && order === 'route') {
+    return (
+      <div className="mt-2">
+        {orderToggle}
+        <RouteView
+          route={route}
+          title={convention?.label || convention?.name || ''}
+          convention={convention}
+          attendingIds={attendingIds}
+          onAddArtist={onAddArtist}
+          onToggleAttending={onToggleAttending}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="mt-2">
+      {orderToggle}
       <Section
         title="Must see"
         subtitle="Already in your gallery, and at this show"

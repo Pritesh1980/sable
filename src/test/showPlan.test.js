@@ -23,6 +23,11 @@ describe('parseBooth', () => {
     expect(parseBooth('Studio, Booth 153 - 158')).toEqual({ raw: '153', zone: '', number: 153 })
   })
 
+  it('keeps a letter suffix as part of the booth', () => {
+    expect(parseBooth('No Regrets Studios, Booth 315A')).toEqual({ raw: '315A', zone: '', number: 315 })
+    expect(parseBooth('Studio, Booth 454, Hall B')).toEqual({ raw: '454', zone: '', number: 454 })
+  })
+
   it('returns null for a non-numeric or missing booth', () => {
     expect(parseBooth('Studio, Booth AE')).toBeNull()
     expect(parseBooth('No booth mentioned here')).toBeNull()

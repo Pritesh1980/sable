@@ -17,6 +17,7 @@
 import { editionKey, migrateEditionMap, normaliseEditionKey } from './conventions'
 import { mergeLineupEntries, parseLineup } from './lineup'
 import { BIG_LONDON_2026 } from './lineups/bigLondon2026'
+import { BIG_LONDON_2026_PLAN } from './lineups/bigLondon2026Floorplan'
 import { BIG_LONDON_2026_PICKS } from './lineups/bigLondon2026Picks'
 
 export const LINEUP_SEEDS = {
@@ -57,4 +58,16 @@ export const CURATED_PICKS = {
 
 export function curatedPicksFor(key) {
   return CURATED_PICKS[normaliseEditionKey(key)] || {}
+}
+
+// Where each stand is, per edition (#190). A plan is read off the show's own
+// published floor plan (method: docs/plans/convention-route-planner.md), and
+// only once that edition's plan is out: positions move every year, so an
+// edition without one gets no route rather than last year's.
+export const FLOORPLANS = {
+  [editionKey('big-london', 2026)]: BIG_LONDON_2026_PLAN,
+}
+
+export function floorplanFor(key) {
+  return FLOORPLANS[normaliseEditionKey(key)] || null
 }
