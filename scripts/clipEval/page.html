@@ -17,10 +17,11 @@ const MODEL = 'Xenova/clip-vit-base-patch32'
 const norm = (v) => { let n = 0; for (const x of v) n += x * x; n = Math.sqrt(n); return n ? v.map((x) => x / n) : v }
 const dot = (a, b) => { let s = 0; for (let i = 0; i < a.length; i++) s += a[i] * b[i]; return s }
 
-window.spike = async (images, cached, PHRASES) => {
-  const timing = {}
+// Unit image vectors for every URL, reusing `cached` ones. Unreadable images are skipped.
+window.embedImages = async (images, cached) => {
   const vectors = { ...cached }
   const todo = images.filter((u) => !vectors[u])
+  let imageMsEach
   if (todo.length) {
     const processor = await AutoProcessor.from_pretrained(MODEL)
     const vision = await CLIPVisionModelWithProjection.from_pretrained(MODEL, { dtype: 'q8', device: 'wasm' })
@@ -33,34 +34,48 @@ window.spike = async (images, cached, PHRASES) => {
       } catch (e) { console.log('skip ' + u + ' ' + e.message) }
       if (++i % 50 === 0) console.log(`embedded ${i}/${todo.length}`)
     }
-    timing.imageMsEach = Math.round((performance.now() - t) / todo.length)
+    imageMsEach = Math.round((performance.now() - t) / todo.length)
   }
+  return { vectors, imageMsEach }
+}
+
+// Unit text vectors for each string, with the per-call times.
+window.embedTexts = async (strings) => {
   let t = performance.now()
   const tokenizer = await AutoTokenizer.from_pretrained(MODEL)
   const text = await CLIPTextModelWithProjection.from_pretrained(MODEL, { dtype: 'q8', device: 'wasm' })
-  timing.textLoadMs = Math.round(performance.now() - t)
-  const embedText = async (s) => {
+  const loadMs = Math.round(performance.now() - t)
+  const vectors = []
+  const ms = []
+  for (const s of strings) {
+    t = performance.now()
     const { text_embeds } = await text(tokenizer([s], { padding: true, truncation: true }))
-    return norm(Array.from(text_embeds.data))
+    vectors.push(norm(Array.from(text_embeds.data)))
+    ms.push(performance.now() - t)
   }
-  const lib = images.filter((u) => vectors[u]).map((u) => ({ u, artist: u.split('/')[2], v: vectors[u] }))
+  return { vectors, loadMs, ms }
+}
+
+// #186: rank the library against each phrase under three templates.
+window.spike = async (images, cached, PHRASES) => {
+  const timing = {}
+  const { vectors, imageMsEach } = await window.embedImages(images, cached)
+  if (imageMsEach) timing.imageMsEach = imageMsEach
   const TEMPLATES = { bare: (q) => q, tattoo: (q) => `a tattoo of ${q}`, bw: (q) => `a black and grey tattoo of ${q}` }
-  const results = {}
-  const qms = []
-  for (const [name, tpl] of Object.entries(TEMPLATES)) {
-    results[name] = {}
-    for (const p of PHRASES) {
-      t = performance.now()
-      const q = await embedText(tpl(p))
-      qms.push(performance.now() - t)
-      const ranked = lib.map((x) => ({ u: x.u, artist: x.artist, s: dot(q, x.v) })).sort((a, b) => b.s - a.s)
-      const sc = ranked.map((r) => r.s)
-      const mean = sc.reduce((a, b) => a + b, 0) / sc.length
-      const sd = Math.sqrt(sc.reduce((a, b) => a + (b - mean) ** 2, 0) / sc.length)
-      results[name][p] = { top: ranked.slice(0, 12), mean, sd, max: sc[0], z1: (sc[0] - mean) / sd, scores: sc }
-    }
-  }
-  qms.sort((a, b) => a - b)
+  const queries = Object.entries(TEMPLATES).flatMap(([name, tpl]) => PHRASES.map((p) => [name, p, tpl(p)]))
+  const embedded = await window.embedTexts(queries.map(([, , q]) => q))
+  timing.textLoadMs = embedded.loadMs
+  const lib = images.filter((u) => vectors[u]).map((u) => ({ u, artist: u.split('/')[2], v: vectors[u] }))
+  const results = Object.fromEntries(Object.keys(TEMPLATES).map((name) => [name, {}]))
+  queries.forEach(([name, p], i) => {
+    const q = embedded.vectors[i]
+    const ranked = lib.map((x) => ({ u: x.u, artist: x.artist, s: dot(q, x.v) })).sort((a, b) => b.s - a.s)
+    const sc = ranked.map((r) => r.s)
+    const mean = sc.reduce((a, b) => a + b, 0) / sc.length
+    const sd = Math.sqrt(sc.reduce((a, b) => a + (b - mean) ** 2, 0) / sc.length)
+    results[name][p] = { top: ranked.slice(0, 12), mean, sd, max: sc[0], z1: (sc[0] - mean) / sd, scores: sc }
+  })
+  const qms = [...embedded.ms].sort((a, b) => a - b)
   timing.queryMsMedian = Math.round(qms[qms.length >> 1])
   timing.libSize = lib.length
   timing.crossOriginIsolated = self.crossOriginIsolated

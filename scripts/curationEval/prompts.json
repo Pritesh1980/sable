@@ -1,0 +1,41 @@
+{
+  "tags": {
+    "dark-illustrative": [
+      "a dark illustrative tattoo",
+      "a dark, detailed illustration tattooed in black and grey",
+      "a tattoo in a dark etching and engraving style"
+    ],
+    "fine-line": [
+      "a fine line tattoo",
+      "a delicate tattoo drawn with thin single-needle lines",
+      "a minimal tattoo with very fine, thin linework"
+    ],
+    "blackwork": [
+      "a blackwork tattoo",
+      "a bold tattoo filled with solid black ink",
+      "a heavy black ink tattoo with large saturated black areas"
+    ],
+    "surrealism": [
+      "a surrealism tattoo",
+      "a surreal, dreamlike tattoo with impossible imagery",
+      "a surrealist tattoo where objects melt and merge into each other"
+    ],
+    "dark-fantasy": [
+      "a dark fantasy tattoo",
+      "a tattoo of demons, monsters and dark mythical creatures",
+      "a gothic horror tattoo with skulls and ghouls"
+    ],
+    "realism": [
+      "a realism tattoo",
+      "a photorealistic black and grey tattoo",
+      "a realistic portrait tattoo that looks like a photograph"
+    ]
+  },
+  "stray": [
+    "a photo of a tattoo studio interior",
+    "a sheet of tattoo flash designs on paper",
+    "a selfie of a person's face",
+    "a poster with text on it",
+    "a pencil drawing on paper"
+  ]
+}

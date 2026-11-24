@@ -94,5 +94,5 @@ artifacts/
 # Python bytecode from scripts/blender (Blender desktop tooling).
 __pycache__/
 
-# Text search eval output (scripts/textSearchEval): model cache and scores
+# CLIP eval output (scripts/textSearchEval, scripts/curationEval): model cache, vectors, scores
 text-search-eval/
