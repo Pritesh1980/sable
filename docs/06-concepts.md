@@ -281,6 +281,10 @@ Switch to **3D preview** to see both colours or the sculpted plate and drag to r
 it updates as you change settings. Binary STLs and two-object `.3mf` archives load quickly
 in Cura or any other slicer.
 
+For Mac desktop preparation before slicing (checking manifoldness, filling holes,
+decimating dense fine-detail exports, adding a base plate or frame, and rendering a lit
+preview), see [Desktop Blender relief prep](BLENDER-RELIEF.md).
+
 > **Tip:** the concept tags use the same six styles as the rest of the app, so a well-tagged
 > concept points straight at the artists already in your collection.
 

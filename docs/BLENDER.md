@@ -778,3 +778,10 @@ nobody has held one yet.
   wide, and it cost either every frame (a GPU blur: the settle test timed out under
   software WebGL) or 150–700 ms of main thread after each resize (a CPU blur, measured on
   a Mac). Side by side on the phone, the two looked the same.
+
+## Relief STL prep
+
+To check manifoldness, decimate dense relief STLs, add a thicker base or border frame,
+and render a lit filament preview on a Mac before slicing, see
+[`scripts/blender/relief-prep.py`](../scripts/blender/relief-prep.py) and
+[docs/BLENDER-RELIEF.md](BLENDER-RELIEF.md).
