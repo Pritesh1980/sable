@@ -222,6 +222,12 @@ the wrist. A light design on a dark card is flipped to dark ink automatically. O
 is installed both arms work offline; if the image itself isn't downloaded to this device and
 you're offline, the panel says so.
 
+For true-to-life desktop previews at exact printed width (including healed ink spread and subsurface lighting), [desktop Blender renders](BLENDER.md#demo-and-guide-renders) wrap the same fictional demo designs onto MakeHuman limbs:
+
+| Upper arm (`tiger.webp`, 11 cm) | Forearm (`koi.webp`, 7 cm) |
+| --- | --- |
+| ![Fictional tiger colour-realism piece rendered on a MakeHuman upper arm in Blender](images/demo-on-body-upper.webp) | ![Fictional koi design rendered on a MakeHuman forearm in Blender](images/demo-on-body-forearm.webp) |
+
 ## Export a relief STL
 
 When a result has an image, choose **Make STL**. You can also start from a reference image

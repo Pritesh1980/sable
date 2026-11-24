@@ -10,7 +10,7 @@ owner review carry `question`; items another agent is actively working on carry
 gh issue list --repo Pritesh1980/sable --state open --label backlog
 ```
 
-Active roadmap & open issues (as of 2026-11-23):
+Active roadmap & open issues (as of 2026-11-24):
 
 - **Roadmap umbrella:** [#177 Roadmap: new features, winter 2026 → summer 2027](https://github.com/Pritesh1980/sable/issues/177)
 - **Owner UX catalogue (remaining group F):** [#220 Catalogue the owner's UX complaints and their causes before fixing anything](https://github.com/Pritesh1980/sable/issues/220)
@@ -25,8 +25,7 @@ Active roadmap & open issues (as of 2026-11-23):
   - [#189 Sable Copilot spike: ask one question across artists, ideas and shows](https://github.com/Pritesh1980/sable/issues/189)
   - [#190 Show planning for 2027: worth-the-trip score and floor-plan route](https://github.com/Pritesh1980/sable/issues/190)
 - **Blender (Phase 6):**
-  - [#193 Blender: repair and preview relief STLs before printing](https://github.com/Pritesh1980/sable/issues/193) (`question`)
-  - [#194 Blender: render demo and guide imagery from fictional pieces](https://github.com/Pritesh1980/sable/issues/194) (`question`)
+  - [#193 Blender: repair and preview relief STLs before printing](https://github.com/Pritesh1980/sable/issues/193)
 - **AWS / Deployment:**
   - [#5 AWS backend adapter (Cognito + API store + S3 blobs)](https://github.com/Pritesh1980/sable/issues/5)
   - [#6 Deploy to S3 + CloudFront](https://github.com/Pritesh1980/sable/issues/6) (`deployment`)
