@@ -17,6 +17,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "audit:targets": "node scripts/auditTouchTargets.mjs",
+    "agents:status": "node scripts/agentsStatus.js",
     "deploy:aws": "node scripts/deployAws.mjs"
   },
   "dependencies": {
