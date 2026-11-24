@@ -65,7 +65,7 @@ export default function PhotoSearch({ artists, saved, query = '', onQueryChange,
   useEffect(() => {
     if (!restored || restored === latest.current.query) return
     setText(restored)
-    run(restored, { cachedOnly: true })
+    void run(restored, { cachedOnly: true })
     // `run` is recreated each render; the phrase is what matters here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restored])
@@ -74,7 +74,7 @@ export default function PhotoSearch({ artists, saved, query = '', onQueryChange,
     e.preventDefault()
     const phrase = normaliseQuery(text)
     if (!phrase) return
-    run(phrase)
+    void run(phrase)
     onQueryChange?.(phrase)
   }
 
