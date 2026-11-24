@@ -431,3 +431,14 @@ export const BIG_LONDON_2026_FLOORPLAN = {
 // Placed by interpolation rather than read directly — same confidence in the
 // aisle, roughly a stand's width of slack in the exact spot.
 export const INTERPOLATED_BOOTHS = ["44", "75", "111", "191", "309", "315", "394", "455"]
+
+// The plan as the route reads it (#190). `aspect` is the image's height over
+// its width: positions are normalised on both axes, so a step of 0.1 down the
+// plan is only two-thirds as far on the floor as 0.1 across, and the walk has
+// to scale y by this to measure real distance. `entrance` is the doors,
+// bottom-right of the plan beside booths 1–12, where the walk starts.
+export const BIG_LONDON_2026_PLAN = {
+  aspect: 4233 / 6400,
+  entrance: [0.9, 1],
+  booths: BIG_LONDON_2026_FLOORPLAN,
+}

@@ -193,7 +193,8 @@ export const HELP_GROUPS = [
         steps: [
           'More → Radar lists conventions, nearest to Milton Keynes first.',
           'On a card, tap Edit beside your artists attending to mark who is going.',
-          'Artist index lists a show’s line-up and says which of them you already have.',
+          'Each card says whether the next edition is worth the trip, and why.',
+          'Artist index lists a show’s line-up; Top picks can show your picks in walking order.',
         ],
         image: 'conventions.png',
         guide: '05-conventions-and-studios.md#convention-radar',

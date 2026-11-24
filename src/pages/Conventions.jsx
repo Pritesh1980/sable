@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { CONVENTIONS, getConventionFavicon, isPastEdition, mergeConventionOverrides, migrateEditionMap, toggleConventionAttendee, viewEdition } from '../data/conventions'
 import { mergeLineupEntries, parseLineup } from '../data/lineup'
-import { mergeLineupSeeds } from '../data/lineupSeeds'
+import { curatedPicksFor, mergeLineupSeeds } from '../data/lineupSeeds'
+import { worthTheTrip } from '../data/worthTheTrip'
 import { parseLineupHash } from '../data/lineupGrabber'
 import { mergeWinnerEntries, winnerKey } from '../data/winners'
 import { deletePhoto, newPhotoId, putPhoto, withPhotoId, withoutPhotoId } from '../data/winnerPhotos'
-import { createArtist } from '../data/artists'
+import { DEFAULT_STUDIOS, createArtist } from '../data/artists'
 import { buildIcs, requestCalendarDownload } from '../data/calendar'
 import ConventionLineup from '../components/ConventionLineup'
 import ConventionWinners from '../components/ConventionWinners'
@@ -82,6 +83,25 @@ function EditionNotes({ convention, past, current }) {
   if (past) return <PastEditionNote convention={convention} />
   if (convention.unconfirmed) return <UnconfirmedNote />
   return null
+}
+
+// Go or skip, and why (#190). Only for an edition still to come: once a show
+// is over there is no trip left to decide on.
+const TRIP_TONE = {
+  go: 'text-accent',
+  maybe: 'text-cream',
+  skip: 'text-cream-muted/70',
+  unknown: 'text-cream-muted/70',
+}
+
+function TripVerdict({ trip }) {
+  if (!trip) return null
+  return (
+    <p className="text-xs font-mono leading-relaxed mt-2">
+      <span className={`${TRIP_TONE[trip.verdict]} text-[0.625rem] tracking-widest uppercase`}>{trip.label}</span>
+      <span className="text-cream-muted/80"> · {trip.reasons.join(' · ')}</span>
+    </p>
+  )
 }
 
 // One button per edition, oldest first, so the row reads as a timeline (#178).
@@ -193,7 +213,7 @@ function AttendeesEditor({ artists, attendingIds, onToggle, record = false }) {
   )
 }
 
-function HeroCard({ convention, past, current, onPickYear, onAddCalendar, artists, attendingIds, onToggle, lineupProps, winnerProps }) {
+function HeroCard({ convention, past, current, trip, onPickYear, onAddCalendar, artists, attendingIds, onToggle, lineupProps, winnerProps }) {
   return (
     <div id={`convention-${convention.id}`} className="bg-gradient-to-br from-accent/10 to-ink-card border border-accent/40 rounded-xs p-6 animate-slide-up">
       <div className="flex items-start gap-4">
@@ -208,6 +228,7 @@ function HeroCard({ convention, past, current, onPickYear, onAddCalendar, artist
           </div>
           <EditionNotes convention={convention} past={past} current={current} />
           <EditionPicker convention={convention} onPick={onPickYear} />
+          <TripVerdict trip={trip} />
         </div>
       </div>
       <p className="text-cream-muted text-sm md:text-base font-body leading-relaxed mt-4">{convention.summary}</p>
@@ -241,7 +262,7 @@ function HeroCard({ convention, past, current, onPickYear, onAddCalendar, artist
   )
 }
 
-function ConventionCard({ convention, past, current, onPickYear, onAddCalendar, artists, attendingIds, onToggle, lineupProps, winnerProps }) {
+function ConventionCard({ convention, past, current, trip, onPickYear, onAddCalendar, artists, attendingIds, onToggle, lineupProps, winnerProps }) {
   return (
     <div
       id={`convention-${convention.id}`}
@@ -268,6 +289,7 @@ function ConventionCard({ convention, past, current, onPickYear, onAddCalendar, 
       </div>
       <EditionNotes convention={convention} past={past} current={current} />
       <EditionPicker convention={convention} onPick={onPickYear} />
+      <TripVerdict trip={trip} />
 
       <p className="text-cream-muted text-sm font-body leading-relaxed mt-3 flex-1">{convention.summary}</p>
 
@@ -511,10 +533,20 @@ export default function Conventions({
   // Everything a card needs for the edition it is showing.
   function cardProps(c) {
     const view = viewEdition(c, years[c.id] ?? c.year)
+    const past = isPastEdition(view, now)
+    const lineupProps = lineupPropsFor(view.editionKey)
     return {
       convention: view,
       current: view.editionKey === c.editionKey,
-      past: isPastEdition(view, now),
+      past,
+      trip: past ? null : worthTheTrip({
+        distanceMiles: view.distanceMiles,
+        artists,
+        studios: DEFAULT_STUDIOS,
+        attendingIds: view.attendingArtistIds,
+        entries: lineupProps.entries,
+        curated: curatedPicksFor(view.editionKey),
+      }),
       onPickYear: (year) => setYears((prev) => ({ ...prev, [c.id]: year })),
       onAddCalendar: (edition) => {
         const handles = artists.filter((a) => edition.attendingArtistIds.includes(a.id) && a.handle)
@@ -532,7 +564,7 @@ export default function Conventions({
       artists,
       attendingIds: view.attendingArtistIds,
       onToggle: (artistId) => toggle(view.editionKey, artistId),
-      lineupProps: lineupPropsFor(view.editionKey),
+      lineupProps,
       winnerProps: winnerPropsFor(view.editionKey),
     }
   }

@@ -31,6 +31,21 @@ which of your saved artists are appearing at that edition of the show. Those nam
 artist's detail card and next to the artist in idea matches. (Automatic look-up is
 on the backlog; for now you set this yourself.)
 
+**Worth the trip?** Under the year buttons, each upcoming edition gets a one-line verdict
+with its reasons, worked out on your device from who's going and the line-up:
+
+- **Worth the trip**: at least one of your saved artists is going (marked attending or found
+  on the line-up). For a show more than 100 miles from Milton Keynes, that takes your #1 or
+  two of your artists. Anything at all at your local show counts.
+- **Maybe**: no saved artists, but a field-guide pick or an artist at a studio you follow is
+  there. Also shown for a long trip for one artist.
+- **Skip it**: the line-up is in and has none of your artists or studios.
+- **Too early to say**: no line-up yet and nobody marked attending. Mark who's going, or
+  import the line-up when the show publishes it.
+
+The reasons read like *6 of your artists, best #5 · 4 field-guide picks · 9 at studios you
+follow*. Wildcards never count towards a verdict. A past edition has no verdict.
+
 **Editions.** Every show recurs, so each card holds its editions by year and opens on the
 next one. A row of year buttons under the dates (**2026 · 2027**) switches the whole card:
 dates, who's attending, the artist index and the winners all belong to that one edition.
@@ -69,6 +84,23 @@ follow — someone new, at the same studio as an artist you've saved — so a st
 otherwise walk past gets a reason to stop. Style matching only ever fires for an artist
 already in your gallery: the show's own list carries no style data, so nothing is guessed.
 Switch back to **All** for the plain, searchable A–Z list.
+
+#### Walking order
+
+When Sable has the show's floor plan for that edition (so far only Big London 2026), Top
+picks has two buttons: **Ranked** and **Walking order**. Walking order lists your Must see
+and field-guide picks as numbered stops, starting from the entrance and going each time to
+the nearest pick you haven't visited yet. It uses each stand's real position, because booth
+numbers zigzag across the hall. It is a sensible order, not a guaranteed shortest one.
+
+- Each stop shows its booth number, and **Close by** lists any Worth a look or Wildcard
+  artist within about three stands, so you can call in on the way.
+- **Elsewhere in the hall** lists picks whose booth isn't on the plan (tents, late additions).
+  Sable never guesses a position for them.
+- **Copy route** copies the whole list as text, ready to paste into Notes for the day.
+
+A floor plan belongs to one edition, like the line-up. 2027's route appears once the show
+publishes its plan and its stand positions are added to the app.
 
 #### Big London 2026 is already there
 

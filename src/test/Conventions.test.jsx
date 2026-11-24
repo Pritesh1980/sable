@@ -403,3 +403,40 @@ describe('Studios page', () => {
     expect(card.getByRole('link', { name: /@berkbosveren/ })).toHaveAttribute('href', 'https://instagram.com/berkbosveren')
   })
 })
+
+// "Worth the trip?" (#190): one line per card, from the attendance list and the
+// line-up, for the edition still to come.
+describe('Conventions worth the trip', () => {
+  const show = CONVENTIONS.find((c) => c.id === 'big-london')
+  const cardFor = (c) => within(screen.getByRole('heading', { name: c.name }).closest('div.animate-slide-up'))
+
+  it('says it is too early while there is nothing to go on', () => {
+    renderConventions()
+    const card = cardFor(show)
+    expect(card.getByText('Too early to say')).toBeInTheDocument()
+    expect(card.getByText(/no line-up or attending artists yet/)).toBeInTheDocument()
+  })
+
+  it('calls a show worth the trip once one of your artists is marked going', () => {
+    renderConventions({ conventionOverrides: { 'big-london@2027': ['zoia.ink'] } })
+    const card = cardFor(show)
+    expect(card.getByText('Worth the trip')).toBeInTheDocument()
+    expect(card.getByText(/1 of your artists, #1/)).toBeInTheDocument()
+  })
+
+  it('says skip when the imported line-up has none of yours', () => {
+    const brighton = CONVENTIONS.find((c) => c.id === 'brighton')
+    renderConventions({
+      conventionLineups: { 'brighton@2027': { entries: [{ name: 'Someone Else', handle: 'someoneelse', note: '' }] } },
+    })
+    expect(cardFor(brighton).getByText('Skip it')).toBeInTheDocument()
+  })
+
+  it('has no verdict on a past edition, where there is no trip left to make', () => {
+    renderConventions()
+    const card = cardFor(show)
+    fireEvent.click(card.getByRole('button', { name: /2026/ }))
+    expect(card.queryByText('Worth the trip')).toBeNull()
+    expect(card.queryByText('Too early to say')).toBeNull()
+  })
+})

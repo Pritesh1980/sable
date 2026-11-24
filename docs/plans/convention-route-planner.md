@@ -1,11 +1,19 @@
 # Plan: convention route planner / top picks
 
-*Status: **Phase 1 shipped** (Top picks — `src/data/showPlan.js`,
-`src/components/ShowPlanView.jsx`, a fourth "Top picks" chip on the artist
-index). Phase 2 (route ordering over the floorplan coordinates in
-`src/data/lineups/bigLondon2026Floorplan.js`, shipped separately) is not
-started. Written 2 Sep 2026 for the Big London Tattoo Show (4–6 Sep 2026), on
-top of the artist index shipped in `3a836d3`.*
+*Status: **Phases 1 and 2 shipped.** Top picks: `src/data/showPlan.js`,
+`src/components/ShowPlanView.jsx`. Route (#190, Nov 2026): `src/data/showRoute.js`,
+the **Walking order** view in Top picks, and per-edition floor plans registered in
+`FLOORPLANS` (`src/data/lineupSeeds.js`); only Big London 2026 has one. The same
+issue added a "Worth the trip?" line to each Radar card (`src/data/worthTheTrip.js`).
+Phase 3 is not started. Written 2 Sep 2026 for the Big London Tattoo Show
+(4–6 Sep 2026), on top of the artist index shipped in `3a836d3`.*
+
+**Adding a new edition's plan** (e.g. Big London 2027, usually published late
+summer): extract the coordinates as in finding 2 below, save them as
+`src/data/lineups/<show><year>Floorplan.js` with the plan's `aspect`
+(height ÷ width) and `entrance`, register it in `FLOORPLANS`, and copy
+`src/test/floorplan.test.js` for it. Nothing else changes: the route reads
+whichever plan the edition has. Never reuse a previous year's plan.
 
 ## What we're building
 
@@ -41,8 +49,8 @@ top face and `208→197` back along the bottom. Sorting by booth number walks on
 face and then teleports across the aisle. Booth number order is *not* walking
 order, so the route must use real coordinates.
 
-Extracting them works — see `docs/plans/floorplan-extraction.md` for the method:
-colour-mask the booth rectangles, then OCR each cell. **Threshold dark pixels
+Extracting them works (the method is summarised here; there is no separate
+write-up): colour-mask the booth rectangles, then OCR each cell. **Threshold dark pixels
 directly (`gray < 110`); Otsu binarisation silently eats digits** (`276` reads
 as `28`). Result: **391 booths placed, 95.4% of the placeable ones.**
 
