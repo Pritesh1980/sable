@@ -5,10 +5,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('../data/embedder', () => ({
   EMBEDDING_MODEL_ID: 'test-model',
   getEmbedder: vi.fn(async () => async (src) => (src.includes('a') ? [1, 0] : [0, 1])),
+  getTextEmbedder: vi.fn(async () => async (text) => (text === 'skull' ? [1, 0] : [0, 1])),
 }))
 
-import { buildStyleIndex, loadVectors, vectorFor, clearStyleIndex } from '../data/styleIndex'
-import { getEmbedder } from '../data/embedder'
+import { buildStyleIndex, loadVectors, vectorFor, textVectorFor, clearStyleIndex } from '../data/styleIndex'
+import { getEmbedder, getTextEmbedder } from '../data/embedder'
 import { refIdentity } from '../data/imageRef'
 
 const artists = [
@@ -73,6 +74,46 @@ describe('vectorFor (one-off embeddings, e.g. concept images)', () => {
       throw new Error('decode failed')
     })
     expect(await vectorFor('/img/broken.png', 'concept:bad')).toBeNull()
+  })
+})
+
+describe('textVectorFor (search by words, #186)', () => {
+  it('embeds a phrase and keeps it, so the same search works again without the model', async () => {
+    expect(await textVectorFor('skull')).toEqual([1, 0])
+    expect(await textVectorFor('skull')).toEqual([1, 0])
+    expect(getTextEmbedder).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the phrase in the model\'s own namespace, beside the photo vectors', async () => {
+    await textVectorFor('skull')
+    const db = await new Promise((resolve) => {
+      const req = indexedDB.open('tattoo-style-index-v2', 1)
+      req.onsuccess = () => resolve(req.result)
+    })
+    const kept = await new Promise((resolve) => {
+      const req = db.transaction('vectors').objectStore('vectors').get('test-model:text:skull')
+      req.onsuccess = () => resolve(req.result)
+    })
+    db.close()
+    expect(kept).toEqual([1, 0])
+  })
+
+  it('passes the model download progress through', async () => {
+    const onProgress = vi.fn()
+    await textVectorFor('wolf', { onProgress })
+    expect(getTextEmbedder).toHaveBeenCalledWith({ onProgress })
+  })
+
+  it('with cachedOnly, answers from the kept phrases and never loads the model', async () => {
+    expect(await textVectorFor('owl', { cachedOnly: true })).toBeNull()
+    expect(getTextEmbedder).not.toHaveBeenCalled()
+    await textVectorFor('skull')
+    expect(await textVectorFor('skull', { cachedOnly: true })).toEqual([1, 0])
+  })
+
+  it('throws when the model cannot load, so the search can say so', async () => {
+    getTextEmbedder.mockRejectedValueOnce(new Error('offline'))
+    await expect(textVectorFor('raven')).rejects.toThrow('offline')
   })
 })
 

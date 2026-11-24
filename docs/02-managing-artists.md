@@ -64,6 +64,23 @@ not built yet, the sheet says so and offers **Build style index** (a one-off mod
 download). If only this photo is missing, it offers **Update style index**. Photos are
 compared on this device and never leave it.
 
+### Search your photos
+
+Tap **Tools → Search** in the Artists header and type what you are looking for:
+*skull*, *wolf*, *a woman's face*. Matching photos come back grouped by artist, best
+match first, including photos saved with no artist. Tap one to open it in the viewer;
+Back brings you to the results again. If a filter on the Wall would hide the photo, the
+filter is cleared first.
+
+Search works best with **one subject**. A scene like *a snake wrapped round a dagger*
+usually finds snakes or daggers, not both together. When nothing looks close enough, it
+says so rather than show weak matches.
+
+It searches the same on-device style index as More like this, so it covers only photos
+that have been indexed (the sheet says how many, for example *Searching 412 of 430
+photos*, and offers **Update style index** for the rest). The first search on each device
+downloads a 67 MB model, once. The words and the photos stay on the device.
+
 ### Describe tattoo
 
 Open any photo on the Wall and tap **Describe tattoo** (**Describe**, or press **D**, on a
