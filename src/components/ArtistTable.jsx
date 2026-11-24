@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { STYLE_TAGS, DEFAULT_STUDIOS } from '../data/artists'
 import { uploadImages } from '../hooks/useImageUpload'
 import { useAuth } from '../context/useAuth'
@@ -6,13 +6,20 @@ import TagPill from './TagPill'
 import ArtistImage from './ArtistImage'
 import { useUndoableRemoval } from '../hooks/useUndoableRemoval'
 import { intersectsViewport } from '../data/viewport'
+import useStyleVectors from '../hooks/useStyleVectors'
+import { artistCentroids } from '../data/embeddings'
+import { suggestTags, offStyleImages } from '../data/curation'
+import { refIdentity } from '../data/imageRef'
+import { TagSuggestions, OffStylePhotos } from './CurationHints'
+
+const NO_HINTS = { suggestions: [], flags: [] }
 
 function studioName(id) {
   const s = DEFAULT_STUDIOS.find((s) => s.id === id)
   return s ? s.name : null
 }
 
-function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
+function ArtistRow({ artist, hints = NO_HINTS, onSaveImages, onUpdate, onRemove }) {
   const fileRef = useRef()
   const [uploading, setUploading] = useState(false)
   const [expanded, setExpanded] = useState(false)
@@ -85,6 +92,10 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
     onUpdate(artist.id, { tags })
   }
 
+  function keepImage(image) {
+    onUpdate(artist.id, { keptImages: [...(artist.keptImages || []), refIdentity(image)] })
+  }
+
   const igUrl = `https://www.instagram.com/${artist.handle}/`
   const imageCount = artist.images?.length || 0
 
@@ -99,6 +110,12 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
           <p className="font-display text-cream text-sm leading-tight">{artist.name || `@${artist.handle}`}</p>
           {artist.name && <p className="font-mono text-cream-muted/90 text-xs">@{artist.handle}</p>}
           {artist.studio && <p className="font-mono text-cream-muted/60 text-[0.6875rem] tracking-widest">{studioName(artist.studio)}</p>}
+          {/* #187: in the name cell, where it can wrap, so the table doesn't widen. */}
+          {hints.flags.length > 0 && (
+            <p className="font-mono text-[0.6875rem] text-cream-muted/90">
+              {hints.flags.length === 1 ? '1 photo to check' : `${hints.flags.length} photos to check`}
+            </p>
+          )}
         </td>
 
         {/* Instagram */}
@@ -153,6 +170,7 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
                     <TagPill key={tag} tag={tag} active={artist.tags.includes(tag)} onClick={() => toggleTag(tag)} small />
                   ))}
                 </div>
+                <TagSuggestions suggestions={hints.suggestions} onAccept={toggleTag} />
               </div>
 
               {/* Studio */}
@@ -208,6 +226,8 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
                 </div>
               )}
 
+              <OffStylePhotos artist={artist} flags={hints.flags} onKeep={keepImage} onRemove={removeImage} />
+
               {/* Remove artist */}
               <div className="flex justify-end">
                 <button
@@ -235,6 +255,17 @@ function ArtistRow({ artist, onSaveImages, onUpdate, onRemove }) {
 // all mutations flow through the onUpdate/onRemove/onSaveImages callbacks.
 export default function ArtistTable({ artists, onSaveImages, onUpdate, onRemove }) {
   const [search, setSearch] = useState('')
+  // #187: hints need the style index; until it's built (or while it loads)
+  // there are none, and nothing is shown.
+  const { getVec, coverage } = useStyleVectors(artists)
+  const hints = useMemo(() => {
+    if (!getVec || !coverage?.embedded) return new Map()
+    const centroids = artistCentroids(artists, getVec)
+    return new Map(artists.map((a) => [a.id, {
+      suggestions: suggestTags(a, artists, getVec, { centroids }),
+      flags: offStyleImages(a, getVec),
+    }]))
+  }, [artists, getVec, coverage?.embedded])
 
   const allInOrder = artists.slice().sort((a, b) => a.rank - b.rank)
 
@@ -273,6 +304,7 @@ export default function ArtistTable({ artists, onSaveImages, onUpdate, onRemove 
               <ArtistRow
                 key={artist.id}
                 artist={artist}
+                hints={hints.get(artist.id)}
                 onSaveImages={onSaveImages}
                 onUpdate={onUpdate}
                 onRemove={onRemove}

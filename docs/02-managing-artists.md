@@ -192,6 +192,27 @@ link and photo count. Type in the **search** box to filter by name or handle.
   commits the first.
 - **Remove artist** — deletes them from your collection (with a confirmation).
 
+### Tidy-up hints
+
+Once the on-device style index is built (see [More like this](#more-like-this)), Manage
+can point out two things. Neither needs an AI key or a download beyond the index, and
+neither changes anything until you tap.
+
+- **Suggested tags.** Under the style tags, a dashed **+ realism** chip with a reason:
+  *looks like A, B and C, tagged realism*. It appears when at least 3 of the 5 artists
+  whose work looks most like this one carry the tag. Tap the chip to add the tag, or
+  ignore it. Only `fine-line` and `realism` are suggested: tested against the tags
+  you'd already chosen, they were the two this got right about three times in four.
+  The other four styles weren't reliable enough to suggest.
+- **Doesn't look like the rest.** A photo that sits far from the artist's other photos,
+  often a selfie, a booking poster, a studio shot or someone else's work, is listed
+  under the photos with **Keep** and **Remove**. A row with one shows **1 photo to check**
+  under the artist's name. **Remove** works like the thumbnail ×, with Undo. **Keep**
+  is remembered on the artist, synced with the rest of your library, so that photo
+  won't be asked about again. Artists need at least 4 indexed photos for this.
+
+Photos added since the index was last built aren't checked until you update it.
+
 > **Tip:** you can also upload photos and edit tags/studio from an artist's full
 > detail card in the [gallery views](03-gallery-and-ranking.md) — whichever is handier.
 > Tap **Done managing** to flip back to the visual views. Backups now live in

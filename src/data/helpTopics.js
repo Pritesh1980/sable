@@ -97,6 +97,16 @@ export const HELP_GROUPS = [
         guide: '02-managing-artists.md#search-your-photos',
       },
       {
+        id: 'tidy',
+        question: 'How do I spot photos that don’t belong to an artist?',
+        steps: [
+          'Build the style index once, from More like this.',
+          'In Tools, then Manage, a row shows “1 photo to check” when a photo looks unlike the rest.',
+          'Open the row and choose Keep or Remove. It may also suggest a style tag.',
+        ],
+        guide: '02-managing-artists.md#tidy-up-hints',
+      },
+      {
         id: 'rank',
         question: 'What does rank do, and how do I set it?',
         steps: [
