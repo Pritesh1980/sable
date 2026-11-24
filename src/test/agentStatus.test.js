@@ -8,6 +8,8 @@ import {
   claimedIssues,
   worktreeNotes,
   formatReport,
+  mergedPrFor,
+  parseStatus,
   stripPluginBlocks,
   STALE_DAYS,
 } from '../agents/agentStatus'
@@ -33,20 +35,31 @@ const PORCELAIN = [
   'branch refs/heads/feat/blender-demo-guide-194',
   'locked',
   '',
+  'worktree /Users/me/code/tattoo-app/.worktrees/gone',
+  'HEAD cccccccccccccccccccccccccccccccccccccccc',
+  'branch refs/heads/claude/gone',
+  'prunable gitdir file points to non-existent location',
+  '',
 ].join('\n')
 
 describe('parseWorktrees', () => {
   it('reads every worktree, marking the first as the root checkout', () => {
     const list = parseWorktrees(PORCELAIN)
-    expect(list).toHaveLength(3)
+    expect(list).toHaveLength(4)
     expect(list[0]).toMatchObject({ path: '/Users/me/code/tattoo-app', branch: 'main', isRoot: true, detached: false })
     expect(list[1]).toMatchObject({ branch: null, detached: true, isRoot: false })
-    expect(list[2]).toMatchObject({ branch: 'feat/blender-demo-guide-194', head: 'b5a236fbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' })
+    expect(list[2]).toMatchObject({ branch: 'feat/blender-demo-guide-194', head: 'b5a236fbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', prunable: false })
+  })
+
+  // git's own flag, not a stat() of the folder: a sandboxed agent may be unable
+  // to stat a sibling worktree that is very much alive.
+  it('takes a missing folder from git, which marks it prunable', () => {
+    expect(parseWorktrees(PORCELAIN)[3]).toMatchObject({ branch: 'claude/gone', prunable: true })
   })
 
   it('tolerates a missing trailing blank line and CRLF', () => {
     const list = parseWorktrees('worktree /a\r\nHEAD 111\r\nbranch refs/heads/x')
-    expect(list).toEqual([{ path: '/a', head: '111', branch: 'x', detached: false, isRoot: true }])
+    expect(list).toEqual([{ path: '/a', head: '111', branch: 'x', detached: false, prunable: false, isRoot: true }])
   })
 })
 
@@ -78,6 +91,35 @@ describe('claimedIssues', () => {
     expect(claims.get(245)).toEqual(['draft PR #251'])
     expect(claims.get(261)).toEqual(['PR #252'])
     expect(claims.get(194)).toEqual(['label in-progress'])
+  })
+
+  // codex's sandbox can't push, so for codex a local worktree is often the only
+  // claim there is. Only worktrees holding work count, and never a merged one.
+  it('counts a local worktree holding work for an issue, by branch or folder name', () => {
+    const worktrees = [
+      { isRoot: true, branch: 'main', path: '/r', ahead: 0, dirty: 0 },
+      { tool: 'codex', branch: null, path: '/h/.codex/worktrees/placement-picker-245/tattoo-app', ahead: 0, dirty: 27 },
+      { tool: 'claude', branch: 'claude/text-search-186', path: '/r/.worktrees/search', ahead: 2, dirty: 0 },
+      { tool: null, branch: 'feat/blender-relief-prep-193', path: '/r/.worktrees/blender-193', ahead: 0, dirty: 0 },
+      { tool: 'codex', branch: 'codex/calendar-export-90', path: '/h/.codex/worktrees/calendar-export/tattoo-app', ahead: 3, dirty: 0, mergedPr: 91 },
+    ]
+    const claims = claimedIssues([], [], worktrees)
+    expect([...claims.keys()].sort((a, b) => a - b)).toEqual([186, 245])
+    expect(claims.get(245)).toEqual(['local worktree (codex)'])
+    expect(claims.get(186)).toEqual(['local worktree (claude)'])
+  })
+
+  it('lists a worktree alongside the PR that claims the same issue', () => {
+    const prs = [{ number: 251, isDraft: true, headRefName: 'codex/placement-picker-245', title: 't', body: '' }]
+    const worktrees = [{ tool: 'codex', branch: 'codex/placement-picker-245', path: '/h/.codex/worktrees/p/tattoo-app', ahead: 1, dirty: 0 }]
+    expect(claimedIssues(prs, [], worktrees).get(245)).toEqual(['draft PR #251', 'local worktree (codex)'])
+  })
+
+  // A template's example or a quoted snippet is not a claim.
+  it('ignores closing keywords inside HTML comments and fenced code', () => {
+    const body = 'Fixes #245\n<!-- Example: Fixes #194 -->\n```\ncloses #12\n```\nresolves #13'
+    const prs = [{ number: 9, isDraft: true, headRefName: 'claude/x', title: 'fix: y', body }]
+    expect([...claimedIssues(prs, []).keys()].sort((a, b) => a - b)).toEqual([13, 245])
   })
 
   it('does not count a bare issue mention in the body as a claim', () => {
@@ -134,6 +176,16 @@ describe('worktreeNotes', () => {
     expect(worktreeNotes({ ...base, mergedPr: 200 }, NOW)).toEqual([])
   })
 
+  it('says so when a worktree cannot be read, instead of guessing', () => {
+    expect(worktreeNotes({ ...base, unreadable: true }, NOW)).toEqual(["couldn't read it from here (sandbox?): ask its owner"])
+  })
+
+  // Without GitHub, "no PR" is unknown, not absent: don't send an agent to open a
+  // PR that already exists.
+  it('drops PR advice when GitHub could not be asked', () => {
+    expect(worktreeNotes({ ...base, pr: null, prsKnown: false }, NOW)).toEqual([])
+  })
+
   it('reports a worktree whose folder has gone', () => {
     expect(worktreeNotes({ ...base, missing: true }, NOW)).toEqual(['folder missing: git worktree prune clears it'])
   })
@@ -154,6 +206,41 @@ describe('worktreeNotes', () => {
   it('uses singular wording for one', () => {
     expect(worktreeNotes({ ...base, unpushed: 1 }, NOW)).toContain('1 commit not pushed')
     expect(worktreeNotes({ ...base, ahead: 0, dirty: 1, pr: null }, NOW)).toContain('1 uncommitted file, nothing committed: other agents cannot see it')
+  })
+})
+
+describe('parseStatus', () => {
+  it('reads paths, renames and quoted names, and whether anything is staged', () => {
+    const porcelain = [' M AGENTS.md', 'MM CLAUDE.md', 'R  old.js -> new.js', '?? "a b.png"', 'A  src/x.js'].join('\n')
+    expect(parseStatus(porcelain)).toEqual([
+      { path: 'AGENTS.md', staged: false },
+      { path: 'CLAUDE.md', staged: true },
+      { path: 'new.js', staged: true },
+      { path: 'a b.png', staged: false },
+      { path: 'src/x.js', staged: true },
+    ])
+  })
+
+  it('returns nothing for a clean tree', () => {
+    expect(parseStatus('')).toEqual([])
+  })
+})
+
+describe('mergedPrFor', () => {
+  const merged = [
+    { number: 243, headRefName: 'claude/rank-explained-220', headRefOid: 'aaa' },
+    { number: 180, headRefName: 'claude/rank-explained-220', headRefOid: 'old' },
+  ]
+
+  it('names the merged PR while the worktree still sits on its head commit', () => {
+    expect(mergedPrFor({ branch: 'claude/rank-explained-220', head: 'aaa' }, merged)).toBe(243)
+    expect(mergedPrFor({ branch: 'claude/rank-explained-220', head: 'old' }, merged)).toBe(180)
+  })
+
+  // A reused branch with new commits must not read as "can be removed".
+  it('ignores a merged PR once the branch has moved on', () => {
+    expect(mergedPrFor({ branch: 'claude/rank-explained-220', head: 'new' }, merged)).toBe(null)
+    expect(mergedPrFor({ branch: null, head: 'aaa' }, merged)).toBe(null)
   })
 })
 
@@ -182,6 +269,12 @@ describe('formatReport', () => {
 
   it('puts warnings first so a missing network is not mistaken for no work', () => {
     expect(report.indexOf('GitHub unreachable')).toBeLessThan(report.indexOf('Claimed issues'))
+  })
+
+  it('marks PRs unknown and claims partial when GitHub was unreachable', () => {
+    const offline = formatReport({ now: NOW, home: '/h', prs: [], claims: new Map([[245, ['local worktree (codex)']]]), worktrees: [], warnings: ['GitHub unreachable'], githubOk: false })
+    expect(offline).toContain('Claimed issues (local worktrees only: GitHub unreachable)')
+    expect(offline).toMatch(/Open PRs\n\s+unknown: GitHub unreachable/)
   })
 
   it('says so when nothing is claimed or open', () => {

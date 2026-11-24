@@ -20,7 +20,7 @@ export function parseWorktrees(porcelain) {
   for (const raw of porcelain.split('\n')) {
     const line = raw.replace(/\r$/, '')
     if (line.startsWith('worktree ')) {
-      current = { path: line.slice(9), head: null, branch: null, detached: false, isRoot: list.length === 0 }
+      current = { path: line.slice(9), head: null, branch: null, detached: false, prunable: false, isRoot: list.length === 0 }
       list.push(current)
     } else if (current && line.startsWith('HEAD ')) {
       current.head = line.slice(5)
@@ -28,9 +28,27 @@ export function parseWorktrees(porcelain) {
       current.branch = line.slice(7).replace(/^refs\/heads\//, '')
     } else if (current && line === 'detached') {
       current.detached = true
+    } else if (current && (line === 'prunable' || line.startsWith('prunable '))) {
+      // git's word for "the folder is gone"; trust it over a stat() that a
+      // sandbox can fail for a folder that exists.
+      current.prunable = true
     }
   }
   return list
+}
+
+/**
+ * Parses `git status --porcelain` ("XY path" or "XY old -> new"). `staged`
+ * means the index differs from HEAD, which a plugin hook never causes.
+ */
+export function parseStatus(porcelain) {
+  return porcelain
+    .split('\n')
+    .filter((line) => line.length > 3)
+    .map((line) => ({
+      path: line.slice(3).split(' -> ').pop().replace(/^"|"$/g, ''),
+      staged: line[0] !== ' ' && line[0] !== '?',
+    }))
 }
 
 /** Files the IJFW plugin hook rewrites in every checkout. */
@@ -83,13 +101,42 @@ const CLOSING = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?):? #(\d+)/gi
 const TITLE_REF = /\(#(\d+)\)/g
 const BRANCH_NUMBER = /[-/](\d+)$/
 
+// HTML comments (a template's examples) and fenced code (a quoted snippet) say
+// nothing about what this PR closes. indexOf, not a lazy regex, to stay linear.
+function proseOnly(body) {
+  let s = body
+  let start = s.indexOf('<!--')
+  while (start !== -1) {
+    const end = s.indexOf('-->', start + 4)
+    s = end === -1 ? s.slice(0, start) : s.slice(0, start) + s.slice(end + 3)
+    start = s.indexOf('<!--', start)
+  }
+  return s.split('```').filter((_, i) => i % 2 === 0).join(' ')
+}
+const FOLDER_NUMBER = /-(\d+)$/
+
+/** The issue a worktree is for: its branch's trailing -N, else its folder's. */
+function worktreeIssue({ branch, path }) {
+  const fromBranch = BRANCH_NUMBER.exec(branch ?? '')
+  if (fromBranch) return Number(fromBranch[1])
+  // The Codex app nests the checkout: ~/.codex/worktrees/<name>/tattoo-app.
+  const segments = path.split('/').filter(Boolean).slice(-2).reverse()
+  for (const segment of segments) {
+    const m = FOLDER_NUMBER.exec(segment)
+    if (m) return Number(m[1])
+  }
+  return null
+}
+
 /**
  * Issues someone is already working on: named by an open PR (closing keyword in
- * the body, "(#N)" in the title, or a branch ending in -N) or labelled
- * in-progress. A bare "#N" mention in a body is not a claim.
+ * the body, "(#N)" in the title, or a branch ending in -N), labelled
+ * in-progress, or the subject of a local worktree that holds unmerged work
+ * (codex's sandbox can't push, so that is sometimes the only claim there is).
+ * A bare "#N" mention in a body is not a claim.
  * Returns Map<issueNumber, string[]> of where each claim came from.
  */
-export function claimedIssues(prs, labelledIssues) {
+export function claimedIssues(prs, labelledIssues, worktrees = []) {
   const claims = new Map()
   const add = (issue, source) => {
     const sources = claims.get(issue) ?? []
@@ -98,25 +145,42 @@ export function claimedIssues(prs, labelledIssues) {
   }
   for (const pr of prs) {
     const source = `${pr.isDraft ? 'draft PR' : 'PR'} #${pr.number}`
-    const body = (pr.body ?? '').split(/\s+/).join(' ')
+    const body = proseOnly(pr.body ?? '').split(/\s+/).join(' ')
     for (const m of body.matchAll(CLOSING)) add(Number(m[1]), source)
     for (const m of (pr.title ?? '').matchAll(TITLE_REF)) add(Number(m[1]), source)
     const fromBranch = BRANCH_NUMBER.exec(pr.headRefName ?? '')
     if (fromBranch) add(Number(fromBranch[1]), source)
   }
   for (const issue of labelledIssues) add(issue.number, 'label in-progress')
+  for (const wt of worktrees) {
+    if (wt.isRoot || wt.mergedPr || !(wt.ahead > 0 || wt.dirty > 0)) continue
+    const issue = worktreeIssue(wt)
+    if (issue !== null) add(issue, `local worktree (${wt.tool ?? 'unknown'})`)
+  }
   return claims
 }
 
 /**
+ * The merged PR a worktree is done with, if any. Sable squash-merges, so a
+ * merged branch's commits never reach main and only the PR says it's done; but a
+ * reused branch with new commits isn't done, so the worktree must still sit on
+ * the PR's head commit. `merged`: [{ number, headRefName, headRefOid }].
+ */
+export function mergedPrFor({ branch, head }, merged) {
+  if (!branch) return null
+  return merged.find((pr) => pr.headRefName === branch && pr.headRefOid === head)?.number ?? null
+}
+
+/**
  * Plain-language notes on one worktree; an empty list means nothing to flag.
- * Fields: isRoot, branch, detached, missing, ahead (commits not on origin/main),
+ * Fields: isRoot, branch, detached, missing, unreadable, prsKnown, ahead (commits not on origin/main),
  * behind (root only), dirty (uncommitted files), pushed (origin has the branch),
  * unpushed (commits not on origin/<branch>), pr (open PR number), mergedPr,
  * lastActivity (ms).
  */
 export function worktreeNotes(wt, now) {
   if (wt.missing) return ['folder missing: git worktree prune clears it']
+  if (wt.unreadable) return ["couldn't read it from here (sandbox?): ask its owner"]
 
   if (wt.isRoot) {
     // The root's own files are left alone: a plugin hook keeps AGENTS.md and
@@ -147,7 +211,8 @@ export function worktreeNotes(wt, now) {
       notes.push('not pushed: other agents cannot see it')
     } else {
       if (wt.unpushed > 0) notes.push(`${plural(wt.unpushed, 'commit')} not pushed`)
-      if (!wt.pr) notes.push('pushed but no PR: open a draft PR to claim it')
+      // prsKnown false: GitHub couldn't be asked, so "no PR" is unknown.
+      if (!wt.pr && wt.prsKnown !== false) notes.push('pushed but no PR: open a draft PR to claim it')
     }
   }
 
@@ -184,13 +249,13 @@ const columns = (rows) => {
 }
 
 /** The whole report as text. `worktrees` entries already carry `tool` and `notes`. */
-export function formatReport({ now, home, prs, claims, worktrees, warnings }) {
+export function formatReport({ now, home, prs, claims, worktrees, warnings, githubOk = true }) {
   const out = [`Agent status  ${new Date(now).toISOString().slice(0, 16).replace('T', ' ')} UTC`, '']
 
   for (const w of warnings) out.push(`! ${w}`)
   if (warnings.length) out.push('')
 
-  out.push('Claimed issues')
+  out.push(githubOk ? 'Claimed issues' : 'Claimed issues (local worktrees only: GitHub unreachable)')
   if (claims.size === 0) out.push('  none')
   else {
     const sorted = [...claims.entries()].sort(([a], [b]) => a - b)
@@ -199,7 +264,8 @@ export function formatReport({ now, home, prs, claims, worktrees, warnings }) {
   out.push('')
 
   out.push('Open PRs')
-  if (prs.length === 0) out.push('  none')
+  if (!githubOk) out.push('  unknown: GitHub unreachable')
+  else if (prs.length === 0) out.push('  none')
   else {
     out.push(...columns(prs.map((pr) => [
       `#${pr.number}`,

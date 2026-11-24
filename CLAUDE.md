@@ -260,17 +260,22 @@ here, so these rules bind every agent.
    `~/.codex/worktrees/` included (all worktrees share one `.git`), with notes on work
    nobody else can see. Don't start a claimed issue.
 2. **Your own worktree, never the root checkout.** Never switch branches or commit in
-   the root `tattoo-app/` folder: other agents read it. Claude uses `.claude/worktrees/` or
-   `.worktrees/`, codex `~/.codex/worktrees/`. Never edit, commit in, clean or remove
-   another agent's worktree or branch, even one the report says "can be removed": that is
-   for its owner (or the owner of the repo) to do.
-3. **Branch names say who and what:** `claude/<slug>-<N>`, `codex/<slug>-<N>`,
-   `agy/<slug>-<N>`, where N is the issue. The report uses the prefix to name the agent.
-   The Codex app starts worktrees detached, so create the branch before the first commit.
+   the root `tattoo-app/` folder: other agents read it. Started there? Make a worktree
+   before the first edit: `git worktree add .worktrees/<slug>-<N> -b <tool>/<slug>-<N>
+   origin/main`. Claude also uses `.claude/worktrees/`, codex `~/.codex/worktrees/`,
+   antigravity `.worktrees/`. Never edit, commit in, clean or remove another agent's
+   worktree or branch, even one the report says "can be removed": that is for its owner
+   (or the owner of the repo) to do.
+3. **Branch and folder names say who and what:** `claude/<slug>-<N>`, `codex/<slug>-<N>`,
+   `agy/<slug>-<N>`, where N is the issue; end the worktree folder in `-<N>` too. The
+   report uses the prefix to name the agent and the number to mark the issue claimed. The
+   Codex app starts worktrees detached, so create the branch before the first commit.
 4. **Claim with a draft PR at the first commit.** Push, then `gh pr create --draft` with a
-   conventional title (`pr-labels.yml` labels from it) and `Fixes #N` in the body. Work that
-   isn't pushed is not a claim, because nobody else can see it. The `in-progress` label is
-   for claims with no code yet (research, a plan). Mark the PR ready when it's done.
+   conventional title (`pr-labels.yml` labels from it) and `Fixes #N` in the body. Until
+   then a worktree holding work for issue N counts as a claim, but only on this machine,
+   and nobody can see what's in it. If codex's sandbox can't push (no network by default),
+   say so and the owner pushes the branch. The `in-progress` label is for claims with no code yet (research, a plan).
+   Mark the PR ready when it's done.
 5. **Hand off and record decisions on the issue, as comments:** what's done, what's next,
    what was decided and why. Any tool can read an issue; nobody else can read your session
    or your memory files (`~/.claude/…`, `.remember/`, `.ijfw/`, codex's).

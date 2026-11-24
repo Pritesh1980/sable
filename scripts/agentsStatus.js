@@ -20,6 +20,8 @@ import {
   claimedIssues,
   worktreeNotes,
   formatReport,
+  mergedPrFor,
+  parseStatus,
   stripPluginBlocks,
   PLUGIN_TOUCHED,
 } from '../src/agents/agentStatus.js'
@@ -46,13 +48,6 @@ const mtime = (file) => {
   }
 }
 
-// `git status --porcelain` lines are "XY path" or "XY old -> new".
-const dirtyPaths = (porcelain) =>
-  porcelain
-    .split('\n')
-    .filter(Boolean)
-    .map((line) => line.slice(3).split(' -> ').pop().replace(/^"|"$/g, ''))
-
 // The IJFW plugin hook rewrites AGENTS.md and CLAUDE.md in every checkout; a
 // file whose only change is its blocks is not anyone's work. Untracked ijfw/
 // folders (gitignored on main, not on older bases) are the same plugin.
@@ -68,21 +63,24 @@ function isPluginNoise(at, file) {
   }
 }
 
-function gather(root, prs, merged) {
+function gather(root, prs, merged, githubOk) {
   const porcelain = run('git', ['worktree', 'list', '--porcelain'], root)
   return parseWorktrees(porcelain).map((wt) => {
-    let missing = false
-    try {
-      statSync(wt.path)
-    } catch {
-      missing = true
-    }
-    if (missing) return { ...wt, tool: toolFor(wt), notes: worktreeNotes({ ...wt, missing }, Date.now()) }
+    const tool = toolFor(wt)
+    const done = (extra) => ({ ...wt, ...extra, tool, notes: worktreeNotes({ ...wt, ...extra }, Date.now()) })
+    if (wt.prunable) return done({ missing: true })
 
     const at = wt.path
-    const status = wt.isRoot ? '' : (tryRun('git', ['status', '--porcelain'], at) ?? '')
-    const files = dirtyPaths(status).filter((f) => !isPluginNoise(at, f))
-    const ahead = count(tryRun('git', ['rev-list', '--count', 'origin/main..HEAD'], at))
+    const status = wt.isRoot ? '' : tryRun('git', ['status', '--porcelain'], at)
+    if (status === null) return done({ unreadable: true })
+    // A staged change is never the hook's doing, so only unstaged files can be noise.
+    const files = parseStatus(status)
+      .filter((entry) => entry.staged || !isPluginNoise(at, entry.path))
+      .map((entry) => entry.path)
+    // A failed count must not read as zero: zero ahead is what "can be removed" rests on.
+    const aheadOut = tryRun('git', ['rev-list', '--count', 'origin/main..HEAD'], at)
+    if (aheadOut === null) return done({ unreadable: true })
+    const ahead = count(aheadOut)
     const behind = wt.isRoot ? count(tryRun('git', ['rev-list', '--count', 'HEAD..origin/main'], at)) : 0
     const remoteRef = wt.branch ? `refs/remotes/origin/${wt.branch}` : null
     const pushed = remoteRef ? tryRun('git', ['rev-parse', '--verify', '--quiet', remoteRef], at) !== null : false
@@ -98,10 +96,11 @@ function gather(root, prs, merged) {
       pushed,
       unpushed,
       pr: prs.find((pr) => pr.headRefName === wt.branch)?.number ?? null,
-      mergedPr: wt.branch ? (merged.get(wt.branch) ?? null) : null,
+      mergedPr: mergedPrFor(wt, merged),
+      prsKnown: githubOk,
       lastActivity: lastActivity || null,
     }
-    return { ...facts, tool: toolFor(wt), notes: worktreeNotes(facts, Date.now()) }
+    return { ...facts, tool, notes: worktreeNotes(facts, Date.now()) }
   })
 }
 
@@ -116,21 +115,22 @@ function main() {
 
   let prs = []
   let labelled = []
-  const merged = new Map()
+  let merged = []
+  let githubOk = true
   try {
     prs = JSON.parse(run('gh', ['pr', 'list', '--state', 'open', '--limit', '100', '--json', 'number,title,headRefName,isDraft,body,updatedAt'], root))
     labelled = JSON.parse(run('gh', ['issue', 'list', '--state', 'open', '--label', 'in-progress', '--json', 'number,title'], root))
-    const recent = JSON.parse(run('gh', ['pr', 'list', '--state', 'merged', '--limit', '100', '--json', 'number,headRefName'], root))
-    for (const pr of recent) if (!merged.has(pr.headRefName)) merged.set(pr.headRefName, pr.number)
+    merged = JSON.parse(run('gh', ['pr', 'list', '--state', 'merged', '--limit', '100', '--json', 'number,headRefName,headRefOid'], root))
   } catch {
+    githubOk = false
     warnings.push(
-      'GitHub unreachable: PRs and claims not shown. In a sandbox without network gh reports this as a bad token; it is not.',
+      'GitHub unreachable: open PRs and the issues they claim are not shown. In a sandbox without network gh calls this a bad token; it is not.',
     )
   }
 
-  const worktrees = gather(root, prs, merged)
-  const claims = claimedIssues(prs, labelled)
-  console.log(formatReport({ now: Date.now(), home: homedir(), prs, claims, worktrees, warnings }))
+  const worktrees = gather(root, prs, merged, githubOk)
+  const claims = claimedIssues(prs, labelled, worktrees)
+  console.log(formatReport({ now: Date.now(), home: homedir(), prs, claims, worktrees, warnings, githubOk }))
 }
 
 main()
