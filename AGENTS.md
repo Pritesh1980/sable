@@ -9,9 +9,16 @@ out of date).
 
 ## Quick orientation
 
-- **Looking for more work:** check the open GitHub issues labelled `backlog` (skip any
-  also labelled `in-progress`) before proposing or starting new work; `BACKLOG.md` is
-  only a local index of them.
+- **Other agents work here too** (Claude Code, codex, antigravity), often at the same time,
+  and coordinate only through git and GitHub. Before starting anything, run
+  **`npm run agents:status`** (`-- --no-fetch` without network): claimed issues, open PRs,
+  and every agent's worktree. The rules are in `CLAUDE.md` under
+  **Working alongside other agents**. In short: your own worktree and a `codex/…` /
+  `claude/…` / `agy/…` branch, a draft PR with `Fixes #N` as soon as there's a commit,
+  handoffs as issue comments, stage files by name.
+- **Looking for more work:** check the open GitHub issues labelled `backlog`, skipping any
+  that `npm run agents:status` lists as claimed; `BACKLOG.md` is only a local index of them.
+- **Odd tooling error** (npm, brew, node, Vite, codex's network)? `docs/TROUBLESHOOTING.md`.
 - **User guide:** [`docs/`](docs/README.md), also available in-app under **More → Help**.
 - **Keeping docs in sync:** when you change UI under `src/pages/` or `src/components/`,
   update the matching `docs/NN-*.md` and, if Help answers it, its topic in `src/data/helpTopics.js`, then

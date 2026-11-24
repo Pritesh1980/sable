@@ -209,8 +209,9 @@ unseeded — ideas are the user's own.
 
 **Still to do (see `BACKLOG.md` / GitHub Issues):**
 When looking for more work, inspect the open GitHub issues labelled `backlog`
-before proposing new tasks (skip any also labelled `in-progress` — another agent has
-it); `BACKLOG.md` is only the local pointer/index.
+before proposing new tasks, skipping any that `npm run agents:status` lists as claimed
+(another agent has it; see **Working alongside other agents**); `BACKLOG.md` is only the
+local pointer/index.
 
 - Apply the AWS S3 + CloudFront deploy (code written, see Hosting) — only needed for
   real accounts + custom domain (the public demo is already live on GitHub Pages)
@@ -241,7 +242,68 @@ them. Keep messages terse and conventional (e.g. `feat(home): …`, `docs: …`)
 `npm test` · `npm run test:coverage` · `npm run test:e2e` ·
 `npm run test:relay` / `npm run test:e2e:refinement` (relay; offline + fictional auth) ·
 `npm run docs:check` (mermaid validity) · `npm run audit:targets` (touch-target audit) ·
-`npm run deploy:aws -- --dry-run` (AWS deploy; unapplied, see Hosting). Node version: `.nvmrc`.
+`npm run deploy:aws -- --dry-run` (AWS deploy; unapplied, see Hosting) ·
+`npm run agents:status` (what other agents are doing; run before starting work).
+Node version: `.nvmrc`. Odd npm/brew/node/Vite errors: `docs/TROUBLESHOOTING.md`.
+
+---
+
+## Working alongside other agents
+
+Claude Code, codex and antigravity all work in this repo, often at the same time. They
+coordinate only through git and GitHub: issues, branches, PRs. There is no chat between
+them, and none is needed. codex reads `AGENTS.md` and antigravity `GEMINI.md`; both point
+here, so these rules bind every agent.
+
+1. **Look before you start:** `npm run agents:status` (`-- --no-fetch` without network).
+   It lists claimed issues, open PRs and every worktree of this repo, codex's under
+   `~/.codex/worktrees/` included (all worktrees share one `.git`), with notes on work
+   nobody else can see. Don't start a claimed issue.
+2. **Your own worktree, never the root checkout.** Never switch branches or commit in
+   the root `tattoo-app/` folder: other agents read it. Started there? Make a worktree
+   before the first edit: `git worktree add .worktrees/<slug>-<N> -b <tool>/<slug>-<N>
+   origin/main`. Claude also uses `.claude/worktrees/`, codex `~/.codex/worktrees/`,
+   antigravity `.worktrees/`. Never edit, commit in, clean or remove another agent's
+   worktree or branch, even one the report says "can be removed": that is for its owner
+   (or the owner of the repo) to do.
+3. **Branch and folder names say who and what:** `claude/<slug>-<N>`, `codex/<slug>-<N>`,
+   `agy/<slug>-<N>`, where N is the issue; end the worktree folder in `-<N>` too. The
+   report uses the prefix to name the agent and the number to mark the issue claimed. The
+   Codex app starts worktrees detached, so create the branch before the first commit.
+4. **Claim with a draft PR at the first commit.** Push, then `gh pr create --draft` with a
+   conventional title (`pr-labels.yml` labels from it) and `Fixes #N` in the body. Until
+   then a worktree holding work for issue N counts as a claim, but only on this machine,
+   and nobody can see what's in it. If codex's sandbox can't push (no network by default),
+   say so and the owner pushes the branch. The `in-progress` label is for claims with no code yet (research, a plan).
+   Mark the PR ready when it's done.
+5. **Hand off and record decisions on the issue, as comments:** what's done, what's next,
+   what was decided and why. Any tool can read an issue; nobody else can read your session
+   or your memory files (`~/.claude/…`, `.remember/`, `.ijfw/`, codex's).
+6. **Lessons every tool needs go in the repo:** rules in this file, symptom → fix in
+   `docs/TROUBLESHOOTING.md`. A tool's private memory is a cache, not the record.
+7. **Stage files by name; never `git add -A` or `git add .`** The IJFW plugin hook rewrites
+   `AGENTS.md` and `CLAUDE.md` in every checkout, mid-session, and `-A` committed its block
+   twice (#221, #225). Check `git status --short` before each commit; `agents:status`
+   already ignores hook-only changes.
+
+The one synchronous channel between tools is the cross-model review (below), and it
+stays read-only.
+
+**The owner's standing preferences**, said to Claude but meant for every agent:
+
+- **Do routine next steps and report afterwards** (a green Dependabot PR, the next backlog
+  issue, a dev-only alert). Pause only for destructive or irreversible steps, another
+  agent's work, real accounts or data, and anything done on the physical phone.
+- **Don't chase rare edge cases**: multi-tab, account-switch and millisecond races. It's
+  one user, mostly one phone, one tab. Reject them in the commit message; don't open an
+  issue. Do fix anything that hits normal use.
+- **Phone first at 440 × 956 CSS px**, then check down to 320 (the e2e `iphone` project is
+  still 390 wide; `e2e/layout.e2e.js` covers 440).
+- **The tattoo is the subject** of every render, 3D view and screenshot: frame the ink so
+  it fills most of the view, not the arm. Look at a screenshot yourself before showing it.
+- **Merge only on every check's conclusion:** `gh pr checks <n>` in full (never through
+  `tail`), and `test-and-build` must pass. The `vitest` and `@vitest/coverage-v8` version
+  ranges must match; a Dependabot group that bumps only one turns main red.
 
 ---
 
@@ -393,6 +455,12 @@ medium+ branches, on plans, and on high-cost decisions, run both in parallel, re
   `/Applications/ChatGPT.app/Contents/Resources/codex`. This has happened twice (cask
   0.146.0, Aug 2026; an interrupted 0.144.4 upgrade in July).
 - `agy --print "<prompt>"` — design/UX/strategy (replaces the defunct `gemini` CLI).
+
+Two ways either one silently returns nothing when run in the background: **`codex exec`
+waits on stdin forever** unless given `< /dev/null`, and **`agy --print` can't run
+commands** (headless, it auto-denies them), so paste the diff into the prompt rather than
+asking it to run `git show`. Wrap both in `timeout 900` and wait for the exit; an empty
+output file means one of these.
 
 Scope prompts to the change, demand file:line + concrete failure scenarios, cap
 findings (≤5), end with "do NOT modify files". **Verify every finding against the
