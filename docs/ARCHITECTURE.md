@@ -871,9 +871,11 @@ field-guide picks from the entrance, always to the nearest unvisited stand, meas
 with the plan's aspect ratio, because booth numbers serpentine. Worth a look and
 wildcards within about three stands are listed under a stop, and a booth missing from
 the plan goes under "Elsewhere in the hall", never at a guessed position.
+Pickups not near a stop follow the route as "Also on your list".
 `worthTheTrip.js` reuses `buildShowPlan` to give each upcoming edition a go / maybe /
-skip / too-early verdict from your artists (rank-weighted), priority picks, studio
-stablemates and distance from Milton Keynes; wildcards never count towards it.
+skip verdict from your artists (a top-five rank clears a long trip alone), priority
+picks, studio stablemates and distance from Milton Keynes; wildcards never count, and
+an edition with no line-up and nobody marked going gets no line.
 
 ```mermaid
 flowchart TB

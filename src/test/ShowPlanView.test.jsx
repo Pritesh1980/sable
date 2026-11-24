@@ -111,11 +111,13 @@ describe('ShowPlanView walking order', () => {
     const route = screen.getByRole('list', { name: /route/i })
     const stops = within(route).getAllByTestId('lineup-label').map((el) => el.textContent)
     expect(stops).toEqual(['Guide Pick', 'Oscar Akermo'])
-    expect(within(route).getByText(/^Stop 1 · Booth 1 · Seen in person$/)).toBeInTheDocument()
-    expect(within(route).getByText(/close by: studio mate, booth 3/i)).toBeInTheDocument()
+    expect(within(route).getByText('Stop 1 · Booth 1')).toBeInTheDocument()
+    expect(within(route).getByText('Seen in person')).toBeInTheDocument()
+    expect(within(route).getByText('Close by: Studio Mate, Booth 3 · studio you follow')).toBeInTheDocument()
 
     const elsewhere = screen.getByRole('heading', { name: /elsewhere in the hall/i }).closest('section')
     expect(within(elsewhere).getByText('Tent Pick')).toBeInTheDocument()
+    expect(within(elsewhere).getByText('Booth T9')).toBeInTheDocument()
   })
 
   it('copies the route as text for Notes', async () => {
@@ -136,6 +138,30 @@ describe('ShowPlanView walking order', () => {
     fireEvent.click(screen.getByRole('button', { name: /copy route/i }))
     const box = await screen.findByRole('textbox', { name: /route/i })
     expect(box.value).toContain('Elsewhere in the hall')
+  })
+
+  it('keeps the hand-copy text in step with the route when the line-up changes', async () => {
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: vi.fn().mockRejectedValue(new Error('no')) }, configurable: true })
+    const { rerender } = walk()
+    fireEvent.click(screen.getByRole('button', { name: /walking order/i }))
+    fireEvent.click(screen.getByRole('button', { name: /copy route/i }))
+    expect((await screen.findByRole('textbox', { name: /route/i })).value).toContain('Booth 2 · Oscar Akermo')
+
+    const moved = routeEntries.map((e) => (e.handle === 'oscarakermo' ? { ...e, note: 'Own Studio, Booth 3' } : e))
+    rerender(
+      <ShowPlanView convention={convention} entries={moved} artists={artists} studios={studios} attendingIds={[]}
+        curated={curated} floorplan={floorplan} onAddArtist={vi.fn()} onToggleAttending={vi.fn()} />
+    )
+    expect(screen.getByRole('textbox', { name: /route/i }).value).toContain('Booth 3 · Oscar Akermo')
+  })
+
+  it('lists Worth a look picks that are not near a stop after the route', () => {
+    const far = { ...floorplan, booths: { ...floorplan.booths, 3: [0.5, 0.2] } }
+    walk({ floorplan: far })
+    fireEvent.click(screen.getByRole('button', { name: /walking order/i }))
+    const also = screen.getByRole('heading', { name: /also on your list/i }).closest('section')
+    expect(within(also).getByText('Studio Mate')).toBeInTheDocument()
+    expect(within(also).getByText('Booth 3 · studio you follow')).toBeInTheDocument()
   })
 
   it('goes back to the ranked sections', () => {

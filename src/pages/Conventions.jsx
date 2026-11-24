@@ -86,16 +86,18 @@ function EditionNotes({ convention, past, current }) {
 }
 
 // Go or skip, and why (#190). Only for an edition still to come: once a show
-// is over there is no trip left to decide on.
+// is over there is no trip left to decide on. With nothing to go on yet (no
+// line-up, nobody marked) there is no line at all: the attendance and artist
+// index rows below already say they are empty, and seven cards repeating
+// "too early to say" was noise.
 const TRIP_TONE = {
   go: 'text-accent',
   maybe: 'text-cream',
   skip: 'text-cream-muted/70',
-  unknown: 'text-cream-muted/70',
 }
 
 function TripVerdict({ trip }) {
-  if (!trip) return null
+  if (!trip || trip.verdict === 'unknown') return null
   return (
     <p className="text-xs font-mono leading-relaxed mt-2">
       <span className={`${TRIP_TONE[trip.verdict]} text-[0.625rem] tracking-widest uppercase`}>{trip.label}</span>

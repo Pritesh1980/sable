@@ -410,11 +410,12 @@ describe('Conventions worth the trip', () => {
   const show = CONVENTIONS.find((c) => c.id === 'big-london')
   const cardFor = (c) => within(screen.getByRole('heading', { name: c.name }).closest('div.animate-slide-up'))
 
-  it('says it is too early while there is nothing to go on', () => {
+  it('shows no verdict while there is nothing to go on', () => {
     renderConventions()
     const card = cardFor(show)
-    expect(card.getByText('Too early to say')).toBeInTheDocument()
-    expect(card.getByText(/no line-up or attending artists yet/)).toBeInTheDocument()
+    for (const label of ['Worth the trip', 'Maybe', 'Skip it', 'Too early to say']) {
+      expect(card.queryByText(label)).toBeNull()
+    }
   })
 
   it('calls a show worth the trip once one of your artists is marked going', () => {
@@ -437,6 +438,6 @@ describe('Conventions worth the trip', () => {
     const card = cardFor(show)
     fireEvent.click(card.getByRole('button', { name: /2026/ }))
     expect(card.queryByText('Worth the trip')).toBeNull()
-    expect(card.queryByText('Too early to say')).toBeNull()
+    expect(card.queryByText('Skip it')).toBeNull()
   })
 })

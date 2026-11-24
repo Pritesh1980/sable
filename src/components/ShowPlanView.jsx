@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { buildShowPlan } from '../data/showPlan'
-import { buildShowRoute, formatRoute } from '../data/showRoute'
+import { buildShowRoute, formatRoute, pickupReason } from '../data/showRoute'
 import { LineupRow } from './ConventionLineup'
 
 // Not an alphabetical list — a verdict. Must see is your own gallery showing
@@ -44,15 +44,14 @@ const toggleClass = (on) =>
 
 function CopyRoute({ text }) {
   const [state, setState] = useState('idle')
-  const [fallback, setFallback] = useState('')
   async function copy() {
     try {
       await navigator.clipboard.writeText(text)
       setState('copied')
     } catch {
       // No clipboard permission: show the text so it can be selected by hand.
-      setFallback(text)
-      setState('idle')
+      // It renders the current route, so a later line-up change shows up in it.
+      setState('manual')
     }
   }
   return (
@@ -60,11 +59,11 @@ function CopyRoute({ text }) {
       <button onClick={copy} className={toggleClass(false)}>
         {state === 'copied' ? 'Copied ✓' : 'Copy route'}
       </button>
-      {fallback && (
+      {state === 'manual' && (
         <textarea
           readOnly
           aria-label="Route text"
-          value={fallback}
+          value={text}
           rows={8}
           onFocus={(e) => e.target.select()}
           className="mt-2 w-full bg-ink-black border border-ink-border focus:border-accent outline-hidden rounded-xs p-2 text-cream text-[0.6875rem] font-mono"
@@ -74,9 +73,22 @@ function CopyRoute({ text }) {
   )
 }
 
+const boothText = (booth) => (booth ? `Booth ${booth}` : 'No booth listed')
+
+// Where to find someone, then why: the row truncates its note on a narrow
+// phone, and the booth is the one thing a walking order is for, so it leads.
+function Footer({ lead, reasons = [] }) {
+  return (
+    <div className="pb-1 text-[0.6875rem] font-mono">
+      <p className="text-accent">{lead}</p>
+      {reasons.length > 0 && <p className="text-accent/70">{reasons.join(' · ')}</p>}
+    </div>
+  )
+}
+
 // The picks you set out to see, in the order you would reach them from the
-// doors. Pickups are hints under a stop, not rows of their own: they are in
-// the ranked view already, and here they only say "while you are there".
+// doors. Pickups are hints under a stop, not rows of their own: they have
+// full rows in the ranked view, and here they only say "while you are there".
 function RouteView({ route, title, convention, attendingIds, onAddArtist, onToggleAttending }) {
   const row = ({ pick }, footer) => (
     <LineupRow
@@ -102,18 +114,14 @@ function RouteView({ route, title, convention, attendingIds, onAddArtist, onTogg
       ) : (
         <ol aria-label="Route" className="mt-1.5">
           {route.stops.map((stop, i) => row(stop, (
-            <div className="pb-1 text-[0.6875rem] font-mono">
-              <p className="text-accent/70">
-                {/* The row truncates its note on a narrow phone, and the booth
-                    is the one thing a walking order is for, so repeat it here. */}
-                {[`Stop ${i + 1}`, `Booth ${stop.booth}`, ...stop.pick.reasons].join(' · ')}
-              </p>
+            <>
+              <Footer lead={`Stop ${i + 1} · ${boothText(stop.booth)}`} reasons={stop.pick.reasons} />
               {stop.nearby.map((n) => (
-                <p key={n.pick.entry.handle || n.pick.entry.label} className="text-cream-muted/70">
-                  Close by: {n.pick.entry.label}, Booth {n.booth}
+                <p key={n.pick.entry.handle || n.pick.entry.label} className="pb-1 text-[0.6875rem] font-mono text-cream-muted/70">
+                  Close by: {[`${n.pick.entry.label}, ${boothText(n.booth)}`, pickupReason(n.pick)].filter(Boolean).join(' · ')}
                 </p>
               ))}
-            </div>
+            </>
           )))}
         </ol>
       )}
@@ -124,8 +132,19 @@ function RouteView({ route, title, convention, attendingIds, onAddArtist, onTogg
             Not on the floor plan: ask at the door or look for them on the day
           </p>
           <ul className="mt-1.5">
-            {route.elsewhere.map((e) => row(e, e.pick.reasons.length > 0 && (
-              <p className="text-[0.6875rem] font-mono text-accent/70 pb-1">{e.pick.reasons.join(' · ')}</p>
+            {route.elsewhere.map((e) => row(e, <Footer lead={boothText(e.booth)} reasons={e.pick.reasons} />))}
+          </ul>
+        </section>
+      )}
+      {route.others.length > 0 && (
+        <section className="mt-4">
+          <h3 className="font-display text-cream text-base">Also on your list</h3>
+          <p className="text-cream-muted/60 text-[0.6875rem] font-mono mt-0.5">
+            Worth a look and wildcards that aren&rsquo;t close to a stop
+          </p>
+          <ul className="mt-1.5">
+            {route.others.map((o) => row(o, (
+              <Footer lead={[boothText(o.booth), pickupReason(o.pick)].filter(Boolean).join(' · ')} reasons={o.pick.reasons} />
             )))}
           </ul>
         </section>

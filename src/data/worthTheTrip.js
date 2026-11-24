@@ -2,10 +2,10 @@
 // same signals as Top picks (showPlan.js) and nothing else: no network.
 //
 // Your own artists decide it. A saved artist going is reason enough to make a
-// day trip; a long trip (over FAR_MILES from Milton Keynes) needs your #1, or
-// two of your artists, before it is called worth it. A researched field-guide
-// pick or a stablemate at a studio you follow is worth a maybe on its own, and
-// anything at all is worth the drive to the show on your doorstep.
+// day trip; a long trip (over FAR_MILES from Milton Keynes) needs one of your
+// top five, two of your artists, or one plus two more picks or stablemates. A
+// researched field-guide pick or a stablemate at a studio you follow is worth a
+// maybe on its own, and the show on your doorstep is never a skip.
 //
 // Speculative wildcards never count: they are there to be judged at the show,
 // not to justify going (see bigLondon2026Picks.js). And with no line-up and
@@ -14,9 +14,8 @@
 import { buildShowPlan } from './showPlan'
 
 export const FAR_MILES = 100
-
-// Rank-weighted like Top picks: your #1 counts 2, your #30 a shade over 1.
-const weightOf = (artist) => 1 + Math.max(0, 31 - (artist.rank || 31)) / 30
+// One of your top five is worth a long trip on their own.
+export const TOP_RANK = 5
 
 const LABELS = {
   go: 'Worth the trip',
@@ -64,12 +63,22 @@ export function worthTheTrip({
   if (picks) reasons.push(plural(picks, 'field-guide pick', 'field-guide picks'))
   if (stablemates) reasons.push(stablemates === 1 ? '1 at a studio you follow' : `${stablemates} at studios you follow`)
 
-  if (reasons.length === 0) return verdict('skip', ['none of your artists or studios on the line-up'])
-  if (distanceMiles === 0) return verdict('go', [...reasons, 'on your doorstep'])
+  // The show on your doorstep costs nothing to look round, so it is never a skip.
+  const local = distanceMiles === 0
+  if (reasons.length === 0) {
+    const none = 'none of your artists or studios on the line-up'
+    return local ? verdict('maybe', [none, 'on your doorstep']) : verdict('skip', [none])
+  }
+  if (local) return verdict('go', [...reasons, 'on your doorstep'])
   if (mine.length === 0) return verdict('maybe', reasons)
 
+  // A long trip needs more than one artist outside your top five, unless the
+  // field guide and your studios add at least two more reasons to stop. Rank
+  // weighting is the top-five line: below it, one artist alone is a maybe.
   const far = distanceMiles > FAR_MILES
-  const weight = mine.reduce((sum, a) => sum + weightOf(a), 0)
-  if (!far || weight >= 2) return verdict('go', reasons)
-  return verdict('maybe', [...reasons, `a long way for ${plural(mine.length, 'artist', 'artists')}`])
+  const best = Math.min(...mine.map((a) => a.rank || Infinity))
+  if (!far || mine.length >= 2 || best <= TOP_RANK || picks + stablemates >= 2) return verdict('go', reasons)
+  // Before the line-up is out, one artist is all that is known, not all there is.
+  const pending = entries.length === 0 ? ['line-up not in yet'] : []
+  return verdict('maybe', [...reasons, 'a long way for one artist', ...pending])
 }

@@ -5,9 +5,10 @@ import { floorplanFor, seedEntriesFor, curatedPicksFor } from '../data/lineupSee
 import { DEFAULT_ARTISTS, DEFAULT_STUDIOS } from '../data/artists'
 
 // A pick as buildShowPlan returns it — only the fields the route reads.
-const pick = (handle, booth, name = handle) => ({
+const pick = (handle, booth, name = handle, kind = undefined) => ({
   entry: { handle, name, label: name, note: booth ? `Studio, Booth ${booth}` : 'Studio' },
   reasons: [],
+  kind,
 })
 const emptyPlan = { mustSee: [], fieldGuide: [], wildcards: [], suggested: [] }
 const handles = (items) => items.map((s) => s.pick.entry.handle)
@@ -41,7 +42,7 @@ describe('buildShowRoute', () => {
     expect(route.elsewhere.map((e) => [e.pick.entry.handle, e.booth])).toEqual([['t', 'T24'], ['none', null]])
   })
 
-  it('picks up Worth a look and wildcards close to a stop, and leaves the far ones out', () => {
+  it('picks up Worth a look and wildcards close to a stop, and lists the far ones after the route', () => {
     const near = { aspect: 1, entrance: [1, 1], booths: { 1: [0.5, 0.5], 2: [0.5 + NEARBY_RADIUS / 2, 0.5], 3: [0.1, 0.1], 4: [0.5, 0.5 + NEARBY_RADIUS / 3] } }
     const route = buildShowRoute(
       { ...emptyPlan, mustSee: [pick('a', 1)], suggested: [pick('close', 2), pick('far', 3)], wildcards: [pick('wild', 4)] },
@@ -49,6 +50,32 @@ describe('buildShowRoute', () => {
     )
     expect(route.stops).toHaveLength(1)
     expect(route.stops[0].nearby.map((n) => [n.pick.entry.handle, n.booth])).toEqual([['wild', '4'], ['close', '2']])
+    expect(route.others.map((o) => [o.pick.entry.handle, o.booth])).toEqual([['far', '3']])
+  })
+
+  it('lists a pickup whose booth is not on the plan after the route too', () => {
+    const route = buildShowRoute({ ...emptyPlan, mustSee: [pick('a', 1)], wildcards: [pick('tent', 'T2')] }, plan)
+    expect(route.others.map((o) => [o.pick.entry.handle, o.booth])).toEqual([['tent', 'T2']])
+  })
+
+  it('routes the rest of Top picks when there is no Must see or field-guide pick', () => {
+    const route = buildShowRoute({ ...emptyPlan, suggested: [pick('b', 2)], wildcards: [pick('c', 3)] }, plan)
+    expect(handles(route.stops)).toEqual(['c', 'b'])
+    expect(route.others).toEqual([])
+  })
+
+  it('does not list one artist twice when a merged line-up holds them with and without a handle', () => {
+    const named = { ...pick('', 1, 'Andro Primo'), entry: { name: 'Andro Primo', label: 'Andro Primo', note: 'Booth 1' } }
+    const route = buildShowRoute({ ...emptyPlan, mustSee: [pick('androprimo_', 3, 'Andro Primo')], suggested: [named] }, plan)
+    expect(route.stops).toHaveLength(1)
+    expect(route.stops[0].nearby).toEqual([])
+    expect(route.others).toEqual([])
+  })
+
+  it('sends a lettered booth to Elsewhere rather than to the numbered stand', () => {
+    const route = buildShowRoute({ ...emptyPlan, mustSee: [pick('a', '1A')] }, plan)
+    expect(route.stops).toEqual([])
+    expect(route.elsewhere.map((e) => e.booth)).toEqual(['1A'])
   })
 
   it('gives each pickup to its closest stop only once', () => {
@@ -63,15 +90,21 @@ describe('buildShowRoute', () => {
   })
 
   it('is empty without a floor plan', () => {
-    expect(buildShowRoute({ ...emptyPlan, mustSee: [pick('a', 1)] }, null)).toEqual({ stops: [], elsewhere: [] })
+    expect(buildShowRoute({ ...emptyPlan, mustSee: [pick('a', 1)] }, null)).toEqual({ stops: [], elsewhere: [], others: [] })
   })
 })
 
 describe('formatRoute', () => {
   it('writes a numbered list for Notes, with pickups and the unplaced booths', () => {
-    const near = { aspect: 1, entrance: [1, 1], booths: { 1: [0.9, 1], 2: [0.91, 1] } }
+    const near = { aspect: 1, entrance: [1, 1], booths: { 1: [0.9, 1], 2: [0.91, 1], 5: [0.1, 0.1] } }
     const route = buildShowRoute(
-      { ...emptyPlan, mustSee: [pick('a.ink', 1, 'Ada')], suggested: [pick('b.ink', 2, 'Bo')], fieldGuide: [pick('c.ink', 'T3', 'Cy')] },
+      {
+        ...emptyPlan,
+        mustSee: [pick('a.ink', 1, 'Ada')],
+        suggested: [pick('b.ink', 2, 'Bo', 'suggested')],
+        fieldGuide: [pick('c.ink', 'T3', 'Cy')],
+        wildcards: [pick('d.ink', 5, 'Di', 'wildcard')],
+      },
       near
     )
     expect(formatRoute(route, { title: 'Big London Tattoo Show 2026' })).toBe([
@@ -79,10 +112,13 @@ describe('formatRoute', () => {
       'Ordered across the floor from the entrance.',
       '',
       '1. Booth 1 · Ada (@a.ink)',
-      '   Close by: Booth 2 · Bo (@b.ink)',
+      '   Close by: Booth 2 · Bo (@b.ink) · studio you follow',
       '',
       'Elsewhere in the hall (not on the floor plan):',
       '- Booth T3 · Cy (@c.ink)',
+      '',
+      'Also on your list:',
+      '- Booth 5 · Di (@d.ink) · wildcard',
     ].join('\n'))
   })
 

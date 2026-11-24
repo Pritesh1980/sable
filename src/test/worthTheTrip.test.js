@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { worthTheTrip, FAR_MILES } from '../data/worthTheTrip'
+import { worthTheTrip, FAR_MILES, TOP_RANK } from '../data/worthTheTrip'
 import { seedEntriesFor, curatedPicksFor } from '../data/lineupSeeds'
 import { DEFAULT_ARTISTS, DEFAULT_STUDIOS } from '../data/artists'
 
@@ -50,15 +50,35 @@ describe('worthTheTrip', () => {
     expect(v.reasons[0]).toBe('1 of your artists, #29')
   })
 
-  it('says maybe for one lower-ranked artist at a far show', () => {
-    const v = verdictFor({ distanceMiles: FAR_MILES + 30, attendingIds: ['mid'] })
+  it('says maybe for one artist outside your top five at a far show', () => {
+    const v = verdictFor({ distanceMiles: FAR_MILES + 30, entries: [{ name: 'Mid', handle: 'mid.ink', note: '' }, stranger] })
     expect(v.verdict).toBe('maybe')
     expect(v.label).toBe('Maybe')
-    expect(v.reasons).toEqual(['1 of your artists, #12', 'a long way for 1 artist'])
+    expect(v.reasons).toEqual(['1 of your artists, #12', 'a long way for one artist'])
   })
 
-  it('still goes far for your top-ranked artist', () => {
+  it('says the line-up is not in yet when one far artist is all that is known', () => {
+    const v = verdictFor({ distanceMiles: FAR_MILES + 30, attendingIds: ['mid'] })
+    expect(v.reasons).toEqual(['1 of your artists, #12', 'a long way for one artist', 'line-up not in yet'])
+  })
+
+  it('still goes far for one of your top five', () => {
     expect(verdictFor({ distanceMiles: FAR_MILES + 30, attendingIds: ['top'] }).verdict).toBe('go')
+    const fifth = [{ ...artists[1], rank: TOP_RANK }]
+    expect(verdictFor({ artists: fifth, distanceMiles: FAR_MILES + 30, attendingIds: ['mid'] }).verdict).toBe('go')
+    const sixth = [{ ...artists[1], rank: TOP_RANK + 1 }]
+    expect(verdictFor({ artists: sixth, distanceMiles: FAR_MILES + 30, attendingIds: ['mid'] }).verdict).toBe('maybe')
+  })
+
+  it('goes far for one artist when the field guide and your studios add two more reasons', () => {
+    const entries = [
+      { name: 'Mid', handle: 'mid.ink', note: '' },
+      stablemate,
+      { name: 'Guide', handle: 'guide', note: 'Booth 7' },
+    ]
+    const v = verdictFor({ distanceMiles: FAR_MILES + 30, entries, curated: { guide: { tier: 'priority', why: 'x' } } })
+    expect(v.verdict).toBe('go')
+    expect(v.reasons).toEqual(['1 of your artists, #12', '1 field-guide pick', '1 at a studio you follow'])
   })
 
   it('still goes far for two of your artists', () => {
@@ -75,6 +95,14 @@ describe('worthTheTrip', () => {
     const v = verdictFor({ distanceMiles: 0, entries: [stablemate] })
     expect(v.verdict).toBe('go')
     expect(v.reasons).toEqual(['1 at a studio you follow', 'on your doorstep'])
+  })
+
+  it('never calls the show on your doorstep a skip', () => {
+    expect(verdictFor({ distanceMiles: 0, entries: [stranger] })).toEqual({
+      verdict: 'maybe',
+      label: 'Maybe',
+      reasons: ['none of your artists or studios on the line-up', 'on your doorstep'],
+    })
   })
 
   it('says skip when the line-up has none of your artists, picks or studios', () => {

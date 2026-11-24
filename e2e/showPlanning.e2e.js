@@ -6,18 +6,26 @@ import { test, expect, openDemo } from './fixtures'
 // see the layout, the Elsewhere group and Copy route.
 
 const noSideScroll = (page) => page.evaluate(() => document.scrollingElement.scrollWidth <= window.innerWidth)
-const VERDICT = /^(Worth the trip|Maybe|Skip it|Too early to say)$/
+const VERDICT = /^(Worth the trip|Maybe|Skip it)$/
 
 for (const width of [440, 320]) {
   test(`shows a trip verdict and walks Top picks across the floor (${width}px)`, async ({ page }) => {
     await page.setViewportSize({ width, height: 956 })
+    // Pinned to Nov 2026, so the 2027 editions are the ones still to come.
+    await page.clock.setFixedTime(new Date('2026-11-20T12:00:00'))
     await openDemo(page, '/conventions')
 
-    // Every card is on an edition still to come today, so each has a verdict.
-    await expect(page.getByText(VERDICT).first()).toBeVisible()
-    expect(await page.getByText(VERDICT).count()).toBeGreaterThanOrEqual(5)
+    // Nothing to go on yet, so no card has a verdict until someone is marked going.
+    await expect(page.getByRole('heading', { name: 'Convention Radar' })).toBeVisible()
+    await expect(page.getByText(VERDICT)).toHaveCount(0)
+    const hero = page.locator('#convention-uk-tattoo-fest')
+    await hero.getByRole('button', { name: 'Edit' }).tap()
+    await hero.getByRole('button', { name: /Mora Vane/ }).tap()
+    await expect(hero.getByText('Worth the trip')).toBeVisible()
+    await expect(hero.getByText(/1 of your artists, #\d+ · on your doorstep/)).toBeVisible()
     expect(await noSideScroll(page)).toBe(true)
-    await page.screenshot({ path: test.info().outputPath(`radar-verdicts-${width}.png`) })
+    await hero.getByText('Worth the trip').scrollIntoViewIfNeeded()
+    await page.screenshot({ path: test.info().outputPath(`radar-verdict-${width}.png`) })
 
     const card = page.locator('#convention-big-london')
     await card.getByRole('button', { name: /2026/ }).tap()
