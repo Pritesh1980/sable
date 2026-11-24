@@ -45,9 +45,11 @@ npm run dev
 
 The sign-in screen also links straight to it (**No account? View the demo →**), so the bare URL isn't a dead end for anyone without an account. `?demo=1` (on the default local backend) signs in a demo session and seeds six fictional artists, ranked, plus a few linked tattoo ideas. It never runs over an existing session (though an out-of-date demo session re-seeds itself, so returning visitors always see the current dataset), and edits you make in the demo persist across reloads. To reset, clear the site's storage (or use a fresh private window). The demo uses 18 original AI-generated tattoo photographs across botanical, surrealist, Japanese-inspired, tribal, colour-realism and brush-lettering portfolios. The generated-imagery label remains visible across the demo's main browsing and editing views; lettering is a concept, not a language-verified tattoo stencil.
 
-| Artists gallery | Brief (ideas) |
-| --- | --- |
-| ![Ranked artist gallery in filmstrip view](docs/images/gallery.png) | ![Tattoo ideas with style tags, placements and linked artists](docs/images/brief.png) |
+| Artists gallery | Brief (ideas) | On-body render (Blender) |
+| --- | --- | --- |
+| ![Ranked artist gallery in filmstrip view](docs/images/gallery.png) | ![Tattoo ideas with style tags, placements and linked artists](docs/images/brief.png) | ![Fictional ocean hourglass design rendered onto a MakeHuman upper arm with Blender](docs/images/demo-on-body-hero.webp) |
+
+The third image renders the fictional hourglass piece from [`public/models/designs/hourglass.webp`](public/models/designs/hourglass.webp) onto skin with the [desktop Blender tooling](docs/BLENDER.md#demo-and-guide-renders).
 
 ## What It Includes
 

@@ -298,6 +298,24 @@ Add one result per angle. They are then ordinary variants: rate them, mark the b
 compare 12 cm with 18 cm. Add them on the device that holds your library (AirDrop the
 PNGs to the iPhone first), because device-local builds don't sync.
 
+## Demo and guide renders
+
+[`render-demo-guide.py`](../scripts/blender/render-demo-guide.py) ([#194](https://github.com/Pritesh1980/sable/issues/194)) regenerates the fictional on-body WebP images committed under `docs/images/` for the README and Concepts guide:
+
+```sh
+npm run render:demo-guide
+```
+
+It reads **only** the fictional designs in `public/models/designs/` (never real artists' work, personal concepts, or `~/.config/sable/render-body.json`) and passes fixed seeds and settings:
+
+| Output (`docs/images/`) | Source (`public/models/designs/`) | Placement / View |
+|---|---|---|
+| `demo-on-body-hero.webp` | `hourglass.webp` | `upper-arm`, `outer`, `10 cm`, `warm-brown`, `front-three-quarter` |
+| `demo-on-body-upper.webp` | `tiger.webp` | `upper-arm`, `outer`, `11 cm`, `light-warm-brown`, `outer` |
+| `demo-on-body-forearm.webp` | `koi.webp` | `forearm`, `inner`, `7 cm`, `warm-brown`, `three-quarter` |
+
+Each shot renders with `--ink healed`, `--seed 194`, `--mh-sex 0.5` (using `~/src/makehuman` when present, falling back to `--body parametric`), `64` Cycles samples at `1024 px`, and converts to WebP (`quality 86`) via Blender (`Standard` / `None` view transform). Pass `--only hero,upper,forearm` to re-render a subset, or `--dry-run` to print commands.
+
 ## Interactive option: a Blender MCP
 
 To tweak a scene by chat instead of re-running the script, connect an MCP client

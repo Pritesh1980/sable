@@ -108,6 +108,10 @@ For the 3D arm guide capture, run
 local-backend server. It refreshes `concept-arm.png` at 430 × 920 from the fictional
 hourglass design in `public/models/designs/`, waiting for the view to settle first.
 
+For the desktop Blender on-body renders in `docs/images/`, run `npm run render:demo-guide`
+(uses only `public/models/designs/` fictional artwork; see
+[Blender guide](BLENDER.md#demo-and-guide-renders)).
+
 ## Demo image assets
 
 Demo artwork ships as 1024 × 1536 WebP images (at most 350 KiB each) and
