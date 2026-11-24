@@ -19,6 +19,8 @@ import io
 import json
 import os
 import shlex
+import shutil
+import struct
 import subprocess
 import sys
 import tempfile
@@ -58,7 +60,8 @@ class Shot:
     width_cm: float
     skin_tone: str
     view: str
-    mh_sex: float = 0.5
+    mh_sex: float = 1.0
+    white_point: float = 0.9
     seed: int = 194
 
 
@@ -71,7 +74,9 @@ SHOTS = (
         side='outer',
         width_cm=10,
         skin_tone='warm-brown',
-        view='front-three-quarter',
+        view='close-up',
+        mh_sex=1.0,
+        white_point=0.76,
     ),
     Shot(
         name='upper',
@@ -81,7 +86,9 @@ SHOTS = (
         side='outer',
         width_cm=11,
         skin_tone='light-warm-brown',
-        view='outer',
+        view='close-up',
+        mh_sex=1.0,
+        white_point=0.74,
     ),
     Shot(
         name='forearm',
@@ -91,7 +98,9 @@ SHOTS = (
         side='inner',
         width_cm=7,
         skin_tone='warm-brown',
-        view='three-quarter',
+        view='close-up',
+        mh_sex=1.0,
+        white_point=0.74,
     ),
 )
 
@@ -129,18 +138,33 @@ def resolve_source(shot, *, repo_root=REPO_ROOT, isfile=os.path.isfile):
     return candidate
 
 
-def resolve_output(shot, *, out_dir=None, repo_root=REPO_ROOT):
+def resolve_output(shot, *, out_dir=None, repo_root=REPO_ROOT, islink=os.path.islink):
     """Resolve destination path safely inside ``docs/images/`` (or ``--out-dir``)."""
+    if os.path.basename(shot.out_name) != shot.out_name or shot.out_name in ('', '.', '..'):
+        raise PlanError(f'output name escapes directory: {shot.out_name!r}')
     root = os.path.realpath(out_dir if out_dir is not None else os.path.join(repo_root, OUT_REL))
-    dest = os.path.realpath(os.path.join(root, shot.out_name))
+    raw_dest = os.path.join(root, shot.out_name)
+    if islink(raw_dest):
+        raise PlanError(f'refusing to overwrite symlink destination: {raw_dest}')
+    dest = os.path.realpath(raw_dest)
     if not dest.startswith(root + os.sep):
         raise PlanError(f'output name escapes directory: {shot.out_name!r}')
     return dest
 
 
-def resolve_body_and_makehuman(body, makehuman_data, *, env=None, isdir=os.path.isdir):
+def _has_makehuman_data(path):
+    try:
+        rob.makehuman_data_dir(path)
+        return True
+    except FileNotFoundError:
+        return False
+
+
+def resolve_body_and_makehuman(body, makehuman_data, *, env=None, require_makehuman=False,
+                               has_makehuman_data=None):
     """Resolve body type (``makehuman`` or ``parametric``) without touching user config."""
     env = os.environ if env is None else env
+    check = _has_makehuman_data if has_makehuman_data is None else has_makehuman_data
     mh_path = (
         rs.resolve_path(makehuman_data, env)
         if makehuman_data is not None
@@ -148,12 +172,15 @@ def resolve_body_and_makehuman(body, makehuman_data, *, env=None, isdir=os.path.
     )
     if body == 'parametric':
         return 'parametric', None
-    if makehuman_data is not None and not isdir(mh_path):
-        raise PlanError(f'MakeHuman directory not found: {mh_path}')
-    if isdir(mh_path):
+    if makehuman_data is not None and not check(mh_path):
+        raise PlanError(f'MakeHuman data (3dobjs/base.obj) not found under {mh_path}')
+    if check(mh_path):
         return 'makehuman', mh_path
-    if body == 'makehuman':
-        raise PlanError(f'MakeHuman directory not found at {mh_path}; pass --makehuman-data DIR')
+    if body == 'makehuman' or require_makehuman:
+        raise PlanError(
+            f'MakeHuman data (3dobjs/base.obj) not found at {mh_path}; '
+            'pass --makehuman-data DIR, or use --out-dir DIR / --body parametric'
+        )
     return 'parametric', None
 
 
@@ -168,6 +195,7 @@ def render_argv(shot, *, image_path, temp_dir, body, makehuman_data, samples, si
         '--side', shot.side,
         '--skin-tone', shot.skin_tone,
         '--ink', 'healed',
+        '--white-point', f'{shot.white_point:g}',
         '--body', body,
         '--seed', str(shot.seed),
         '--samples', str(samples),
@@ -280,6 +308,86 @@ def _convert_webp_in_blender(src, dst, quality):
     img.save_render(out_abs, scene=scene)
 
 
+def parse_webp_dimensions(data):
+    """Parse ``(width, height)`` from raw WebP bytes or raise ``ValueError``."""
+    if len(data) < 24 or data[:4] != b'RIFF' or data[8:12] != b'WEBP':
+        raise ValueError('not a valid WebP RIFF container')
+    riff_len = struct.unpack('<I', data[4:8])[0]
+    riff_end = 8 + riff_len
+    if riff_len < 12 or riff_end > len(data):
+        raise ValueError('truncated WebP RIFF container')
+
+    pos = 12
+    width = None
+    height = None
+    while pos + 8 <= riff_end:
+        tag = data[pos:pos + 4]
+        chunk_len = struct.unpack('<I', data[pos + 4:pos + 8])[0]
+        payload = pos + 8
+        if payload + chunk_len > riff_end:
+            raise ValueError('truncated WebP chunk')
+        if tag == b'VP8 ' and width is None:
+            if chunk_len < 10 or (data[payload] & 1) != 0 or data[payload + 3:payload + 6] != b'\x9d\x01\x2a':
+                raise ValueError('invalid VP8 keyframe header')
+            width = struct.unpack('<H', data[payload + 6:payload + 8])[0] & 0x3FFF
+            height = struct.unpack('<H', data[payload + 8:payload + 10])[0] & 0x3FFF
+        elif tag == b'VP8L' and width is None:
+            if chunk_len < 5 or data[payload] != 0x2F:
+                raise ValueError('invalid VP8L bitstream header')
+            bits = struct.unpack('<I', data[payload + 1:payload + 5])[0]
+            width = (bits & 0x3FFF) + 1
+            height = ((bits >> 14) & 0x3FFF) + 1
+        elif tag == b'VP8X' and width is None:
+            if chunk_len < 10:
+                raise ValueError('invalid VP8X header')
+            width = int.from_bytes(data[payload + 4:payload + 7], 'little') + 1
+            height = int.from_bytes(data[payload + 7:payload + 10], 'little') + 1
+        pos = payload + chunk_len + (chunk_len & 1)
+
+    if not width or not height:
+        raise ValueError('missing WebP image frame dimensions')
+    return width, height
+
+
+def validate_webp_file(path, *, min_bytes=128):
+    """Verify ``path`` is a non-empty valid WebP file and return ``(width, height, bytes)``."""
+    if not os.path.isfile(path):
+        raise ValueError(f'missing WebP output: {path}')
+    with open(path, 'rb') as fh:
+        data = fh.read()
+    if len(data) < max(24, min_bytes):
+        raise ValueError(f'WebP output too small ({len(data)} bytes): {path}')
+    width, height = parse_webp_dimensions(data)
+    return width, height, len(data)
+
+
+def _commit_staged_outputs(staged_items, *, islink=os.path.islink):
+    """Atomically install all validated staged WebPs without leaving partial sets."""
+    pending = []
+    try:
+        for staged_path, dst_path in staged_items:
+            dest_dir = os.path.dirname(dst_path)
+            os.makedirs(dest_dir, exist_ok=True)
+            if islink(dst_path):
+                raise PlanError(f'refusing to overwrite symlink destination: {dst_path}')
+            with open(staged_path, 'rb') as src_fh, tempfile.NamedTemporaryFile(
+                dir=dest_dir, prefix='.render-demo-guide-', suffix='.webp.tmp', delete=False,
+            ) as tmp_fh:
+                shutil.copyfileobj(src_fh, tmp_fh)
+                tmp_fh.flush()
+                tmp_path = tmp_fh.name
+            pending.append((tmp_path, dst_path))
+        for tmp_path, dst_path in pending:
+            os.replace(tmp_path, dst_path)
+    finally:
+        for tmp_path, _ in pending:
+            if os.path.exists(tmp_path):
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+
+
 def _read_params(path):
     try:
         with open(path, encoding='utf-8') as fh:
@@ -290,7 +398,7 @@ def _read_params(path):
 
 def main(argv=None, *, run=lambda cmd, cwd: subprocess.run(cmd, cwd=cwd).returncode,
          repo_root=REPO_ROOT, isfile=os.path.isfile, isdir=os.path.isdir,
-         exists=os.path.exists):
+         exists=os.path.exists, islink=os.path.islink, has_makehuman_data=None):
     argv = sys.argv[1:] if argv is None else list(argv)
     if argv and argv[0] in ('-h', '--help') and '--convert-webp' not in argv:
         parse_cli(argv)
@@ -312,10 +420,15 @@ def main(argv=None, *, run=lambda cmd, cwd: subprocess.run(cmd, cwd=cwd).returnc
         planned = []
         for shot in shots:
             src_img = resolve_source(shot, repo_root=repo_root, isfile=isfile)
-            dst_webp = resolve_output(shot, out_dir=out_dir, repo_root=repo_root)
+            dst_webp = resolve_output(shot, out_dir=out_dir, repo_root=repo_root, islink=islink)
             planned.append((shot, src_img, dst_webp))
+        mh_checker = has_makehuman_data
+        if mh_checker is None and isdir is not os.path.isdir:
+            mh_checker = isdir
         body, mh_dir = resolve_body_and_makehuman(
-            args.body, args.makehuman_data, env=os.environ, isdir=isdir,
+            args.body, args.makehuman_data, env=os.environ,
+            require_makehuman=(out_dir is None),
+            has_makehuman_data=mh_checker,
         )
         # Never pass personal render-body.json config into fictional guide renders.
         blender = rs.find_blender({}, os.environ, exists=exists)
@@ -329,16 +442,19 @@ def main(argv=None, *, run=lambda cmd, cwd: subprocess.run(cmd, cwd=cwd).returnc
           f'samples={args.samples}, size={args.size}', flush=True)
 
     with tempfile.TemporaryDirectory(prefix='sable-demo-guide-') as tmp_root:
+        staged_results = []
         for i, (shot, src_img, dst_webp) in enumerate(planned, 1):
             label = os.path.splitext(shot.out_name)[0]
             tmp_dir = os.path.join(tmp_root, shot.name)
+            os.makedirs(tmp_dir, exist_ok=True)
             r_argv = render_argv(
                 shot, image_path=src_img, temp_dir=tmp_dir, body=body,
                 makehuman_data=mh_dir, samples=args.samples, size=args.size,
             )
             r_cmd = render_command(blender, r_argv)
             src_png = os.path.join(tmp_dir, rob.view_filename(shot.view, label))
-            c_cmd = convert_command(blender, src_png, dst_webp, quality=args.quality)
+            staged_webp = os.path.join(tmp_dir, shot.out_name)
+            c_cmd = convert_command(blender, src_png, staged_webp, quality=args.quality)
             print(f'[render-demo-guide] {i}/{len(planned)} {shot.name} → {dst_webp}', flush=True)
             if args.dry_run:
                 print('  ' + ' '.join(shlex.quote(c) for c in r_cmd), flush=True)
@@ -354,9 +470,26 @@ def main(argv=None, *, run=lambda cmd, cwd: subprocess.run(cmd, cwd=cwd).returnc
                 print(f'[render-demo-guide] WebP convert exited {code} at {shot.name}',
                       file=sys.stderr)
                 return 1
+            try:
+                _, _, byte_size = validate_webp_file(staged_webp)
+            except (OSError, ValueError) as err:
+                print(f'[render-demo-guide] invalid WebP output for {shot.name}: {err}',
+                      file=sys.stderr)
+                return 1
             params = _read_params(os.path.join(tmp_dir, rob.params_filename(label)))
-            byte_size = os.path.getsize(dst_webp) if os.path.isfile(dst_webp) else 0
-            print(format_shot_report(shot, params, dst_webp, byte_size), flush=True)
+            staged_results.append((shot, params, staged_webp, dst_webp, byte_size))
+
+        if not args.dry_run:
+            try:
+                _commit_staged_outputs(
+                    [(staged, dst) for _, _, staged, dst, _ in staged_results],
+                    islink=islink,
+                )
+            except (OSError, PlanError) as err:
+                print(f'[render-demo-guide] failed to install outputs: {err}', file=sys.stderr)
+                return 1
+            for shot, params, _, dst_webp, byte_size in staged_results:
+                print(format_shot_report(shot, params, dst_webp, byte_size), flush=True)
 
     return 0
 

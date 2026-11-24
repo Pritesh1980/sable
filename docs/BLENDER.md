@@ -308,13 +308,13 @@ npm run render:demo-guide
 
 It reads **only** the fictional designs in `public/models/designs/` (never real artists' work, personal concepts, or `~/.config/sable/render-body.json`) and passes fixed seeds and settings:
 
-| Output (`docs/images/`) | Source (`public/models/designs/`) | Placement / View |
+| Output (`docs/images/`) | Source (`public/models/designs/`) | Placement / View / White point |
 |---|---|---|
-| `demo-on-body-hero.webp` | `hourglass.webp` | `upper-arm`, `outer`, `10 cm`, `warm-brown`, `front-three-quarter` |
-| `demo-on-body-upper.webp` | `tiger.webp` | `upper-arm`, `outer`, `11 cm`, `light-warm-brown`, `outer` |
-| `demo-on-body-forearm.webp` | `koi.webp` | `forearm`, `inner`, `7 cm`, `warm-brown`, `three-quarter` |
+| `demo-on-body-hero.webp` | `hourglass.webp` | `upper-arm`, `outer`, `10 cm`, `warm-brown`, `close-up`, `--white-point 0.76` |
+| `demo-on-body-upper.webp` | `tiger.webp` | `upper-arm`, `outer`, `11 cm`, `light-warm-brown`, `close-up`, `--white-point 0.74` |
+| `demo-on-body-forearm.webp` | `koi.webp` | `forearm`, `inner`, `7 cm`, `warm-brown`, `close-up`, `--white-point 0.74` |
 
-Each shot renders with `--ink healed`, `--seed 194`, `--mh-sex 0.5` (using `~/src/makehuman` when present, falling back to `--body parametric`), `64` Cycles samples at `1024 px`, and converts to WebP (`quality 86`) via Blender (`Standard` / `None` view transform). Pass `--only hero,upper,forearm` to re-render a subset, or `--dry-run` to print commands.
+Each shot renders with `--ink healed`, `--seed 194`, `--mh-sex 1.0`, `64` Cycles samples at `1024 px`, and converts to WebP (`quality 86`) in a staging directory via Blender (`Standard` / `None` view transform), replacing `docs/images/` atomically only after every shot succeeds. Regenerating the default `docs/images/` assets requires MakeHuman data (`3dobjs/base.obj` under `~/src/makehuman` or `--makehuman-data DIR`); `--body parametric` only runs when explicitly requested or when writing to a custom `--out-dir`. Pass `--only hero,upper,forearm` to re-render a subset, or `--dry-run` to print commands.
 
 ## Interactive option: a Blender MCP
 

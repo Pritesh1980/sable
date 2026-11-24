@@ -287,9 +287,12 @@ Switch to **3D preview** to see both colours or the sculpted plate and drag to r
 it updates as you change settings. Binary STLs and two-object `.3mf` archives load quickly
 in Cura or any other slicer.
 
-For Mac desktop preparation before slicing (checking manifoldness, filling holes,
-decimating dense fine-detail exports, adding a base plate or frame, and rendering a lit
-preview), see [Desktop Blender relief prep](BLENDER-RELIEF.md).
+For Mac desktop preparation before slicing rectangular relief, line-art, or lithophane exports
+(checking edge and vertex manifoldness, filling holes, decimating dense fine-detail exports,
+adding a rectangular base plate or border frame, and rendering a lit preview), see
+[Desktop Blender relief prep](BLENDER-RELIEF.md) (die-cut **Print this tattoo** cutouts and
+face-down **Inlay** split STLs should use only manifold repair/decimation or preview, not
+rectangular base/frame options).
 
 > **Tip:** the concept tags use the same six styles as the rest of the app, so a well-tagged
 > concept points straight at the artists already in your collection.
