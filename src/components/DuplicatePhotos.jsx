@@ -12,11 +12,12 @@ const KIND = { artist: 'Artist', idea: 'Idea', concept: 'Concept', variant: 'Con
 const BLOCKED = {
   favourite: 'Favourited, so it stays. Remove the other copy instead.',
   note: 'Has its own note, so it stays. Remove the other copy instead.',
+  crop: 'Has its own Brief card crop, so it stays. Remove the other copy instead.',
 }
 
 const plural = (n, one, many) => (n === 1 ? one : many)
 
-function useLine(use) {
+function whereLine(use) {
   if (use.kind === 'saved') return KIND.saved
   const where = `${KIND[use.kind]} · ${use.label}`
   return use.of > 1 ? `${where}, ${use.kind === 'variant' ? 'variant' : 'photo'} ${use.position} of ${use.of}` : where
@@ -31,7 +32,7 @@ function Coverage({ summary, groups }) {
         <p>{external} {plural(external, 'is a link', 'are links')} to another site, so {plural(external, 'it wasn’t', 'they weren’t')} compared.</p>
       )}
       {unavailable > 0 && (
-        <p>{unavailable} couldn’t be read right now, so {plural(unavailable, 'it wasn’t', 'they weren’t')} compared. Check again when you’re online.</p>
+        <p>{unavailable} couldn’t be read right now (offline, or the photo is missing), so {plural(unavailable, 'it wasn’t', 'they weren’t')} compared.</p>
       )}
       {unchecked > 0 && <p>{unchecked} added since this check.</p>}
       <p className="text-cream">
@@ -44,10 +45,9 @@ function Coverage({ summary, groups }) {
 }
 
 function UseRow({ use, copyNumber, keepNumber, check, confirming, onAsk, onCancel, onConfirm }) {
-  const line = useLine(use)
   return (
     <li className="text-sm font-body">
-      <p className="text-cream">{line}</p>
+      <p className="text-cream">{whereLine(use)}</p>
       {use.note && <p className="text-cream-muted/90 text-xs">“{use.note}”</p>}
       {check.reason && <p className="text-cream-muted/90 text-xs mt-1">{BLOCKED[check.reason]}</p>}
       {check.removable && !confirming && (
@@ -91,43 +91,46 @@ function Group({ group, favourites, confirming, setConfirming, onRemove }) {
   const numberOf = (id) => group.copies.findIndex((c) => c.id === id) + 1
   return (
     <li aria-label={`Same photo, ${group.copies.length} copies`} className="border-t border-ink-border pt-4">
-      <p className="text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase mb-3">
-        Same photo, {group.copies.length} copies
-      </p>
+      {/* The copies are byte-identical, so one thumbnail shows them all and the rows get the width. */}
+      <div className="flex items-center gap-3 mb-3">
+        <div className="w-16 h-16 rounded-xs overflow-hidden bg-ink-muted shrink-0">
+          <RefImage src={group.copies[0].ref} alt="" className="w-full h-full object-cover" />
+        </div>
+        <p className="text-[0.8125rem] font-mono text-cream-muted/90 tracking-widest uppercase">
+          Same photo, {group.copies.length} copies
+        </p>
+      </div>
       <ol className="space-y-4">
         {group.copies.map((copy, i) => (
-          <li key={copy.id} className="flex gap-3">
-            <div className="w-16 h-16 rounded-xs overflow-hidden bg-ink-muted shrink-0">
-              <RefImage src={copy.ref} alt={`Copy ${i + 1}`} className="w-full h-full object-cover" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-mono text-cream-muted tracking-widest uppercase">Copy {i + 1}</p>
-              <ul className="space-y-2 mt-1">
-                {copy.uses.map((use) => {
-                  const check = removalCheck(group, copy, use, { favourites })
-                  const id = `${copy.id}|${use.kind}:${use.recordId}`
-                  return (
-                    <UseRow
-                      key={`${use.kind}:${use.recordId}:${use.position}`}
-                      use={use}
-                      copyNumber={i + 1}
-                      keepNumber={check.removable ? numberOf(check.keepId) : 0}
-                      check={check}
-                      confirming={confirming === id}
-                      onAsk={() => setConfirming(id)}
-                      onCancel={() => setConfirming(null)}
-                      onConfirm={() => onRemove(use, copy, check.keepId, i + 1)}
-                    />
-                  )
-                })}
-              </ul>
-            </div>
+          <li key={copy.id}>
+            <p className="text-xs font-mono text-cream-muted tracking-widest uppercase">Copy {i + 1}</p>
+            <ul className="space-y-2 mt-1">
+              {copy.uses.map((use) => {
+                const check = removalCheck(group, copy, use, { favourites })
+                const id = `${copy.id}|${use.kind}:${use.recordId}:${use.position}`
+                return (
+                  <UseRow
+                    key={`${use.kind}:${use.recordId}:${use.position}`}
+                    use={use}
+                    copyNumber={i + 1}
+                    keepNumber={check.removable ? numberOf(check.keepId) : 0}
+                    check={check}
+                    confirming={confirming === id}
+                    onAsk={() => setConfirming(id)}
+                    onCancel={() => setConfirming(null)}
+                    onConfirm={() => onRemove(use, copy, check.keepId)}
+                  />
+                )
+              })}
+            </ul>
           </li>
         ))}
       </ol>
-      {!group.sameRecord && (
+      {group.spansRecords && (
         <p className="text-xs font-body text-cream-muted/90 mt-3">
-          These are in different places. That can be on purpose, so Sable leaves them as they are.
+          {group.sameRecord
+            ? 'Copies in different places stay as they are: that can be on purpose.'
+            : 'These are in different places. That can be on purpose, so Sable leaves them as they are.'}
         </p>
       )}
     </li>
@@ -143,8 +146,19 @@ export default function DuplicatePhotos({
   const [confirming, setConfirming] = useState(null)
   const [status, setStatus] = useState(null) // { text, undo? }
   const controller = useRef(null)
+  const statusRef = useRef(null)
+  const undoRef = useRef(null)
 
   useEffect(() => () => controller.current?.abort(), [])
+
+  // The button that was tapped unmounts with its group, so focus (and, on a
+  // phone, the scroll position) moves to the outcome and its Undo.
+  useEffect(() => {
+    if (!status?.focus) return
+    const target = undoRef.current || statusRef.current
+    target?.focus()
+    target?.scrollIntoView?.({ block: 'nearest' })
+  }, [status])
 
   const uses = useMemo(() => collectPhotoUses({ artists, ideas, concepts, saved }), [artists, ideas, concepts, saved])
   const groups = useMemo(() => (prints ? findDuplicateGroups(uses, prints) : []), [uses, prints])
@@ -163,40 +177,45 @@ export default function DuplicatePhotos({
       const next = await fingerprintPhotos(uses.map((u) => u.ref), {
         ...(readBlob ? { readBlob } : {}),
         signal: abort.signal,
-        onProgress: (done, total) => { if (!abort.signal.aborted) setProgress({ done, total }) },
+        onProgress: (done, total) => { if (controller.current === abort) setProgress({ done, total }) },
       })
       if (controller.current !== abort) return
       setPrints(next)
       setPhase('done')
     } catch {
-      if (controller.current !== abort) return
-      setPhase('stopped')
+      if (controller.current === abort) setPhase('stopped')
     }
   }
 
+  // A photo read already in flight can't be cancelled (the fetch doesn't take
+  // the signal), so Stop doesn't wait for it: the run is dropped at once, and
+  // whatever it returns later is ignored.
   function stop() {
     controller.current?.abort()
+    controller.current = null
+    setPhase('stopped')
   }
 
   const setterFor = (kind) => (kind === 'artist' ? setArtists : setIdeas)
   const recordsFor = (kind) => (kind === 'artist' ? artists : ideas)
 
-  function remove(use, copy, keepId, copyNumber) {
+  function remove(use, copy, keepId) {
     setConfirming(null)
-    const args = { recordId: use.recordId, id: copy.id, keepId }
+    const args = { recordId: use.recordId, id: copy.id, index: use.position - 1, keepId }
     const result = removeCopy(recordsFor(use.kind), args)
     if (!result) {
-      setStatus({ text: `${use.label} changed since the check. Check again.` })
+      setStatus({ text: `${use.label} changed since the check. Check again.`, focus: true })
       return
     }
     setterFor(use.kind)((prev) => removeCopy(prev, args)?.records ?? prev)
-    setStatus({ text: `Removed copy ${copyNumber} from ${use.label}.`, undo: { kind: use.kind, undo: result.undo, label: use.label, copyNumber } })
+    // Copy numbers shift once a copy is gone, so the outcome names the place.
+    setStatus({ text: `Removed a copy from ${use.label}.`, undo: { kind: use.kind, undo: result.undo, label: use.label }, focus: true })
   }
 
   function undo() {
-    const { kind, undo: payload, label, copyNumber } = status.undo
+    const { kind, undo: payload, label } = status.undo
     setterFor(kind)((prev) => restoreCopy(prev, payload))
-    setStatus({ text: `Put back copy ${copyNumber} in ${label}.` })
+    setStatus({ text: `Put the copy back in ${label}.`, focus: true })
   }
 
   const scanning = phase === 'scanning'
@@ -244,10 +263,10 @@ export default function DuplicatePhotos({
       {phase === 'stopped' && <p className="text-xs font-mono text-cream-muted/90 mt-3">Stopped. Nothing was changed.</p>}
 
       {status && (
-        <div role="status" className="flex flex-wrap items-center gap-3 mt-3 text-xs font-mono text-cream-muted/90">
+        <div ref={statusRef} tabIndex={-1} role="status" className="flex flex-wrap items-center gap-3 mt-3 text-xs font-mono text-cream-muted/90 outline-hidden">
           <span>{status.text}</span>
           {status.undo && (
-            <button type="button" onClick={undo} className="min-h-11 px-3 text-accent hover:text-accent-hover underline">
+            <button ref={undoRef} type="button" onClick={undo} className="min-h-11 px-3 text-accent hover:text-accent-hover underline">
               Undo
             </button>
           )}

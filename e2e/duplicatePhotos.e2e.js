@@ -49,7 +49,8 @@ for (const width of [440, 320]) {
     expect(await noSideScroll(page)).toBe(true)
     await card.screenshot({ path: test.info().outputPath(`duplicates-confirm-${width}px.png`) })
     await card.getByRole('button', { name: 'Remove', exact: true }).click()
-    await expect(card.getByRole('status')).toHaveText(/Removed copy 2 from Fern twice\./)
+    await expect(card.getByRole('status')).toHaveText(/Removed a copy from Fern twice\./)
+    await expect(card.getByRole('button', { name: 'Undo' })).toBeInViewport()
     await expect.poll(() => ideaPhotos(page)).toEqual([first])
     await expect(group).toHaveCount(0)
 

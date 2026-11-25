@@ -2,6 +2,7 @@ import { refIdentity, refKey } from './imageRef'
 import { getImageNote } from './planning'
 import { isSameOrigin, resolveImageBlob } from './imageResolver'
 import { isFavourite } from './favourites'
+import { normalizeBriefCrop } from './referenceImages'
 
 // Duplicate photo review (#210): the same reference uploaded more than once,
 // under different keys or file names. Found on-device from the photos' own
@@ -27,6 +28,14 @@ import { isFavourite } from './favourites'
 
 const LIST_KINDS = new Set(['artist', 'idea'])
 
+// An idea may hold one photo twice on purpose, each occurrence with its own
+// note or Brief card crop (src/data/referenceImages.js). Both are intent the
+// owner set, so a copy carrying either only goes when the kept copy matches.
+function cropOf(ref) {
+  const crop = typeof ref === 'object' ? normalizeBriefCrop(ref?.briefCrop) : undefined
+  return crop ? JSON.stringify(crop) : ''
+}
+
 function artistLabel(artist) {
   const name = typeof artist?.name === 'string' ? artist.name.trim() : ''
   if (name) return name
@@ -50,7 +59,7 @@ export function collectPhotoUses({ artists = [], ideas = [], concepts = [], save
     for (const row of rows || []) {
       const images = Array.isArray(row?.images) ? row.images : []
       images.forEach((ref, index) => add(ref, {
-        kind, recordId: row.id, label: label(row), position: index + 1, of: images.length, note: getImageNote(ref),
+        kind, recordId: row.id, label: label(row), position: index + 1, of: images.length, note: getImageNote(ref), crop: cropOf(ref),
       }))
     }
   }
@@ -92,6 +101,9 @@ function throwIfAborted(signal) {
 // a time, each read once, so a large library never holds more than one
 // photo's bytes in memory. A photo that cannot be read right now (offline, a
 // missing blob, an empty file) is unscanned: neither unique nor a duplicate.
+// So is a response that isn't an image: a host that answers a missing file
+// with the app's own page (a single-page-app fallback, CloudFront's 404 → 200)
+// would otherwise make every missing photo "identical" to every other.
 export async function fingerprintPhotos(refs = [], { readBlob = resolveImageBlob, signal, onProgress } = {}) {
   const pending = new Map()
   for (const ref of refs) {
@@ -113,7 +125,7 @@ export async function fingerprintPhotos(refs = [], { readBlob = resolveImageBlob
 async function fingerprint(ref, readBlob) {
   try {
     const blob = await readBlob(ref)
-    if (!blob?.size) return { skipped: 'unavailable' }
+    if (!blob?.size || (blob.type && !blob.type.startsWith('image/'))) return { skipped: 'unavailable' }
     return { hash: await sha256(blob) }
   } catch {
     return { skipped: 'unavailable' }
@@ -160,16 +172,16 @@ export function findDuplicateGroups(uses = [], prints = new Map()) {
         seen.set(record, true)
       }
     }
-    groups.push({ hash, sameRecord, copies: list })
+    groups.push({ hash, sameRecord, spansRecords: new Set(list.flatMap((c) => c.uses.map(recordOf))).size > 1, copies: list })
   }
   return groups.sort((a, b) => Number(b.sameRecord) - Number(a.sameRecord))
 }
 
 // Whether `use` (one place `copy` appears) can come out. Only from an artist's
 // or an idea's photo list that keeps another copy, and only when nothing would
-// be lost: not a favourite, and not a note the remaining copy doesn't carry.
-// reason: 'favourite' | 'note' when that is what keeps it; null when removal
-// simply doesn't apply (another record, or a photo that *is* its record).
+// be lost: not a favourite, and not a note or crop the kept copy doesn't carry.
+// reason: 'favourite' | 'note' | 'crop' when that is what keeps it; null when
+// removal simply doesn't apply (another record, or a photo that *is* its record).
 export function removalCheck(group, copy, use, { favourites = [] } = {}) {
   const no = (reason = null) => ({ removable: false, reason })
   if (!LIST_KINDS.has(use?.kind)) return no()
@@ -178,40 +190,53 @@ export function removalCheck(group, copy, use, { favourites = [] } = {}) {
     .flatMap((other) => other.uses.filter((u) => recordOf(u) === recordOf(use)).map((u) => ({ copy: other, use: u })))
   if (!siblings.length) return no()
   if (isFavourite(favourites, copy.ref)) return no('favourite')
-  const keep = use.note ? siblings.find((s) => s.use.note === use.note) : siblings[0]
-  if (!keep) return no('note')
+  const plain = !use.note && !use.crop
+  const keep = plain ? siblings[0] : siblings.find((s) => s.use.note === use.note && s.use.crop === use.crop)
+  if (!keep) return no(use.note && !siblings.some((s) => s.use.note === use.note) ? 'note' : 'crop')
   return { removable: true, keepId: keep.copy.id }
 }
 
-// Removes copy `id` from one record's photos, keeping `keepId`. Returns
-// { records, undo }, or null when the record no longer holds both (it changed
-// since the check). A curation Keep flag (#187) moves to the copy that stays.
-export function removeCopy(records = [], { recordId, id, keepId }) {
+// Removes the occurrence at `index` (0-based) from one record's photos, which
+// must still be copy `id`, keeping `keepId`. By position, not identity: an idea
+// can hold one photo twice with different notes, and only the chosen
+// occurrence may go. Returns { records, undo }, or null when the record no
+// longer matches (it changed since the check). A curation Keep flag (#187)
+// moves to the copy that stays once no occurrence of `id` is left.
+export function removeCopy(records = [], { recordId, id, index, keepId }) {
   const record = records.find((r) => r?.id === recordId)
   const images = Array.isArray(record?.images) ? record.images : null
-  if (!images) return null
-  const index = images.findIndex((ref) => refIdentity(ref) === id)
-  if (index < 0 || !images.some((ref) => refIdentity(ref) === keepId)) return null
+  if (!images || refIdentity(images[index]) !== id) return null
+  if (!images.some((ref, i) => i !== index && refIdentity(ref) === keepId)) return null
 
-  const next = { ...record, images: images.filter((_, i) => i !== index) }
-  const undo = { recordId, index, ref: images[index] }
-  if (Array.isArray(record.keptImages) && record.keptImages.includes(id)) {
-    const kept = record.keptImages.filter((k) => k !== id)
-    next.keptImages = kept.includes(keepId) ? kept : [...kept, keepId]
-    undo.keptImages = record.keptImages
+  const left = images.filter((_, i) => i !== index)
+  const next = { ...record, images: left }
+  const undo = { recordId, index, ref: images[index], count: images.filter((ref) => refIdentity(ref) === id).length }
+  const kept = Array.isArray(record.keptImages) ? record.keptImages : []
+  if (kept.includes(id) && !left.some((ref) => refIdentity(ref) === id)) {
+    next.keptImages = kept.filter((k) => k !== id)
+    undo.unkept = id
+    if (!kept.includes(keepId)) {
+      next.keptImages.push(keepId)
+      undo.addedKeep = keepId
+    }
   }
   return { records: records.map((r) => (r === record ? next : r)), undo }
 }
 
-// Puts a removed copy back where it was. A no-op (same array) when it is
-// already there or its record has gone.
+// Puts a removed copy back where it was, and reverses only the Keep-flag change
+// the removal made (a flag set since then stays). A no-op (same array) when
+// the copy is already back or its record has gone.
 export function restoreCopy(records = [], undo) {
   const record = records.find((r) => r?.id === undo?.recordId)
   const images = Array.isArray(record?.images) ? record.images : null
   const id = refIdentity(undo?.ref)
-  if (!images || !id || images.some((ref) => refIdentity(ref) === id)) return records
+  if (!images || !id) return records
+  if (images.filter((ref) => refIdentity(ref) === id).length >= (undo.count ?? 1)) return records
   const at = Math.min(undo.index, images.length)
   const next = { ...record, images: [...images.slice(0, at), undo.ref, ...images.slice(at)] }
-  if (undo.keptImages) next.keptImages = undo.keptImages
+  if (undo.unkept) {
+    const kept = (Array.isArray(record.keptImages) ? record.keptImages : []).filter((k) => k !== undo.addedKeep)
+    next.keptImages = kept.includes(undo.unkept) ? kept : [...kept, undo.unkept]
+  }
   return records.map((r) => (r === record ? next : r))
 }

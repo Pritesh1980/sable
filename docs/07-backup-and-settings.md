@@ -85,7 +85,7 @@ and it runs on this device: no AI key, no upload. A big library can take a while
 ends the check and changes nothing.
 
 The result says how much it covered, for example *Checked 380 of 409 photos*. Photos it
-couldn't read right now (offline, or not downloaded yet) and links to other sites aren't
+couldn't read right now (offline, or the photo is missing) and links to other sites aren't
 compared, so they're neither duplicates nor unique. Check again when you're back online.
 
 Each **Same photo** group lists every copy and where it is used: an artist's photos, an
@@ -93,8 +93,9 @@ idea, a concept, a saved photo.
 
 - **Two copies on one artist or one idea.** Each copy that can go has **Remove this
   copy**. You choose which copy to remove, confirm, and the other copy stays. **Undo**
-  puts it back where it was. A copy that is favourited, or that has a note the other
-  copy doesn't share, stays, and the review says why. Remove the other copy instead.
+  puts it back where it was. A copy that is favourited, or that has a note or Brief card
+  crop the other copy doesn't share, stays, and the review says why. Remove the other
+  copy instead.
 - **Copies in different places** (an artist and an idea, or two artists) are listed
   but never changed: that can be on purpose, and the same photo on two artists says
   nothing about who made it.

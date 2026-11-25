@@ -65,7 +65,7 @@ describe('DuplicatePhotos', () => {
     check()
     expect(await screen.findByText('No duplicates among the photos checked.')).toBeInTheDocument()
     expect(screen.getByText('Checked 2 of 4 photos.')).toBeInTheDocument()
-    expect(screen.getByText(/2 couldn’t be read right now, so they weren’t compared/)).toBeInTheDocument()
+    expect(screen.getByText('2 couldn’t be read right now (offline, or the photo is missing), so they weren’t compared.')).toBeInTheDocument()
   })
 
   it('removes a copy only after confirming, and Undo puts it back', async () => {
@@ -83,12 +83,15 @@ describe('DuplicatePhotos', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Remove' }))
     expect(screen.getByTestId('artists').textContent).not.toContain(B)
     expect(screen.getByTestId('ideas').textContent).toContain(C) // other records untouched
-    expect(screen.getByRole('status')).toHaveTextContent('Removed copy 2 from Zoia.')
+    expect(screen.getByRole('status')).toHaveTextContent('Removed a copy from Zoia.')
+    // The tapped button is gone; focus lands on Undo rather than the page.
+    expect(screen.getByRole('button', { name: 'Undo' })).toHaveFocus()
     expect(remove).not.toHaveBeenCalled()
 
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
     expect(JSON.parse(screen.getByTestId('artists').textContent)).toEqual([[{ key: A }, { key: B }]])
-    expect(screen.getByRole('status')).toHaveTextContent('Put back copy 2 in Zoia.')
+    expect(screen.getByRole('status')).toHaveTextContent('Put the copy back in Zoia.')
+    expect(screen.getByRole('status')).toHaveFocus()
   })
 
   it('Cancel leaves the photos as they were', async () => {
@@ -118,7 +121,7 @@ describe('DuplicatePhotos', () => {
     expect(screen.getByText(/in different places\. That can be on purpose/)).toBeInTheDocument()
   })
 
-  it('stops when asked, and changes nothing', async () => {
+  it('stops at once even while a photo read hangs, and ignores it when it lands', async () => {
     let release
     const gate = new Promise((resolve) => { release = resolve })
     const readBlob = vi.fn(async (ref) => { await gate; return new Blob([SAME[ref.key]]) })
@@ -126,9 +129,19 @@ describe('DuplicatePhotos', () => {
     check()
     expect(await screen.findByRole('progressbar', { name: 'Checking photos' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Stop' }))
-    release()
-    expect(await screen.findByText('Stopped. Nothing was changed.')).toBeInTheDocument()
-    expect(screen.queryByRole('list', { name: 'Duplicate photos found' })).toBeNull()
+    // No waiting on the stalled read.
+    expect(screen.getByText('Stopped. Nothing was changed.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Check for duplicates' })).toBeInTheDocument()
+    release()
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(screen.getByText('Stopped. Nothing was changed.')).toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'Duplicate photos found' })).toBeNull()
+  })
+
+  it('explains the copy it leaves alone in a group that is also tidy-able', async () => {
+    render(<Harness />) // two copies on Zoia, one on an idea
+    check()
+    await groupList()
+    expect(screen.getByText('Copies in different places stay as they are: that can be on purpose.')).toBeInTheDocument()
   })
 })

@@ -78,6 +78,8 @@ describe('fingerprintPhotos', () => {
   it('matches identical bytes across distinct keys and keeps differing bytes apart', async () => {
     const { groups } = await scan()
     expect(groups).toHaveLength(1)
+    // Two copies on Zoia and one on an idea: tidy-able, and spread across records.
+    expect(groups[0]).toMatchObject({ sameRecord: true, spansRecords: true })
     expect(groups[0].copies.map((c) => c.id)).toEqual([`key:${A}`, `key:${B}`, `key:${C}`])
   })
 
@@ -112,6 +114,16 @@ describe('fingerprintPhotos', () => {
     const { groups, prints } = await scan(library({ ideas: [] }), read)
     expect(groups).toEqual([])
     expect(prints.get(`key:${A}`)).toEqual({ skipped: 'unavailable' })
+  })
+
+  it('does not hash a page served in place of a missing photo', async () => {
+    // A single-page-app host answers a missing file with its own index.html.
+    const page = () => new Blob(['<!doctype html><title>Sable</title>'], { type: 'text/html' })
+    const read = vi.fn(async () => page())
+    const lib = { artists: [{ id: 'z', name: 'Z', images: ['/images/artists/z/gone-1.jpg', '/images/artists/z/gone-2.jpg'] }] }
+    const { groups, prints } = await scan(lib, read)
+    expect(groups).toEqual([])
+    expect(prints.get('path:/images/artists/z/gone-1.jpg')).toEqual({ skipped: 'unavailable' })
   })
 
   it('never fetches photos hosted on other sites', async () => {
@@ -189,6 +201,7 @@ describe('removalCheck', () => {
     const { groups } = await scan(lib)
     expect(groups).toHaveLength(1)
     expect(groups[0].sameRecord).toBe(false)
+    expect(groups[0].spansRecords).toBe(true)
     for (const copy of groups[0].copies) {
       expect(removalCheck(groups[0], copy, copy.uses[0], { favourites: [] })).toEqual({ removable: false, reason: null })
     }
@@ -220,6 +233,15 @@ describe('removalCheck', () => {
     expect(removalCheck(noted.group, noted.copy, noted.use, { favourites: [] })).toEqual({ removable: false, reason: 'note' })
   })
 
+  it('keeps a copy with its own Brief card crop', async () => {
+    const E = 'user/u1/ideas/moth/e.jpg'
+    const lib = { ideas: [{ id: 'moth', title: 'Moth', images: [{ key: C, briefCrop: { x: 0.3, y: 0.5, zoom: 2 } }, { key: E }] }] }
+    const { groups } = await scan(lib, reader({ [C]: 'skull', [E]: 'skull' }))
+    const [cropped, plain] = groups[0].copies
+    expect(removalCheck(groups[0], cropped, cropped.uses[0], { favourites: [] })).toEqual({ removable: false, reason: 'crop' })
+    expect(removalCheck(groups[0], plain, plain.uses[0], { favourites: [] })).toEqual({ removable: true, keepId: `key:${C}` })
+  })
+
   it('allows removal when the notes match or the removed copy has none', async () => {
     const E = 'user/u1/ideas/moth/e.jpg'
     const lib = library({ ideas: [{ id: 'moth', title: 'Moth', images: [{ key: C, note: 'this shading' }, { key: E }, { key: D, note: 'x' }] }] })
@@ -244,7 +266,7 @@ describe('removeCopy / restoreCopy', () => {
 
   it('removes one copy from one record and leaves every other record as it was', () => {
     const artists = zoia()
-    const result = removeCopy(artists, { recordId: 'zoia', id: `key:${B}`, keepId: `key:${A}` })
+    const result = removeCopy(artists, { recordId: 'zoia', id: `key:${B}`, index: 2, keepId: `key:${A}` })
     expect(result.records[0].images).toEqual([{ key: A }, '/images/artists/zoia/1.jpg'])
     expect(result.records[1]).toBe(artists[1])
     expect(result.undo).toMatchObject({ recordId: 'zoia', index: 2, ref: { key: B } })
@@ -252,7 +274,7 @@ describe('removeCopy / restoreCopy', () => {
 
   it('moves a Keep flag to the copy that stays', () => {
     const artists = zoia().map((a) => (a.id === 'zoia' ? { ...a, keptImages: [`key:${B}`] } : a))
-    const { records, undo } = removeCopy(artists, { recordId: 'zoia', id: `key:${B}`, keepId: `key:${A}` })
+    const { records, undo } = removeCopy(artists, { recordId: 'zoia', id: `key:${B}`, index: 2, keepId: `key:${A}` })
     expect(records[0].keptImages).toEqual([`key:${A}`])
     const restored = restoreCopy(records, undo)
     expect(restored[0].keptImages).toEqual([`key:${B}`])
@@ -260,16 +282,39 @@ describe('removeCopy / restoreCopy', () => {
 
   it('refuses when the record changed since the check', () => {
     const artists = zoia().map((a) => (a.id === 'zoia' ? { ...a, images: [{ key: B }] } : a))
-    expect(removeCopy(artists, { recordId: 'zoia', id: `key:${B}`, keepId: `key:${A}` })).toBeNull()
-    expect(removeCopy(artists, { recordId: 'gone', id: `key:${B}`, keepId: `key:${A}` })).toBeNull()
+    expect(removeCopy(artists, { recordId: 'zoia', id: `key:${B}`, index: 0, keepId: `key:${A}` })).toBeNull()
+    expect(removeCopy(artists, { recordId: 'gone', id: `key:${B}`, index: 0, keepId: `key:${A}` })).toBeNull()
+    // The occurrence moved: index 1 is no longer copy B.
+    expect(removeCopy(zoia(), { recordId: 'zoia', id: `key:${B}`, index: 1, keepId: `key:${A}` })).toBeNull()
   })
 
   it('undo puts the copy back where it was, with its note', () => {
     const E = 'user/u1/ideas/moth/e.jpg'
     const ideas = [{ id: 'moth', title: 'Moth', images: [{ key: C, note: 'n' }, { key: E, note: 'n' }, { key: D }] }]
-    const { records, undo } = removeCopy(ideas, { recordId: 'moth', id: `key:${E}`, keepId: `key:${C}` })
+    const { records, undo } = removeCopy(ideas, { recordId: 'moth', id: `key:${E}`, index: 1, keepId: `key:${C}` })
     expect(records[0].images).toEqual([{ key: C, note: 'n' }, { key: D }])
     expect(restoreCopy(records, undo)[0].images).toEqual(ideas[0].images)
+  })
+
+  it('removes the chosen occurrence when an idea holds one photo twice with different notes', async () => {
+    // A twice (noted, then plain) and B, byte-identical to A.
+    const ideas = [{ id: 'moth', title: 'Moth', images: [{ key: A, note: 'the linework' }, { key: A }, { key: B }] }]
+    const { groups } = await scan({ ideas }, reader())
+    const copyA = groups[0].copies.find((c) => c.id === `key:${A}`)
+    const plainA = copyA.uses.find((u) => u.position === 2)
+    expect(removalCheck(groups[0], copyA, plainA, { favourites: [] })).toEqual({ removable: true, keepId: `key:${B}` })
+
+    const { records, undo } = removeCopy(ideas, { recordId: 'moth', id: `key:${A}`, index: plainA.position - 1, keepId: `key:${B}` })
+    expect(records[0].images).toEqual([{ key: A, note: 'the linework' }, { key: B }])
+    expect(restoreCopy(records, undo)[0].images).toEqual(ideas[0].images)
+  })
+
+  it('undo reverses only its own Keep-flag change, so a flag set since then stays', () => {
+    const artists = zoia().map((a) => (a.id === 'zoia' ? { ...a, keptImages: [`key:${B}`] } : a))
+    const { records, undo } = removeCopy(artists, { recordId: 'zoia', id: `key:${B}`, index: 2, keepId: `key:${A}` })
+    // Meanwhile a pull brings a Keep flag for another photo.
+    const pulled = records.map((a) => (a.id === 'zoia' ? { ...a, keptImages: [...a.keptImages, 'path:/images/artists/zoia/1.jpg'] } : a))
+    expect(restoreCopy(pulled, undo)[0].keptImages.sort()).toEqual([`key:${B}`, 'path:/images/artists/zoia/1.jpg'].sort())
   })
 
   it('undo does not add a second copy if it is already back', () => {
