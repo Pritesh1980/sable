@@ -64,6 +64,12 @@ describe('Settings page', () => {
   })
 
   // #220: text size is set here, not from unlabelled chips in the nav.
+  it('offers the duplicate photo check (#210), which changes nothing until asked', () => {
+    renderSettings()
+    expect(screen.getByRole('region', { name: 'Duplicate photos' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Check for duplicates' })).toBeInTheDocument()
+  })
+
   it('switches the text size from Appearance, in words', () => {
     localStorage.clear()
     renderSettings()

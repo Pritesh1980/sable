@@ -1,5 +1,6 @@
 import Logo from '../components/Logo'
 import BackupPanel from '../components/BackupPanel'
+import DuplicatePhotos from '../components/DuplicatePhotos'
 import { useAuth } from '../context/useAuth'
 import { useTheme } from '../context/useTheme'
 import { isIOS, getShareShortcutUrl } from '../data/platform'
@@ -122,6 +123,16 @@ export default function Settings({ artists, setArtists, ideas, setIdeas, boards,
         setFavourites={setFavourites}
         conventionOverrides={conventionOverrides}
         setConventionOverrides={setConventionOverrides}
+      />
+
+      <DuplicatePhotos
+        artists={artists}
+        setArtists={setArtists}
+        ideas={ideas}
+        setIdeas={setIdeas}
+        concepts={concepts}
+        saved={saved}
+        favourites={favourites}
       />
 
       {/* Appearance (#220): these were unlabelled chips at the end of the nav. */}
