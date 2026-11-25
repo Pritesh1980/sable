@@ -263,7 +263,7 @@ export default function DuplicatePhotos({
       {phase === 'stopped' && <p className="text-xs font-mono text-cream-muted/90 mt-3">Stopped. Nothing was changed.</p>}
 
       {status && (
-        <div ref={statusRef} tabIndex={-1} role="status" className="flex flex-wrap items-center gap-3 mt-3 text-xs font-mono text-cream-muted/90 outline-hidden">
+        <div ref={statusRef} tabIndex={-1} role="status" className="flex flex-wrap items-center gap-3 mt-3 text-xs font-mono text-cream-muted/90 outline-hidden focus-visible:ring-2 focus-visible:ring-accent">
           <span>{status.text}</span>
           {status.undo && (
             <button ref={undoRef} type="button" onClick={undo} className="min-h-11 px-3 text-accent hover:text-accent-hover underline">
