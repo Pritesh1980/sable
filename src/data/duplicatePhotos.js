@@ -3,6 +3,7 @@ import { getImageNote } from './planning'
 import { isSameOrigin, resolveImageBlob } from './imageResolver'
 import { isFavourite } from './favourites'
 import { normalizeBriefCrop } from './referenceImages'
+import { normalizePhotoMarkup } from './photoMarkup'
 
 // Duplicate photo review (#210): the same reference uploaded more than once,
 // under different keys or file names. Found on-device from the photos' own
@@ -29,11 +30,17 @@ import { normalizeBriefCrop } from './referenceImages'
 const LIST_KINDS = new Set(['artist', 'idea'])
 
 // An idea may hold one photo twice on purpose, each occurrence with its own
-// note or Brief card crop (src/data/referenceImages.js). Both are intent the
-// owner set, so a copy carrying either only goes when the kept copy matches.
+// note, Brief card crop, or markup (src/data/referenceImages.js). Those are
+// intent the owner set, so a copy carrying any only goes when the kept copy matches.
 function cropOf(ref) {
   const crop = typeof ref === 'object' ? normalizeBriefCrop(ref?.briefCrop) : undefined
   return crop ? JSON.stringify(crop) : ''
+}
+
+function markupOf(ref) {
+  const markup = typeof ref === 'object' ? normalizePhotoMarkup(ref?.markup) : undefined
+  if (!markup) return ''
+  return JSON.stringify([markup, ref?.includeMarkupInBrief === false ? false : true])
 }
 
 function artistLabel(artist) {
@@ -59,7 +66,8 @@ export function collectPhotoUses({ artists = [], ideas = [], concepts = [], save
     for (const row of rows || []) {
       const images = Array.isArray(row?.images) ? row.images : []
       images.forEach((ref, index) => add(ref, {
-        kind, recordId: row.id, label: label(row), position: index + 1, of: images.length, note: getImageNote(ref), crop: cropOf(ref),
+        kind, recordId: row.id, label: label(row), position: index + 1, of: images.length,
+        note: getImageNote(ref), crop: cropOf(ref), markup: markupOf(ref),
       }))
     }
   }
@@ -179,8 +187,8 @@ export function findDuplicateGroups(uses = [], prints = new Map()) {
 
 // Whether `use` (one place `copy` appears) can come out. Only from an artist's
 // or an idea's photo list that keeps another copy, and only when nothing would
-// be lost: not a favourite, and not a note or crop the kept copy doesn't carry.
-// reason: 'favourite' | 'note' | 'crop' when that is what keeps it; null when
+// be lost: not a favourite, and not a note, crop, or markup the kept copy doesn't carry.
+// reason: 'favourite' | 'note' | 'crop' | 'markup' when that is what keeps it; null when
 // removal simply doesn't apply (another record, or a photo that *is* its record).
 export function removalCheck(group, copy, use, { favourites = [] } = {}) {
   const no = (reason = null) => ({ removable: false, reason })
@@ -190,9 +198,16 @@ export function removalCheck(group, copy, use, { favourites = [] } = {}) {
     .flatMap((other) => other.uses.filter((u) => recordOf(u) === recordOf(use)).map((u) => ({ copy: other, use: u })))
   if (!siblings.length) return no()
   if (isFavourite(favourites, copy.ref)) return no('favourite')
-  const plain = !use.note && !use.crop
-  const keep = plain ? siblings[0] : siblings.find((s) => s.use.note === use.note && s.use.crop === use.crop)
-  if (!keep) return no(use.note && !siblings.some((s) => s.use.note === use.note) ? 'note' : 'crop')
+  const plain = !use.note && !use.crop && !use.markup
+  const keep = plain
+    ? siblings[0]
+    : siblings.find((s) => s.use.note === use.note && s.use.crop === use.crop && s.use.markup === use.markup)
+  if (!keep) {
+    if (use.note && !siblings.some((s) => s.use.note === use.note)) return no('note')
+    if (use.markup && !siblings.some((s) => s.use.markup === use.markup)) return no('markup')
+    if (use.crop && !siblings.some((s) => s.use.crop === use.crop)) return no('crop')
+    return no(use.note ? 'note' : use.markup ? 'markup' : 'crop')
+  }
   return { removable: true, keepId: keep.copy.id }
 }
 

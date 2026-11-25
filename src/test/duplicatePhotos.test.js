@@ -242,6 +242,15 @@ describe('removalCheck', () => {
     expect(removalCheck(groups[0], plain, plain.uses[0], { favourites: [] })).toEqual({ removable: true, keepId: `key:${C}` })
   })
 
+  it('keeps a copy with its own markup', async () => {
+    const E = 'user/u1/ideas/moth/e.jpg'
+    const lib = { ideas: [{ id: 'moth', title: 'Moth', images: [{ key: C, markup: [{ id: 'm1', kind: 'circle', x: 0.5, y: 0.5, r: 0.1, label: 'vein' }] }, { key: E }] }] }
+    const { groups } = await scan(lib, reader({ [C]: 'skull', [E]: 'skull' }))
+    const [annotated, plain] = groups[0].copies
+    expect(removalCheck(groups[0], annotated, annotated.uses[0], { favourites: [] })).toEqual({ removable: false, reason: 'markup' })
+    expect(removalCheck(groups[0], plain, plain.uses[0], { favourites: [] })).toEqual({ removable: true, keepId: `key:${C}` })
+  })
+
   it('allows removal when the notes match or the removed copy has none', async () => {
     const E = 'user/u1/ideas/moth/e.jpg'
     const lib = library({ ideas: [{ id: 'moth', title: 'Moth', images: [{ key: C, note: 'this shading' }, { key: E }, { key: D, note: 'x' }] }] })

@@ -13,6 +13,7 @@ const BLOCKED = {
   favourite: 'Favourited, so it stays. Remove the other copy instead.',
   note: 'Has its own note, so it stays. Remove the other copy instead.',
   crop: 'Has its own Brief card crop, so it stays. Remove the other copy instead.',
+  markup: 'Has its own markup, so it stays. Remove the other copy instead.',
 }
 
 const plural = (n, one, many) => (n === 1 ? one : many)
