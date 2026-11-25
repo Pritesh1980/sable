@@ -24,9 +24,13 @@ export function createMarkId() {
   return `m-${fallbackCounter}`
 }
 
-export function normalizeMarkLabel(label) {
+export function sanitizeLiveLabel(label) {
   if (typeof label !== 'string') return ''
-  return label.replace(/[\r\n]+/g, ' ').trim().slice(0, MAX_MARK_LABEL_LENGTH)
+  return label.replace(/[\r\n]+/g, ' ').slice(0, MAX_MARK_LABEL_LENGTH)
+}
+
+export function normalizeMarkLabel(label) {
+  return sanitizeLiveLabel(label).trim()
 }
 
 /**
@@ -85,12 +89,15 @@ export function normalizePhotoMarkup(marks) {
  * Builds a circle or arrow from normalized start/end pointer positions.
  * Short taps (< 0.025 normalized distance) produce a clearly visible default mark.
  */
-export function buildMarkFromPoints(kind, start, end, { id, label } = {}) {
+export function buildMarkFromPoints(kind, start, end, { id, label, iw = 1, ih = 1 } = {}) {
   const sx = clamp(Number.isFinite(start?.x) ? start.x : 0.5, 0, 1)
   const sy = clamp(Number.isFinite(start?.y) ? start.y : 0.5, 0, 1)
   const ex = clamp(Number.isFinite(end?.x) ? end.x : sx, 0, 1)
   const ey = clamp(Number.isFinite(end?.y) ? end.y : sy, 0, 1)
-  const dist = Math.hypot(ex - sx, ey - sy)
+  const safeIw = Number.isFinite(iw) && iw > 0 ? iw : 1
+  const safeIh = Number.isFinite(ih) && ih > 0 ? ih : 1
+  const minSide = Math.min(safeIw, safeIh)
+  const dist = Math.hypot(((ex - sx) * safeIw) / minSide, ((ey - sy) * safeIh) / minSide)
   const markId = id || createMarkId()
   const cleanLabel = normalizeMarkLabel(label)
 
@@ -165,6 +172,16 @@ export function pushMarkupHistory(history, nextMarks) {
   if (JSON.stringify(next) === JSON.stringify(history.present)) return history
   return {
     past: [...history.past.slice(-49), history.present],
+    present: next,
+    future: [],
+  }
+}
+
+export function replaceMarkupPresent(history, nextMarks) {
+  const next = normalizePhotoMarkup(nextMarks) || []
+  if (JSON.stringify(next) === JSON.stringify(history.present)) return history
+  return {
+    ...history,
     present: next,
     future: [],
   }
@@ -246,7 +263,14 @@ export function projectPhotoMarkToSlot(mark, { iw, ih, sx, sy, sw, sh, slot }) {
     const r = mark.r * Math.min(safeIw, safeIh) * (slot.width / safeW)
     const nearX = clamp(cx, slot.x, slot.x + slot.width)
     const nearY = clamp(cy, slot.y, slot.y + slot.height)
-    const visible = Math.hypot(cx - nearX, cy - nearY) <= r + 2
+    const minDist = Math.hypot(cx - nearX, cy - nearY)
+    const maxCornerDist = Math.max(
+      Math.hypot(cx - slot.x, cy - slot.y),
+      Math.hypot(cx - (slot.x + slot.width), cy - slot.y),
+      Math.hypot(cx - slot.x, cy - (slot.y + slot.height)),
+      Math.hypot(cx - (slot.x + slot.width), cy - (slot.y + slot.height)),
+    )
+    const visible = minDist <= r + 2 && maxCornerDist >= Math.max(0, r - 2)
     return { kind: 'circle', id: mark.id, cx, cy, r, label: mark.label, anchorX: cx, anchorY: cy + r, visible }
   }
 

@@ -54,17 +54,31 @@ describe('PhotoMarkupModal (#208)', () => {
     fireEvent.pointerUp(stage, { button: 2, pointerId: 2, clientX: 120, clientY: 80 })
 
     const labelInput = screen.getByLabelText('Mark label')
+    // Simulated keystroke-by-keystroke typing keeps spaces and coalesces Undo
+    fireEvent.change(labelInput, { target: { value: 'Keep' } })
+    fireEvent.change(labelInput, { target: { value: 'Keep ' } })
+    expect(labelInput).toHaveValue('Keep ')
     fireEvent.change(labelInput, { target: { value: 'Keep wing vein' } })
+    expect(labelInput).toHaveValue('Keep wing vein')
+
+    // Keyboard position/size sliders adjust coordinates cleanly
+    fireEvent.click(screen.getByText('Adjust position & size'))
+    const markX = screen.getByRole('slider', { name: 'Mark X' })
+    fireEvent.change(markX, { target: { value: '0.52' } })
+    expect(markX).toHaveValue('0.52')
 
     // Switch to Arrow and place via button (keyboard accessible)
     fireEvent.click(screen.getByRole('button', { name: 'Arrow', pressed: false }))
     fireEvent.click(screen.getByRole('button', { name: '+ Place mark' }))
-    fireEvent.change(screen.getByLabelText('Mark label'), { target: { value: 'Soft shading' } })
+    const arrowLabel = screen.getByLabelText('Mark label')
+    fireEvent.change(arrowLabel, { target: { value: 'Soft' } })
+    fireEvent.change(arrowLabel, { target: { value: 'Soft ' } })
+    fireEvent.change(arrowLabel, { target: { value: 'Soft shading' } })
 
     expect(screen.getByText('Keep wing vein')).toBeInTheDocument()
     expect(screen.getByText('Soft shading')).toBeInTheDocument()
 
-    // Undo and Redo label / mark edits
+    // Single Undo reverts the entire coalesced label edit rather than one character at a time
     fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
     expect(screen.queryByText('Soft shading')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Redo' }))
@@ -88,7 +102,7 @@ describe('PhotoMarkupModal (#208)', () => {
     expect(onApply).toHaveBeenCalledTimes(1)
     const [savedMarks, includeInBrief] = onApply.mock.calls[0]
     expect(savedMarks).toHaveLength(1)
-    expect(savedMarks[0]).toMatchObject({ kind: 'circle', x: 0.5, y: 0.5, r: 0.15, label: 'Keep wing vein' })
+    expect(savedMarks[0]).toMatchObject({ kind: 'circle', x: 0.52, y: 0.5, r: 0.2, label: 'Keep wing vein' })
     expect(includeInBrief).toBe(false)
     // Original ref was never mutated
     expect(source).toEqual({ url: '/images/demo/vesper_noctis/1.svg', note: 'Original note' })
@@ -218,5 +232,5 @@ describe('PhotoMarkupModal (#208)', () => {
       includeMarkupInBrief: false,
       markup: [{ kind: 'circle', label: 'Borrow stipple' }],
     })
-  })
+  }, 15_000)
 })

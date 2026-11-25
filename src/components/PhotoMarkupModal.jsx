@@ -2,8 +2,10 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { refKey } from '../data/imageRef'
 import { isSameOrigin, resolveImageRef } from '../data/imageResolver'
 import {
+  MAX_CIRCLE_RADIUS,
   MAX_MARK_LABEL_LENGTH,
   MAX_PHOTO_MARKS,
+  MIN_CIRCLE_RADIUS,
   buildMarkFromPoints,
   createDefaultMark,
   createMarkupHistory,
@@ -11,6 +13,8 @@ import {
   normalizePhotoMarkup,
   pushMarkupHistory,
   redoMarkupHistory,
+  replaceMarkupPresent,
+  sanitizeLiveLabel,
   undoMarkupHistory,
 } from '../data/photoMarkup'
 import useImageBytes from '../hooks/useImageBytes'
@@ -20,12 +24,19 @@ function clamp(value, low, high) {
   return Math.max(low, Math.min(high, value))
 }
 
-function normalizeClientPoint(svg, clientX, clientY) {
+function normalizeClientPoint(svg, clientX, clientY, iw = 1, ih = 1) {
   const rect = svg?.getBoundingClientRect?.()
   if (!rect || rect.width <= 0 || rect.height <= 0) return { x: 0.5, y: 0.5 }
+  const safeIw = iw > 0 ? iw : rect.width
+  const safeIh = ih > 0 ? ih : rect.height
+  const scale = Math.min(rect.width / safeIw, rect.height / safeIh)
+  const fitW = safeIw * scale
+  const fitH = safeIh * scale
+  const fitLeft = rect.left + (rect.width - fitW) / 2
+  const fitTop = rect.top + (rect.height - fitH) / 2
   return {
-    x: clamp((clientX - rect.left) / rect.width, 0, 1),
-    y: clamp((clientY - rect.top) / rect.height, 0, 1),
+    x: clamp((clientX - fitLeft) / (fitW || 1), 0, 1),
+    y: clamp((clientY - fitTop) / (fitH || 1), 0, 1),
   }
 }
 
@@ -36,7 +47,7 @@ function labelAnchorFor(mark) {
   return { x: mark.x, y: clamp(mark.y + 0.03, 0.08, 0.92) }
 }
 
-function renderSvgArrow(mark, iw, ih, strokeW, headLen) {
+function renderSvgArrow(mark, iw, ih, strokeW, headLen, isSelected = false) {
   const x1 = mark.x * iw
   const y1 = mark.y * ih
   const x2 = mark.toX * iw
@@ -56,8 +67,31 @@ function renderSvgArrow(mark, iw, ih, strokeW, headLen) {
   return (
     <g>
       <path d={d} fill="none" stroke="rgba(19, 17, 16, 0.88)" strokeWidth={strokeW + 4} strokeLinecap="round" strokeLinejoin="round" />
-      <path d={d} fill="none" stroke="#d9483b" strokeWidth={strokeW} strokeLinecap="round" strokeLinejoin="round" />
+      <path d={d} fill="none" stroke={isSelected ? '#efe9dc' : '#d9483b'} strokeWidth={strokeW} strokeLinecap="round" strokeLinejoin="round" />
     </g>
+  )
+}
+
+function AdjustSlider({ label, min, max, step = 0.01, value, onChange }) {
+  const sliderId = useId()
+  return (
+    <div>
+      <div className="flex items-baseline justify-between gap-2 text-xs text-cream-muted">
+        <label htmlFor={sliderId}>{label}</label>
+        <output htmlFor={sliderId}>{Math.round(value * 100)}%</output>
+      </div>
+      <input
+        id={sliderId}
+        type="range"
+        aria-label={label}
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value))}
+        className="w-full min-h-11 accent-cream"
+      />
+    </div>
   )
 }
 
@@ -91,6 +125,8 @@ export default function PhotoMarkupModal({ image, index, onApply, onClose }) {
   const [naturalSize, setNaturalSize] = useState(null)
   const [decodeError, setDecodeError] = useState(false)
   const [confirmDiscard, setConfirmDiscard] = useState(false)
+  const [typingLabel, setTypingLabel] = useState(null)
+  const coalesceKeyRef = useRef(null)
   const keepEditingRef = useFocusOnOpen(confirmDiscard)
 
   const marks = history.present
@@ -149,6 +185,8 @@ export default function PhotoMarkupModal({ image, index, onApply, onClose }) {
   const canEdit = !unavailableMessage && bytes.status === 'ready' && Boolean(naturalSize)
   const activeSelectedId = marks.some((mark) => mark.id === selectedId) ? selectedId : (marks[0]?.id || null)
   const selectedMark = marks.find((mark) => mark.id === activeSelectedId) || null
+  const iw = naturalSize?.width || 800
+  const ih = naturalSize?.height || 600
 
   function requestClose() {
     if (isDirty) {
@@ -159,7 +197,13 @@ export default function PhotoMarkupModal({ image, index, onApply, onClose }) {
     onClose()
   }
 
+  function resetEditingTransient() {
+    setTypingLabel(null)
+    coalesceKeyRef.current = null
+  }
+
   function commitMarks(nextMarks, nextSelectedId = activeSelectedId) {
+    resetEditingTransient()
     setHistory((prev) => pushMarkupHistory(prev, nextMarks))
     setSelectedId(nextSelectedId)
   }
@@ -168,20 +212,20 @@ export default function PhotoMarkupModal({ image, index, onApply, onClose }) {
     if (!canEdit || event.button !== 0 || marks.length >= MAX_PHOTO_MARKS) return
     event.preventDefault()
     event.currentTarget.setPointerCapture?.(event.pointerId)
-    const pt = normalizeClientPoint(svgRef.current, event.clientX, event.clientY)
+    const pt = normalizeClientPoint(svgRef.current, event.clientX, event.clientY, iw, ih)
     setDragState({ pointerId: event.pointerId, start: pt, end: pt })
   }
 
   function handlePointerMove(event) {
     if (!dragState || dragState.pointerId !== event.pointerId) return
-    const pt = normalizeClientPoint(svgRef.current, event.clientX, event.clientY)
+    const pt = normalizeClientPoint(svgRef.current, event.clientX, event.clientY, iw, ih)
     setDragState((prev) => (prev && prev.pointerId === event.pointerId ? { ...prev, end: pt } : prev))
   }
 
   function finishDrag(event) {
     if (!dragState || dragState.pointerId !== event.pointerId) return
-    const end = normalizeClientPoint(svgRef.current, event.clientX, event.clientY)
-    const created = buildMarkFromPoints(tool, dragState.start, end)
+    const end = normalizeClientPoint(svgRef.current, event.clientX, event.clientY, iw, ih)
+    const created = buildMarkFromPoints(tool, dragState.start, end, { iw, ih })
     setDragState(null)
     if (!created) return
     commitMarks([...marks, created], created.id)
@@ -200,9 +244,11 @@ export default function PhotoMarkupModal({ image, index, onApply, onClose }) {
     commitMarks([...marks, created], created.id)
   }
 
-  function updateSelectedLabel(nextLabel) {
+  function updateSelectedLabel(rawValue) {
     if (!selectedMark) return
-    const clean = normalizeMarkLabel(nextLabel)
+    const live = sanitizeLiveLabel(rawValue)
+    setTypingLabel({ id: selectedMark.id, value: live })
+    const clean = normalizeMarkLabel(live)
     const nextMarks = marks.map((mark) => {
       if (mark.id !== selectedMark.id) return mark
       const copy = { ...mark }
@@ -210,7 +256,28 @@ export default function PhotoMarkupModal({ image, index, onApply, onClose }) {
       else delete copy.label
       return copy
     })
-    commitMarks(nextMarks, selectedMark.id)
+    const key = `label:${selectedMark.id}`
+    if (coalesceKeyRef.current !== key) {
+      coalesceKeyRef.current = key
+      setHistory((prev) => pushMarkupHistory(prev, nextMarks))
+    } else {
+      setHistory((prev) => replaceMarkupPresent(prev, nextMarks))
+    }
+  }
+
+  function updateSelectedField(field, value) {
+    if (!selectedMark || !Number.isFinite(value)) return
+    setTypingLabel(null)
+    const nextMarks = marks.map((mark) => (
+      mark.id === selectedMark.id ? { ...mark, [field]: value } : mark
+    ))
+    const key = `adjust:${selectedMark.id}:${field}`
+    if (coalesceKeyRef.current !== key) {
+      coalesceKeyRef.current = key
+      setHistory((prev) => pushMarkupHistory(prev, nextMarks))
+    } else {
+      setHistory((prev) => replaceMarkupPresent(prev, nextMarks))
+    }
   }
 
   function removeSelectedMark() {
@@ -225,27 +292,28 @@ export default function PhotoMarkupModal({ image, index, onApply, onClose }) {
   }
 
   function handleUndo() {
+    resetEditingTransient()
     setHistory((prev) => undoMarkupHistory(prev))
   }
 
   function handleRedo() {
+    resetEditingTransient()
     setHistory((prev) => redoMarkupHistory(prev))
   }
 
   function handleApply() {
     if (unavailableMessage || bytes.status !== 'ready') return
+    resetEditingTransient()
     if (dialogRef.current) dialogRef.current.returnValue = 'apply'
     onApply(marks, includeInBrief)
   }
 
   const draftPreview = useMemo(() => {
     if (!dragState) return null
-    return buildMarkFromPoints(tool, dragState.start, dragState.end, { id: '__draft__' })
-  }, [dragState, tool])
+    return buildMarkFromPoints(tool, dragState.start, dragState.end, { id: '__draft__', iw, ih })
+  }, [dragState, tool, iw, ih])
 
   const renderedMarks = draftPreview ? [...marks, draftPreview] : marks
-  const iw = naturalSize?.width || 800
-  const ih = naturalSize?.height || 600
   const strokeW = Math.max(3, Math.round(Math.min(iw, ih) * 0.008))
   const headLen = Math.max(14, Math.round(Math.min(iw, ih) * 0.045))
 
@@ -253,10 +321,17 @@ export default function PhotoMarkupModal({ image, index, onApply, onClose }) {
     <dialog
       ref={dialogRef}
       aria-labelledby={titleId}
-      closedby={isDirty ? 'none' : 'closerequest'}
+      onKeyDown={(event) => {
+        if (event.key !== 'Escape' || event.defaultPrevented) return
+        event.preventDefault()
+        event.stopPropagation()
+        if (confirmDiscard) setConfirmDiscard(false)
+        else requestClose()
+      }}
       onCancel={(event) => {
         event.preventDefault()
-        requestClose()
+        if (confirmDiscard) setConfirmDiscard(false)
+        else requestClose()
       }}
       onClose={() => {
         if (dialogRef.current) dialogRef.current.returnValue = ''
@@ -386,10 +461,12 @@ export default function PhotoMarkupModal({ image, index, onApply, onClose }) {
 
                 <div className="flex justify-center border border-ink-border bg-ink-card p-2">
                   <div
-                    className="markup-stage relative max-h-[48dvh] w-full overflow-hidden"
+                    className="markup-stage relative max-h-[48dvh] overflow-hidden"
                     style={{
                       aspectRatio: naturalSize ? `${naturalSize.width} / ${naturalSize.height}` : '1 / 1',
-                      maxWidth: naturalSize ? 'min(100%, 540px)' : '420px',
+                      width: naturalSize
+                        ? `min(100%, 540px, calc(48dvh * ${naturalSize.width / naturalSize.height}))`
+                        : 'min(100%, 420px)',
                       WebkitUserSelect: 'none',
                       userSelect: 'none',
                     }}
@@ -407,7 +484,7 @@ export default function PhotoMarkupModal({ image, index, onApply, onClose }) {
                         })
                       }}
                       onError={() => setDecodeError(true)}
-                      className="block h-full w-full select-none object-contain"
+                      className="block h-full w-full select-none object-fill"
                     />
                     {naturalSize && (
                       <>
@@ -445,7 +522,7 @@ export default function PhotoMarkupModal({ image, index, onApply, onClose }) {
                                 />
                               </g>
                             ) : (
-                              <g key={mark.id}>{renderSvgArrow(mark, iw, ih, strokeW, headLen)}</g>
+                              <g key={mark.id}>{renderSvgArrow(mark, iw, ih, strokeW, headLen, mark.id === activeSelectedId)}</g>
                             )
                           ))}
                         </svg>
@@ -455,10 +532,10 @@ export default function PhotoMarkupModal({ image, index, onApply, onClose }) {
                             return (
                               <span
                                 key={`${mark.id}-label`}
-                                className="absolute -translate-x-1/2 border border-accent bg-ink-black/90 px-2 py-0.5 text-xs text-cream shadow-sm whitespace-nowrap max-w-[70%] truncate"
+                                className="absolute -translate-x-1/2 border border-accent bg-ink-black/90 px-2 py-0.5 text-xs text-cream shadow-sm whitespace-nowrap max-w-[80%] truncate"
                                 style={{
-                                  left: `${clamp(pos.x * 100, 14, 86)}%`,
-                                  top: `${clamp(pos.y * 100, 4, 88)}%`,
+                                  left: `${clamp(pos.x * 100, 8, 92)}%`,
+                                  top: `${clamp(pos.y * 100, 4, 90)}%`,
                                 }}
                               >
                                 {mark.label}
@@ -483,7 +560,10 @@ export default function PhotoMarkupModal({ image, index, onApply, onClose }) {
                           key={mark.id}
                           type="button"
                           aria-pressed={mark.id === activeSelectedId}
-                          onClick={() => setSelectedId(mark.id)}
+                          onClick={() => {
+                            resetEditingTransient()
+                            setSelectedId(mark.id)
+                          }}
                           className={`min-h-11 border px-3 text-xs font-mono transition-colors ${
                             mark.id === activeSelectedId
                               ? 'border-cream bg-ink-muted text-cream'
@@ -497,25 +577,50 @@ export default function PhotoMarkupModal({ image, index, onApply, onClose }) {
                     </div>
 
                     {selectedMark && (
-                      <div className="flex flex-wrap items-center gap-2">
-                        <label htmlFor={labelInputId} className="sr-only">Mark label</label>
-                        <input
-                          id={labelInputId}
-                          type="text"
-                          aria-label="Mark label"
-                          maxLength={MAX_MARK_LABEL_LENGTH}
-                          placeholder="Short note (e.g. shading, stem curve)…"
-                          value={selectedMark.label || ''}
-                          onChange={(event) => updateSelectedLabel(event.target.value)}
-                          className="min-h-11 flex-1 bg-ink-muted border border-ink-border rounded-xs px-3 text-sm text-cream outline-hidden focus-visible:ring-2 focus-visible:ring-accent placeholder-cream-muted/60"
-                        />
-                        <button
-                          type="button"
-                          onClick={removeSelectedMark}
-                          className="min-h-11 border border-ink-border px-3 text-sm text-cream-muted hover:text-accent"
-                        >
-                          Remove mark
-                        </button>
+                      <div className="space-y-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <label htmlFor={labelInputId} className="sr-only">Mark label</label>
+                          <input
+                            id={labelInputId}
+                            type="text"
+                            aria-label="Mark label"
+                            maxLength={MAX_MARK_LABEL_LENGTH}
+                            placeholder="Short note (e.g. shading, stem curve)…"
+                            value={typingLabel?.id === selectedMark.id ? typingLabel.value : (selectedMark.label || '')}
+                            onChange={(event) => updateSelectedLabel(event.target.value)}
+                            onBlur={resetEditingTransient}
+                            className="min-h-11 flex-1 bg-ink-muted border border-ink-border rounded-xs px-3 text-sm text-cream outline-hidden focus-visible:ring-2 focus-visible:ring-accent placeholder-cream-muted/60"
+                          />
+                          <button
+                            type="button"
+                            onClick={removeSelectedMark}
+                            className="min-h-11 border border-ink-border px-3 text-sm text-cream-muted hover:text-accent"
+                          >
+                            Remove mark
+                          </button>
+                        </div>
+
+                        <details className="border-t border-ink-border pt-2">
+                          <summary className="flex min-h-11 cursor-pointer items-center text-xs font-mono uppercase tracking-widest text-cream-muted hover:text-cream">
+                            Adjust position & size
+                          </summary>
+                          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            {selectedMark.kind === 'circle' ? (
+                              <>
+                                <AdjustSlider label="Mark X" min={0} max={1} value={selectedMark.x} onChange={(v) => updateSelectedField('x', v)} />
+                                <AdjustSlider label="Mark Y" min={0} max={1} value={selectedMark.y} onChange={(v) => updateSelectedField('y', v)} />
+                                <AdjustSlider label="Mark radius" min={MIN_CIRCLE_RADIUS} max={MAX_CIRCLE_RADIUS} value={selectedMark.r} onChange={(v) => updateSelectedField('r', v)} />
+                              </>
+                            ) : (
+                              <>
+                                <AdjustSlider label="Start X" min={0} max={1} value={selectedMark.x} onChange={(v) => updateSelectedField('x', v)} />
+                                <AdjustSlider label="Start Y" min={0} max={1} value={selectedMark.y} onChange={(v) => updateSelectedField('y', v)} />
+                                <AdjustSlider label="Tip X" min={0} max={1} value={selectedMark.toX} onChange={(v) => updateSelectedField('toX', v)} />
+                                <AdjustSlider label="Tip Y" min={0} max={1} value={selectedMark.toY} onChange={(v) => updateSelectedField('toY', v)} />
+                              </>
+                            )}
+                          </div>
+                        </details>
                       </div>
                     )}
                   </div>

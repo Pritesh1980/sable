@@ -87,6 +87,12 @@ describe('photoMarkup normalization and bounds', () => {
     const draggedCircle = buildMarkFromPoints('circle', { x: 0.4, y: 0.5 }, { x: 0.55, y: 0.5 }, { id: 'c1' })
     expect(draggedCircle).toEqual({ id: 'c1', kind: 'circle', x: 0.4, y: 0.5, r: 0.15 })
 
+    // Horizontal vs vertical drag of equal pixel length (180px on 600x900) produce identical radii
+    const horiz = buildMarkFromPoints('circle', { x: 0.2, y: 0.2 }, { x: 0.5, y: 0.2 }, { id: 'h', iw: 600, ih: 900 })
+    const vert = buildMarkFromPoints('circle', { x: 0.2, y: 0.2 }, { x: 0.2, y: 0.4 }, { id: 'v', iw: 600, ih: 900 })
+    expect(horiz.r).toBe(0.3)
+    expect(vert.r).toBe(0.3)
+
     const tappedCircle = buildMarkFromPoints('circle', { x: 0.3, y: 0.4 }, { x: 0.302, y: 0.402 }, { id: 'c2' })
     expect(tappedCircle).toEqual({ id: 'c2', kind: 'circle', x: 0.3, y: 0.4, r: 0.12 })
 
@@ -277,6 +283,14 @@ describe('brief card projection and export rendering with crops', () => {
       { iw, ih, ...cropBox, slot },
     )
     expect(offCropCircle.visible).toBe(false)
+
+    // Zoomed crop sits strictly inside a huge centered circle (outline entirely outside crop)
+    const interiorOnlyCrop = computeBriefCardCrop(1000, 1000, 200, 200, { x: 0.5, y: 0.5, zoom: 3 })
+    const hugeCircle = projectPhotoMarkToSlot(
+      { id: 'huge', kind: 'circle', x: 0.5, y: 0.5, r: 0.45, label: 'Outer frame' },
+      { iw: 1000, ih: 1000, ...interiorOnlyCrop, slot: { x: 0, y: 0, width: 200, height: 200 } },
+    )
+    expect(hugeCircle.visible).toBe(false)
   })
 
   it('renders markup on exported Brief card when enabled and keeps original clean when disabled', async () => {

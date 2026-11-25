@@ -1,4 +1,4 @@
-import { test, expect, openBriefCardFixture, swipe } from './fixtures'
+import { test, expect, openDemo, openBriefCardFixture, swipe } from './fixtures'
 
 async function previewBytes(dialog) {
   return dialog.getByRole('img', { name: 'Brief card preview' }).evaluate(async (img) => {
@@ -40,15 +40,22 @@ test('touch markup annotates a reference photo cleanly across reorder, crop, exp
   const cx = box.x + box.width * 0.45
   const cy = box.y + box.height * 0.45
   await swipe(page, [cx, cy], [cx + 55, cy])
-  await markupDialog.getByLabel('Mark label').fill('Keep fern curve')
+  await markupDialog.getByLabel('Mark label').pressSequentially('Keep fern curve')
+  await expect(markupDialog.getByLabel('Mark label')).toHaveValue('Keep fern curve')
   await expect(markupDialog.getByText('Keep fern curve').first()).toBeVisible()
 
   await markupDialog.getByRole('button', { name: 'Arrow', pressed: false }).click()
   await swipe(page, [box.x + box.width * 0.25, box.y + box.height * 0.25], [box.x + box.width * 0.7, box.y + box.height * 0.7])
-  await markupDialog.getByLabel('Mark label').fill('Soft tip')
+  await markupDialog.getByLabel('Mark label').pressSequentially('Soft tip')
   await expect(markupDialog.getByText('Soft tip').first()).toBeVisible()
 
-  // Exercise Undo / Redo before applying
+  // Escape while dirty in real Chromium opens discard guard without losing edits
+  await page.keyboard.press('Escape')
+  await expect(markupDialog.getByText(/Discard unsaved markup changes/i)).toBeVisible()
+  await markupDialog.getByRole('button', { name: 'Keep editing' }).click()
+  await expect(markupDialog.getByText(/Discard unsaved markup changes/i)).not.toBeVisible()
+
+  // Single Undo clears the typed label without deleting one character at a time
   await markupDialog.getByRole('button', { name: 'Undo' }).click()
   await expect(markupDialog.getByLabel('Mark label')).toHaveValue('')
   await markupDialog.getByRole('button', { name: 'Redo' }).click()
@@ -124,4 +131,90 @@ test('touch markup annotates a reference photo cleanly across reorder, crop, exp
   await page.reload()
   await page.getByText('Card arrangement study', { exact: true }).click()
   await expect(page.getByRole('button', { name: 'Mark up reference 4' })).toHaveText('Mark up (2)')
+})
+
+test('tall 9:16 portrait stage keeps finger alignment and aligned circle pixels in Brief card export (#208)', async ({ page }) => {
+  await openDemo(page, '/brief')
+  await page.goto('/manifest.json')
+  await page.evaluate(() => {
+    const user = JSON.parse(localStorage.getItem('tattoo_local_session')).user
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="360" height="640" viewBox="0 0 360 640"><rect width="360" height="640" fill="#141210"/></svg>'
+    const dataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`
+    const rows = [{
+      id: 'tall-portrait-study',
+      title: 'Tall portrait alignment study',
+      description: 'Check 9:16 coordinate fidelity.',
+      tags: ['fine-line'],
+      placement: 'forearm',
+      images: [{ url: dataUrl, note: 'Portrait 9:16' }],
+      linkedArtists: [],
+      status: 'idea',
+      updatedAt: '2026-11-11T10:00:00.000Z',
+    }]
+    localStorage.setItem('tattoo_ideas', JSON.stringify(rows))
+    localStorage.setItem(`tattoo_remote_${user.id}_ideas`, JSON.stringify(rows))
+  })
+  await page.goto('/brief')
+  await page.getByText('Tall portrait alignment study', { exact: true }).click()
+  await page.getByRole('button', { name: 'Mark up reference 1' }).click()
+
+  const markupDialog = page.getByRole('dialog', { name: 'Mark up reference 1' })
+  const stage = markupDialog.getByTestId('markup-stage')
+  await expect(stage).toBeVisible()
+  await stage.scrollIntoViewIfNeeded()
+  const box = await stage.boundingBox()
+  // Stage keeps 9:16 portrait aspect ratio instead of full-width letterboxing
+  expect(box.width / box.height).toBeCloseTo(360 / 640, 1)
+
+  // Drag near upper-right (0.78, 0.22) -> normalized mark must land right under finger
+  const tapX = box.x + box.width * 0.78
+  const tapY = box.y + box.height * 0.22
+  await swipe(page, [tapX, tapY], [tapX + 20, tapY])
+  await markupDialog.getByRole('button', { name: 'Apply markup' }).click()
+
+  await page.getByRole('button', { name: 'Preview card', exact: true }).click()
+  const previewDialog = page.getByRole('dialog', { name: 'Preview card', exact: true })
+  const vertical = previewDialog.getByRole('slider', { name: 'Vertical reference 1' })
+  await vertical.focus()
+  await vertical.press('Home')
+  await expect(vertical).toHaveValue('0')
+  await expect(previewDialog.getByRole('button', { name: 'Share this card' })).toBeEnabled()
+  // Count red accent pixels inside right vs left half of the exported card image slot
+  const counts = await previewDialog.getByRole('img', { name: 'Brief card preview' }).evaluate(async (img) => {
+    const canvas = document.createElement('canvas')
+    canvas.width = img.naturalWidth || 1080
+    canvas.height = img.naturalHeight || 1350
+    const ctx = canvas.getContext('2d')
+    ctx.drawImage(img, 0, 0)
+    const { data, width, height } = ctx.getImageData(0, 0, canvas.width, canvas.height)
+    let leftHalf = 0
+    let rightHalf = 0
+    for (let y = Math.floor(height * 0.35); y < Math.floor(height * 0.85); y += 1) {
+      for (let x = Math.floor(width * 0.1); x < Math.floor(width * 0.9); x += 1) {
+        const i = (y * width + x) * 4
+        if (data[i] > 180 && data[i + 1] < 105 && data[i + 2] < 105) {
+          if (x < width / 2) leftHalf += 1
+          else rightHalf += 1
+        }
+      }
+    }
+    return { leftHalf, rightHalf }
+  })
+  expect(counts.rightHalf).toBeGreaterThan(20)
+  expect(counts.leftHalf).toBe(0)
+
+  await previewDialog.getByRole('button', { name: 'Close card preview' }).click()
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect.poll(() => page.evaluate(() => {
+    const user = JSON.parse(localStorage.getItem('tattoo_local_session')).user
+    return JSON.parse(localStorage.getItem(`tattoo_remote_${user.id}_ideas`) || '[]')[0]?.images?.[0]?.markup?.[0]
+  })).toBeTruthy()
+  const mark = await page.evaluate(() => {
+    const user = JSON.parse(localStorage.getItem('tattoo_local_session')).user
+    return JSON.parse(localStorage.getItem(`tattoo_remote_${user.id}_ideas`) || '[]')[0]?.images?.[0]?.markup?.[0]
+  })
+  expect(mark.x).toBeGreaterThan(0.72)
+  expect(mark.x).toBeLessThan(0.84)
+  expect(mark.y).toBeGreaterThan(0.16)
+  expect(mark.y).toBeLessThan(0.28)
 })
