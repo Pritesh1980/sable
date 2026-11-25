@@ -76,6 +76,32 @@ library first if you might want it back. Embedded photos are saved to the
 account you're signed in to as they come back in. Backups made by earlier versions of Sable
 still import; a backup from a *newer* version is refused with a message to update first.
 
+## Find duplicate photos
+
+The same reference often gets added twice: saved from Instagram once, screenshotted
+later, under a different file name each time. **More → Settings → Duplicate photos →
+Check for duplicates** finds them. It compares the photos themselves, not their names,
+and it runs on this device: no AI key, no upload. A big library can take a while; **Stop**
+ends the check and changes nothing.
+
+The result says how much it covered, for example *Checked 380 of 409 photos*. Photos it
+couldn't read right now (offline, or not downloaded yet) and links to other sites aren't
+compared, so they're neither duplicates nor unique. Check again when you're back online.
+
+Each **Same photo** group lists every copy and where it is used: an artist's photos, an
+idea, a concept, a saved photo.
+
+- **Two copies on one artist or one idea.** Each copy that can go has **Remove this
+  copy**. You choose which copy to remove, confirm, and the other copy stays. **Undo**
+  puts it back where it was. A copy that is favourited, or that has a note the other
+  copy doesn't share, stays, and the review says why. Remove the other copy instead.
+- **Copies in different places** (an artist and an idea, or two artists) are listed
+  but never changed: that can be on purpose, and the same photo on two artists says
+  nothing about who made it.
+
+Removing a copy never deletes the photo from anywhere else. Photos added after the
+check show as *added since this check* until you check again.
+
 ## Appearance
 
 **More → Settings → Appearance** has one switch: **Text size** (Normal / Large). It is

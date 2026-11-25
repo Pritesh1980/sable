@@ -98,11 +98,12 @@ export const HELP_GROUPS = [
       },
       {
         id: 'tidy',
-        question: 'How do I spot photos that don’t belong to an artist?',
+        question: 'How do I tidy up photos that look wrong or were added twice?',
         steps: [
           'Build the style index once, from More like this.',
           'In Tools, then Manage, a row shows “1 photo to check” when a photo looks unlike the rest.',
           'Open the row and choose Keep or Remove. It may also suggest a style tag.',
+          'More → Settings → Duplicate photos finds photos added more than once. You choose which copy goes.',
         ],
         guide: '02-managing-artists.md#tidy-up-hints',
       },

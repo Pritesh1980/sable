@@ -213,6 +213,9 @@ neither changes anything until you tap.
 
 Photos added since the index was last built aren't checked until you update it.
 
+A photo added twice under different names is a different job: see
+[Find duplicate photos](07-backup-and-settings.md#find-duplicate-photos) in Settings.
+
 > **Tip:** you can also upload photos and edit tags/studio from an artist's full
 > detail card in the [gallery views](03-gallery-and-ranking.md) — whichever is handier.
 > Tap **Done managing** to flip back to the visual views. Backups now live in
