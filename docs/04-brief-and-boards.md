@@ -29,7 +29,9 @@ Tap **+** to add an idea (or tap a card to edit one). The editor gives you:
   image, this button drafts the title, description, style tags and placement from the
   image itself; only fields you haven't filled are touched.
 - **Reference images** — paste an image URL or upload photos, each with a note on *what to
-  borrow from it*. **3D print** on an image opens the STL / two-colour 3MF export for it
+  borrow from it*. **Mark up** adds non-destructive circles, arrows and short labels directly
+  on a locally readable photo (see [Mark up reference photos](#mark-up-reference-photos)).
+  **3D print** on an image opens the STL / two-colour 3MF export for it
   (with optional Gemini **Lift the tattoo** preparation and **Add to references**, see
   [AI concepts](06-concepts.md#export-a-relief-stl)). **On arm** puts it on the 3D arm at
   its real size, on the forearm when the idea's placement is *forearm* and on the upper arm
@@ -70,6 +72,21 @@ the reference. It can copy an image already stored on this device while offline;
 otherwise reconnect and retry. No AI request is made.
 
 ![A new Idea draft created from a fictional AI result](../public/guide/concept-idea-draft.png)
+
+### Mark up reference photos
+
+Tap **Mark up** beneath any reference photo to circle shapes, point arrows at details and
+add short labels on this device (no AI key or external upload is used).
+
+- Your original photo bytes, file reference and note never change: markup belongs only to
+  that reference occurrence in the idea, so reordering photos or cropping them on the brief
+  card keeps every mark lined up in place.
+- Offline photos and pasted web image links stay in the idea with their notes, and can be
+  marked up once their bytes are stored on this device.
+- **Show markup on brief card** lets you export the annotated image in **Share as image**
+  and **Preview card**, or switch markup off on the card while keeping your clean original.
+- **Save** the idea to keep markup edits; annotations travel with your idea through sync,
+  backup export and restore.
 
 ### Choose the card's photos
 

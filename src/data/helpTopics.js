@@ -129,10 +129,10 @@ export const HELP_GROUPS = [
         id: 'idea',
         question: 'How do I write down a tattoo idea?',
         steps: [
-          'Ideas → +.',
-          'Give it a title, styles, a placement and reference photos, then tap Add.',
+          'Ideas → +, add a title, styles, placement and reference photos, then tap Add.',
+          'Tap Mark up on a photo to circle or point at details without changing the original.',
           'Artists with matching styles appear in the editor: tap one to link them.',
-          'Share as image makes a card to send an artist. The Boards tab groups ideas together.',
+          'Preview card crops photos and toggles markup; Share as image exports the card.',
         ],
         image: 'brief-idea-editor.png',
         guide: '04-brief-and-boards.md#create-or-edit-an-idea',

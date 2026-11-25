@@ -18,7 +18,7 @@ function CropControl({ label, value, sourceIndex, zoom = false, onChange }) {
 
 export default function BriefCardPreview({
   prepared, previewUrl, controlsPhotos, images, preparing, error,
-  onRefresh, onCrop, onClose, onShare, shareState, shareNote,
+  onRefresh, onCrop, onToggleMarkup, onClose, onShare, shareState, shareNote,
 }) {
   const focusRef = useDialogFocus(true)
   const escapeRef = useEscapeToClose(onClose)
@@ -70,6 +70,21 @@ export default function BriefCardPreview({
           return <fieldset key={sourceIndex} className="space-y-2 border-t border-ink-border pt-4">
             <legend className="pr-3 text-sm text-cream">Reference {sourceIndex + 1} · Card {cardIndex + 1}</legend>
             {image.note && <p className="text-sm text-cream-muted">{image.note}</p>}
+            {image.markup?.length > 0 && (
+              <button
+                type="button"
+                role="switch"
+                aria-checked={image.includeMarkupInBrief !== false}
+                aria-label={`Show markup on card reference ${sourceIndex + 1}`}
+                onClick={() => onToggleMarkup?.(sourceIndex, image.includeMarkupInBrief === false)}
+                className="flex min-h-11 w-full items-center justify-between border border-ink-border px-3 text-sm text-cream hover:border-cream-muted/50"
+              >
+                <span>Show markup on card ({image.markup.length} {image.markup.length === 1 ? 'mark' : 'marks'})</span>
+                <span className="font-mono text-xs uppercase tracking-widest text-cream-muted">
+                  {image.includeMarkupInBrief === false ? 'Off' : 'On'}
+                </span>
+              </button>
+            )}
             <CropControl label="Horizontal" value={crop.x} sourceIndex={sourceIndex} onChange={(value) => update('x', value)} />
             <CropControl label="Vertical" value={crop.y} sourceIndex={sourceIndex} onChange={(value) => update('y', value)} />
             <CropControl label="Zoom" value={crop.zoom} sourceIndex={sourceIndex} zoom onChange={(value) => update('zoom', value)} />
