@@ -291,9 +291,12 @@ stays read-only.
 
 **The owner's standing preferences**, said to Claude but meant for every agent:
 
-- **Do routine next steps and report afterwards** (a green Dependabot PR, the next backlog
-  issue, a dev-only alert). Pause only for destructive or irreversible steps, another
-  agent's work, real accounts or data, and anything done on the physical phone.
+- **Do routine upkeep and report afterwards** (a green Dependabot PR, a dev-only alert).
+- **Propose new work; don't start it** (Nov 2026). Asked "what's next?", name the issue
+  you'd pick, why, and the alternatives, then wait for the owner's go before making a
+  worktree or writing code. Finishing work already approved needs no fresh go. Pause
+  also for destructive or irreversible steps, another agent's work, real accounts or
+  data, and anything done on the physical phone.
 - **Don't chase rare edge cases**: multi-tab, account-switch and millisecond races. It's
   one user, mostly one phone, one tab. Reject them in the commit message; don't open an
   issue. Do fix anything that hits normal use.
