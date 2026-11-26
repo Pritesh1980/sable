@@ -282,6 +282,7 @@ determines whether a value syncs.
 | Imported winners | `tattoo_convention_winners` | Not synced |
 | Winner photo bytes | `tattoo-winner-photos-v1` IndexedDB; records carry `photoIds` | No |
 | Top picks | Derived in memory from lineup, gallery, studios and curated picks | No separate collection |
+| Offline show packs (#209) | `tattoo-show-packs-v1` IndexedDB, keyed by owner; deleted on sign-out | No |
 | Gemini photo descriptions (Describe tattoo) | `tattoo_photo_descriptions`, newest 200, purged on sign-out | No |
 | Text size, API keys, composer draft | Device-local preferences / draft | No |
 | CLIP vectors | Model-keyed IndexedDB cache | No |
@@ -895,6 +896,53 @@ match. The gallery artist and attendance record can sync; the imported award boa
 and its photos cannot. Implementation: `lineup.js`, `lineupGrabber.js`,
 `lineupSeeds.js`, `showPlan.js`, `showRoute.js`, `worthTheTrip.js`, `winners.js`,
 `winnerPhotos.js`, and `Conventions.jsx`.
+
+### Offline show packs
+
+A pack (#209) copies one edition's chosen artists, their photos and the open ideas linked to
+them onto the device, so Radar can open them in a hall with no signal. Three modules:
+`showPack.js` plans it (pure: who is offered, the snapshot, the photo list, the status a
+stored pack can honestly claim), `showPackStore.js` holds it, and `showPackPrepare.js` fills,
+checks and removes it. The UI is `ShowPack.jsx` on each card and `ShowPackViewer.jsx` behind
+`?pack=<editionKey>`.
+
+```mermaid
+flowchart TB
+  CHOOSE["Choose artists + linked ideas<br/>(attending first)"] --> PLAN["planShowPack<br/>snapshot text · booth from line-up<br/>stored refs, never display urls"]
+  PLAN --> START[("Pack record written first<br/>state: preparing")]
+  START --> EACH{"Each photo, one at a time"}
+  EACH -- "other site" --> EXT["external: never fetched"]
+  EACH -- "intact copy already stored" --> KEEP["reused"]
+  EACH -- "fetch" --> READ["image/* · not empty · not 206<br/>not shorter than announced"]
+  READ --> PUT[("photos: ownerId + identity<br/>bytes · size · SHA-256")]
+  PUT -- "QuotaExceededError" --> STOP["stop: quota"]
+  EACH --> CHECK["Read every photo back<br/>and re-hash"]
+  CHECK --> DONE[("state: done + verification<br/>checkedAt")]
+  DONE --> STATUS{"packStatus"}
+  STATUS -- "all present and intact" --> READY["Ready offline"]
+  STATUS -- "anything short" --> NOT["Not ready / Interrupted<br/>names each photo and why"]
+```
+
+- **Ready means verified.** The record is written as `preparing` before any photo is read, and
+  only a finished run that read every savable photo back with a matching SHA-256 becomes
+  `done` with a `verification`. A reload, a Stop or a killed tab leaves it `preparing`, shown as
+  interrupted. A partial body (shorter than its `Content-Length`, a cut-off read, a 206 or a
+  `Content-Range`), a non-image response or a quota failure is recorded per photo and keeps the
+  pack not ready. Check again, opening the panel and opening the pack all re-run the read-back
+  with no network, so eviction since the last check shows up.
+- **Copies, not originals.** Bytes are fetched through `resolveImage` (staged device copy,
+  then the backend's URL) and stored as an `ArrayBuffer` in the pack store. Static paths are
+  fetched `same-origin`; an external `{ url }` is never fetched. Nothing here writes to blob
+  storage, staged images or library records, and removal deletes only photos no other pack of
+  the same owner lists.
+- **Owner-scoped twice.** Keys are `[ownerId, editionKey]` and `[ownerId, identity]` and every
+  read takes an owner, so another account sees nothing even before the purge; a run captures
+  `backend.ownerScope` and stops writing once it changes. `purgeLocalUserData()` deletes the
+  database.
+- **Limits.** The pack is a last-verified device state, not a backup: browser storage can be
+  evicted (Safari's script-writable storage cap applies outside a Home Screen install), and
+  `navigator.storage.persist()` is only requested as a hint. The SW is unchanged; it serves
+  the app shell offline, the pack store serves the pack.
 
 ### Why line-ups arrive by paste, and why the grabber is base64
 

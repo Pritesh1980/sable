@@ -192,10 +192,9 @@ export const HELP_GROUPS = [
         id: 'conventions',
         question: 'Which conventions are my artists going to?',
         steps: [
-          'More → Radar lists conventions, nearest to Milton Keynes first.',
-          'On a card, tap Edit beside your artists attending to mark who is going.',
-          'Once a line-up is in or someone is marked going, a card says whether the trip is worth it.',
-          'Artist index lists a show’s line-up; Top picks can show your picks in walking order.',
+          'More → Radar lists conventions, nearest to Milton Keynes first. On a card, tap Edit to mark who is going.',
+          'The card then says whether the trip is worth it. Artist index lists the line-up; Top picks can show a walking order.',
+          'Offline pack saves those artists, their photos and linked ideas on this phone, to open at the show with no signal.',
         ],
         image: 'conventions.png',
         guide: '05-conventions-and-studios.md#convention-radar',

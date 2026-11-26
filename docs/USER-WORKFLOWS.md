@@ -299,6 +299,10 @@ flowchart TB
   WIN["Competition winners → paste results"]
   REVIEW["Review award category, place<br/>and matched artist identity"]
   PHOTO["Optionally attach photos<br/>of the winning piece"]
+  PACK["Offline pack → choose artists<br/>and linked ideas → Prepare"]
+  READY{"Every saved photo<br/>read back intact?"}
+  OPEN["At the show, no signal:<br/>Open pack"]
+  RETRY["Not ready / Interrupted<br/>Try again or Resume with signal"]
 
   RADAR --> SOURCE
   SOURCE -- "shipped list" --> SEED --> VIEW
@@ -310,13 +314,21 @@ flowchart TB
   SAVED -- yes --> FLAG --> KEEP
   RADAR --> WIN --> REVIEW --> PHOTO
   REVIEW -- "save this artist" --> SAVED
+  FLAG --> PACK --> READY
+  READY -- yes --> OPEN
+  READY -- no --> RETRY --> READY
 ```
 
 Top picks use your saved artists, rank, known studios and curated choices;
 they do not run CLIP or infer styles for the whole roster. Wildcards are explicitly unjudged suggestions. This is a research
 shortlist, not a mapped walking route.
 
-Imports and winner photos stay on this device. Only artists you explicitly save and
+An offline pack copies the chosen artists' photos and details, their booth from the line-up
+and the linked ideas onto this device, and calls itself ready only after reading every saved
+photo back. It is a last-checked device state, not a guarantee or a backup: browser storage can
+be cleared, so check it again before leaving. Photos linked from other sites are never fetched.
+
+Imports, winner photos and offline packs stay on this device. Only artists you explicitly save and
 attendance flags join library collections, synced only with a remote storage adapter.
 **Clear list** also suppresses the shipped
 seed; a later import makes the list available again. Winner-name matches should be
@@ -364,7 +376,7 @@ flowchart TB
 
 API keys, text size, and the derived Taste Engine index are device-local and are
 not restored by account sync. Neither are the composer draft, imported lineups,
-winners boards or winner photos. The index can be rebuilt from images; provider keys
+winners boards, winner photos or offline show packs (sign-out deletes the packs). The index can be rebuilt from images; provider keys
 must be entered separately on each device.
 
 For supported saved-image removals, **Undo** remains available after closing a viewer

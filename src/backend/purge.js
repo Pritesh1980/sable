@@ -3,6 +3,7 @@ import { DEVICE_COPIES_KEY, STAGED_IMAGES_DB, UPLOAD_OUTBOX_KEY } from '../data/
 import { purgeDirtySidecars } from './dirty'
 import { SHARE_CACHE } from '../sw/shareTarget'
 import { pendingImageJobs } from '../data/imageJobs/pendingJobs'
+import { SHOW_PACKS_DB } from '../data/showPackStore'
 
 // Local caches that hold the signed-in user's data. Cleared on sign-out so the
 // next account on a shared device never sees the previous user's content.
@@ -78,6 +79,9 @@ export async function purgeLocalUserData() {
   // are the only durable copy for real-auth/local-storage accounts, not caches.
   await deleteDatabaseAsync('tattoo-images-v1')
   await deleteDatabaseAsync(STAGED_IMAGES_DB)
+  // Offline show packs (#209): copies of this user's photos, artist notes and
+  // ideas, kept for a convention. Device-local and private, like the rest.
+  await deleteDatabaseAsync(SHOW_PACKS_DB)
   // An uncollected shared screenshot is this user's content sitting in an
   // origin-scoped cache — without this, A shares, closes before collecting,
   // and B signs in and picks up A's image from /share.
