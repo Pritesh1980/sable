@@ -12,6 +12,7 @@ import { Blob } from 'node:buffer'
 import { stageImage } from '../data/imageStaging'
 import { STAGED_IMAGES_DB, UPLOAD_OUTBOX_KEY, DEVICE_COPIES_KEY, readOutbox } from '../data/stagedImageStore'
 import { showPackStore } from '../data/showPackStore'
+import { loadPhotos as loadWinnerPhotos, putPhoto as putWinnerPhoto } from '../data/winnerPhotos'
 
 describe('purgeLocalUserData', () => {
   beforeEach(() => localStorage.clear())
@@ -125,6 +126,23 @@ describe('purgeLocalUserData', () => {
     // The same owner asking again finds nothing: the records went with the database.
     expect(await showPackStore.listPacks('A')).toEqual([])
     expect(await showPackStore.listPhotoIds('A')).toEqual([])
+  })
+
+  // #260: photos of the winning pieces (often of an identifiable person) were
+  // left behind. putPhoto leaves winnerPhotos.js holding its cached connection
+  // open, which is the case that would block a delete by name.
+  it('deletes winner photos, even with the store connection open', async () => {
+    await putWinnerPhoto('w1', 'data:image/png;base64,YQ==')
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    await purgeLocalUserData()
+
+    expect(errSpy).not.toHaveBeenCalledWith(expect.stringContaining('blocked'))
+    errSpy.mockRestore()
+    expect(await loadWinnerPhotos(['w1'])).toEqual(new Map())
+    // The next account can still save photos: the store reopens a fresh database.
+    await putWinnerPhoto('w2', 'data:image/png;base64,Yg==')
+    expect(await loadWinnerPhotos(['w2'])).toEqual(new Map([['w2', 'data:image/png;base64,Yg==']]))
   })
 
   it('preserves device prefs, API keys, and the local simulated remote', async () => {
