@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, act, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router'
 import App from '../App'
 import { AuthProvider } from '../context/AuthContext'
@@ -111,15 +111,22 @@ describe('root and pipeline routes', () => {
     expect(screen.getByText('Add New Artist')).toBeInTheDocument()
     vi.restoreAllMocks()
   })
+  // #257: the wall renders behind this dialog (~2,400 nodes, ~430 buttons), so
+  // an unscoped getByRole('button', { name }) computes every button's
+  // accessible name: ~0.5s each alone and ~1.6s each in a loaded full run,
+  // which pushed this test past 5s. Query inside the dialog instead. The dialog
+  // itself waits on that wall render (~0.9s loaded, near findBy's 1s default),
+  // so it gets the 5s budget the other wall waits in this file use.
   it('holds Save until the destructive share-stash read finishes', async () => {
     let resolve
     takeSharedImage.mockImplementationOnce(() => new Promise((r) => { resolve = r }))
     renderAt('/gallery?shared=1')
-    await screen.findByRole('dialog', { name: 'Add an artist' })
-    fireEvent.change(screen.getByLabelText('Instagram *'), { target: { value: 'fixture.share' } })
-    expect(screen.getByRole('button', { name: 'Save', exact: true })).toBeDisabled()
+    const dialog = await screen.findByRole('dialog', { name: 'Add an artist' }, { timeout: 5000 })
+    const inDialog = within(dialog)
+    fireEvent.change(inDialog.getByLabelText('Instagram *'), { target: { value: 'fixture.share' } })
+    expect(inDialog.getByRole('button', { name: 'Save', exact: true })).toBeDisabled()
     await act(async () => resolve(new File(['fictional'], 'shared.png', { type: 'image/png' })))
-    expect(screen.getByAltText('Staged reference 1')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Save', exact: true })).toBeEnabled()
+    expect(inDialog.getByAltText('Staged reference 1')).toBeInTheDocument()
+    expect(inDialog.getByRole('button', { name: 'Save', exact: true })).toBeEnabled()
   })
 })
