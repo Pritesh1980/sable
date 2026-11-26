@@ -93,8 +93,8 @@ idea, a concept, a saved photo.
 
 - **Two copies on one artist or one idea.** Each copy that can go has **Remove this
   copy**. You choose which copy to remove, confirm, and the other copy stays. **Undo**
-  puts it back where it was. A copy that is favourited, or that has a note or Brief card
-  crop the other copy doesn't share, stays, and the review says why. Remove the other
+  puts it back where it was. A copy that is favourited, or that has a note, Brief card
+  crop or markup the other copy doesn't share, stays, and the review says why. Remove the other
   copy instead.
 - **Copies in different places** (an artist and an idea, or two artists) are listed
   but never changed: that can be on purpose, and the same photo on two artists says
