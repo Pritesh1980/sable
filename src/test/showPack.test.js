@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import {
   defaultPackSelection,
+  formatBytes,
+  formatPackTime,
+  lineupDetail,
   linkedIdeas,
   packArtistChoices,
   packFreshness,
@@ -188,5 +191,29 @@ describe('photoPlaces', () => {
     const places = photoPlaces(plan)
     expect(places.get('path:/images/demo/mora/1.webp')).toEqual(['Mora Vane, photo 2', 'Botanical forearm, photo 2'])
     expect(places.get(`key:${KEY_B}`)).toEqual(['Botanical forearm, photo 1'])
+  })
+})
+
+describe('formatting', () => {
+  it('gives the last-checked time as a day and a clock time', () => {
+    expect(formatPackTime('2026-11-26T12:02:00.000Z')).toMatch(/^26 Nov, \d{2}:\d{2}$/)
+    expect(formatPackTime('2026-11-26T12:02:00.000Z', { time: false })).toBe('26 Nov')
+    expect(formatPackTime('')).toBe('')
+    expect(formatPackTime('not a date')).toBe('')
+  })
+
+  it('gives sizes in KB or MB', () => {
+    expect(formatBytes(10)).toBe('1 KB')
+    expect(formatBytes(300 * 1024)).toBe('300 KB')
+    expect(formatBytes(2.5 * 1024 * 1024)).toBe('2.5 MB')
+  })
+})
+
+describe('lineupDetail', () => {
+  it('keeps what the line-up says besides the booth', () => {
+    expect(lineupDetail('No Regrets Studios, Booth 315A')).toBe('No Regrets Studios')
+    expect(lineupDetail('Booth 12')).toBe('')
+    expect(lineupDetail('Slovakia')).toBe('Slovakia')
+    expect(lineupDetail('')).toBe('')
   })
 })

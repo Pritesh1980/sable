@@ -16,6 +16,7 @@ import { isSameOrigin } from './imageResolver'
 import { getImageNote } from './planning'
 import { indexLineup } from './lineup'
 import { parseBooth } from './showPlan'
+import { trimEndChars } from './textTrim'
 
 const artistLabel = (artist) => artist?.name || (artist?.handle ? `@${artist.handle}` : 'Unnamed artist')
 const text = (value) => (typeof value === 'string' ? value.trim() : '')
@@ -121,6 +122,14 @@ export function planShowPack({ edition = {}, artists = [], ideas = [], entries =
   return { ...plan, signature: packSignature(plan) }
 }
 
+// The rest of a line-up note once its booth is shown on its own: "No Regrets
+// Studios, Booth 315A" -> "No Regrets Studios". A note with no booth stays whole.
+export function lineupDetail(note = '') {
+  const s = String(note || '')
+  const at = s.search(/\bBooth\b/i)
+  return at < 0 ? s.trim() : trimEndChars(s.slice(0, at), ',;:-–—', { whitespace: true })
+}
+
 // FNV-1a over the packed content: a cheap fingerprint of what the pack holds,
 // so a later change to the library (a new photo, an edited idea, a different
 // choice of artists) reads as "changed since you prepared it".
@@ -185,4 +194,19 @@ export function photoPlaces(pack) {
   for (const artist of list(pack?.artists)) artist.photos.forEach((id, i) => add(id, `${artist.label}, photo ${i + 1}`))
   for (const idea of list(pack?.ideas)) idea.photos.forEach((p, i) => add(p.id, `${idea.title}, photo ${i + 1}`))
   return places
+}
+
+// "26 Nov, 14:02" (or "26 Nov"): when a pack was last checked, in the phone's
+// own time zone.
+export function formatPackTime(iso, { time = true } = {}) {
+  const date = new Date(iso)
+  if (!iso || Number.isNaN(date.getTime())) return ''
+  return date.toLocaleString('en-GB', time
+    ? { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }
+    : { day: 'numeric', month: 'short' })
+}
+
+export function formatBytes(bytes = 0) {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }

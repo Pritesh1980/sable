@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { CONVENTIONS, getConventionFavicon, isPastEdition, mergeConventionOverrides, migrateEditionMap, toggleConventionAttendee, viewEdition } from '../data/conventions'
 import { mergeLineupEntries, parseLineup } from '../data/lineup'
 import { curatedPicksFor, mergeLineupSeeds } from '../data/lineupSeeds'
@@ -8,9 +8,13 @@ import { mergeWinnerEntries, winnerKey } from '../data/winners'
 import { deletePhoto, newPhotoId, putPhoto, withPhotoId, withoutPhotoId } from '../data/winnerPhotos'
 import { DEFAULT_STUDIOS, createArtist } from '../data/artists'
 import { buildIcs, requestCalendarDownload } from '../data/calendar'
+import { currentPackOwner, showPackStore } from '../data/showPackStore'
 import ConventionLineup from '../components/ConventionLineup'
 import ConventionWinners from '../components/ConventionWinners'
+import ShowPack from '../components/ShowPack'
+import ShowPackViewer from '../components/ShowPackViewer'
 import Logo from '../components/Logo'
+import useOverlayParam from '../hooks/useOverlayParam'
 
 function DistanceBadge({ distanceMiles }) {
   if (distanceMiles === null || distanceMiles === undefined) {
@@ -215,7 +219,15 @@ function AttendeesEditor({ artists, attendingIds, onToggle, record = false }) {
   )
 }
 
-function HeroCard({ convention, past, current, trip, onPickYear, onAddCalendar, artists, attendingIds, onToggle, lineupProps, winnerProps }) {
+// Offline pack (#209): for a show still to come, or any edition that already
+// has a pack on this phone (so a pack for a show that has passed can still be
+// opened or removed).
+function PackRow({ convention, current, past, packProps }) {
+  if (!packProps || (!(current && !past) && !packProps.pack)) return null
+  return <ShowPack key={`pack-${convention.editionKey}`} convention={convention} {...packProps} />
+}
+
+function HeroCard({ convention, past, current, trip, onPickYear, onAddCalendar, artists, attendingIds, onToggle, lineupProps, winnerProps, packProps }) {
   return (
     <div id={`convention-${convention.id}`} className="bg-gradient-to-br from-accent/10 to-ink-card border border-accent/40 rounded-xs p-6 animate-slide-up">
       <div className="flex items-start gap-4">
@@ -246,6 +258,7 @@ function HeroCard({ convention, past, current, trip, onPickYear, onAddCalendar, 
       )}
       <CalendarAction convention={convention} current={current} past={past} onAddCalendar={onAddCalendar} />
       <AttendeesEditor key={`att-${convention.editionKey}`} artists={artists} attendingIds={attendingIds} onToggle={onToggle} record={!current} />
+      <PackRow convention={convention} current={current} past={past} packProps={packProps} />
       <ConventionLineup
         key={`lineup-${convention.editionKey}`}
         convention={convention}
@@ -264,7 +277,7 @@ function HeroCard({ convention, past, current, trip, onPickYear, onAddCalendar, 
   )
 }
 
-function ConventionCard({ convention, past, current, trip, onPickYear, onAddCalendar, artists, attendingIds, onToggle, lineupProps, winnerProps }) {
+function ConventionCard({ convention, past, current, trip, onPickYear, onAddCalendar, artists, attendingIds, onToggle, lineupProps, winnerProps, packProps }) {
   return (
     <div
       id={`convention-${convention.id}`}
@@ -307,6 +320,7 @@ function ConventionCard({ convention, past, current, trip, onPickYear, onAddCale
       )}
       <CalendarAction convention={convention} current={current} past={past} onAddCalendar={onAddCalendar} />
       <AttendeesEditor key={`att-${convention.editionKey}`} artists={artists} attendingIds={attendingIds} onToggle={onToggle} record={!current} />
+      <PackRow convention={convention} current={current} past={past} packProps={packProps} />
       <ConventionLineup
         key={`lineup-${convention.editionKey}`}
         convention={convention}
@@ -334,9 +348,16 @@ export default function Conventions({
   setConventionLineups = () => {},
   conventionWinners = {},
   setConventionWinners = () => {},
+  ideas = [],
   downloadCalendar = requestCalendarDownload,
   // Injected by tests; the app always renders against the real clock.
   now = new Date(),
+  // Offline packs (#209). Injected by tests; the app uses the device store and
+  // the signed-in owner.
+  packStore = showPackStore,
+  getPackOwner = currentPackOwner,
+  readPackPhoto,
+  packClock,
 }) {
   // Each show as its current edition (#178). Everything below is keyed by
   // edition (`big-london@2027`), never by show id alone: attendance, line-ups
@@ -352,6 +373,25 @@ export default function Conventions({
 
   // Which edition each card is showing, by show id. Unset means current.
   const [years, setYears] = useState({})
+
+  // Offline packs on this phone, by edition key, for whoever is signed in. The
+  // owner is captured once: the app shell remounts for a different account.
+  const [packOwner] = useState(() => getPackOwner())
+  const [packState, setPackState] = useState({ loaded: false, packs: {} })
+  const [packReads, setPackReads] = useState(0)
+  const reloadPacks = useCallback(() => setPackReads((n) => n + 1), [])
+  useEffect(() => {
+    let live = true
+    const read = packOwner ? packStore.listPacks(packOwner.ownerId) : Promise.resolve([])
+    read
+      .then((list) => { packOwner?.assertCurrent(); return list })
+      .catch(() => [])
+      .then((list) => {
+        if (live) setPackState({ loaded: true, packs: Object.fromEntries(list.map((p) => [p.editionKey, p])) })
+      })
+    return () => { live = false }
+  }, [packOwner, packStore, packReads])
+  const packView = useOverlayParam('pack')
 
   function toggle(key, artistId) {
     setConventionOverrides((prev) =>
@@ -568,6 +608,21 @@ export default function Conventions({
       onToggle: (artistId) => toggle(view.editionKey, artistId),
       lineupProps,
       winnerProps: winnerPropsFor(view.editionKey),
+      packProps: {
+        artists,
+        ideas,
+        entries: lineupProps.entries,
+        attendingIds: view.attendingArtistIds,
+        studios: DEFAULT_STUDIOS,
+        pack: packState.packs[view.editionKey] || null,
+        loaded: packState.loaded,
+        owner: packOwner,
+        store: packStore,
+        readPhoto: readPackPhoto,
+        clock: packClock,
+        onPackChange: reloadPacks,
+        onOpen: (key) => packView.open(key),
+      },
     }
   }
 
@@ -624,6 +679,15 @@ export default function Conventions({
           ))}
         </div>
       </div>
+      {packView.value && (
+        <ShowPackViewer
+          pack={packState.packs[packView.value] || null}
+          loaded={packState.loaded}
+          ownerId={packOwner?.ownerId}
+          store={packStore}
+          onClose={packView.close}
+        />
+      )}
     </div>
   )
 }
