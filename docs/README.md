@@ -97,6 +97,9 @@ records, not activation instructions. The shared guide screenshots use fictional
 - **[On-body renders with Blender](BLENDER.md)** — wrap a concept round a 3D forearm (a
   smooth tube, or MakeHuman's real arm with its hand) at a true size in cm, render three
   angles, and import them back as results.
+- **[Relief STL prep with Blender](BLENDER-RELIEF.md)** — check and repair exported
+  rectangular relief, line-art or lithophane STLs, decimate dense meshes, add an optional
+  base plate or border frame, and render a raking-light preview before slicing.
 
 ---
 
