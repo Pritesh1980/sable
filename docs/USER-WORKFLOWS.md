@@ -376,7 +376,7 @@ flowchart TB
 
 API keys, text size, and the derived Taste Engine index are device-local and are
 not restored by account sync. Neither are the composer draft, imported lineups,
-winners boards, winner photos or offline show packs (sign-out deletes the packs). The index can be rebuilt from images; provider keys
+winners boards, winner photos or offline show packs (sign-out deletes the winners, their photos and the packs). The index can be rebuilt from images; provider keys
 must be entered separately on each device.
 
 For supported saved-image removals, **Undo** remains available after closing a viewer
@@ -396,5 +396,5 @@ reference and is counted as skipped, so that backup is not complete. Download an
 restore in a fresh browser context before relying on it.
 Account sync is available only when a remote storage adapter is configured.
 Settings backup covers the five account collections, not the device-only convention
-imports or winner photos. Sign-out clears winner-board references but currently leaves
-the photo bytes in IndexedDB; it is not a complete photo-erasure operation.
+imports or winner photos. Sign-out deletes the winners boards and the winner-photo
+database (#260); that removes them from the app, but it is not secure erasure of the disk.

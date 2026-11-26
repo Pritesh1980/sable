@@ -582,12 +582,13 @@ app. A contract test asserts `winnerPhotos.js` never calls `localStorage`.
 | Record holds | `{ key }` canonical ref | `photoIds: []` |
 | Bytes live in | blob storage, via codec | IndexedDB, directly |
 | Split exists because | sync cost | localStorage quota |
-| Sign-out behaviour | Account data retained by backend; display cache purged | Board references purged; photo bytes currently remain |
+| Sign-out behaviour | Account data retained by backend; display cache purged | Board references and the photo database purged |
 
-The current `purgeLocalUserData()` does **not** invoke `clearWinnerPhotos()` or delete
-the winner-photo database. Removing board references is not secure byte erasure;
-orphaned winner images can remain on the device. This is an implementation gap, not a
-promised cleanup guarantee.
+`purgeLocalUserData()` deletes the winner-photo database by name (#260), like the
+staged-image and show-pack stores. `winnerPhotos.js` caches one connection for the
+session, so it closes that handle and forgets it on `versionchange`; otherwise the app's
+own connection would block the delete and the photos would outlive the account. Deleting
+the database is not secure byte erasure of the underlying disk.
 
 ---
 
@@ -1124,9 +1125,6 @@ stores start from the purged cache, and stopping A's discards their in-flight pu
 One narrow gap remains. A push A's store had already started, for instance parked in an
 image upload, is not cancelled, and both adapters attribute a write to whoever is signed
 in when it lands.
-
-**Winner-photo cleanup is incomplete.** Sign-out removes winners metadata but the
-current purge path leaves the separate photo database untouched (§3).
 
 **Full offline needs one online visit.** Assets are precached from a build-time
 manifest, but on a first-ever visit they load before the worker takes control. The app

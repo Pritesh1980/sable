@@ -4,6 +4,7 @@ import { purgeDirtySidecars } from './dirty'
 import { SHARE_CACHE } from '../sw/shareTarget'
 import { pendingImageJobs } from '../data/imageJobs/pendingJobs'
 import { SHOW_PACKS_DB } from '../data/showPackStore'
+import { WINNER_PHOTOS_DB } from '../data/winnerPhotos'
 
 // Local caches that hold the signed-in user's data. Cleared on sign-out so the
 // next account on a shared device never sees the previous user's content.
@@ -82,6 +83,9 @@ export async function purgeLocalUserData() {
   // Offline show packs (#209): copies of this user's photos, artist notes and
   // ideas, kept for a convention. Device-local and private, like the rest.
   await deleteDatabaseAsync(SHOW_PACKS_DB)
+  // Photos of competition winners (#260): the bytes behind the
+  // tattoo_convention_winners ids cleared above. Often of an identifiable person.
+  await deleteDatabaseAsync(WINNER_PHOTOS_DB)
   // An uncollected shared screenshot is this user's content sitting in an
   // origin-scoped cache — without this, A shares, closes before collecting,
   // and B signs in and picks up A's image from /share.

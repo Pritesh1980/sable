@@ -17,23 +17,33 @@
 
 import { randomId } from './randomId'
 
-const DB_NAME = 'tattoo-winner-photos-v1'
+export const WINNER_PHOTOS_DB = 'tattoo-winner-photos-v1'
 const STORE = 'photos'
 
 // A post carries the piece from a few angles plus the trophy shot. More than
 // this and it stops being a record of what won and starts being an album.
 export const MAX_PHOTOS_PER_WINNER = 6
 
-// One cached connection per session — also lets clearWinnerPhotos close it, so
-// deleteDatabase isn't blocked forever by our own open handle.
+// One cached connection per session, closed and forgotten on versionchange so
+// sign-out's deleteDatabase isn't blocked by our own open handle.
 let dbPromise = null
 
 function openDB() {
   if (!dbPromise) {
     dbPromise = new Promise((resolve, reject) => {
-      const req = indexedDB.open(DB_NAME, 1)
+      const req = indexedDB.open(WINNER_PHOTOS_DB, 1)
       req.onupgradeneeded = (e) => e.target.result.createObjectStore(STORE)
-      req.onsuccess = (e) => resolve(e.target.result)
+      req.onsuccess = (e) => {
+        const db = e.target.result
+        // Sign-out deletes this database by name (#260). Let go of the cached
+        // handle when it does, or our own connection blocks the delete and the
+        // photos outlive the account. The next call opens a fresh database.
+        db.onversionchange = () => {
+          db.close()
+          dbPromise = null
+        }
+        resolve(db)
+      }
       req.onerror = () => reject(req.error)
     })
   }
