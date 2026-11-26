@@ -85,7 +85,7 @@ with Reorder **off** — that is the view people arrive in.
    | `/gallery?mode=manage` | `manage-list.png`, `manage-artist-expanded.png` |
    | `/brief` | `brief-list.png`, `brief-idea-editor.png` |
    | `/brief?tab=boards` | `boards-list.png`, `board-editor.png` |
-   | `/conventions` | `conventions.png` |
+   | `/conventions` | `conventions.png`, `show-pack.png`, `show-pack-viewer.png` (see `captureShowPackGuide.mjs` below) |
    | `/studios` | `studios.png` |
    | `/concepts` | `concepts.png` (desktop, composer open), `concept-card.png` (desktop, concept full-screen with `I` panel open) |
    | `/settings` | `settings.png` |
@@ -102,6 +102,13 @@ For Concepts → Ideas guide captures, run
 `GUIDE_URL=http://localhost:15484 node scripts/captureConceptIdeasGuide.mjs` against
 an isolated local-backend server. It refreshes `concept-idea-picker.png` and
 `concept-idea-draft.png` at 430 × 920 using fictional Japanese-inspired demo images.
+
+For Radar and its Offline pack (#209), run
+`GUIDE_URL=http://localhost:15519 node scripts/captureShowPackGuide.mjs` against an isolated
+local-backend server (a `vite preview` of a local-env build works too). With the clock pinned
+to 26 Nov 2026 it refreshes `conventions.png`, then marks two demo artists as going to UK
+Tattoo Fest, prepares their pack and captures `show-pack.png` (the ready card) and
+`show-pack-viewer.png` (the pack opened), all at 430 × 920.
 
 For the 3D arm guide capture, run
 `GUIDE_URL=http://localhost:15494 node scripts/captureArmGuide.mjs` against an isolated

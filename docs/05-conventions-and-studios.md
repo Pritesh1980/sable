@@ -60,6 +60,62 @@ next year's. An artist's detail card lists those past editions under **Attended*
 > booking travel. Once the latest edition in the app is over, its card says *This edition
 > has passed* under the dates; the order (nearest first) doesn't change.
 
+### Offline pack
+
+A convention hall often has no signal, which is exactly when you want to show an artist the
+reference photos you came with. **Offline pack** saves a show's artists, their photos and the
+ideas linked to them on this phone, so they open with no connection at all.
+
+![The Offline pack on a Radar card, ready](../public/guide/show-pack.png)
+
+It sits on every upcoming show's card, under *Your artists attending*. Tap it, and:
+
+1. **Choose who goes in.** Sable offers the artists you marked as going (already chosen) and
+   any other saved artists on the show's line-up, then your open ideas linked to the chosen
+   artists (you link an artist in the idea editor). Tap to add or drop any of them. A done idea
+   isn't offered.
+2. Tap **Prepare pack** while you have signal. It saves one photo at a time; **Stop** halts it
+   without losing what is already saved.
+3. Sable then reads every saved photo back off the phone, and only if all of them are there and
+   unchanged does the card say **Ready offline · checked** with the date and time it checked,
+   how many photos it saved and how much space they take.
+4. At the show, tap **Open pack**. A row of buttons under the title jumps straight to an
+   artist or to the ideas. Each artist shows their Instagram handle, rank, the **booth** the
+   show's line-up gives (or *No booth in the line-up*: Sable never guesses one), their styles
+   and your notes, then their photos. Tap a photo to see it full size, and tap it again to
+   close it. Your linked ideas follow, with their description and the notes on their
+   reference photos.
+
+![An offline pack, opened with no signal](../public/guide/show-pack-viewer.png)
+
+**What the other states mean.** A pack is never called ready unless that check passed.
+
+- **Not ready** names each photo it couldn't save and why: no connection, a download cut
+  short, a photo that couldn't be read, or **storage full** (it stops there; free some space or
+  choose fewer artists). **Try again** fetches only what is missing.
+- **Interrupted** means a run stopped before it finished: you tapped Stop, left the page, or
+  the app was closed or reloaded. **Resume** carries on from what was saved.
+- **Changed since you prepared it** appears when an artist in the pack gained or lost a photo
+  or an idea was edited. **Refresh pack** brings it up to date, downloading only the new
+  photos. Tapping an artist or idea on a prepared pack changes only what the next refresh
+  saves; it says *Not saved to the pack yet*, and **Undo** puts the choice back.
+- A photo that is a link to another site (an external portfolio address rather than a saved
+  copy) is listed as *on another site*. Sable doesn't fetch it: that site would refuse to hand
+  the photo over, and it isn't Sable's to take. Save a screenshot of it to the artist instead.
+
+**Check again** re-reads the saved photos (no network needed) and updates the time. Opening
+the panel or the pack does the same, so a photo the browser has since cleared shows as *Not on
+this phone* (or *Copy damaged*) and the pack stops saying it's ready. **Remove pack** asks first, then deletes the pack's copies from this
+phone. Your artists, ideas and their photos are untouched, and a photo another show's pack
+also uses stays for that pack.
+
+**Storage and its limits.** A pack lives on this phone only, in the browser's own storage. It
+is not synced and not a backup. The browser can clear it when the phone runs short of space
+(in Safari on an iPhone, a site you haven't visited for about a week of browsing can lose its
+storage; Sable added to your Home Screen keeps its own), so tap **Check again** before you set
+off. The card shows how much space the pack takes. Signing out deletes every pack on this
+phone, so the next account to sign in finds none.
+
 ### Artist index
 
 A big show publishes hundreds of artists as one long alphabetical list. **Artist index** on

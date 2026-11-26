@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from 'react'
 import useDialogFocus, { useEscapeToClose } from '../hooks/useDialogFocus'
 import { formatPackTime, lineupDetail, packStatus } from '../data/showPack'
+import { verifyPack } from '../data/showPackPrepare'
 
 // An offline show pack, opened (#209). Everything here comes from the pack
 // store on this phone: the text from the pack's snapshot, the photos from the
@@ -15,37 +16,47 @@ const STATE_LINE = {
   preparing: 'Still saving',
 }
 
-function useStoredPhotos(pack, ownerId, store) {
-  const [photos, setPhotos] = useState({ for: null, urls: new Map() })
+// Opening a pack re-reads its stored bytes first (the same check as Check
+// again), so what it claims is about the phone now, not the last check. Only
+// photos that pass get shown; the rest say why not.
+function useCheckedPack(pack, owner, store, clock) {
+  const [state, setState] = useState({ for: null, checked: null, urls: new Map() })
   useEffect(() => {
-    if (!pack || !ownerId || !store) return undefined
+    if (!pack || !owner || !store) return undefined
     let live = true
     const made = []
     ;(async () => {
+      let checked
+      try {
+        checked = await verifyPack(pack, { store, assertCurrent: owner.assertCurrent, ...(clock ? { now: clock } : {}) })
+      } catch {
+        checked = { ...pack, verification: null }
+      }
+      const present = new Set(checked.verification?.present || [])
       const urls = new Map()
       for (const photo of pack.photos) {
-        if (photo.external) continue
+        if (!present.has(photo.id)) continue
         try {
-          const record = await store.getPhoto(ownerId, photo.id)
+          const record = await store.getPhoto(owner.ownerId, photo.id)
           if (!live) return
-          if (record?.bytes?.byteLength && record.bytes.byteLength === record.size) {
+          if (record?.bytes?.byteLength) {
             const url = URL.createObjectURL(new Blob([record.bytes], { type: record.type }))
             made.push(url)
             urls.set(photo.id, url)
           }
-        } catch { /* reported below as not on this phone */ }
+        } catch { /* shown as not on this phone */ }
       }
-      if (live) setPhotos({ for: pack, urls })
+      if (live) setState({ for: pack, checked, urls })
     })()
     return () => {
       live = false
       for (const url of made) URL.revokeObjectURL(url)
     }
-  }, [pack, ownerId, store])
-  return photos.for === pack ? photos.urls : null
+  }, [pack, owner, store, clock])
+  return state.for === pack ? state : null
 }
 
-function Tile({ photo, src, label, onOpen }) {
+function Tile({ photo, src, damaged = false, label, onOpen }) {
   const box = 'aspect-square w-full rounded-xs overflow-hidden bg-ink-muted'
   if (photo?.external) {
     return (
@@ -54,11 +65,12 @@ function Tile({ photo, src, label, onOpen }) {
       </div>
     )
   }
-  if (src === undefined) return <div aria-busy="true" aria-label={`${label}: loading`} className={box} />
+  if (src === undefined) return <div aria-busy="true" aria-label={`${label}: checking`} className={box} />
   if (!src) {
+    const text = damaged ? 'Copy damaged' : 'Not on this phone'
     return (
-      <div role="img" aria-label={`${label}: not on this phone`} className={`${box} flex items-center justify-center p-2 text-center`}>
-        <span className="text-[0.625rem] font-mono tracking-widest uppercase text-cream-muted/90">Not on this phone</span>
+      <div role="img" aria-label={`${label}: ${text.toLowerCase()}`} className={`${box} flex items-center justify-center p-2 text-center`}>
+        <span className="text-[0.625rem] font-mono tracking-widest uppercase text-cream-muted/90">{text}</span>
       </div>
     )
   }
@@ -69,7 +81,7 @@ function Tile({ photo, src, label, onOpen }) {
   )
 }
 
-function Photos({ ids, byId, urls, labelFor, notes = [], onOpen }) {
+function Photos({ ids, byId, urls, damaged, labelFor, notes = [], onOpen }) {
   if (!ids.length) return <p className="text-xs font-mono text-cream-muted/80 mt-2">No photos.</p>
   return (
     <ul className="grid grid-cols-2 gap-2 mt-3">
@@ -77,7 +89,7 @@ function Photos({ ids, byId, urls, labelFor, notes = [], onOpen }) {
         const label = labelFor(i)
         return (
           <li key={`${id}-${i}`}>
-            <Tile photo={byId.get(id)} src={urls ? urls.get(id) || '' : undefined} label={label} onOpen={onOpen} />
+            <Tile photo={byId.get(id)} src={urls ? urls.get(id) || '' : undefined} damaged={damaged.has(id)} label={label} onOpen={onOpen} />
             {notes[i] && <p className="text-[0.6875rem] font-body text-cream-muted/90 mt-1">{notes[i]}</p>}
           </li>
         )
@@ -99,22 +111,31 @@ function Lightbox({ photo, onClose }) {
         <p className="text-xs font-mono text-cream-muted/90 truncate py-3">{photo.label}</p>
         <button type="button" onClick={onClose} className="min-h-11 min-w-11 px-2 text-sm font-body text-cream-muted hover:text-cream">Close</button>
       </div>
-      <div className="flex-1 min-h-0 flex items-center justify-center p-2">
-        <img src={photo.src} alt={photo.label} className="max-w-full max-h-full object-contain" />
+      {/* Tap anywhere to close: one-handed, the corner button is a stretch. */}
+      <div className="relative flex-1 min-h-0 flex items-center justify-center p-2">
+        <button type="button" onClick={onClose} aria-label="Close photo" className="absolute inset-0 w-full h-full focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent" />
+        <img src={photo.src} alt={photo.label} className="relative pointer-events-none max-w-full max-h-full object-contain" />
       </div>
     </div>
   )
 }
 
-export default function ShowPackViewer({ pack = null, loaded = true, ownerId, store, onClose }) {
+export default function ShowPackViewer({ pack = null, loaded = true, owner = null, store, clock, onClose }) {
   const focusRef = useDialogFocus(true)
   const escapeRef = useEscapeToClose(onClose)
   const titleId = useId()
-  const urls = useStoredPhotos(pack, ownerId, store)
+  const opened = useCheckedPack(pack, owner, store, clock)
+  const urls = opened?.urls || null
+  const damaged = new Set(opened?.checked?.verification?.damaged || [])
   const [zoomed, setZoomed] = useState(null)
   const byId = new Map((pack?.photos || []).map((p) => [p.id, p]))
-  const status = packStatus(pack)
+  const status = opened ? packStatus(opened.checked) : null
   const names = new Map((pack?.artists || []).map((a) => [a.id, a.label]))
+  const anchor = (kind, id) => `${titleId}-${kind}-${id}`.replace(/[^\w-]/g, '_')
+  const jumps = [
+    ...(pack?.artists || []).map((a) => ({ id: anchor('artist', a.id), label: a.booth ? `${a.label} · ${a.booth}` : a.label })),
+    ...(pack?.ideas?.length ? [{ id: anchor('ideas', 'all'), label: 'Ideas' }] : []),
+  ]
 
   return (
     <div
@@ -130,6 +151,24 @@ export default function ShowPackViewer({ pack = null, loaded = true, ownerId, st
           </div>
           <button type="button" onClick={onClose} aria-label="Close offline pack" className="min-h-11 min-w-11 px-2 text-sm font-body text-cream-muted hover:text-cream shrink-0">Close</button>
         </div>
+        {jumps.length > 1 && (
+          // Straight to an artist (or the ideas) without scrolling past everyone else.
+          <nav aria-label="Jump to" className="mx-auto max-w-3xl pb-2 overflow-x-auto">
+            <ul className="flex gap-1.5 w-max">
+              {jumps.map((jump) => (
+                <li key={jump.id}>
+                  <button
+                    type="button"
+                    onClick={() => globalThis.document?.getElementById(jump.id)?.scrollIntoView({ block: 'start' })}
+                    className="min-h-11 px-3 rounded-xs border border-ink-border text-[0.6875rem] font-mono text-cream-muted tracking-wide whitespace-nowrap hover:text-cream hover:border-cream-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                  >
+                    {jump.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
       </header>
 
       <div className="mx-auto max-w-3xl px-4 pb-24">
@@ -142,15 +181,17 @@ export default function ShowPackViewer({ pack = null, loaded = true, ownerId, st
             <p className="text-xs font-mono text-cream-muted/90 mt-4">
               {[pack.edition?.dates, pack.edition?.location].filter(Boolean).join(' · ')}
             </p>
-            <p role="status" className={`text-xs font-mono mt-1 ${status.state === 'ready' ? 'text-accent' : 'text-cream'}`}>
-              {STATE_LINE[status.state] || ''}{status.checkedAt ? ` · checked ${formatPackTime(status.checkedAt)}` : ''}
+            <p role="status" className={`text-xs font-mono mt-1 ${status?.state === 'ready' ? 'text-accent' : 'text-cream'}`}>
+              {status
+                ? `${STATE_LINE[status.state] || ''}${status.checkedAt ? ` · checked ${formatPackTime(status.checkedAt)}` : ''}`
+                : 'Checking the photos on this phone…'}
             </p>
 
             <section aria-labelledby={`${titleId}-artists`} className="mt-6">
               <h3 id={`${titleId}-artists`} className="text-[0.625rem] font-mono text-cream-muted tracking-widest uppercase">Artists</h3>
               {pack.artists.length === 0 && <p className="text-xs font-mono text-cream-muted/80 mt-2">No artists in this pack.</p>}
               {pack.artists.map((artist) => (
-                <article key={artist.id} className="border-t border-ink-border pt-4 mt-4">
+                <article key={artist.id} id={anchor('artist', artist.id)} className="border-t border-ink-border pt-4 mt-4 scroll-mt-36">
                   <h4 className="font-display text-2xl text-cream leading-tight">{artist.label}</h4>
                   <p className="text-xs font-mono text-cream-muted/90 mt-1">
                     {[artist.handle && `@${artist.handle}`, artist.rank && `#${artist.rank} in your ranking`].filter(Boolean).join(' · ')}
@@ -165,13 +206,13 @@ export default function ShowPackViewer({ pack = null, loaded = true, ownerId, st
                   {artist.tags.length > 0 && <p className="text-[0.6875rem] font-mono text-cream-muted/90 tracking-wide mt-1">{artist.tags.join(' · ')}</p>}
                   {artist.styleNote && <p className="text-sm font-body text-cream-muted leading-relaxed mt-2">{artist.styleNote}</p>}
                   {artist.notes && <p className="text-sm font-body text-cream leading-relaxed mt-2">{artist.notes}</p>}
-                  <Photos ids={artist.photos} byId={byId} urls={urls} labelFor={(i) => `${artist.label}, photo ${i + 1}`} onOpen={setZoomed} />
+                  <Photos ids={artist.photos} byId={byId} urls={urls} damaged={damaged} labelFor={(i) => `${artist.label}, photo ${i + 1}`} onOpen={setZoomed} />
                 </article>
               ))}
             </section>
 
             {pack.ideas.length > 0 && (
-              <section aria-labelledby={`${titleId}-ideas`} className="mt-8">
+              <section id={anchor('ideas', 'all')} aria-labelledby={`${titleId}-ideas`} className="mt-8 scroll-mt-36">
                 <h3 id={`${titleId}-ideas`} className="text-[0.625rem] font-mono text-cream-muted tracking-widest uppercase">Ideas</h3>
                 {pack.ideas.map((idea) => (
                   <article key={idea.id} className="border-t border-ink-border pt-4 mt-4">
@@ -181,7 +222,7 @@ export default function ShowPackViewer({ pack = null, loaded = true, ownerId, st
                     </p>
                     {idea.description && <p className="text-sm font-body text-cream-muted leading-relaxed mt-2">{idea.description}</p>}
                     <Photos
-                      ids={idea.photos.map((p) => p.id)} notes={idea.photos.map((p) => p.note)} byId={byId} urls={urls}
+                      ids={idea.photos.map((p) => p.id)} notes={idea.photos.map((p) => p.note)} byId={byId} urls={urls} damaged={damaged}
                       labelFor={(i) => `${idea.title}, photo ${i + 1}`} onOpen={setZoomed}
                     />
                   </article>

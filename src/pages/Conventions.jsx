@@ -683,8 +683,9 @@ export default function Conventions({
         <ShowPackViewer
           pack={packState.packs[packView.value] || null}
           loaded={packState.loaded}
-          ownerId={packOwner?.ownerId}
+          owner={packOwner}
           store={packStore}
+          clock={packClock}
           onClose={packView.close}
         />
       )}

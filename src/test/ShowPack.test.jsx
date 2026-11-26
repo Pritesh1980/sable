@@ -145,6 +145,24 @@ describe('Offline pack on a Radar card', () => {
     expect(within(hero()).getByRole('button', { name: 'Refresh pack' })).toBeInTheDocument()
   })
 
+  it('a chip tapped on a ready pack is not saved until a refresh, and can be undone', async () => {
+    await preparedFor()
+    renderRadar({ props: { conventionOverrides: { [EDITION]: ['mora', 'vesper'] } } })
+    await openPanel()
+    const card = within(hero())
+    expect(await card.findByText(/Ready offline/)).toBeInTheDocument()
+    // Ready and current: Open is the one primary action, above the choices.
+    const buttons = card.getAllByRole('button').map((b) => b.textContent)
+    expect(buttons.indexOf('Open pack')).toBeLessThan(buttons.indexOf('Vesper Ash'))
+
+    fireEvent.click(card.getByRole('button', { name: 'Vesper Ash' }))
+    expect(card.getByText(/Not saved to the pack yet/)).toBeInTheDocument()
+    expect(card.queryByText(/Changed since you prepared it/)).toBeNull()
+    fireEvent.click(card.getByRole('button', { name: 'Undo' }))
+    expect(card.queryByText(/Not saved to the pack yet/)).toBeNull()
+    expect(card.getByRole('button', { name: 'Vesper Ash' })).toHaveAttribute('aria-pressed', 'false')
+  })
+
   it('removes only the pack, after asking', async () => {
     await preparedFor()
     renderRadar()
@@ -152,6 +170,9 @@ describe('Offline pack on a Radar card', () => {
     const card = within(hero())
     fireEvent.click(await card.findByRole('button', { name: 'Remove pack' }))
     expect(card.getByText(/Your artists, ideas and photos stay as they are/)).toBeInTheDocument()
+    // The safe choice comes first.
+    const confirmButtons = card.getAllByRole('button').map((b) => b.textContent)
+    expect(confirmButtons.indexOf('Cancel')).toBeLessThan(confirmButtons.indexOf('Remove'))
     fireEvent.click(card.getByRole('button', { name: 'Remove' }))
 
     await waitFor(() => expect(packToggle()).toHaveTextContent(/not prepared/i))
@@ -202,6 +223,21 @@ describe('Opening a pack', () => {
     await store.deletePhotos('A', ['path:/images/demo/mora/1.webp'])
     const dialog = within(await openViewer())
     await waitFor(() => expect(dialog.getAllByRole('img', { name: /not on this phone/i })).toHaveLength(2))
+  })
+
+  // Review finding (codex): opened straight from a link, the viewer showed
+  // the last check's "Ready" over a photo that had since gone or changed.
+  it('re-reads the bytes on open: a photo changed since the last check is not shown and the pack is not ready', async () => {
+    await preparedFor()
+    const record = await store.getPhoto('A', `key:${KEY}`)
+    const same = new Uint8Array(record.bytes.byteLength).fill(120)
+    await store.putPhoto({ ...record, bytes: same.buffer })
+    const dialog = within(await openViewer())
+
+    expect(await dialog.findByText(/Not ready/)).toBeInTheDocument()
+    expect(dialog.queryByText(/Ready offline/)).toBeNull()
+    expect(dialog.getByRole('img', { name: /Mora Vane, photo 1: copy damaged/ })).toBeInTheDocument()
+    expect((await store.getPack('A', EDITION)).verification.damaged).toEqual([`key:${KEY}`])
   })
 
   it('opens a photo full size; Escape closes the photo first, then the pack', async () => {

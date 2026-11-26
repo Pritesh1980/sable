@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, afterEach } from 'vitest'
+import { clearBlobUrls, registerBlobUrl } from '../data/blobUrls'
 import {
   defaultPackSelection,
   formatBytes,
@@ -115,10 +116,22 @@ describe('planShowPack', () => {
     expect(plan.artists[0].photos).toEqual([`key:${KEY_A}`, 'path:/images/demo/mora/1.webp', 'url:https://cdn.example.com/x.jpg'])
   })
 
+  // Review finding (codex): a display url resolved from a key this session
+  // goes back to its key, so an expiring url is never what the pack keeps.
+  it('turns a known display url back into its key', () => {
+    registerBlobUrl(KEY_B, 'https://storage.example.com/signed/b.jpg?token=secret')
+    const legacy = ideas.map((i) => (i.id === 'fern' ? { ...i, images: [{ url: 'https://storage.example.com/signed/b.jpg?token=secret', note: 'n' }] } : i))
+    const packed = planShowPack({ edition, artists, ideas: legacy, entries, studios, selection: { artistIds: [], ideaIds: ['fern'] } })
+    expect(packed.photos).toEqual([{ id: `key:${KEY_B}`, ref: { key: KEY_B }, external: false }])
+    expect(JSON.stringify(packed)).not.toContain('token=secret')
+  })
+
   it('never stores a resolved display url', () => {
     expect(JSON.stringify(plan)).not.toMatch(/blob:|data:/)
   })
 })
+
+afterEach(() => clearBlobUrls())
 
 describe('packFreshness', () => {
   const selection = { artistIds: ['mora'], ideaIds: ['fern'] }

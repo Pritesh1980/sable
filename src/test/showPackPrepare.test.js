@@ -164,6 +164,28 @@ describe('preparePack', () => {
     expect(packStatus(done).state).toBe('ready')
   })
 
+  // Review finding (codex): a Stop during the final read-back still committed
+  // the run as done.
+  it('a Stop during the final read-back leaves the pack interrupted', async () => {
+    const store = freshStore()
+    const controller = new AbortController()
+    let readingBack = false
+    const watched = {
+      ...store,
+      getPhoto: async (...args) => {
+        const record = await store.getPhoto(...args)
+        if (readingBack) controller.abort()
+        return record
+      },
+    }
+    const run = preparePack(plan(), {
+      ownerId: OWNER, store: watched, readPhoto: reader(), now: clock(), signal: controller.signal,
+      onProgress: (done, total) => { if (done === total) readingBack = true },
+    })
+    await expect(run).rejects.toMatchObject({ name: 'AbortError' })
+    expect(packStatus(await store.getPack(OWNER, 'uk-tattoo-fest@2027')).state).toBe('interrupted')
+  })
+
   it('stops writing as soon as the signed-in owner changes', async () => {
     const store = freshStore()
     let current = true
@@ -277,6 +299,27 @@ describe('readPhotoBytes', () => {
   it('calls a body cut off mid-read partial', async () => {
     const cut = { ok: true, status: 200, headers: new Headers(), blob: () => Promise.reject(new TypeError('network error')) }
     expect(await readPhotoBytes('images/a.webp', { resolve, fetchImpl: async () => cut })).toEqual({ error: 'partial' })
+  })
+
+  // Review finding (codex): a 206 is a slice of the photo, and its length
+  // header describes the slice, so the length check alone can't catch it.
+  it('calls a range response partial', async () => {
+    const slice = { ok: true, status: 206, headers: new Headers({ 'content-length': '3' }), blob: async () => image('abc') }
+    expect(await readPhotoBytes('images/a.webp', { resolve, fetchImpl: async () => slice })).toEqual({ error: 'partial' })
+    const ranged = response(image('abc'), { headers: { 'content-range': 'bytes 0-2/100' } })
+    expect(await readPhotoBytes('images/a.webp', { resolve, fetchImpl: async () => ranged })).toEqual({ error: 'partial' })
+  })
+
+  // Review finding (codex): a same-origin path must not follow a redirect to
+  // another site. A blob key's storage url is the backend's own business.
+  it('keeps a same-origin photo request same-origin', async () => {
+    const fetchImpl = vi.fn(async () => response(image('abc', 'image/webp')))
+    await readPhotoBytes('images/demo/mora/1.webp', { resolve, fetchImpl })
+    expect(fetchImpl.mock.calls[0][1]).toMatchObject({ mode: 'same-origin' })
+    await readPhotoBytes({ key: KEY }, { resolve: async () => 'https://storage.example.com/signed?token=x', fetchImpl })
+    expect(fetchImpl.mock.calls[1][1]?.mode).toBeUndefined()
+    await readPhotoBytes({ key: KEY }, { resolve: async () => 'data:image/jpeg;base64,YQ==', fetchImpl })
+    expect(fetchImpl.mock.calls[2][1]?.mode).toBeUndefined()
   })
 
   it('tells offline from a missing photo', async () => {

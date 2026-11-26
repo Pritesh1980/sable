@@ -11,6 +11,8 @@ import { getStoragePersistence } from '../data/storagePersistence'
 // src/data/showPackPrepare.js; this panel only reports what the store says.
 
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
+const sameIds = (a = [], b = []) => a.length === b.length && a.every((id) => b.includes(id))
+const sameSelection = (a, b) => sameIds(a?.artistIds, b?.artistIds) && sameIds(a?.ideaIds, b?.ideaIds)
 
 const HEADER = {
   none: 'Not prepared',
@@ -40,6 +42,7 @@ const REASON = {
 
 const primaryClass = 'inline-flex items-center min-h-11 px-3 text-[0.6875rem] font-mono text-accent tracking-widest uppercase border border-accent/40 rounded-xs hover:border-accent hover:text-accent-hover transition-colors disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
 const secondaryClass = 'inline-flex items-center min-h-11 px-3 text-[0.625rem] font-mono text-cream-muted tracking-widest uppercase hover:text-cream transition-colors disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
+const neutralClass = 'inline-flex items-center min-h-11 px-3 text-[0.6875rem] font-mono text-cream tracking-widest uppercase border border-ink-border rounded-xs hover:border-cream-muted transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent'
 const chipClass = (on) => `min-h-11 px-3 rounded-xs border text-[0.6875rem] font-mono tracking-wide text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
   on ? 'border-accent bg-accent/10 text-accent' : 'border-ink-border text-cream-muted hover:border-cream-muted hover:text-cream'
 }`
@@ -285,12 +288,83 @@ export default function ShowPack({
   const primaryLabel = { none: 'Prepare pack', interrupted: 'Resume', incomplete: 'Try again' }[status.state] || 'Refresh pack'
   const header = loaded ? HEADER[status.state] : 'Loading…'
   const nothingToPack = plan.artists.length === 0 && plan.ideas.length === 0
+  // A tap on a chip changes what the next refresh would save, not the pack.
+  // Said apart from a library change, with a way back, so a stray tap at the
+  // venue never reads as a broken pack.
+  const edited = Boolean(pack) && chosen !== null && !sameSelection(plan.selection, pack.selection)
+  // One primary action per state: open a pack that is ready, otherwise fix it.
+  const readyFresh = status.state === 'ready' && !stale
+
+  const statusAndActions = (
+    <>
+      {running && <Progress progress={progress} onStop={stop} />}
+      <StatusBlock status={status} pack={pack} stale={stale && !edited} />
+      {note && <p role="status" className="text-xs font-mono text-cream-muted/90 mt-2">{note}</p>}
+
+      {!running && owner && !confirming && (
+        <div className="flex flex-wrap items-center gap-1.5 mt-3">
+          {pack && (
+            <button type="button" onClick={() => onOpen(pack.editionKey)} className={readyFresh ? primaryClass : neutralClass}>Open pack</button>
+          )}
+          {!nothingToPack && (
+            <button type="button" onClick={prepare} disabled={busy} className={readyFresh ? secondaryClass : primaryClass}>
+              {primaryLabel}
+            </button>
+          )}
+          {pack && (
+            <button type="button" onClick={() => check()} disabled={busy} className={secondaryClass}>
+              {phase === 'checking' ? 'Checking…' : 'Check again'}
+            </button>
+          )}
+          {pack && (
+            <button type="button" onClick={() => setConfirming(true)} disabled={busy} className={secondaryClass}>Remove pack</button>
+          )}
+        </div>
+      )}
+
+      {confirming && (
+        <div className="mt-3 border border-ink-border rounded-xs p-3">
+          <p className="text-cream text-sm font-body">
+            Remove this pack from this phone? Your artists, ideas and photos stay as they are; only the offline copy goes.
+          </p>
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            <button type="button" onClick={() => setConfirming(false)} className={neutralClass}>Cancel</button>
+            <button type="button" onClick={remove} disabled={busy} className={primaryClass}>Remove</button>
+          </div>
+        </div>
+      )}
+    </>
+  )
+
+  const choosing = (
+    <div className={pack ? 'mt-4 pt-1 border-t border-ink-border/40' : ''}>
+      {choices.length === 0 ? (
+        <p className="text-cream-muted/90 text-xs font-mono mt-3">Mark who’s going first (Edit, above), or import the show’s line-up.</p>
+      ) : (
+        <Chips label={pack ? 'Artists in the pack' : 'Artists'} items={choices} selected={selection.artistIds} onToggle={toggleArtist} />
+      )}
+      {ideaChoices.length > 0 && (
+        <Chips label="Ideas linked to them" items={ideaChoices} selected={selection.ideaIds} onToggle={toggleIdea} />
+      )}
+      {!nothingToPack && (
+        <p className="text-[0.6875rem] font-mono text-cream-muted/80 mt-2">
+          {plural(plan.artists.length, 'artist')} · {plural(plan.ideas.length, 'idea')} · {plural(plan.photos.length, 'photo')}
+        </p>
+      )}
+      {edited && (
+        <div className="flex flex-wrap items-center gap-x-2 mt-1">
+          <p className="text-xs font-mono text-accent">Not saved to the pack yet: Refresh pack to save it.</p>
+          <button type="button" onClick={() => setChosen(null)} className={secondaryClass}>Undo</button>
+        </div>
+      )}
+    </div>
+  )
 
   return (
     <div className="mt-3 pt-3 border-t border-ink-border">
       <button type="button" onClick={toggleOpen} aria-expanded={expanded} className="w-full min-h-11 flex items-center justify-between gap-2 text-left">
         <span className="text-[0.625rem] font-mono text-cream-muted tracking-widest uppercase">Offline pack</span>
-        <span className={`text-[0.625rem] font-mono tracking-widest uppercase shrink-0 ${status.state === 'ready' && !stale ? 'text-accent' : 'text-cream-muted/80'}`}>
+        <span className={`text-[0.625rem] font-mono tracking-widest uppercase shrink-0 ${readyFresh ? 'text-accent' : 'text-cream-muted/80'}`}>
           {header}
           {status.state === 'ready' && status.checkedAt ? ` · ${formatPackTime(status.checkedAt, { time: false })}` : ''}
           <span className="text-cream-muted/80"> {expanded ? '▲' : '▼'}</span>
@@ -299,63 +373,23 @@ export default function ShowPack({
 
       {expanded && (
         <div className="mt-1">
-          <p className="text-cream-muted/90 text-xs font-body leading-relaxed">
-            Save these artists, their photos and the ideas linked to them on this phone, so they open at the show with no signal.
-          </p>
-
-          {choices.length === 0 ? (
-            <p className="text-cream-muted/90 text-xs font-mono mt-3">Mark who’s going first (Edit, above), or import the show’s line-up.</p>
+          {pack ? (
+            // At the venue the pack is what matters: its state and Open first.
+            <>
+              {statusAndActions}
+              {choosing}
+            </>
           ) : (
-            <Chips label="Artists" items={choices} selected={selection.artistIds} onToggle={toggleArtist} />
-          )}
-          {ideaChoices.length > 0 && (
-            <Chips label="Ideas linked to them" items={ideaChoices} selected={selection.ideaIds} onToggle={toggleIdea} />
-          )}
-          {!nothingToPack && (
-            <p className="text-[0.6875rem] font-mono text-cream-muted/80 mt-2">
-              {plural(plan.artists.length, 'artist')} · {plural(plan.ideas.length, 'idea')} · {plural(plan.photos.length, 'photo')}
-            </p>
-          )}
-
-          {running && <Progress progress={progress} onStop={stop} />}
-          <StatusBlock status={status} pack={pack} stale={stale} />
-          {note && <p role="status" className="text-xs font-mono text-cream-muted/90 mt-2">{note}</p>}
-
-          {!running && owner && (
-            <div className="flex flex-wrap items-center gap-1.5 mt-3">
-              {pack && (
-                <button type="button" onClick={() => onOpen(pack.editionKey)} className={primaryClass}>Open pack</button>
-              )}
-              {!nothingToPack && (
-                <button type="button" onClick={prepare} disabled={busy} className={pack && status.state === 'ready' && !stale ? secondaryClass : primaryClass}>
-                  {primaryLabel}
-                </button>
-              )}
-              {pack && (
-                <button type="button" onClick={() => check()} disabled={busy} className={secondaryClass}>
-                  {phase === 'checking' ? 'Checking…' : 'Check again'}
-                </button>
-              )}
-              {pack && !confirming && (
-                <button type="button" onClick={() => setConfirming(true)} disabled={busy} className={secondaryClass}>Remove pack</button>
-              )}
-            </div>
-          )}
-
-          {confirming && (
-            <div className="mt-2 border border-ink-border rounded-xs p-3">
-              <p className="text-cream text-sm font-body">
-                Remove this pack from this phone? Your artists, ideas and photos stay as they are; only the offline copy goes.
+            <>
+              <p className="text-cream-muted/90 text-xs font-body leading-relaxed">
+                Save these artists, their photos and the ideas linked to them on this phone, so they open at the show with no signal.
               </p>
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                <button type="button" onClick={remove} disabled={busy} className={primaryClass}>Remove</button>
-                <button type="button" onClick={() => setConfirming(false)} className={secondaryClass}>Cancel</button>
-              </div>
-            </div>
+              {choosing}
+              {statusAndActions}
+            </>
           )}
-
           <p className="text-cream-muted/80 text-[0.6875rem] font-body leading-relaxed mt-3">
-            A pack is a copy on this phone only, not a backup. The browser can clear it when storage runs low, so check it again before you leave.
+            On this phone only, not a backup: the browser can clear it when storage runs low. Check again before you leave.
           </p>
         </div>
       )}

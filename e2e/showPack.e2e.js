@@ -59,7 +59,9 @@ for (const width of [440, 320]) {
     expect(expected).toBeGreaterThan(2)
 
     // Offline, from a cold reload, as at a venue with no signal.
-    await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller)), { timeout: 15_000 }).toBe(true)
+    // The worker precaches the whole build on its first visit; two phones at
+    // once on a busy machine can take longer than the offline suite allows.
+    await expect.poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller)), { timeout: 30_000 }).toBe(true)
     await page.evaluate(() => navigator.serviceWorker.ready)
     await page.context().setOffline(true)
     try {
@@ -85,13 +87,20 @@ for (const width of [440, 320]) {
       expect(await noSideScroll(page)).toBe(true)
       await page.screenshot({ path: test.info().outputPath(`show-pack-viewer-${width}.png`) })
 
+      // The jump row goes straight to the ideas, under the sticky header.
+      await dialog.getByRole('navigation', { name: 'Jump to' }).getByRole('button', { name: 'Ideas' }).tap()
+      await expect(dialog.getByRole('heading', { name: 'Botanical forearm study' })).toBeInViewport()
+      await page.screenshot({ path: test.info().outputPath(`show-pack-ideas-${width}.png`) })
+
       // A photo opens full size, and closes back to the pack.
       await dialog.getByRole('button', { name: 'Open Mora Vane, photo 1' }).tap()
       const photo = page.getByRole('dialog', { name: 'Mora Vane, photo 1' })
       await expect(photo.getByRole('img')).toBeVisible()
       await expect.poll(() => photo.getByRole('img').evaluate((img) => img.naturalWidth)).toBeGreaterThan(0)
       await page.screenshot({ path: test.info().outputPath(`show-pack-photo-${width}.png`) })
-      await photo.getByRole('button', { name: 'Close' }).tap()
+      // A tap on the photo itself closes it: no reaching for the corner. The
+      // image lets taps through to the button behind it, so tap that.
+      await photo.getByRole('button', { name: 'Close photo' }).tap()
       await expect(photo).toHaveCount(0)
       await expect(dialog).toBeVisible()
       await dialog.getByRole('button', { name: 'Close offline pack' }).tap()

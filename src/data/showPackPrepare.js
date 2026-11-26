@@ -1,4 +1,4 @@
-import { resolveImage } from './imageResolver'
+import { isSameOrigin, resolveImage } from './imageResolver'
 
 // Preparing, checking and removing offline show packs (#209). The rules that
 // make "ready" mean something:
@@ -52,14 +52,20 @@ async function sha256(buffer) {
 export async function readPhotoBytes(ref, { signal, resolve = resolveImage, fetchImpl = globalThis.fetch } = {}) {
   const src = await resolve(ref)
   if (!src) return { error: 'unavailable' }
+  // A same-origin photo stays same-origin: a redirect to another site fails
+  // rather than quietly fetching from it. Blob keys resolve to the storage
+  // backend's own url (or a data: url) and are left to it.
+  const init = { ...(signal ? { signal } : {}), ...(sameOriginHttp(src) ? { mode: 'same-origin' } : {}) }
   let response
   try {
-    response = await fetchImpl(src, signal ? { signal } : undefined)
+    response = await fetchImpl(src, Object.keys(init).length ? init : undefined)
   } catch (error) {
     if (isAbort(error, signal)) throw error
     return { error: 'offline' }
   }
   if (!response?.ok) return { error: 'unavailable' }
+  // Only a slice of the photo, whatever its length says.
+  if (response.status === 206 || response.headers?.get?.('content-range')) return { error: 'partial' }
   let blob
   try {
     blob = await response.blob()
@@ -74,6 +80,8 @@ export async function readPhotoBytes(ref, { signal, resolve = resolveImage, fetc
   return { blob }
 }
 
+const sameOriginHttp = (src) => !/^(?:data|blob):/i.test(src) && isSameOrigin(src)
+
 // Whether the stored copy of a photo is whole: present, and hashing to what
 // was recorded when it was saved.
 async function intact(store, ownerId, id) {
@@ -85,9 +93,10 @@ async function intact(store, ownerId, id) {
 }
 
 // Reads every savable photo back off the device. No network.
-async function check(pack, store, now) {
+async function check(pack, store, now, signal) {
   const verification = { checkedAt: now(), present: [], missing: [], damaged: [], bytes: 0 }
   for (const photo of pack.photos) {
+    throwIfAborted(signal)
     if (photo.external) continue
     const found = await intact(store, pack.ownerId, photo.id)
     if (found.state === 'present') {
@@ -173,7 +182,9 @@ export async function preparePack(plan, {
 
   throwIfAborted(signal)
   assertCurrent()
-  const verification = await check(pack, store, now)
+  const verification = await check(pack, store, now, signal)
+  // A Stop during the read-back still means stopped: never commit `done`.
+  throwIfAborted(signal)
   assertCurrent()
   const finished = { ...pack, state: 'done', preparedAt: now(), results, stoppedBy: quota ? 'quota' : null, verification }
   await store.putPack(finished)

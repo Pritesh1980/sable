@@ -13,6 +13,7 @@
 
 import { refIdentity, refKey } from './imageRef'
 import { isSameOrigin } from './imageResolver'
+import { keyForUrl } from './blobUrls'
 import { getImageNote } from './planning'
 import { indexLineup } from './lineup'
 import { parseBooth } from './showPlan'
@@ -63,9 +64,19 @@ function isExternal(ref) {
   return typeof raw !== 'string' || !isSameOrigin(raw)
 }
 
+// A display url this session resolved from a blob key goes back to that key,
+// so an expiring url is never what the pack keeps (#110, #117).
+function canonical(ref) {
+  if (refKey(ref)) return ref
+  const raw = typeof ref === 'string' ? ref : ref?.url
+  const key = typeof raw === 'string' ? keyForUrl(raw) : null
+  return key ? { key } : ref
+}
+
 export function planShowPack({ edition = {}, artists = [], ideas = [], entries = [], studios = [], selection = {} } = {}) {
   const photos = new Map()
-  const addPhoto = (ref) => {
+  const addPhoto = (original) => {
+    const ref = canonical(original)
     const id = refIdentity(ref)
     if (!id) return null
     if (!photos.has(id)) photos.set(id, { id, ref: storedRef(ref), external: isExternal(ref) })
