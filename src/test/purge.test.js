@@ -11,6 +11,7 @@ import { compileRefinementPrompt } from '../../shared/imageJobs'
 import { Blob } from 'node:buffer'
 import { stageImage } from '../data/imageStaging'
 import { STAGED_IMAGES_DB, UPLOAD_OUTBOX_KEY, DEVICE_COPIES_KEY, readOutbox } from '../data/stagedImageStore'
+import { showPackStore } from '../data/showPackStore'
 
 describe('purgeLocalUserData', () => {
   beforeEach(() => localStorage.clear())
@@ -111,6 +112,19 @@ describe('purgeLocalUserData', () => {
     expect(upgraded).toBe(true)
     db.close()
     vi.restoreAllMocks()
+  })
+
+  // #209: an offline show pack holds copies of the signed-out user's photos
+  // and notes. The next account on this phone must find nothing.
+  it('deletes offline show packs and their photo copies', async () => {
+    await showPackStore.putPack({ ownerId: 'A', editionKey: 'uk-tattoo-fest@2027', state: 'done', photos: [] })
+    await showPackStore.putPhoto({ ownerId: 'A', id: 'path:/images/a.webp', type: 'image/webp', size: 1, sha256: 'x', bytes: new ArrayBuffer(1) })
+
+    await purgeLocalUserData()
+
+    // The same owner asking again finds nothing: the records went with the database.
+    expect(await showPackStore.listPacks('A')).toEqual([])
+    expect(await showPackStore.listPhotoIds('A')).toEqual([])
   })
 
   it('preserves device prefs, API keys, and the local simulated remote', async () => {
