@@ -16,7 +16,15 @@ import { IDEA_STATUSES, matchArtistsToIdea } from '../data/brief'
 import { shareOrDownloadBriefCard } from '../data/briefCard'
 import usePreparedBriefCard from '../hooks/usePreparedBriefCard'
 import BriefCardPreview from '../components/BriefCardPreview'
-import { moveReferenceImage, referenceOccurrenceIdentity, setReferenceCrop, setReferenceNote } from '../data/referenceImages'
+import PhotoMarkupModal from '../components/PhotoMarkupModal'
+import {
+  moveReferenceImage,
+  referenceOccurrenceIdentity,
+  setReferenceCrop,
+  setReferenceMarkup,
+  setReferenceMarkupOnCard,
+  setReferenceNote,
+} from '../data/referenceImages'
 import { buildIdeaBrief } from '../data/export'
 import { compressImages } from '../hooks/useImageUpload'
 import { stageImageRefs, withStagedImages } from '../data/imageStaging'
@@ -125,6 +133,7 @@ function IdeaModal({ idea, isNew = !idea.id, onClose, onSave, onDelete, onRestor
   const [shareState, setShareState] = useState('idle')
   const [shareNote, setShareNote] = useState('')
   const [previewOpen, setPreviewOpen] = useState(false)
+  const [markupIndex, setMarkupIndex] = useState(null)
   const card = usePreparedBriefCard(draft, artists)
   useEffect(() => {
     if (shareState !== 'download') return
@@ -296,6 +305,16 @@ function IdeaModal({ idea, isNew = !idea.id, onClose, onSave, onDelete, onRestor
     setDraft((d) => ({ ...d, images: setReferenceCrop(d.images, index, crop) }))
   }
 
+  function updateMarkup(index, marks, includeMarkupInBrief) {
+    touch('images')
+    setDraft((d) => ({ ...d, images: setReferenceMarkup(d.images, index, marks, { includeMarkupInBrief }) }))
+  }
+
+  function updateMarkupOnCard(index, include) {
+    touch('images')
+    setDraft((d) => ({ ...d, images: setReferenceMarkupOnCard(d.images, index, include) }))
+  }
+
   function save() {
     if (!draft.title.trim()) return
     const id = draft.id || Date.now().toString()
@@ -362,7 +381,7 @@ function IdeaModal({ idea, isNew = !idea.id, onClose, onSave, onDelete, onRestor
 
   return (
     <>
-    <div inert={previewOpen || undefined} aria-hidden={previewOpen || undefined} className="fixed inset-0 top-[var(--nav-top)] z-50 bg-ink-black flex flex-col animate-fade-in overflow-y-auto">
+    <div inert={previewOpen || markupIndex !== null || undefined} aria-hidden={previewOpen || markupIndex !== null || undefined} className="fixed inset-0 top-[var(--nav-top)] z-50 bg-ink-black flex flex-col animate-fade-in overflow-y-auto">
       <div className="px-5 pt-safe-top pt-6 pb-2 border-b border-ink-border sticky top-0 bg-ink-black z-10">
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <button onClick={onClose} className="min-h-11 text-cream-muted hover:text-cream text-sm tracking-widest uppercase">
@@ -498,10 +517,12 @@ function IdeaModal({ idea, isNew = !idea.id, onClose, onSave, onDelete, onRestor
                     <span className="pointer-events-none absolute left-1 top-1 z-10 max-w-[calc(100%_-_3.25rem)] bg-ink-black/90 px-2 py-1 text-xs text-cream">
                       {!card.prepared ? 'Checking card…' : (() => {
                         const at = card.prepared.photos.findIndex((photo) => photo.sourceIndex === index)
-                        if (at !== -1) return `Card ${at + 1}`
-                        if (card.prepared.skippedWebIndices.includes(index)) return 'Web link · not on card'
-                        if (card.prepared.unavailableIndices.includes(index)) return 'Unavailable · not on card'
-                        return 'Extra reference'
+                        const markCount = image.markup?.length || 0
+                        const markSuffix = markCount ? ` · ${markCount} mark${markCount === 1 ? '' : 's'}` : ''
+                        if (at !== -1) return `Card ${at + 1}${markSuffix}`
+                        if (card.prepared.skippedWebIndices.includes(index)) return `Web link · not on card${markSuffix}`
+                        if (card.prepared.unavailableIndices.includes(index)) return `Unavailable · not on card${markSuffix}`
+                        return `Extra reference${markSuffix}`
                       })()}
                     </span>
                     <RefImage
@@ -536,6 +557,14 @@ function IdeaModal({ idea, isNew = !idea.id, onClose, onSave, onDelete, onRestor
                     </button>
                   </div>
                   <div className="border-t border-ink-border px-2">
+                    <button
+                      type="button"
+                      onClick={() => setMarkupIndex(index)}
+                      aria-label={`Mark up reference ${index + 1}`}
+                      className="min-h-11 w-full border-b border-ink-border text-xs text-cream-muted hover:text-cream"
+                    >
+                      {image.markup?.length ? `Mark up (${image.markup.length})` : 'Mark up'}
+                    </button>
                     <button onClick={() => moveImage(index, 0)} disabled={index === 0}
                       aria-label={`Make reference ${index + 1} the cover`}
                       className="min-h-11 w-full text-xs text-cream-muted hover:text-cream disabled:opacity-40">
@@ -702,7 +731,19 @@ function IdeaModal({ idea, isNew = !idea.id, onClose, onSave, onDelete, onRestor
       hint="Best with a flat design: a photo of a tattoo already on skin goes on whole, background and all."
     />
     {previewOpen && <BriefCardPreview {...card} images={images} onClose={() => setPreviewOpen(false)}
-      onRefresh={card.refresh} onCrop={updateCrop} onShare={shareBriefImage} shareState={shareState} shareNote={shareNote} />}
+      onRefresh={card.refresh} onCrop={updateCrop} onToggleMarkup={updateMarkupOnCard} onShare={shareBriefImage} shareState={shareState} shareNote={shareNote} />}
+    {markupIndex !== null && images[markupIndex] && (
+      <PhotoMarkupModal
+        key={`${composerId}-markup-${markupIndex}`}
+        image={images[markupIndex]}
+        index={markupIndex}
+        onApply={(marks, includeInBrief) => {
+          updateMarkup(markupIndex, marks, includeInBrief)
+          setMarkupIndex(null)
+        }}
+        onClose={() => setMarkupIndex(null)}
+      />
+    )}
     </>
   )
 }

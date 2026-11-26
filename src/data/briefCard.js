@@ -4,6 +4,7 @@ import { isSameOrigin, resolveImageBytes, resolveImageRef } from './imageResolve
 import { getImageNote, normalizeReferenceImages } from './planning'
 import { trimChars, trimEndChars } from './textTrim'
 import { normalizeBriefCrop } from './referenceImages'
+import { drawPhotoMarkupOnSlot } from './photoMarkup'
 
 export const BRIEF_CARD_WIDTH = 1080
 export const BRIEF_CARD_HEIGHT = 1350
@@ -624,8 +625,14 @@ export async function collectBriefCardPhotos(
     try {
       const element = await loadImage(src)
       if (element) {
-        photos.push({ element, note: candidate.note, sourceIndex: candidate.sourceIndex,
-          ref: candidate.image, crop: candidate.image.briefCrop })
+        photos.push({
+          element,
+          note: candidate.note,
+          sourceIndex: candidate.sourceIndex,
+          ref: candidate.image,
+          crop: candidate.image.briefCrop,
+          markup: candidate.image.includeMarkupInBrief === false ? undefined : candidate.image.markup,
+        })
       } else unavailableIndices.push(candidate.sourceIndex)
     } catch {
       unavailableIndices.push(candidate.sourceIndex)
@@ -655,7 +662,7 @@ export function computeBriefCardCrop(iw, ih, width, height, crop) {
   return { sx: Math.max(0, iw - sw) * x, sy: Math.max(0, ih - sh) * y, sw, sh }
 }
 
-function drawCoverImage(ctx, img, slot, crop) {
+function drawCoverImage(ctx, img, slot, crop, markup, fonts) {
   const iw = img.naturalWidth || img.width || slot.width
   const ih = img.naturalHeight || img.height || slot.height
   const { sx, sy, sw, sh } = computeBriefCardCrop(iw, ih, slot.width, slot.height, crop)
@@ -665,6 +672,9 @@ function drawCoverImage(ctx, img, slot, crop) {
   ctx.rect(slot.x, slot.y, slot.width, slot.height)
   ctx.clip()
   ctx.drawImage(img, sx, sy, sw, sh, slot.x, slot.y, slot.width, slot.height)
+  if (markup?.length) {
+    drawPhotoMarkupOnSlot(ctx, markup, { iw, ih, sx, sy, sw, sh, slot, fonts })
+  }
   ctx.restore()
 }
 
@@ -735,7 +745,7 @@ export function drawBriefCardOnCanvas(canvas, layout, photos = []) {
     ctx.fillRect(slot.x, slot.y, slot.width, slot.height)
     const photo = photos[slot.index]
     if (photo?.element) {
-      drawCoverImage(ctx, photo.element, { ...slot, height: slot.imageHeight }, photo.crop)
+      drawCoverImage(ctx, photo.element, { ...slot, height: slot.imageHeight }, photo.crop, photo.markup, fonts)
       const { lines, fontSize, lineHeight, pad } = slot.caption
       ctx.fillStyle = theme.cream
       ctx.font = `400 ${fontSize}px ${fonts.body}`
@@ -1138,7 +1148,12 @@ export async function collectBoardCardPhotos(
       try {
         const element = await loadImage(src)
         if (element) {
-          photos.push({ element, note: group.caption, crop: candidate.image.briefCrop })
+          photos.push({
+            element,
+            note: group.caption,
+            crop: candidate.image.briefCrop,
+            markup: candidate.image.includeMarkupInBrief === false ? undefined : candidate.image.markup,
+          })
           break
         }
       } finally {

@@ -2,6 +2,7 @@ import { createBackup, requestBackupDownload } from './export'
 import { knownKeyForUrl } from './blobUrls'
 import { readStagedImage } from './stagedImageStore'
 import { paidVariantIds, recordExportRequested } from './backupStatus'
+import { normalizeReferenceImages } from './referenceImages'
 
 function isImageDataUrl(url) {
   const match = /^data:image\/[a-z0-9.+-]+(;[^,]*)?,(.+)$/is.exec(url)
@@ -123,9 +124,13 @@ export async function createPortableBackup(data, { ownerId, blobs, fetchImpl = g
     delete artist.unresolvedImages
   }
   for (const idea of backup.data.ideas) {
-    idea.images = await Promise.all((idea.images || []).map(async (entry) => ({
-      url: await image(entry), note: typeof entry === 'object' ? entry.note || '' : '',
-    })))
+    idea.images = await Promise.all((idea.images || []).map(async (entry) => {
+      const url = await image(entry)
+      const note = typeof entry === 'object' && entry ? entry.note || '' : ''
+      if (!entry || typeof entry !== 'object') return { url, note }
+      const normalized = normalizeReferenceImages([{ ...entry, key: undefined, url, note }])[0]
+      return normalized || { url, note }
+    }))
   }
   for (const row of backup.data.saved) {
     if (row.image != null) row.image = { url: await image(row.image) }

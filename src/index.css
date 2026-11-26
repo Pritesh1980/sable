@@ -97,6 +97,22 @@
   ::-webkit-scrollbar-thumb {
     background: var(--scrollbar-thumb);
   }
+
+  dialog:modal {
+    overscroll-behavior: contain;
+  }
+
+  dialog::backdrop {
+    overflow: hidden;
+    overscroll-behavior: contain;
+    background-color: rgba(19, 17, 16, 0.85);
+  }
+}
+
+.markup-stage {
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: none;
 }
 
 /* Height of the app nav where it sits at the top (laptop). 0 on a phone, where
