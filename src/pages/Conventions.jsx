@@ -383,7 +383,7 @@ export default function Conventions({
   useEffect(() => {
     let live = true
     const read = packOwner ? packStore.listPacks(packOwner.ownerId) : Promise.resolve([])
-    read
+    void read
       .then((list) => { packOwner?.assertCurrent(); return list })
       .catch(() => [])
       .then((list) => {

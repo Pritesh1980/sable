@@ -25,7 +25,7 @@ function useCheckedPack(pack, owner, store, clock) {
     if (!pack || !owner || !store) return undefined
     let live = true
     const made = []
-    ;(async () => {
+    void (async () => {
       let checked
       try {
         checked = await verifyPack(pack, { store, assertCurrent: owner.assertCurrent, ...(clock ? { now: clock } : {}) })
